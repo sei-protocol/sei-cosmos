@@ -1,0 +1,28 @@
+syntax = "proto3";
+package cosmos.accesscontrol.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "accesscontrol/constants.proto";
+
+option go_package = "github.com/cosmos/cosmos-sdk/x/accesscontrol/types";
+
+message GenesisState {
+    Params params = 1 [(gogoproto.nullable) = false];
+}
+
+message MessageDependencyMapping {
+    MessageType message_type = 1;
+    Module module_name = 2;
+    repeated string resource_dependencies = 3;
+}
+
+message Params {
+    option (gogoproto.goproto_stringer) = false;
+    
+    // mapping between every message type and its predetermined resource read/write sequence
+    repeated MessageDependencyMapping message_dependency_mapping = 1 [
+        (gogoproto.nullable) = false,
+        (gogoproto.moretags) = "yaml:\"message_dependency_mapping\""
+    ];
+  }
+

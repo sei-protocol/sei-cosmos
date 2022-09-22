@@ -12,7 +12,11 @@ const (
 	StoreKey = ModuleName
 )
 
+func GetResourceDependencyMappingKey() []byte {
+	return []byte{byte(ResourceDependencyMappingKey)}
+}
+
 func GetResourceKey(moduleName string, messageType string) []byte {
-	tempKey := append([]byte{byte(ResourceDependencyMappingKey)}, []byte(moduleName)...)
+	tempKey := append(GetResourceDependencyMappingKey(), []byte(moduleName)...)
 	return append(tempKey, []byte(messageType)...)
 }

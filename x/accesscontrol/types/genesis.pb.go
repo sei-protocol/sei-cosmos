@@ -23,50 +23,6 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type GenesisState struct {
-	Params Params `protobuf:"bytes,1,opt,name=params,proto3" json:"params"`
-}
-
-func (m *GenesisState) Reset()         { *m = GenesisState{} }
-func (m *GenesisState) String() string { return proto.CompactTextString(m) }
-func (*GenesisState) ProtoMessage()    {}
-func (*GenesisState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_70bf81890cee44c6, []int{0}
-}
-func (m *GenesisState) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *GenesisState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GenesisState.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *GenesisState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GenesisState.Merge(m, src)
-}
-func (m *GenesisState) XXX_Size() int {
-	return m.Size()
-}
-func (m *GenesisState) XXX_DiscardUnknown() {
-	xxx_messageInfo_GenesisState.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GenesisState proto.InternalMessageInfo
-
-func (m *GenesisState) GetParams() Params {
-	if m != nil {
-		return m.Params
-	}
-	return Params{}
-}
-
 type MessageDependencyMapping struct {
 	MessageType          MessageType `protobuf:"varint,1,opt,name=message_type,json=messageType,proto3,enum=cosmos.accesscontrol.v1beta1.MessageType" json:"message_type,omitempty"`
 	ModuleName           Module      `protobuf:"varint,2,opt,name=module_name,json=moduleName,proto3,enum=cosmos.accesscontrol.v1beta1.Module" json:"module_name,omitempty"`
@@ -77,7 +33,7 @@ func (m *MessageDependencyMapping) Reset()         { *m = MessageDependencyMappi
 func (m *MessageDependencyMapping) String() string { return proto.CompactTextString(m) }
 func (*MessageDependencyMapping) ProtoMessage()    {}
 func (*MessageDependencyMapping) Descriptor() ([]byte, []int) {
-	return fileDescriptor_70bf81890cee44c6, []int{1}
+	return fileDescriptor_70bf81890cee44c6, []int{0}
 }
 func (m *MessageDependencyMapping) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -127,9 +83,60 @@ func (m *MessageDependencyMapping) GetResourceDependencies() []string {
 	return nil
 }
 
-type Params struct {
+type GenesisState struct {
+	Params Params `protobuf:"bytes,1,opt,name=params,proto3" json:"params"`
 	// mapping between every message type and its predetermined resource read/write sequence
-	MessageDependencyMapping []MessageDependencyMapping `protobuf:"bytes,1,rep,name=message_dependency_mapping,json=messageDependencyMapping,proto3" json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
+	MessageDependencyMapping []MessageDependencyMapping `protobuf:"bytes,2,rep,name=message_dependency_mapping,json=messageDependencyMapping,proto3" json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
+}
+
+func (m *GenesisState) Reset()         { *m = GenesisState{} }
+func (m *GenesisState) String() string { return proto.CompactTextString(m) }
+func (*GenesisState) ProtoMessage()    {}
+func (*GenesisState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_70bf81890cee44c6, []int{1}
+}
+func (m *GenesisState) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GenesisState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GenesisState.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GenesisState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenesisState.Merge(m, src)
+}
+func (m *GenesisState) XXX_Size() int {
+	return m.Size()
+}
+func (m *GenesisState) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenesisState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GenesisState proto.InternalMessageInfo
+
+func (m *GenesisState) GetParams() Params {
+	if m != nil {
+		return m.Params
+	}
+	return Params{}
+}
+
+func (m *GenesisState) GetMessageDependencyMapping() []MessageDependencyMapping {
+	if m != nil {
+		return m.MessageDependencyMapping
+	}
+	return nil
+}
+
+type Params struct {
 }
 
 func (m *Params) Reset()      { *m = Params{} }
@@ -164,16 +171,9 @@ func (m *Params) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Params proto.InternalMessageInfo
 
-func (m *Params) GetMessageDependencyMapping() []MessageDependencyMapping {
-	if m != nil {
-		return m.MessageDependencyMapping
-	}
-	return nil
-}
-
 func init() {
-	proto.RegisterType((*GenesisState)(nil), "cosmos.accesscontrol.v1beta1.GenesisState")
 	proto.RegisterType((*MessageDependencyMapping)(nil), "cosmos.accesscontrol.v1beta1.MessageDependencyMapping")
+	proto.RegisterType((*GenesisState)(nil), "cosmos.accesscontrol.v1beta1.GenesisState")
 	proto.RegisterType((*Params)(nil), "cosmos.accesscontrol.v1beta1.Params")
 }
 
@@ -182,65 +182,32 @@ func init() {
 }
 
 var fileDescriptor_70bf81890cee44c6 = []byte{
-	// 393 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x52, 0xcd, 0xae, 0xd2, 0x40,
-	0x14, 0xee, 0x08, 0x21, 0x71, 0x4a, 0x5c, 0x34, 0x98, 0x34, 0xc4, 0x14, 0x6c, 0x58, 0xc0, 0xc2,
-	0x36, 0x94, 0xc4, 0x05, 0xcb, 0x06, 0xe3, 0x06, 0x8c, 0xa9, 0xae, 0xdc, 0x34, 0xc3, 0xf4, 0xa4,
-	0x36, 0x32, 0x33, 0x4d, 0x67, 0x30, 0xf6, 0x2d, 0x5c, 0xba, 0xd3, 0x47, 0xf0, 0x31, 0x58, 0xb2,
-	0x74, 0x45, 0x0c, 0xf8, 0x04, 0x3e, 0x81, 0xa1, 0x53, 0xd4, 0xfb, 0x03, 0xf7, 0xae, 0x66, 0x26,
-	0xe7, 0xfb, 0x39, 0xdf, 0x99, 0x83, 0x5d, 0x2a, 0x24, 0x13, 0xd2, 0x27, 0x94, 0x82, 0x94, 0x54,
-	0x70, 0x55, 0x88, 0x95, 0x9f, 0x02, 0x07, 0x99, 0x49, 0x2f, 0x2f, 0x84, 0x12, 0xd6, 0x13, 0x8d,
-	0xf1, 0xae, 0x60, 0xbc, 0x8f, 0xe3, 0x25, 0x28, 0x32, 0xee, 0x76, 0x52, 0x91, 0x8a, 0x0a, 0xe8,
-	0x1f, 0x6f, 0x9a, 0xd3, 0x1d, 0xdc, 0xaa, 0x4b, 0x05, 0x97, 0x8a, 0x70, 0x55, 0x2b, 0xbb, 0x11,
-	0x6e, 0xbf, 0xd4, 0x56, 0x6f, 0x14, 0x51, 0x60, 0x85, 0xb8, 0x95, 0x93, 0x82, 0x30, 0x69, 0xa3,
-	0x3e, 0x1a, 0x9a, 0xc1, 0xc0, 0xbb, 0x64, 0xed, 0xbd, 0xae, 0xb0, 0x61, 0x73, 0xb3, 0xeb, 0x19,
-	0x51, 0xcd, 0x74, 0x7f, 0x21, 0x6c, 0x2f, 0x40, 0x4a, 0x92, 0xc2, 0x0c, 0x72, 0xe0, 0x09, 0x70,
-	0x5a, 0x2e, 0x48, 0x9e, 0x67, 0x3c, 0xb5, 0xe6, 0xb8, 0xcd, 0x74, 0x2d, 0x56, 0x65, 0x0e, 0x95,
-	0xcd, 0xa3, 0x60, 0x74, 0xd9, 0xa6, 0x56, 0x7b, 0x5b, 0xe6, 0x10, 0x99, 0xec, 0xdf, 0xc3, 0x7a,
-	0x81, 0x4d, 0x26, 0x92, 0xf5, 0x0a, 0x62, 0x4e, 0x18, 0xd8, 0x0f, 0x2a, 0xb1, 0x3b, 0x7a, 0x5e,
-	0x54, 0x84, 0x08, 0x6b, 0xe2, 0x2b, 0xc2, 0xc0, 0x9a, 0xe0, 0xc7, 0x05, 0x48, 0xb1, 0x2e, 0x28,
-	0xc4, 0xc9, 0xa9, 0xe5, 0x0c, 0xa4, 0xdd, 0xe8, 0x37, 0x86, 0x0f, 0xa3, 0xce, 0xa9, 0x38, 0xfb,
-	0xaf, 0xe6, 0x7e, 0x47, 0xb8, 0xa5, 0xf3, 0x5b, 0x5f, 0x11, 0xee, 0x9e, 0x52, 0xfd, 0xe5, 0x97,
-	0x31, 0xd3, 0x99, 0x6d, 0xd4, 0x6f, 0x0c, 0xcd, 0xe0, 0xf9, 0xbd, 0x32, 0xde, 0x98, 0x58, 0x38,
-	0x3a, 0x0e, 0xf7, 0xf7, 0xae, 0xf7, 0xb4, 0x24, 0x6c, 0x35, 0x75, 0xcf, 0xfb, 0xb8, 0x91, 0xcd,
-	0xce, 0x88, 0x4c, 0x9b, 0x5f, 0xbe, 0xf5, 0x8c, 0x70, 0xbe, 0xd9, 0x3b, 0x68, 0xbb, 0x77, 0xd0,
-	0xcf, 0xbd, 0x83, 0x3e, 0x1f, 0x1c, 0x63, 0x7b, 0x70, 0x8c, 0x1f, 0x07, 0xc7, 0x78, 0x17, 0xa4,
-	0x99, 0x7a, 0xbf, 0x5e, 0x7a, 0x54, 0x30, 0xbf, 0x5e, 0x1c, 0x7d, 0x3c, 0x93, 0xc9, 0x07, 0xff,
-	0xd3, 0xb5, 0x2d, 0x3a, 0xfe, 0x9c, 0x5c, 0xb6, 0xaa, 0x15, 0x9a, 0xfc, 0x09, 0x00, 0x00, 0xff,
-	0xff, 0xbf, 0x63, 0x18, 0xf7, 0xc2, 0x02, 0x00, 0x00,
-}
-
-func (m *GenesisState) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *GenesisState) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GenesisState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	{
-		size, err := m.Params.MarshalToSizedBuffer(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = encodeVarintGenesis(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
+	// 392 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x52, 0xcd, 0xaa, 0xda, 0x40,
+	0x18, 0xcd, 0xa8, 0x08, 0x9d, 0x88, 0x8b, 0x60, 0x21, 0x48, 0x89, 0x36, 0xb8, 0xd0, 0x45, 0x13,
+	0x54, 0xe8, 0xc2, 0x65, 0xb0, 0x74, 0xa3, 0xa5, 0xa4, 0x5d, 0x75, 0x13, 0xc6, 0xc9, 0x47, 0x1a,
+	0xea, 0xcc, 0x84, 0xcc, 0x58, 0x9a, 0xb7, 0xe8, 0xb2, 0xbb, 0xf6, 0x71, 0x5c, 0xba, 0xec, 0x4a,
+	0x8a, 0xf6, 0x09, 0x4a, 0x1f, 0xa0, 0x98, 0x89, 0xfd, 0xbb, 0xd7, 0xeb, 0x5d, 0xcd, 0x0c, 0xdf,
+	0x39, 0xe7, 0x3b, 0x73, 0x38, 0xd8, 0xa5, 0x42, 0x32, 0x21, 0x7d, 0x42, 0x29, 0x48, 0x49, 0x05,
+	0x57, 0xb9, 0x58, 0xfb, 0x09, 0x70, 0x90, 0xa9, 0xf4, 0xb2, 0x5c, 0x28, 0x61, 0x3d, 0xd2, 0x18,
+	0xef, 0x1f, 0x8c, 0xf7, 0x7e, 0xbc, 0x02, 0x45, 0xc6, 0xdd, 0x4e, 0x22, 0x12, 0x51, 0x02, 0xfd,
+	0xd3, 0x4d, 0x73, 0xba, 0x83, 0x5b, 0x75, 0xa9, 0xe0, 0x52, 0x11, 0xae, 0x2a, 0x65, 0xf7, 0x3b,
+	0xc2, 0xf6, 0x12, 0xa4, 0x24, 0x09, 0xcc, 0x21, 0x03, 0x1e, 0x03, 0xa7, 0xc5, 0x92, 0x64, 0x59,
+	0xca, 0x13, 0x6b, 0x81, 0x5b, 0x4c, 0xcf, 0x22, 0x55, 0x64, 0x60, 0xa3, 0x3e, 0x1a, 0xb6, 0x27,
+	0x23, 0xef, 0x2e, 0x37, 0x5e, 0xa5, 0xf6, 0xba, 0xc8, 0x20, 0x34, 0xd9, 0x9f, 0x87, 0xf5, 0x0c,
+	0x9b, 0x4c, 0xc4, 0x9b, 0x35, 0x44, 0x9c, 0x30, 0xb0, 0x6b, 0xa5, 0xd8, 0xe0, 0x8a, 0x58, 0x49,
+	0x08, 0xb1, 0x26, 0xbe, 0x20, 0x0c, 0xac, 0x29, 0x7e, 0x98, 0x83, 0x14, 0x9b, 0x9c, 0x42, 0x14,
+	0x9f, 0x2d, 0xa7, 0x20, 0xed, 0x7a, 0xbf, 0x3e, 0x7c, 0x10, 0x76, 0xce, 0xc3, 0xf9, 0x5f, 0x33,
+	0xf7, 0x27, 0xc2, 0xad, 0xe7, 0x3a, 0xd2, 0x57, 0x8a, 0x28, 0xb0, 0x02, 0xdc, 0xcc, 0x48, 0x4e,
+	0x98, 0x2c, 0x3f, 0x65, 0x5e, 0xf3, 0xf1, 0xb2, 0xc4, 0x06, 0x8d, 0xed, 0xbe, 0x67, 0x84, 0x15,
+	0xd3, 0xfa, 0x8c, 0x70, 0xf7, 0x9c, 0xcf, 0x6f, 0x27, 0x45, 0xc4, 0x74, 0x7a, 0x76, 0xad, 0x5f,
+	0x1f, 0x9a, 0x93, 0xa7, 0xf7, 0x4a, 0xeb, 0x46, 0xf6, 0xc1, 0xe8, 0xb4, 0xea, 0xc7, 0xbe, 0xf7,
+	0xb8, 0x20, 0x6c, 0x3d, 0x73, 0x2f, 0xef, 0x71, 0x43, 0x9b, 0x5d, 0x10, 0x71, 0xdb, 0xb8, 0xa9,
+	0x9d, 0xcf, 0x1a, 0x9f, 0xbe, 0xf4, 0x8c, 0x60, 0xb1, 0x3d, 0x38, 0x68, 0x77, 0x70, 0xd0, 0xb7,
+	0x83, 0x83, 0x3e, 0x1e, 0x1d, 0x63, 0x77, 0x74, 0x8c, 0xaf, 0x47, 0xc7, 0x78, 0x33, 0x49, 0x52,
+	0xf5, 0x76, 0xb3, 0xf2, 0xa8, 0x60, 0x7e, 0x55, 0x1c, 0x7d, 0x3c, 0x91, 0xf1, 0x3b, 0xff, 0xc3,
+	0x7f, 0x2d, 0x3a, 0xb5, 0x41, 0xae, 0x9a, 0x65, 0x85, 0xa6, 0xbf, 0x02, 0x00, 0x00, 0xff, 0xff,
+	0xdc, 0xf7, 0x18, 0xda, 0xc2, 0x02, 0x00, 0x00,
 }
 
 func (m *MessageDependencyMapping) Marshal() (dAtA []byte, err error) {
@@ -285,6 +252,53 @@ func (m *MessageDependencyMapping) MarshalToSizedBuffer(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
+func (m *GenesisState) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GenesisState) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GenesisState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.MessageDependencyMapping) > 0 {
+		for iNdEx := len(m.MessageDependencyMapping) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.MessageDependencyMapping[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenesis(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.Params.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenesis(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
 func (m *Params) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -305,20 +319,6 @@ func (m *Params) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.MessageDependencyMapping) > 0 {
-		for iNdEx := len(m.MessageDependencyMapping) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.MessageDependencyMapping[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintGenesis(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
-		}
-	}
 	return len(dAtA) - i, nil
 }
 
@@ -333,17 +333,6 @@ func encodeVarintGenesis(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *GenesisState) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = m.Params.Size()
-	n += 1 + l + sovGenesis(uint64(l))
-	return n
-}
-
 func (m *MessageDependencyMapping) Size() (n int) {
 	if m == nil {
 		return 0
@@ -365,12 +354,14 @@ func (m *MessageDependencyMapping) Size() (n int) {
 	return n
 }
 
-func (m *Params) Size() (n int) {
+func (m *GenesisState) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
+	l = m.Params.Size()
+	n += 1 + l + sovGenesis(uint64(l))
 	if len(m.MessageDependencyMapping) > 0 {
 		for _, e := range m.MessageDependencyMapping {
 			l = e.Size()
@@ -380,94 +371,20 @@ func (m *Params) Size() (n int) {
 	return n
 }
 
+func (m *Params) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
 func sovGenesis(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozGenesis(x uint64) (n int) {
 	return sovGenesis(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (m *GenesisState) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGenesis
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: GenesisState: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GenesisState: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Params", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGenesis
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGenesis
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthGenesis
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.Params.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGenesis(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthGenesis
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
 }
 func (m *MessageDependencyMapping) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -589,7 +506,7 @@ func (m *MessageDependencyMapping) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Params) Unmarshal(dAtA []byte) error {
+func (m *GenesisState) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -612,13 +529,46 @@ func (m *Params) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Params: wiretype end group for non-group")
+			return fmt.Errorf("proto: GenesisState: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Params: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GenesisState: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Params", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenesis
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Params.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field MessageDependencyMapping", wireType)
 			}
@@ -652,6 +602,56 @@ func (m *Params) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenesis(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenesis
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Params) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenesis
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Params: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Params: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenesis(dAtA[iNdEx:])

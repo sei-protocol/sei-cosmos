@@ -44,17 +44,30 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 func (k Keeper) GetResourceDepedencyMapping(ctx sdk.Context, moduleName string, messageType string) types.MessageDependencyMapping {
 	store := ctx.KVStore(k.storeKey)
 	b := store.Get(types.GetResourceKey(moduleName, messageType))
-	depdencyMapping := types.MessageDependencyMapping{}
-	k.cdc.MustUnmarshal(b, &depdencyMapping)
-	return depdencyMapping
+	dependencyMapping := types.MessageDependencyMapping{}
+	k.cdc.MustUnmarshal(b, &dependencyMapping)
+	return dependencyMapping
 }
 
 func (k Keeper) SetResourceDepedencyMapping(
 	ctx sdk.Context,
-	depdencyMapping types.MessageDependencyMapping,
+	dependencyMapping types.MessageDependencyMapping,
 ) {
 	store := ctx.KVStore(k.storeKey)
-	b := k.cdc.MustMarshal(&depdencyMapping)
-	resourceKey := types.GetResourceKey(depdencyMapping.GetModuleName().String(), depdencyMapping.GetMessageType().String())
+	b := k.cdc.MustMarshal(&dependencyMapping)
+	resourceKey := types.GetResourceKey(dependencyMapping.GetModuleName().String(), dependencyMapping.GetMessageType().String())
 	store.Set(resourceKey, b)
+}
+
+func (k Keeper) IterateResourceKeys(ctx sdk.Context, handler func(dependencyMapping types.MessageDependencyMapping) (stop bool)) {
+	store := ctx.KVStore(k.storeKey)
+	iter := sdk.KVStorePrefixIterator(store, types.GetResourceDependencyMappingKey())
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		dependencyMapping := types.MessageDependencyMapping{}
+		k.cdc.MustUnmarshal(iter.Value(), &dependencyMapping)
+		if handler(dependencyMapping) {
+			break
+		}
+	}
 }

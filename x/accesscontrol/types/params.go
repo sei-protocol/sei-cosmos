@@ -5,11 +5,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Parameter store keys
-var (
-	KeyMessageDependencyMapping = []byte("MessageDependencyMapping")
-)
-
 func ParamKeyTable() paramtypes.KeyTable {
 	return paramtypes.NewKeyTable().RegisterParamSet(&Params{})
 }
@@ -20,36 +15,18 @@ func (p Params) String() string {
 }
 
 func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
-	return paramtypes.ParamSetPairs{
-		paramtypes.NewParamSetPair(KeyMessageDependencyMapping, &p.MessageDependencyMapping, validateMessageDependencyMapping),
-	}
+	return paramtypes.ParamSetPairs{}
 }
 
-func NewParams(messageDependencyMapping []MessageDependencyMapping) Params {
-	return Params{
-		MessageDependencyMapping: messageDependencyMapping,
-	}
+func NewParams() Params {
+	return Params{}
 }
 
 // default access control module parameters
 func DefaultParams() Params {
-	return NewParams([]MessageDependencyMapping{
-		{
-			MessageType:          MessageType_ANY_MESSAGE,
-			ModuleName:           Module_ANY_MODULE,
-			ResourceDependencies: []string{ResourceType_ANY.String()},
-		},
-	})
+	return NewParams()
 }
 
 func (p Params) Validate() error {
-	if err := validateMessageDependencyMapping(p.MessageDependencyMapping); err != nil {
-		return err
-	}
-	return nil
-}
-
-// TODO(bweng):: add validation logic for msg dep mapping
-func validateMessageDependencyMapping(i interface{}) error {
 	return nil
 }

@@ -6,17 +6,29 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 )
 
+func DefaultMessageDependencyMapping() []MessageDependencyMapping {
+	return []MessageDependencyMapping{
+		{
+			MessageType:          MessageType_ANY_MESSAGE,
+			ModuleName:           Module_ANY_MODULE,
+			ResourceDependencies: []string{ResourceType_ANY.String()},
+		},
+	}
+}
+
 // NewGenesisState creates a new GenesisState object
-func NewGenesisState(params Params) *GenesisState {
+func NewGenesisState(params Params, messageDependencyMapping []MessageDependencyMapping) *GenesisState {
 	return &GenesisState{
-		Params: params,
+		Params:                   params,
+		MessageDependencyMapping: messageDependencyMapping,
 	}
 }
 
 // DefaultGenesisState - default GenesisState used by columbus-2
 func DefaultGenesisState() *GenesisState {
 	return &GenesisState{
-		Params: DefaultParams(),
+		Params:                   DefaultParams(),
+		MessageDependencyMapping: DefaultMessageDependencyMapping(),
 	}
 }
 

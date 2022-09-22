@@ -55,7 +55,7 @@ func (k Keeper) SetResourceDepedencyMapping(
 ) {
 	store := ctx.KVStore(k.storeKey)
 	b := k.cdc.MustMarshal(&dependencyMapping)
-	resourceKey := types.GetResourceKey(dependencyMapping.GetModuleName().String(), dependencyMapping.GetMessageType().String())
+	resourceKey := types.GetResourceKey(dependencyMapping.GetModuleName(), dependencyMapping.GetMessageType().String())
 	store.Set(resourceKey, b)
 }
 

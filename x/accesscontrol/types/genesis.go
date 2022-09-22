@@ -10,8 +10,10 @@ func DefaultMessageDependencyMapping() []MessageDependencyMapping {
 	return []MessageDependencyMapping{
 		{
 			MessageType:          MessageType_ANY_MESSAGE,
-			ModuleName:           Module_ANY_MODULE,
-			ResourceDependencies: []string{ResourceType_ANY.String()},
+			ModuleName:           "ANY",
+			AccessOps: []AccessOperation {
+				{AccessType: AccessType_UNKNOWN, ResourceType: ResourceType_ANY, IdentifierTemplate: "*"},
+			},
 		},
 	}
 }

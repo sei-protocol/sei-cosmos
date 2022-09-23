@@ -41,21 +41,21 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
-func (k Keeper) GetResourceDepedencyMapping(ctx sdk.Context, moduleName string, messageType string) types.MessageDependencyMapping {
+func (k Keeper) GetResourceDependencyMapping(ctx sdk.Context, messageKey string) types.MessageDependencyMapping {
 	store := ctx.KVStore(k.storeKey)
-	b := store.Get(types.GetResourceKey(moduleName, messageType))
+	b := store.Get(types.GetResourceDependencyKey(messageKey))
 	dependencyMapping := types.MessageDependencyMapping{}
 	k.cdc.MustUnmarshal(b, &dependencyMapping)
 	return dependencyMapping
 }
 
-func (k Keeper) SetResourceDepedencyMapping(
+func (k Keeper) SetResourceDependencyMapping(
 	ctx sdk.Context,
 	dependencyMapping types.MessageDependencyMapping,
 ) {
 	store := ctx.KVStore(k.storeKey)
 	b := k.cdc.MustMarshal(&dependencyMapping)
-	resourceKey := types.GetResourceKey(dependencyMapping.GetModuleName(), dependencyMapping.GetMessageType().String())
+	resourceKey := types.GetResourceDependencyKey(dependencyMapping.GetMessageKey())
 	store.Set(resourceKey, b)
 }
 

@@ -9,7 +9,7 @@ import (
 func (k Keeper) InitGenesis(ctx sdk.Context, genState types.GenesisState) {
 	k.SetParams(ctx, genState.Params)
 	for _, resourceDepedencyMapping := range genState.GetMessageDependencyMapping() {
-		k.SetResourceDepedencyMapping(ctx, resourceDepedencyMapping)
+		k.SetResourceDependencyMapping(ctx, resourceDepedencyMapping)
 	}
 }
 

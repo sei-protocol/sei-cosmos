@@ -39,6 +39,8 @@ type Context struct {
 	consParams    *tmproto.ConsensusParams
 	eventManager  *EventManager
 	priority      int64 // The tx priority, only relevant in CheckTx
+	txCompletionChannels [][]chan interface{}
+	txBlockingChannels [][]chan interface{}
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -60,6 +62,8 @@ func (c Context) IsReCheckTx() bool           { return c.recheckTx }
 func (c Context) MinGasPrices() DecCoins      { return c.minGasPrice }
 func (c Context) EventManager() *EventManager { return c.eventManager }
 func (c Context) Priority() int64             { return c.priority }
+func (c Context) TxCompletionChannels() [][]chan interface{} { return c.txCompletionChannels }
+func (c Context) TxBlockingChannels() [][]chan interface{} 	 { return c.txBlockingChannels }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
@@ -219,6 +223,18 @@ func (c Context) WithConsensusParams(params *tmproto.ConsensusParams) Context {
 // WithEventManager returns a Context with an updated event manager
 func (c Context) WithEventManager(em *EventManager) Context {
 	c.eventManager = em
+	return c
+}
+
+// WithEventManager returns a Context with an updated list of completion channel
+func (c Context) WithTxCompletionChannels(completionChannels [][](chan interface{})) Context {
+	c.txCompletionChannels = completionChannels
+	return c
+}
+
+// WithEventManager returns a Context with an updated list of blocking channels for completion signals
+func (c Context) WithTxBlockingChannels(blockingChannels [][](chan interface{})) Context {
+	c.txBlockingChannels = blockingChannels
 	return c
 }
 

@@ -226,13 +226,13 @@ func (c Context) WithEventManager(em *EventManager) Context {
 	return c
 }
 
-// WithEventManager returns a Context with an updated list of completion channel
+// WithTxCompletionChannels returns a Context with an updated list of completion channel
 func (c Context) WithTxCompletionChannels(completionChannels [][](chan interface{})) Context {
 	c.txCompletionChannels = completionChannels
 	return c
 }
 
-// WithEventManager returns a Context with an updated list of blocking channels for completion signals
+// WithTxBlockingChannels returns a Context with an updated list of blocking channels for completion signals
 func (c Context) WithTxBlockingChannels(blockingChannels [][](chan interface{})) Context {
 	c.txBlockingChannels = blockingChannels
 	return c

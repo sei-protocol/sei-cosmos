@@ -41,10 +41,12 @@ type Context struct {
 	eventManager  *EventManager
 	priority      int64 // The tx priority, only relevant in CheckTx
 
-	// Map of MessageIndex -> AccessOperation -> Channel
-	txBlockingChannels 		map[int]map[*acltypes.AccessOperation][]chan interface{}
-	txCompletionChannels 	map[int]map[*acltypes.AccessOperation][]chan interface{}
+	txBlockingChannels 		MessageAccessOpsChannelMapping
+	txCompletionChannels 	MessageAccessOpsChannelMapping
 }
+
+// Alias for Map of MessageIndex -> AccessOperation -> Channel
+type MessageAccessOpsChannelMapping = map[int]map[*acltypes.AccessOperation][]chan interface{}
 
 // Proposed rename, not done to avoid API breakage
 type Request = Context
@@ -230,13 +232,13 @@ func (c Context) WithEventManager(em *EventManager) Context {
 }
 
 // WithTxCompletionChannels returns a Context with an updated list of completion channel
-func (c Context) WithTxCompletionChannels(completionChannels map[int]map[*acltypes.AccessOperation][]chan interface{}) Context {
+func (c Context) WithTxCompletionChannels(completionChannels MessageAccessOpsChannelMapping) Context {
 	c.txCompletionChannels = completionChannels
 	return c
 }
 
 // WithTxBlockingChannels returns a Context with an updated list of blocking channels for completion signals
-func (c Context) WithTxBlockingChannels(blockingChannels map[int]map[*acltypes.AccessOperation][]chan interface{}) Context {
+func (c Context) WithTxBlockingChannels(blockingChannels MessageAccessOpsChannelMapping) Context {
 	c.txBlockingChannels = blockingChannels
 	return c
 }

@@ -41,9 +41,9 @@ type Context struct {
 	eventManager  *EventManager
 	priority      int64 // The tx priority, only relevant in CheckTx
 
-	// Map of AccessOperatin 
-	txBlockingChannels 		map[*acltypes.AccessOperation][]chan interface{}
-	txCompletionChannels 	map[*acltypes.AccessOperation][]chan interface{}
+	// Map of MessageIndex -> AccessOperation -> Channel
+	txBlockingChannels 		map[int]map[*acltypes.AccessOperation][]chan interface{}
+	txCompletionChannels 	map[int]map[*acltypes.AccessOperation][]chan interface{}
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -65,8 +65,8 @@ func (c Context) IsReCheckTx() bool           { return c.recheckTx }
 func (c Context) MinGasPrices() DecCoins      { return c.minGasPrice }
 func (c Context) EventManager() *EventManager { return c.eventManager }
 func (c Context) Priority() int64             { return c.priority }
-func (c Context) TxCompletionChannels() map[*acltypes.AccessOperation][]chan interface{} { return c.txCompletionChannels }
-func (c Context) TxBlockingChannels() map[*acltypes.AccessOperation][]chan interface{} 	 { return c.txBlockingChannels }
+func (c Context) TxCompletionChannels() map[int]map[*acltypes.AccessOperation][]chan interface{} { return c.txCompletionChannels }
+func (c Context) TxBlockingChannels() map[int]map[*acltypes.AccessOperation][]chan interface{}	 { return c.txBlockingChannels }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
@@ -230,13 +230,13 @@ func (c Context) WithEventManager(em *EventManager) Context {
 }
 
 // WithTxCompletionChannels returns a Context with an updated list of completion channel
-func (c Context) WithTxCompletionChannels(completionChannels map[*acltypes.AccessOperation][]chan interface{}) Context {
+func (c Context) WithTxCompletionChannels(completionChannels map[int]map[*acltypes.AccessOperation][]chan interface{}) Context {
 	c.txCompletionChannels = completionChannels
 	return c
 }
 
 // WithTxBlockingChannels returns a Context with an updated list of blocking channels for completion signals
-func (c Context) WithTxBlockingChannels(blockingChannels map[*acltypes.AccessOperation][]chan interface{}) Context {
+func (c Context) WithTxBlockingChannels(blockingChannels map[int]map[*acltypes.AccessOperation][]chan interface{}) Context {
 	c.txBlockingChannels = blockingChannels
 	return c
 }

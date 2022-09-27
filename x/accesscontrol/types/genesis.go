@@ -20,23 +20,23 @@ func DefaultMessageDependencyMapping() []acltypes.MessageDependencyMapping {
 }
 
 // NewGenesisState creates a new GenesisState object
-func NewGenesisState(params acltypes.Params, messageDependencyMapping []acltypes.MessageDependencyMapping) *acltypes.GenesisState {
-	return &acltypes.GenesisState{
+func NewGenesisState(params Params, messageDependencyMapping []acltypes.MessageDependencyMapping) *GenesisState {
+	return &GenesisState{
 		Params:                   params,
 		MessageDependencyMapping: messageDependencyMapping,
 	}
 }
 
 // DefaultGenesisState - default GenesisState used by columbus-2
-func DefaultGenesisState() *acltypes.GenesisState {
-	return &acltypes.GenesisState{
-		Params:                   acltypes.DefaultParams(),
+func DefaultGenesisState() *GenesisState {
+	return &GenesisState{
+		Params:                   DefaultParams(),
 		MessageDependencyMapping: DefaultMessageDependencyMapping(),
 	}
 }
 
 // ValidateGenesis validates the oracle genesis state
-func ValidateGenesis(data acltypes.GenesisState) error {
+func ValidateGenesis(data GenesisState) error {
 	for _, mapping := range data.MessageDependencyMapping {
 		err := ValidateMessageDependencyMapping(mapping)
 		if err != nil {
@@ -48,8 +48,8 @@ func ValidateGenesis(data acltypes.GenesisState) error {
 
 // GetGenesisStateFromAppState returns x/oracle GenesisState given raw application
 // genesis state.
-func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *acltypes.GenesisState {
-	var genesisState acltypes.GenesisState
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *GenesisState {
+	var genesisState GenesisState
 
 	if appState[ModuleName] != nil {
 		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)

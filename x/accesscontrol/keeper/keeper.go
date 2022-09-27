@@ -27,7 +27,7 @@ func NewKeeper(
 	paramSpace paramtypes.Subspace,
 ) Keeper {
 	if !paramSpace.HasKeyTable() {
-		paramSpace = paramSpace.WithKeyTable(acltypes.ParamKeyTable())
+		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
 	}
 
 	return Keeper{

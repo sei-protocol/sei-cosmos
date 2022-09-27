@@ -41,8 +41,8 @@ type Context struct {
 	eventManager  *EventManager
 	priority      int64 // The tx priority, only relevant in CheckTx
 
-	txBlockingChannels 		MessageAccessOpsChannelMapping
-	txCompletionChannels 	MessageAccessOpsChannelMapping
+	txBlockingChannels		MessageAccessOpsChannelMapping
+	txCompletionChannels	MessageAccessOpsChannelMapping
 }
 
 // Alias for Map of MessageIndex -> AccessOperation -> Channel

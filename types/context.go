@@ -230,13 +230,13 @@ func (c Context) WithEventManager(em *EventManager) Context {
 }
 
 // WithTxCompletionChannels returns a Context with an updated list of completion channel
-func (c Context) WithTxCompletionChannels(completionChannels [][](chan interface{})) Context {
+func (c Context) WithTxCompletionChannels(completionChannels map[*acltypes.AccessOperation][]chan interface{}) Context {
 	c.txCompletionChannels = completionChannels
 	return c
 }
 
 // WithTxBlockingChannels returns a Context with an updated list of blocking channels for completion signals
-func (c Context) WithTxBlockingChannels(blockingChannels [][](chan interface{})) Context {
+func (c Context) WithTxBlockingChannels(blockingChannels map[*acltypes.AccessOperation][]chan interface{}) Context {
 	c.txBlockingChannels = blockingChannels
 	return c
 }

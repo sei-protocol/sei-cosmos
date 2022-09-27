@@ -12,6 +12,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/gaskv"
 	stypes "github.com/cosmos/cosmos-sdk/store/types"
+	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 )
 
 /*
@@ -39,8 +40,10 @@ type Context struct {
 	consParams    *tmproto.ConsensusParams
 	eventManager  *EventManager
 	priority      int64 // The tx priority, only relevant in CheckTx
-	txCompletionChannels [][]chan interface{}
-	txBlockingChannels [][]chan interface{}
+
+	// Map of AccessOperatin 
+	txBlockingChannels map[*acltypes.AccessOperation][]chan interface{}
+	txCompletionChannels map[*acltypes.AccessOperation][]chan interface{}
 }
 
 // Proposed rename, not done to avoid API breakage

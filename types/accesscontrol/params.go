@@ -1,4 +1,4 @@
-package types
+package accesscontrol
 
 import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"

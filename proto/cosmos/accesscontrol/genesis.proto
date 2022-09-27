@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "cosmos/accesscontrol/constants.proto";
 import "cosmos/accesscontrol/accesscontrol.proto";
 
-option go_package = "github.com/cosmos/cosmos-sdk/x/accesscontrol/types";
+option go_package = "github.com/cosmos/cosmos-sdk/types/accesscontrol";
 
 message GenesisState {
     Params params = 1 [(gogoproto.nullable) = false];

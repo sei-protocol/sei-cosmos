@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/keeper"
@@ -52,7 +53,7 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 
 // ValidateGenesis performs genesis state validation for the accesscontrol module.
 func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncodingConfig, bz json.RawMessage) error {
-	var data types.GenesisState
+	var data acltypes.GenesisState
 	if err := cdc.UnmarshalJSON(bz, &data); err != nil {
 		println("Validate Failed", bz)
 		return fmt.Errorf("failed to unmarshal %s genesis state: %w", types.ModuleName, err)
@@ -118,7 +119,7 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {}
 // InitGenesis performs genesis initialization for the accesscontrol module. It returns
 // no validator updates.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
-	var genState types.GenesisState
+	var genState acltypes.GenesisState
 	cdc.MustUnmarshalJSON(data, &genState)
 
 	am.keeper.InitGenesis(ctx, genState)

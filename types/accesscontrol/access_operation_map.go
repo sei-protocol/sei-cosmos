@@ -6,7 +6,7 @@ type MessageAccessOpsChannelMapping = map[int]AccessOpsChannelMapping
 // Alias for Map of AccessOperation -> Channel
 type AccessOpsChannelMapping = map[*AccessOperation][]chan interface{}
 
-func WaitForSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
+func WaitForAllSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
 	for _, channels := range accessOpsToChannelsMap {
 		for _, channel := range channels {
 			<-channel
@@ -14,10 +14,10 @@ func WaitForSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
 	}
 }
 
-func SendSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
-	for accessOp, channels := range accessOpsToChannelsMap {
+func SendAllSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
+	for _, channels := range accessOpsToChannelsMap {
 		for _, channel := range channels {
-			channel <- accessOp
+			channel <- struct{}{}
 		}
 	}
 }

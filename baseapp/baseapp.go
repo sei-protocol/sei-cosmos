@@ -778,11 +778,11 @@ func wrappedHandler(ctx sdk.Context, msg sdk.Msg, handler sdk.Handler) (*sdk.Res
 	messageIndex := ctx.MessageIndex()
 
 	// Defer sending completion channels to the end of the message 
-	defer acltypes.SendSignals(ctx.TxCompletionChannels()[messageIndex])
+	defer acltypes.SendAllSignals(ctx.TxCompletionChannels()[messageIndex])
 
 	// Wait for signals to complete, this should be blocking 
 	// TODO:: More granular waits on access time instead
-	acltypes.WaitForSignals(ctx.TxBlockingChannels()[messageIndex])
+	acltypes.WaitForAllSignals(ctx.TxBlockingChannels()[messageIndex])
 
 	return handler(ctx, msg)
 }

@@ -4,7 +4,7 @@ package accesscontrol
 type MessageAccessOpsChannelMapping = map[int]AccessOpsChannelMapping
 
 // Alias for Map of AccessOperation -> Channel
-type AccessOpsChannelMapping = map[*AccessOperation][]chan interface{}
+type AccessOpsChannelMapping = map[AccessOperation][]chan interface{}
 
 func WaitForAllSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
 	for _, channels := range accessOpsToChannelsMap {

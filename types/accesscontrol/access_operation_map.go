@@ -6,7 +6,6 @@ type MessageAccessOpsChannelMapping = map[int]AccessOpsChannelMapping
 // Alias for Map of AccessOperation -> Channel
 type AccessOpsChannelMapping = map[*AccessOperation][]chan interface{}
 
-// Waits for all signals to complete before proceeding
 func WaitForSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
 	for _, channels := range accessOpsToChannelsMap {
 		for _, channel := range channels {

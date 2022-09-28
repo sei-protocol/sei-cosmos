@@ -777,10 +777,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 func wrappedHandler(ctx sdk.Context, msg sdk.Msg, handler sdk.Handler) (*sdk.Result, error) {
 	messageIndex := ctx.MessageIndex()
 
-	// Defer sending completion channels to the end of the message
+	// Defer sending completion channels to the end of the message 
 	defer acltypes.SendSignals(ctx.TxCompletionChannels()[messageIndex])
 
-	// Wait for signals to complete, this should be a blocking event
+	// Wait for signals to complete, this should be blocking 
 	// TODO:: More granular waits on access time instead
 	acltypes.WaitForSignals(ctx.TxBlockingChannels()[messageIndex])
 

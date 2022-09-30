@@ -187,7 +187,7 @@ func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abc
 // the ResponseCheckTx will contain relevant gas execution context.
 func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "check_tx")
-
+	app.Logger().Info("CheckTx:: checking TX")
 	var mode runTxMode
 
 	switch {

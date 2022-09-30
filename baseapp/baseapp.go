@@ -654,6 +654,7 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // returned if the tx does not run out of gas and if all the messages are valid
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
+	ctx.Logger().Info("runTx:: running Tx")
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
@@ -755,6 +756,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
+	ctx.Logger().Info("runTx:: running Msgs")
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
 
 	if err == nil && mode == runTxModeDeliver {
@@ -782,8 +784,9 @@ func wrappedHandler(ctx sdk.Context, msg sdk.Msg, handler sdk.Handler) (*sdk.Res
 
 	// Wait for signals to complete, this should be blocking 
 	// TODO:: More granular waits on access time instead
+	ctx.Logger().Info("wrappedHandler:: waiting for signals")
 	acltypes.WaitForAllSignals(ctx.TxBlockingChannels()[messageIndex])
-
+	ctx.Logger().Info("wrappedHandler:: recieved all for signals")
 	return handler(ctx, msg)
 }
 
@@ -821,7 +824,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
 			ctx = ctx.WithMessageIndex(i)
 			// ADR 031 request type routing
+			ctx.Logger().Info("runMsgs:: handling msg")
 			msgResult, err = wrappedHandler(ctx, msg, handler)
+			ctx.Logger().Info("runMsgs:: msg handled!")
 			eventMsgName = sdk.MsgTypeURL(msg)
 		} else if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 			// legacy sdk.Msg routing

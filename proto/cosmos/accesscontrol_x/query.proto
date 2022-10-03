@@ -42,16 +42,16 @@ message ResourceDepedencyMappingFromMessageKeyRequest {
 }
 
 message ResourceDepedencyMappingFromMessageKeyResponse {
-    cosmos.accesscontrol.v1beta1.MessageDependencyMapping message_dependency_mapping = 1 [ 
+    cosmos.accesscontrol.v1beta1.MessageDependencyMapping message_dependency_mapping = 1 [
         (gogoproto.nullable) = false,
         (gogoproto.moretags) = "yaml:\"message_dependency_mapping\""
     ];
 }
 
 message ListResourceDepedencyMappingRequest {}
-  
+
 message ListResourceDepedencyMappingResponse {
-    repeated cosmos.accesscontrol.v1beta1.MessageDependencyMapping message_dependency_mapping_list = 1 [ 
+    repeated cosmos.accesscontrol.v1beta1.MessageDependencyMapping message_dependency_mapping_list = 1 [
         (gogoproto.nullable) = false,
         (gogoproto.moretags) = "yaml:\"message_dependency_mapping_list\""
     ];

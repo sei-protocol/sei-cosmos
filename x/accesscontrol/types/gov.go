@@ -9,46 +9,46 @@ import (
 )
 
 const (
-	ProposalUpdateResourceDepedencyMapping = "UpdateResourceDepedencyMapping"
+	ProposalUpdateResourceDependencyMapping = "UpdateResourceDependencyMapping"
 )
 
 func init() {
 	// for routing
-	govtypes.RegisterProposalType(ProposalUpdateResourceDepedencyMapping)
+	govtypes.RegisterProposalType(ProposalUpdateResourceDependencyMapping)
 	// for marshal and unmarshal
-	govtypes.RegisterProposalTypeCodec(&UpdateResourceDepedencyMappingProposal{}, "tokenfactory/UpdateResourceDepedencyMappingProposal")
+	govtypes.RegisterProposalTypeCodec(&UpdateResourceDependencyMappingProposal{}, "tokenfactory/UpdateResourceDependencyMappingProposal")
 }
 
-var _ govtypes.Content = &UpdateResourceDepedencyMappingProposal{}
+var _ govtypes.Content = &UpdateResourceDependencyMappingProposal{}
 
-func NewRegisterPairsProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) UpdateResourceDepedencyMappingProposal {
-	return UpdateResourceDepedencyMappingProposal{
+func NewRegisterPairsProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) UpdateResourceDependencyMappingProposal {
+	return UpdateResourceDependencyMappingProposal{
 		Title:       title,
 		Description: description,
 		MessageDependencyMapping : messageDependencyMapping,
 	}
 }
 
-func NewUpdateResourceDepedencyMappingProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) *UpdateResourceDepedencyMappingProposal {
-	return &UpdateResourceDepedencyMappingProposal{title, description, messageDependencyMapping}
+func NewUpdateResourceDependencyMappingProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) *UpdateResourceDependencyMappingProposal {
+	return &UpdateResourceDependencyMappingProposal{title, description, messageDependencyMapping}
 }
 
-func (p *UpdateResourceDepedencyMappingProposal) GetTitle() string { return p.Title }
+func (p *UpdateResourceDependencyMappingProposal) GetTitle() string { return p.Title }
 
-func (p *UpdateResourceDepedencyMappingProposal) GetDescription() string { return p.Description }
+func (p *UpdateResourceDependencyMappingProposal) GetDescription() string { return p.Description }
 
-func (p *UpdateResourceDepedencyMappingProposal) ProposalRoute() string { return RouterKey }
+func (p *UpdateResourceDependencyMappingProposal) ProposalRoute() string { return RouterKey }
 
-func (p *UpdateResourceDepedencyMappingProposal) ProposalType() string {
-	return ProposalUpdateResourceDepedencyMapping
+func (p *UpdateResourceDependencyMappingProposal) ProposalType() string {
+	return ProposalUpdateResourceDependencyMapping
 }
 
-func (p *UpdateResourceDepedencyMappingProposal) ValidateBasic() error {
+func (p *UpdateResourceDependencyMappingProposal) ValidateBasic() error {
 	err := govtypes.ValidateAbstract(p)
 	return err
 }
 
-func (p UpdateResourceDepedencyMappingProposal) String() string {
+func (p UpdateResourceDependencyMappingProposal) String() string {
 	var b strings.Builder
 	b.WriteString(
 		fmt.Sprintf(`Add Creators to Denom Fee Whitelist Proposal:

@@ -7,8 +7,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
 )
 
-func ParseUpdateResourceDepedencyMappingProposalFile(cdc codec.JSONCodec, proposalFile string) (types.UpdateResourceDepedencyMappingProposalJsonFile, error) {
-	proposal := types.UpdateResourceDepedencyMappingProposalJsonFile{}
+func ParseUpdateResourceDependencyMappingProposalFile(cdc codec.JSONCodec, proposalFile string) (types.UpdateResourceDependencyMappingProposalJsonFile, error) {
+	proposal := types.UpdateResourceDependencyMappingProposalJsonFile{}
 
 	contents, err := ioutil.ReadFile(proposalFile)
 	if err != nil {

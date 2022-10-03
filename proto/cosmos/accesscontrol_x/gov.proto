@@ -7,7 +7,7 @@ import "cosmos/accesscontrol/accesscontrol.proto";
 
 option go_package = "github.com/cosmos/cosmos-sdk/x/accesscontrol/types";
 
-message UpdateResourceDepedencyMappingProposal {
+message UpdateResourceDependencyMappingProposal {
     option (gogoproto.equal) = false;
     option (gogoproto.goproto_getters) = false;
     option (gogoproto.goproto_stringer) = false;
@@ -26,7 +26,7 @@ message UpdateResourceDepedencyMappingProposal {
     ];
 }
 
-message UpdateResourceDepedencyMappingProposalJsonFile {
+message UpdateResourceDependencyMappingProposalJsonFile {
     string title = 1 [
         (gogoproto.moretags) = "yaml:\"title\"",
         (gogoproto.jsontag) = "title"

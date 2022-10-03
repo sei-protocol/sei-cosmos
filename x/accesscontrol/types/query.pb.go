@@ -112,26 +112,26 @@ func (m *QueryParamsResponse) GetParams() Params {
 	return Params{}
 }
 
-type ResourceDepedencyMappingFromMessageKeyRequest struct {
+type ResourceDependencyMappingFromMessageKeyRequest struct {
 	MessageKey string `protobuf:"bytes,1,opt,name=message_key,json=messageKey,proto3" json:"message_key,omitempty" yaml:"message_key"`
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) Reset() {
-	*m = ResourceDepedencyMappingFromMessageKeyRequest{}
+func (m *ResourceDependencyMappingFromMessageKeyRequest) Reset() {
+	*m = ResourceDependencyMappingFromMessageKeyRequest{}
 }
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) String() string {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) String() string {
 	return proto.CompactTextString(m)
 }
-func (*ResourceDepedencyMappingFromMessageKeyRequest) ProtoMessage() {}
-func (*ResourceDepedencyMappingFromMessageKeyRequest) Descriptor() ([]byte, []int) {
+func (*ResourceDependencyMappingFromMessageKeyRequest) ProtoMessage() {}
+func (*ResourceDependencyMappingFromMessageKeyRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_d83f2274e13e6a16, []int{2}
 }
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) XXX_Unmarshal(b []byte) error {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ResourceDependencyMappingFromMessageKeyRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -141,45 +141,45 @@ func (m *ResourceDepedencyMappingFromMessageKeyRequest) XXX_Marshal(b []byte, de
 		return b[:n], nil
 	}
 }
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyRequest.Merge(m, src)
+func (m *ResourceDependencyMappingFromMessageKeyRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResourceDependencyMappingFromMessageKeyRequest.Merge(m, src)
 }
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) XXX_Size() int {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyRequest.DiscardUnknown(m)
+func (m *ResourceDependencyMappingFromMessageKeyRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResourceDependencyMappingFromMessageKeyRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyRequest proto.InternalMessageInfo
+var xxx_messageInfo_ResourceDependencyMappingFromMessageKeyRequest proto.InternalMessageInfo
 
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) GetMessageKey() string {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) GetMessageKey() string {
 	if m != nil {
 		return m.MessageKey
 	}
 	return ""
 }
 
-type ResourceDepedencyMappingFromMessageKeyResponse struct {
+type ResourceDependencyMappingFromMessageKeyResponse struct {
 	MessageDependencyMapping accesscontrol.MessageDependencyMapping `protobuf:"bytes,1,opt,name=message_dependency_mapping,json=messageDependencyMapping,proto3" json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) Reset() {
-	*m = ResourceDepedencyMappingFromMessageKeyResponse{}
+func (m *ResourceDependencyMappingFromMessageKeyResponse) Reset() {
+	*m = ResourceDependencyMappingFromMessageKeyResponse{}
 }
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) String() string {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) String() string {
 	return proto.CompactTextString(m)
 }
-func (*ResourceDepedencyMappingFromMessageKeyResponse) ProtoMessage() {}
-func (*ResourceDepedencyMappingFromMessageKeyResponse) Descriptor() ([]byte, []int) {
+func (*ResourceDependencyMappingFromMessageKeyResponse) ProtoMessage() {}
+func (*ResourceDependencyMappingFromMessageKeyResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_d83f2274e13e6a16, []int{3}
 }
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) XXX_Unmarshal(b []byte) error {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ResourceDependencyMappingFromMessageKeyResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -189,40 +189,40 @@ func (m *ResourceDepedencyMappingFromMessageKeyResponse) XXX_Marshal(b []byte, d
 		return b[:n], nil
 	}
 }
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyResponse.Merge(m, src)
+func (m *ResourceDependencyMappingFromMessageKeyResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ResourceDependencyMappingFromMessageKeyResponse.Merge(m, src)
 }
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) XXX_Size() int {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyResponse.DiscardUnknown(m)
+func (m *ResourceDependencyMappingFromMessageKeyResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ResourceDependencyMappingFromMessageKeyResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ResourceDepedencyMappingFromMessageKeyResponse proto.InternalMessageInfo
+var xxx_messageInfo_ResourceDependencyMappingFromMessageKeyResponse proto.InternalMessageInfo
 
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) GetMessageDependencyMapping() accesscontrol.MessageDependencyMapping {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) GetMessageDependencyMapping() accesscontrol.MessageDependencyMapping {
 	if m != nil {
 		return m.MessageDependencyMapping
 	}
 	return accesscontrol.MessageDependencyMapping{}
 }
 
-type ListResourceDepedencyMappingRequest struct {
+type ListResourceDependencyMappingRequest struct {
 }
 
-func (m *ListResourceDepedencyMappingRequest) Reset()         { *m = ListResourceDepedencyMappingRequest{} }
-func (m *ListResourceDepedencyMappingRequest) String() string { return proto.CompactTextString(m) }
-func (*ListResourceDepedencyMappingRequest) ProtoMessage()    {}
-func (*ListResourceDepedencyMappingRequest) Descriptor() ([]byte, []int) {
+func (m *ListResourceDependencyMappingRequest) Reset()         { *m = ListResourceDependencyMappingRequest{} }
+func (m *ListResourceDependencyMappingRequest) String() string { return proto.CompactTextString(m) }
+func (*ListResourceDependencyMappingRequest) ProtoMessage()    {}
+func (*ListResourceDependencyMappingRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_d83f2274e13e6a16, []int{4}
 }
-func (m *ListResourceDepedencyMappingRequest) XXX_Unmarshal(b []byte) error {
+func (m *ListResourceDependencyMappingRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ListResourceDepedencyMappingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListResourceDependencyMappingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ListResourceDepedencyMappingRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ListResourceDependencyMappingRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -232,34 +232,34 @@ func (m *ListResourceDepedencyMappingRequest) XXX_Marshal(b []byte, deterministi
 		return b[:n], nil
 	}
 }
-func (m *ListResourceDepedencyMappingRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListResourceDepedencyMappingRequest.Merge(m, src)
+func (m *ListResourceDependencyMappingRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListResourceDependencyMappingRequest.Merge(m, src)
 }
-func (m *ListResourceDepedencyMappingRequest) XXX_Size() int {
+func (m *ListResourceDependencyMappingRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *ListResourceDepedencyMappingRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListResourceDepedencyMappingRequest.DiscardUnknown(m)
+func (m *ListResourceDependencyMappingRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListResourceDependencyMappingRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ListResourceDepedencyMappingRequest proto.InternalMessageInfo
+var xxx_messageInfo_ListResourceDependencyMappingRequest proto.InternalMessageInfo
 
-type ListResourceDepedencyMappingResponse struct {
+type ListResourceDependencyMappingResponse struct {
 	MessageDependencyMappingList []accesscontrol.MessageDependencyMapping `protobuf:"bytes,1,rep,name=message_dependency_mapping_list,json=messageDependencyMappingList,proto3" json:"message_dependency_mapping_list" yaml:"message_dependency_mapping_list"`
 }
 
-func (m *ListResourceDepedencyMappingResponse) Reset()         { *m = ListResourceDepedencyMappingResponse{} }
-func (m *ListResourceDepedencyMappingResponse) String() string { return proto.CompactTextString(m) }
-func (*ListResourceDepedencyMappingResponse) ProtoMessage()    {}
-func (*ListResourceDepedencyMappingResponse) Descriptor() ([]byte, []int) {
+func (m *ListResourceDependencyMappingResponse) Reset()         { *m = ListResourceDependencyMappingResponse{} }
+func (m *ListResourceDependencyMappingResponse) String() string { return proto.CompactTextString(m) }
+func (*ListResourceDependencyMappingResponse) ProtoMessage()    {}
+func (*ListResourceDependencyMappingResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_d83f2274e13e6a16, []int{5}
 }
-func (m *ListResourceDepedencyMappingResponse) XXX_Unmarshal(b []byte) error {
+func (m *ListResourceDependencyMappingResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ListResourceDepedencyMappingResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListResourceDependencyMappingResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ListResourceDepedencyMappingResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ListResourceDependencyMappingResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -269,19 +269,19 @@ func (m *ListResourceDepedencyMappingResponse) XXX_Marshal(b []byte, determinist
 		return b[:n], nil
 	}
 }
-func (m *ListResourceDepedencyMappingResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListResourceDepedencyMappingResponse.Merge(m, src)
+func (m *ListResourceDependencyMappingResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListResourceDependencyMappingResponse.Merge(m, src)
 }
-func (m *ListResourceDepedencyMappingResponse) XXX_Size() int {
+func (m *ListResourceDependencyMappingResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *ListResourceDepedencyMappingResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListResourceDepedencyMappingResponse.DiscardUnknown(m)
+func (m *ListResourceDependencyMappingResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListResourceDependencyMappingResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ListResourceDepedencyMappingResponse proto.InternalMessageInfo
+var xxx_messageInfo_ListResourceDependencyMappingResponse proto.InternalMessageInfo
 
-func (m *ListResourceDepedencyMappingResponse) GetMessageDependencyMappingList() []accesscontrol.MessageDependencyMapping {
+func (m *ListResourceDependencyMappingResponse) GetMessageDependencyMappingList() []accesscontrol.MessageDependencyMapping {
 	if m != nil {
 		return m.MessageDependencyMappingList
 	}
@@ -291,10 +291,10 @@ func (m *ListResourceDepedencyMappingResponse) GetMessageDependencyMappingList()
 func init() {
 	proto.RegisterType((*QueryParamsRequest)(nil), "cosmos.accesscontrol_x.v1beta1.QueryParamsRequest")
 	proto.RegisterType((*QueryParamsResponse)(nil), "cosmos.accesscontrol_x.v1beta1.QueryParamsResponse")
-	proto.RegisterType((*ResourceDepedencyMappingFromMessageKeyRequest)(nil), "cosmos.accesscontrol_x.v1beta1.ResourceDepedencyMappingFromMessageKeyRequest")
-	proto.RegisterType((*ResourceDepedencyMappingFromMessageKeyResponse)(nil), "cosmos.accesscontrol_x.v1beta1.ResourceDepedencyMappingFromMessageKeyResponse")
-	proto.RegisterType((*ListResourceDepedencyMappingRequest)(nil), "cosmos.accesscontrol_x.v1beta1.ListResourceDepedencyMappingRequest")
-	proto.RegisterType((*ListResourceDepedencyMappingResponse)(nil), "cosmos.accesscontrol_x.v1beta1.ListResourceDepedencyMappingResponse")
+	proto.RegisterType((*ResourceDependencyMappingFromMessageKeyRequest)(nil), "cosmos.accesscontrol_x.v1beta1.ResourceDependencyMappingFromMessageKeyRequest")
+	proto.RegisterType((*ResourceDependencyMappingFromMessageKeyResponse)(nil), "cosmos.accesscontrol_x.v1beta1.ResourceDependencyMappingFromMessageKeyResponse")
+	proto.RegisterType((*ListResourceDependencyMappingRequest)(nil), "cosmos.accesscontrol_x.v1beta1.ListResourceDependencyMappingRequest")
+	proto.RegisterType((*ListResourceDependencyMappingResponse)(nil), "cosmos.accesscontrol_x.v1beta1.ListResourceDependencyMappingResponse")
 }
 
 func init() {
@@ -356,8 +356,8 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type QueryClient interface {
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
-	ResourceDepedencyMappingFromMessageKey(ctx context.Context, in *ResourceDepedencyMappingFromMessageKeyRequest, opts ...grpc.CallOption) (*ResourceDepedencyMappingFromMessageKeyResponse, error)
-	ListResourceDepedencyMapping(ctx context.Context, in *ListResourceDepedencyMappingRequest, opts ...grpc.CallOption) (*ListResourceDepedencyMappingResponse, error)
+	ResourceDependencyMappingFromMessageKey(ctx context.Context, in *ResourceDependencyMappingFromMessageKeyRequest, opts ...grpc.CallOption) (*ResourceDependencyMappingFromMessageKeyResponse, error)
+	ListResourceDependencyMapping(ctx context.Context, in *ListResourceDependencyMappingRequest, opts ...grpc.CallOption) (*ListResourceDependencyMappingResponse, error)
 }
 
 type queryClient struct {
@@ -377,18 +377,18 @@ func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts .
 	return out, nil
 }
 
-func (c *queryClient) ResourceDepedencyMappingFromMessageKey(ctx context.Context, in *ResourceDepedencyMappingFromMessageKeyRequest, opts ...grpc.CallOption) (*ResourceDepedencyMappingFromMessageKeyResponse, error) {
-	out := new(ResourceDepedencyMappingFromMessageKeyResponse)
-	err := c.cc.Invoke(ctx, "/cosmos.accesscontrol_x.v1beta1.Query/ResourceDepedencyMappingFromMessageKey", in, out, opts...)
+func (c *queryClient) ResourceDependencyMappingFromMessageKey(ctx context.Context, in *ResourceDependencyMappingFromMessageKeyRequest, opts ...grpc.CallOption) (*ResourceDependencyMappingFromMessageKeyResponse, error) {
+	out := new(ResourceDependencyMappingFromMessageKeyResponse)
+	err := c.cc.Invoke(ctx, "/cosmos.accesscontrol_x.v1beta1.Query/ResourceDependencyMappingFromMessageKey", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) ListResourceDepedencyMapping(ctx context.Context, in *ListResourceDepedencyMappingRequest, opts ...grpc.CallOption) (*ListResourceDepedencyMappingResponse, error) {
-	out := new(ListResourceDepedencyMappingResponse)
-	err := c.cc.Invoke(ctx, "/cosmos.accesscontrol_x.v1beta1.Query/ListResourceDepedencyMapping", in, out, opts...)
+func (c *queryClient) ListResourceDependencyMapping(ctx context.Context, in *ListResourceDependencyMappingRequest, opts ...grpc.CallOption) (*ListResourceDependencyMappingResponse, error) {
+	out := new(ListResourceDependencyMappingResponse)
+	err := c.cc.Invoke(ctx, "/cosmos.accesscontrol_x.v1beta1.Query/ListResourceDependencyMapping", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -398,8 +398,8 @@ func (c *queryClient) ListResourceDepedencyMapping(ctx context.Context, in *List
 // QueryServer is the server API for Query service.
 type QueryServer interface {
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
-	ResourceDepedencyMappingFromMessageKey(context.Context, *ResourceDepedencyMappingFromMessageKeyRequest) (*ResourceDepedencyMappingFromMessageKeyResponse, error)
-	ListResourceDepedencyMapping(context.Context, *ListResourceDepedencyMappingRequest) (*ListResourceDepedencyMappingResponse, error)
+	ResourceDependencyMappingFromMessageKey(context.Context, *ResourceDependencyMappingFromMessageKeyRequest) (*ResourceDependencyMappingFromMessageKeyResponse, error)
+	ListResourceDependencyMapping(context.Context, *ListResourceDependencyMappingRequest) (*ListResourceDependencyMappingResponse, error)
 }
 
 // UnimplementedQueryServer can be embedded to have forward compatible implementations.
@@ -409,11 +409,11 @@ type UnimplementedQueryServer struct {
 func (*UnimplementedQueryServer) Params(ctx context.Context, req *QueryParamsRequest) (*QueryParamsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Params not implemented")
 }
-func (*UnimplementedQueryServer) ResourceDepedencyMappingFromMessageKey(ctx context.Context, req *ResourceDepedencyMappingFromMessageKeyRequest) (*ResourceDepedencyMappingFromMessageKeyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ResourceDepedencyMappingFromMessageKey not implemented")
+func (*UnimplementedQueryServer) ResourceDependencyMappingFromMessageKey(ctx context.Context, req *ResourceDependencyMappingFromMessageKeyRequest) (*ResourceDependencyMappingFromMessageKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResourceDependencyMappingFromMessageKey not implemented")
 }
-func (*UnimplementedQueryServer) ListResourceDepedencyMapping(ctx context.Context, req *ListResourceDepedencyMappingRequest) (*ListResourceDepedencyMappingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListResourceDepedencyMapping not implemented")
+func (*UnimplementedQueryServer) ListResourceDependencyMapping(ctx context.Context, req *ListResourceDependencyMappingRequest) (*ListResourceDependencyMappingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListResourceDependencyMapping not implemented")
 }
 
 func RegisterQueryServer(s grpc1.Server, srv QueryServer) {
@@ -438,38 +438,38 @@ func _Query_Params_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_ResourceDepedencyMappingFromMessageKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResourceDepedencyMappingFromMessageKeyRequest)
+func _Query_ResourceDependencyMappingFromMessageKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResourceDependencyMappingFromMessageKeyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).ResourceDepedencyMappingFromMessageKey(ctx, in)
+		return srv.(QueryServer).ResourceDependencyMappingFromMessageKey(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cosmos.accesscontrol_x.v1beta1.Query/ResourceDepedencyMappingFromMessageKey",
+		FullMethod: "/cosmos.accesscontrol_x.v1beta1.Query/ResourceDependencyMappingFromMessageKey",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ResourceDepedencyMappingFromMessageKey(ctx, req.(*ResourceDepedencyMappingFromMessageKeyRequest))
+		return srv.(QueryServer).ResourceDependencyMappingFromMessageKey(ctx, req.(*ResourceDependencyMappingFromMessageKeyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_ListResourceDepedencyMapping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListResourceDepedencyMappingRequest)
+func _Query_ListResourceDependencyMapping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListResourceDependencyMappingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).ListResourceDepedencyMapping(ctx, in)
+		return srv.(QueryServer).ListResourceDependencyMapping(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cosmos.accesscontrol_x.v1beta1.Query/ListResourceDepedencyMapping",
+		FullMethod: "/cosmos.accesscontrol_x.v1beta1.Query/ListResourceDependencyMapping",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).ListResourceDepedencyMapping(ctx, req.(*ListResourceDepedencyMappingRequest))
+		return srv.(QueryServer).ListResourceDependencyMapping(ctx, req.(*ListResourceDependencyMappingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -483,12 +483,12 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Query_Params_Handler,
 		},
 		{
-			MethodName: "ResourceDepedencyMappingFromMessageKey",
-			Handler:    _Query_ResourceDepedencyMappingFromMessageKey_Handler,
+			MethodName: "ResourceDependencyMappingFromMessageKey",
+			Handler:    _Query_ResourceDependencyMappingFromMessageKey_Handler,
 		},
 		{
-			MethodName: "ListResourceDepedencyMapping",
-			Handler:    _Query_ListResourceDepedencyMapping_Handler,
+			MethodName: "ListResourceDependencyMapping",
+			Handler:    _Query_ListResourceDependencyMapping_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -551,7 +551,7 @@ func (m *QueryParamsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) Marshal() (dAtA []byte, err error) {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -561,12 +561,12 @@ func (m *ResourceDepedencyMappingFromMessageKeyRequest) Marshal() (dAtA []byte, 
 	return dAtA[:n], nil
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -581,7 +581,7 @@ func (m *ResourceDepedencyMappingFromMessageKeyRequest) MarshalToSizedBuffer(dAt
 	return len(dAtA) - i, nil
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) Marshal() (dAtA []byte, err error) {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -591,12 +591,12 @@ func (m *ResourceDepedencyMappingFromMessageKeyResponse) Marshal() (dAtA []byte,
 	return dAtA[:n], nil
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -614,7 +614,7 @@ func (m *ResourceDepedencyMappingFromMessageKeyResponse) MarshalToSizedBuffer(dA
 	return len(dAtA) - i, nil
 }
 
-func (m *ListResourceDepedencyMappingRequest) Marshal() (dAtA []byte, err error) {
+func (m *ListResourceDependencyMappingRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -624,12 +624,12 @@ func (m *ListResourceDepedencyMappingRequest) Marshal() (dAtA []byte, err error)
 	return dAtA[:n], nil
 }
 
-func (m *ListResourceDepedencyMappingRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *ListResourceDependencyMappingRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ListResourceDepedencyMappingRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ListResourceDependencyMappingRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -637,7 +637,7 @@ func (m *ListResourceDepedencyMappingRequest) MarshalToSizedBuffer(dAtA []byte) 
 	return len(dAtA) - i, nil
 }
 
-func (m *ListResourceDepedencyMappingResponse) Marshal() (dAtA []byte, err error) {
+func (m *ListResourceDependencyMappingResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -647,12 +647,12 @@ func (m *ListResourceDepedencyMappingResponse) Marshal() (dAtA []byte, err error
 	return dAtA[:n], nil
 }
 
-func (m *ListResourceDepedencyMappingResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *ListResourceDependencyMappingResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ListResourceDepedencyMappingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ListResourceDependencyMappingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -705,7 +705,7 @@ func (m *QueryParamsResponse) Size() (n int) {
 	return n
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) Size() (n int) {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -718,7 +718,7 @@ func (m *ResourceDepedencyMappingFromMessageKeyRequest) Size() (n int) {
 	return n
 }
 
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) Size() (n int) {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -729,7 +729,7 @@ func (m *ResourceDepedencyMappingFromMessageKeyResponse) Size() (n int) {
 	return n
 }
 
-func (m *ListResourceDepedencyMappingRequest) Size() (n int) {
+func (m *ListResourceDependencyMappingRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -738,7 +738,7 @@ func (m *ListResourceDepedencyMappingRequest) Size() (n int) {
 	return n
 }
 
-func (m *ListResourceDepedencyMappingResponse) Size() (n int) {
+func (m *ListResourceDependencyMappingResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -892,7 +892,7 @@ func (m *QueryParamsResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ResourceDepedencyMappingFromMessageKeyRequest) Unmarshal(dAtA []byte) error {
+func (m *ResourceDependencyMappingFromMessageKeyRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -915,10 +915,10 @@ func (m *ResourceDepedencyMappingFromMessageKeyRequest) Unmarshal(dAtA []byte) e
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ResourceDepedencyMappingFromMessageKeyRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: ResourceDependencyMappingFromMessageKeyRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ResourceDepedencyMappingFromMessageKeyRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ResourceDependencyMappingFromMessageKeyRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -974,7 +974,7 @@ func (m *ResourceDepedencyMappingFromMessageKeyRequest) Unmarshal(dAtA []byte) e
 	}
 	return nil
 }
-func (m *ResourceDepedencyMappingFromMessageKeyResponse) Unmarshal(dAtA []byte) error {
+func (m *ResourceDependencyMappingFromMessageKeyResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -997,10 +997,10 @@ func (m *ResourceDepedencyMappingFromMessageKeyResponse) Unmarshal(dAtA []byte) 
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ResourceDepedencyMappingFromMessageKeyResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: ResourceDependencyMappingFromMessageKeyResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ResourceDepedencyMappingFromMessageKeyResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ResourceDependencyMappingFromMessageKeyResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1057,7 +1057,7 @@ func (m *ResourceDepedencyMappingFromMessageKeyResponse) Unmarshal(dAtA []byte) 
 	}
 	return nil
 }
-func (m *ListResourceDepedencyMappingRequest) Unmarshal(dAtA []byte) error {
+func (m *ListResourceDependencyMappingRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1080,10 +1080,10 @@ func (m *ListResourceDepedencyMappingRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ListResourceDepedencyMappingRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: ListResourceDependencyMappingRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListResourceDepedencyMappingRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ListResourceDependencyMappingRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -1107,7 +1107,7 @@ func (m *ListResourceDepedencyMappingRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ListResourceDepedencyMappingResponse) Unmarshal(dAtA []byte) error {
+func (m *ListResourceDependencyMappingResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1130,10 +1130,10 @@ func (m *ListResourceDepedencyMappingResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ListResourceDepedencyMappingResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: ListResourceDependencyMappingResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListResourceDepedencyMappingResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ListResourceDependencyMappingResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

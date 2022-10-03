@@ -24,25 +24,25 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type UpdateResourceDepedencyMappingProposal struct {
+type UpdateResourceDependencyMappingProposal struct {
 	Title                    string                                   `protobuf:"bytes,1,opt,name=title,proto3" json:"title" yaml:"title"`
 	Description              string                                   `protobuf:"bytes,2,opt,name=description,proto3" json:"description" yaml:"description"`
 	MessageDependencyMapping []accesscontrol.MessageDependencyMapping `protobuf:"bytes,3,rep,name=message_dependency_mapping,json=messageDependencyMapping,proto3" json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
 }
 
-func (m *UpdateResourceDepedencyMappingProposal) Reset() {
-	*m = UpdateResourceDepedencyMappingProposal{}
+func (m *UpdateResourceDependencyMappingProposal) Reset() {
+	*m = UpdateResourceDependencyMappingProposal{}
 }
-func (*UpdateResourceDepedencyMappingProposal) ProtoMessage() {}
-func (*UpdateResourceDepedencyMappingProposal) Descriptor() ([]byte, []int) {
+func (*UpdateResourceDependencyMappingProposal) ProtoMessage() {}
+func (*UpdateResourceDependencyMappingProposal) Descriptor() ([]byte, []int) {
 	return fileDescriptor_3e058bfaa38d4c4c, []int{0}
 }
-func (m *UpdateResourceDepedencyMappingProposal) XXX_Unmarshal(b []byte) error {
+func (m *UpdateResourceDependencyMappingProposal) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *UpdateResourceDepedencyMappingProposal) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *UpdateResourceDependencyMappingProposal) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_UpdateResourceDepedencyMappingProposal.Marshal(b, m, deterministic)
+		return xxx_messageInfo_UpdateResourceDependencyMappingProposal.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -52,41 +52,41 @@ func (m *UpdateResourceDepedencyMappingProposal) XXX_Marshal(b []byte, determini
 		return b[:n], nil
 	}
 }
-func (m *UpdateResourceDepedencyMappingProposal) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpdateResourceDepedencyMappingProposal.Merge(m, src)
+func (m *UpdateResourceDependencyMappingProposal) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateResourceDependencyMappingProposal.Merge(m, src)
 }
-func (m *UpdateResourceDepedencyMappingProposal) XXX_Size() int {
+func (m *UpdateResourceDependencyMappingProposal) XXX_Size() int {
 	return m.Size()
 }
-func (m *UpdateResourceDepedencyMappingProposal) XXX_DiscardUnknown() {
-	xxx_messageInfo_UpdateResourceDepedencyMappingProposal.DiscardUnknown(m)
+func (m *UpdateResourceDependencyMappingProposal) XXX_DiscardUnknown() {
+	xxx_messageInfo_UpdateResourceDependencyMappingProposal.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_UpdateResourceDepedencyMappingProposal proto.InternalMessageInfo
+var xxx_messageInfo_UpdateResourceDependencyMappingProposal proto.InternalMessageInfo
 
-type UpdateResourceDepedencyMappingProposalJsonFile struct {
+type UpdateResourceDependencyMappingProposalJsonFile struct {
 	Title                    string                                   `protobuf:"bytes,1,opt,name=title,proto3" json:"title" yaml:"title"`
 	Description              string                                   `protobuf:"bytes,2,opt,name=description,proto3" json:"description" yaml:"description"`
 	Deposit                  string                                   `protobuf:"bytes,3,opt,name=deposit,proto3" json:"deposit" yaml:"deposit"`
 	MessageDependencyMapping []accesscontrol.MessageDependencyMapping `protobuf:"bytes,4,rep,name=message_dependency_mapping,json=messageDependencyMapping,proto3" json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) Reset() {
-	*m = UpdateResourceDepedencyMappingProposalJsonFile{}
+func (m *UpdateResourceDependencyMappingProposalJsonFile) Reset() {
+	*m = UpdateResourceDependencyMappingProposalJsonFile{}
 }
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) String() string {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) String() string {
 	return proto.CompactTextString(m)
 }
-func (*UpdateResourceDepedencyMappingProposalJsonFile) ProtoMessage() {}
-func (*UpdateResourceDepedencyMappingProposalJsonFile) Descriptor() ([]byte, []int) {
+func (*UpdateResourceDependencyMappingProposalJsonFile) ProtoMessage() {}
+func (*UpdateResourceDependencyMappingProposalJsonFile) Descriptor() ([]byte, []int) {
 	return fileDescriptor_3e058bfaa38d4c4c, []int{1}
 }
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) XXX_Unmarshal(b []byte) error {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_UpdateResourceDepedencyMappingProposalJsonFile.Marshal(b, m, deterministic)
+		return xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -96,40 +96,40 @@ func (m *UpdateResourceDepedencyMappingProposalJsonFile) XXX_Marshal(b []byte, d
 		return b[:n], nil
 	}
 }
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpdateResourceDepedencyMappingProposalJsonFile.Merge(m, src)
+func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile.Merge(m, src)
 }
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) XXX_Size() int {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Size() int {
 	return m.Size()
 }
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) XXX_DiscardUnknown() {
-	xxx_messageInfo_UpdateResourceDepedencyMappingProposalJsonFile.DiscardUnknown(m)
+func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_DiscardUnknown() {
+	xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_UpdateResourceDepedencyMappingProposalJsonFile proto.InternalMessageInfo
+var xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile proto.InternalMessageInfo
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) GetTitle() string {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) GetTitle() string {
 	if m != nil {
 		return m.Title
 	}
 	return ""
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) GetDescription() string {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) GetDescription() string {
 	if m != nil {
 		return m.Description
 	}
 	return ""
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) GetDeposit() string {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) GetDeposit() string {
 	if m != nil {
 		return m.Deposit
 	}
 	return ""
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) GetMessageDependencyMapping() []accesscontrol.MessageDependencyMapping {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) GetMessageDependencyMapping() []accesscontrol.MessageDependencyMapping {
 	if m != nil {
 		return m.MessageDependencyMapping
 	}
@@ -137,8 +137,8 @@ func (m *UpdateResourceDepedencyMappingProposalJsonFile) GetMessageDependencyMap
 }
 
 func init() {
-	proto.RegisterType((*UpdateResourceDepedencyMappingProposal)(nil), "cosmos.accesscontrol.v1beta1.UpdateResourceDepedencyMappingProposal")
-	proto.RegisterType((*UpdateResourceDepedencyMappingProposalJsonFile)(nil), "cosmos.accesscontrol.v1beta1.UpdateResourceDepedencyMappingProposalJsonFile")
+	proto.RegisterType((*UpdateResourceDependencyMappingProposal)(nil), "cosmos.accesscontrol.v1beta1.UpdateResourceDependencyMappingProposal")
+	proto.RegisterType((*UpdateResourceDependencyMappingProposalJsonFile)(nil), "cosmos.accesscontrol.v1beta1.UpdateResourceDependencyMappingProposalJsonFile")
 }
 
 func init() { proto.RegisterFile("cosmos/accesscontrol_x/gov.proto", fileDescriptor_3e058bfaa38d4c4c) }
@@ -174,7 +174,7 @@ var fileDescriptor_3e058bfaa38d4c4c = []byte{
 	0xff, 0xff, 0x5a, 0xc8, 0x9d, 0xde, 0xd9, 0x03, 0x00, 0x00,
 }
 
-func (m *UpdateResourceDepedencyMappingProposal) Marshal() (dAtA []byte, err error) {
+func (m *UpdateResourceDependencyMappingProposal) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -184,12 +184,12 @@ func (m *UpdateResourceDepedencyMappingProposal) Marshal() (dAtA []byte, err err
 	return dAtA[:n], nil
 }
 
-func (m *UpdateResourceDepedencyMappingProposal) MarshalTo(dAtA []byte) (int, error) {
+func (m *UpdateResourceDependencyMappingProposal) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *UpdateResourceDepedencyMappingProposal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *UpdateResourceDependencyMappingProposal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -225,7 +225,7 @@ func (m *UpdateResourceDepedencyMappingProposal) MarshalToSizedBuffer(dAtA []byt
 	return len(dAtA) - i, nil
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) Marshal() (dAtA []byte, err error) {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -235,12 +235,12 @@ func (m *UpdateResourceDepedencyMappingProposalJsonFile) Marshal() (dAtA []byte,
 	return dAtA[:n], nil
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) MarshalTo(dAtA []byte) (int, error) {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -294,7 +294,7 @@ func encodeVarintGov(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *UpdateResourceDepedencyMappingProposal) Size() (n int) {
+func (m *UpdateResourceDependencyMappingProposal) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -317,7 +317,7 @@ func (m *UpdateResourceDepedencyMappingProposal) Size() (n int) {
 	return n
 }
 
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) Size() (n int) {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -350,7 +350,7 @@ func sovGov(x uint64) (n int) {
 func sozGov(x uint64) (n int) {
 	return sovGov(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *UpdateResourceDepedencyMappingProposal) Unmarshal(dAtA []byte) error {
+func (m *UpdateResourceDependencyMappingProposal) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -373,10 +373,10 @@ func (m *UpdateResourceDepedencyMappingProposal) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UpdateResourceDepedencyMappingProposal: wiretype end group for non-group")
+			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposal: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UpdateResourceDepedencyMappingProposal: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposal: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -498,7 +498,7 @@ func (m *UpdateResourceDepedencyMappingProposal) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *UpdateResourceDepedencyMappingProposalJsonFile) Unmarshal(dAtA []byte) error {
+func (m *UpdateResourceDependencyMappingProposalJsonFile) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -521,10 +521,10 @@ func (m *UpdateResourceDepedencyMappingProposalJsonFile) Unmarshal(dAtA []byte) 
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UpdateResourceDepedencyMappingProposalJsonFile: wiretype end group for non-group")
+			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposalJsonFile: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UpdateResourceDepedencyMappingProposalJsonFile: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposalJsonFile: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

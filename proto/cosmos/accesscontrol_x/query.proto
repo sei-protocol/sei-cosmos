@@ -56,4 +56,3 @@ message ListResourceDepedencyMappingResponse {
         (gogoproto.moretags) = "yaml:\"message_dependency_mapping_list\""
     ];
 }
-  

@@ -16,7 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	cli "github.com/cosmos/cosmos-sdk/x/accesscontrol/client"
+	cli "github.com/cosmos/cosmos-sdk/x/accesscontrol/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/keeper"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
 )

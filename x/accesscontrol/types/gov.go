@@ -29,6 +29,10 @@ func NewRegisterPairsProposal(title, description string, messageDependencyMappin
 	}
 }
 
+func NewUpdateResourceDepedencyMappingProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) *UpdateResourceDepedencyMappingProposal {
+	return &UpdateResourceDepedencyMappingProposal{title, description, messageDependencyMapping}
+}
+
 func (p *UpdateResourceDepedencyMappingProposal) GetTitle() string { return p.Title }
 
 func (p *UpdateResourceDepedencyMappingProposal) GetDescription() string { return p.Description }
@@ -45,17 +49,19 @@ func (p *UpdateResourceDepedencyMappingProposal) ValidateBasic() error {
 }
 
 func (p UpdateResourceDepedencyMappingProposal) String() string {
-	creators := ""
-	for _, creator := range p.CreatorList {
-		creators += creator
-	}
 	var b strings.Builder
 	b.WriteString(
 		fmt.Sprintf(`Add Creators to Denom Fee Whitelist Proposal:
 			Title:       %s
 			Description: %s
-			CreatorList: %s
-			`, 
-		p.Title, p.Description, creators))
+			Changes:
+			`,
+		p.Title, p.Description))
+
+	for _, depMapping := range p.MessageDependencyMapping {
+		b.WriteString(fmt.Sprintf(`		Change:
+			MessageDependencyMapping: %s
+		`, depMapping.String()))
+	}
 	return b.String()
 }

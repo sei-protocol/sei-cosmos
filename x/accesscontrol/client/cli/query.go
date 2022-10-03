@@ -84,7 +84,6 @@ func GetResourceDependencyMapping() *cobra.Command {
 	return cmd
 }
 
-
 func ListResourceDependencyMapping() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list-resource-dependency-mapping [flags]",

@@ -22,7 +22,7 @@ func NewProposalHandler(k keeper.Keeper) govtypes.Handler {
 		case *types.UpdateResourceDepedencyMappingProposal:
 			return HandleUpdateResourceDepedencyMappingProposal(ctx, &k, c)
 		default:
-			return sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized tokenfactory proposal content type: %T", c)
+			return sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized accesscontrol proposal content type: %T", c)
 		}
 	}
 }

@@ -24,25 +24,25 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-type UpdateResourceDependencyMappingProposal struct {
+type MsgUpdateResourceDependencyMappingProposal struct {
 	Title                    string                                   `protobuf:"bytes,1,opt,name=title,proto3" json:"title" yaml:"title"`
 	Description              string                                   `protobuf:"bytes,2,opt,name=description,proto3" json:"description" yaml:"description"`
 	MessageDependencyMapping []accesscontrol.MessageDependencyMapping `protobuf:"bytes,3,rep,name=message_dependency_mapping,json=messageDependencyMapping,proto3" json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
 }
 
-func (m *UpdateResourceDependencyMappingProposal) Reset() {
-	*m = UpdateResourceDependencyMappingProposal{}
+func (m *MsgUpdateResourceDependencyMappingProposal) Reset() {
+	*m = MsgUpdateResourceDependencyMappingProposal{}
 }
-func (*UpdateResourceDependencyMappingProposal) ProtoMessage() {}
-func (*UpdateResourceDependencyMappingProposal) Descriptor() ([]byte, []int) {
+func (*MsgUpdateResourceDependencyMappingProposal) ProtoMessage() {}
+func (*MsgUpdateResourceDependencyMappingProposal) Descriptor() ([]byte, []int) {
 	return fileDescriptor_3e058bfaa38d4c4c, []int{0}
 }
-func (m *UpdateResourceDependencyMappingProposal) XXX_Unmarshal(b []byte) error {
+func (m *MsgUpdateResourceDependencyMappingProposal) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *UpdateResourceDependencyMappingProposal) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgUpdateResourceDependencyMappingProposal) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_UpdateResourceDependencyMappingProposal.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgUpdateResourceDependencyMappingProposal.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -52,41 +52,41 @@ func (m *UpdateResourceDependencyMappingProposal) XXX_Marshal(b []byte, determin
 		return b[:n], nil
 	}
 }
-func (m *UpdateResourceDependencyMappingProposal) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpdateResourceDependencyMappingProposal.Merge(m, src)
+func (m *MsgUpdateResourceDependencyMappingProposal) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgUpdateResourceDependencyMappingProposal.Merge(m, src)
 }
-func (m *UpdateResourceDependencyMappingProposal) XXX_Size() int {
+func (m *MsgUpdateResourceDependencyMappingProposal) XXX_Size() int {
 	return m.Size()
 }
-func (m *UpdateResourceDependencyMappingProposal) XXX_DiscardUnknown() {
-	xxx_messageInfo_UpdateResourceDependencyMappingProposal.DiscardUnknown(m)
+func (m *MsgUpdateResourceDependencyMappingProposal) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgUpdateResourceDependencyMappingProposal.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_UpdateResourceDependencyMappingProposal proto.InternalMessageInfo
+var xxx_messageInfo_MsgUpdateResourceDependencyMappingProposal proto.InternalMessageInfo
 
-type UpdateResourceDependencyMappingProposalJsonFile struct {
+type MsgUpdateResourceDependencyMappingProposalJsonFile struct {
 	Title                    string                                   `protobuf:"bytes,1,opt,name=title,proto3" json:"title" yaml:"title"`
 	Description              string                                   `protobuf:"bytes,2,opt,name=description,proto3" json:"description" yaml:"description"`
 	Deposit                  string                                   `protobuf:"bytes,3,opt,name=deposit,proto3" json:"deposit" yaml:"deposit"`
 	MessageDependencyMapping []accesscontrol.MessageDependencyMapping `protobuf:"bytes,4,rep,name=message_dependency_mapping,json=messageDependencyMapping,proto3" json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) Reset() {
-	*m = UpdateResourceDependencyMappingProposalJsonFile{}
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) Reset() {
+	*m = MsgUpdateResourceDependencyMappingProposalJsonFile{}
 }
-func (m *UpdateResourceDependencyMappingProposalJsonFile) String() string {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) String() string {
 	return proto.CompactTextString(m)
 }
-func (*UpdateResourceDependencyMappingProposalJsonFile) ProtoMessage() {}
-func (*UpdateResourceDependencyMappingProposalJsonFile) Descriptor() ([]byte, []int) {
+func (*MsgUpdateResourceDependencyMappingProposalJsonFile) ProtoMessage() {}
+func (*MsgUpdateResourceDependencyMappingProposalJsonFile) Descriptor() ([]byte, []int) {
 	return fileDescriptor_3e058bfaa38d4c4c, []int{1}
 }
-func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Unmarshal(b []byte) error {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile.Marshal(b, m, deterministic)
+		return xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalJsonFile.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -96,85 +96,127 @@ func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Marshal(b []byte, 
 		return b[:n], nil
 	}
 }
-func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile.Merge(m, src)
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalJsonFile.Merge(m, src)
 }
-func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_Size() int {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) XXX_Size() int {
 	return m.Size()
 }
-func (m *UpdateResourceDependencyMappingProposalJsonFile) XXX_DiscardUnknown() {
-	xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile.DiscardUnknown(m)
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalJsonFile.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_UpdateResourceDependencyMappingProposalJsonFile proto.InternalMessageInfo
+var xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalJsonFile proto.InternalMessageInfo
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) GetTitle() string {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) GetTitle() string {
 	if m != nil {
 		return m.Title
 	}
 	return ""
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) GetDescription() string {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) GetDescription() string {
 	if m != nil {
 		return m.Description
 	}
 	return ""
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) GetDeposit() string {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) GetDeposit() string {
 	if m != nil {
 		return m.Deposit
 	}
 	return ""
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) GetMessageDependencyMapping() []accesscontrol.MessageDependencyMapping {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) GetMessageDependencyMapping() []accesscontrol.MessageDependencyMapping {
 	if m != nil {
 		return m.MessageDependencyMapping
 	}
 	return nil
 }
 
+type MsgUpdateResourceDependencyMappingProposalResponse struct {
+}
+
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) Reset() {
+	*m = MsgUpdateResourceDependencyMappingProposalResponse{}
+}
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) String() string {
+	return proto.CompactTextString(m)
+}
+func (*MsgUpdateResourceDependencyMappingProposalResponse) ProtoMessage() {}
+func (*MsgUpdateResourceDependencyMappingProposalResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_3e058bfaa38d4c4c, []int{2}
+}
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalResponse.Merge(m, src)
+}
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MsgUpdateResourceDependencyMappingProposalResponse proto.InternalMessageInfo
+
 func init() {
-	proto.RegisterType((*UpdateResourceDependencyMappingProposal)(nil), "cosmos.accesscontrol.v1beta1.UpdateResourceDependencyMappingProposal")
-	proto.RegisterType((*UpdateResourceDependencyMappingProposalJsonFile)(nil), "cosmos.accesscontrol.v1beta1.UpdateResourceDependencyMappingProposalJsonFile")
+	proto.RegisterType((*MsgUpdateResourceDependencyMappingProposal)(nil), "cosmos.accesscontrol.v1beta1.MsgUpdateResourceDependencyMappingProposal")
+	proto.RegisterType((*MsgUpdateResourceDependencyMappingProposalJsonFile)(nil), "cosmos.accesscontrol.v1beta1.MsgUpdateResourceDependencyMappingProposalJsonFile")
+	proto.RegisterType((*MsgUpdateResourceDependencyMappingProposalResponse)(nil), "cosmos.accesscontrol.v1beta1.MsgUpdateResourceDependencyMappingProposalResponse")
 }
 
 func init() { proto.RegisterFile("cosmos/accesscontrol_x/gov.proto", fileDescriptor_3e058bfaa38d4c4c) }
 
 var fileDescriptor_3e058bfaa38d4c4c = []byte{
-	// 426 bytes of a gzipped FileDescriptorProto
+	// 438 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x93, 0xcf, 0x8b, 0xd3, 0x40,
-	0x14, 0xc7, 0x93, 0x8d, 0x3f, 0x30, 0xbb, 0x78, 0x08, 0x1e, 0x62, 0xd1, 0x4c, 0x0d, 0x2a, 0xf5,
-	0x60, 0xc2, 0xae, 0xa0, 0xb0, 0xc7, 0xb2, 0x28, 0x88, 0x0b, 0x12, 0xf0, 0xe2, 0xa5, 0x4c, 0x27,
-	0x8f, 0x18, 0x4c, 0xe6, 0x0d, 0x99, 0xd9, 0x65, 0xfb, 0x07, 0x08, 0x1e, 0x3d, 0x7a, 0xb3, 0x7f,
-	0xce, 0x1e, 0x8b, 0x27, 0x4f, 0x83, 0xb4, 0x17, 0xe9, 0x31, 0x7f, 0x81, 0x38, 0xd3, 0x4a, 0x2b,
-	0xad, 0x7a, 0xeb, 0x29, 0xc9, 0x37, 0x9f, 0xef, 0x77, 0xde, 0xbc, 0xc7, 0xf3, 0xbb, 0x0c, 0x65,
-	0x8d, 0x32, 0xa5, 0x8c, 0x81, 0x94, 0x0c, 0xb9, 0x6a, 0xb0, 0x1a, 0x5c, 0xa4, 0x05, 0x9e, 0x27,
-	0xa2, 0x41, 0x85, 0xc1, 0x1d, 0x4b, 0x24, 0x6b, 0x44, 0x72, 0x7e, 0x38, 0x04, 0x45, 0x0f, 0x3b,
-	0xb7, 0x0a, 0x2c, 0xd0, 0x80, 0xe9, 0xaf, 0x37, 0xeb, 0xe9, 0xdc, 0xdf, 0x94, 0x9a, 0x32, 0xe4,
-	0x52, 0x51, 0xae, 0xe4, 0x82, 0xea, 0x6d, 0xa4, 0xd6, 0xcf, 0x31, 0x64, 0xfc, 0x75, 0xcf, 0x7f,
-	0xf8, 0x46, 0xe4, 0x54, 0x41, 0x06, 0x12, 0xcf, 0x1a, 0x06, 0x27, 0x20, 0x20, 0x07, 0xce, 0x46,
-	0xa7, 0x54, 0x88, 0x92, 0x17, 0xaf, 0x1b, 0x14, 0x28, 0x69, 0x15, 0xa4, 0xfe, 0x55, 0x55, 0xaa,
-	0x0a, 0x42, 0xb7, 0xeb, 0xf6, 0x6e, 0xf4, 0x6f, 0xcf, 0x35, 0xb1, 0x42, 0xab, 0xc9, 0xc1, 0x88,
-	0xd6, 0xd5, 0x71, 0x6c, 0x3e, 0xe3, 0xcc, 0xca, 0xc1, 0x0b, 0x7f, 0x3f, 0x07, 0xc9, 0x9a, 0x52,
-	0xa8, 0x12, 0x79, 0xb8, 0x67, 0x6c, 0x0f, 0xe6, 0x9a, 0xac, 0xca, 0xad, 0x26, 0x81, 0x35, 0xaf,
-	0x88, 0x71, 0xb6, 0x8a, 0x04, 0x5f, 0x5c, 0xbf, 0x53, 0x83, 0x94, 0xb4, 0x80, 0x41, 0x0e, 0x02,
-	0xb8, 0xa9, 0x6f, 0x50, 0xdb, 0x02, 0x43, 0xaf, 0xeb, 0xf5, 0xf6, 0x8f, 0x9e, 0x26, 0x7f, 0x6b,
-	0x67, 0x72, 0x6a, 0xfd, 0x27, 0xbf, 0xed, 0x8b, 0xeb, 0xf5, 0x1f, 0x5d, 0x6a, 0xe2, 0xb4, 0x9a,
-	0xdc, 0xb3, 0x55, 0x6c, 0x3f, 0x27, 0xce, 0xc2, 0x7a, 0x4b, 0xc8, 0xf1, 0xc1, 0xc7, 0x31, 0x71,
-	0x3e, 0x8f, 0x89, 0xf3, 0x63, 0x4c, 0x9c, 0xf8, 0x83, 0xe7, 0x27, 0xff, 0xd7, 0xd4, 0x97, 0x12,
-	0xf9, 0xf3, 0xb2, 0x82, 0x1d, 0x36, 0xf7, 0x99, 0x7f, 0x3d, 0x07, 0x81, 0xb2, 0x54, 0xa1, 0x67,
-	0x42, 0xee, 0xce, 0x35, 0x59, 0x4a, 0xad, 0x26, 0x37, 0x97, 0x01, 0x46, 0x88, 0xb3, 0xe5, 0xaf,
-	0x7f, 0x4d, 0xe5, 0xca, 0xce, 0xa7, 0xd2, 0x7f, 0x75, 0x39, 0x8d, 0xdc, 0xc9, 0x34, 0x72, 0xbf,
-	0x4f, 0x23, 0xf7, 0xd3, 0x2c, 0x72, 0x26, 0xb3, 0xc8, 0xf9, 0x36, 0x8b, 0x9c, 0xb7, 0x47, 0x45,
-	0xa9, 0xde, 0x9d, 0x0d, 0x13, 0x86, 0x75, 0xba, 0xd8, 0x15, 0xfb, 0x78, 0x2c, 0xf3, 0xf7, 0xe9,
-	0xc5, 0x1f, 0x8b, 0xa3, 0x46, 0x02, 0xe4, 0xf0, 0x9a, 0xd9, 0x98, 0x27, 0x3f, 0x03, 0x00, 0x00,
-	0xff, 0xff, 0x5a, 0xc8, 0x9d, 0xde, 0xd9, 0x03, 0x00, 0x00,
+	0x14, 0xc7, 0x93, 0xad, 0x3f, 0x30, 0x2b, 0x22, 0xc1, 0x43, 0x2c, 0x9a, 0xa9, 0x41, 0xa1, 0x0a,
+	0x26, 0x6c, 0x15, 0x85, 0x3d, 0x16, 0x51, 0x10, 0x0b, 0x12, 0xf0, 0xe2, 0xa5, 0x4c, 0x27, 0x8f,
+	0x18, 0x4c, 0xe6, 0x0d, 0x79, 0xb3, 0xcb, 0xf6, 0xe6, 0x51, 0x6f, 0x1e, 0xbd, 0xd9, 0x3f, 0x67,
+	0x8f, 0x7b, 0x14, 0x91, 0x41, 0xda, 0x8b, 0xf4, 0x98, 0xbf, 0x40, 0xcc, 0x6c, 0xa5, 0xab, 0xbb,
+	0xfe, 0x38, 0xed, 0x29, 0xc9, 0x37, 0x9f, 0xef, 0x77, 0xde, 0xbc, 0xc7, 0xf3, 0x7a, 0x02, 0xa9,
+	0x42, 0x4a, 0xb8, 0x10, 0x40, 0x24, 0x50, 0xea, 0x1a, 0xcb, 0xf1, 0x5e, 0x92, 0xe3, 0x6e, 0xac,
+	0x6a, 0xd4, 0xe8, 0x5f, 0xb3, 0x44, 0x7c, 0x84, 0x88, 0x77, 0xb7, 0x26, 0xa0, 0xf9, 0x56, 0xf7,
+	0x4a, 0x8e, 0x39, 0xb6, 0x60, 0xf2, 0xe3, 0xcd, 0x7a, 0xba, 0x37, 0x8f, 0x4b, 0x4d, 0x04, 0x4a,
+	0xd2, 0x5c, 0x6a, 0x3a, 0xa4, 0xfa, 0xc7, 0x52, 0x47, 0xcf, 0x69, 0xc9, 0xe8, 0xf3, 0x86, 0x77,
+	0x67, 0x44, 0xf9, 0x0b, 0x95, 0x71, 0x0d, 0x29, 0x10, 0xee, 0xd4, 0x02, 0x1e, 0x81, 0x02, 0x99,
+	0x81, 0x14, 0xd3, 0x11, 0x57, 0xaa, 0x90, 0xf9, 0xf3, 0x1a, 0x15, 0x12, 0x2f, 0xfd, 0xc4, 0x3b,
+	0xab, 0x0b, 0x5d, 0x42, 0xe0, 0xf6, 0xdc, 0xfe, 0x85, 0xe1, 0xd5, 0xa5, 0x61, 0x56, 0x68, 0x0c,
+	0xbb, 0x38, 0xe5, 0x55, 0xb9, 0x1d, 0xb5, 0x9f, 0x51, 0x6a, 0x65, 0xff, 0x89, 0xb7, 0x99, 0x01,
+	0x89, 0xba, 0x50, 0xba, 0x40, 0x19, 0x6c, 0xb4, 0xb6, 0x5b, 0x4b, 0xc3, 0xd6, 0xe5, 0xc6, 0x30,
+	0xdf, 0x9a, 0xd7, 0xc4, 0x28, 0x5d, 0x47, 0xfc, 0x8f, 0xae, 0xd7, 0xad, 0x80, 0x88, 0xe7, 0x30,
+	0xce, 0x7e, 0xd6, 0x37, 0xae, 0x6c, 0x81, 0x41, 0xa7, 0xd7, 0xe9, 0x6f, 0x0e, 0x1e, 0xc4, 0x7f,
+	0x6a, 0x69, 0x3c, 0xb2, 0xfe, 0xdf, 0xae, 0x37, 0xbc, 0xbd, 0x6f, 0x98, 0xd3, 0x18, 0x76, 0xc3,
+	0x56, 0x71, 0xf2, 0x39, 0x51, 0x1a, 0x54, 0x27, 0x84, 0x6c, 0x5f, 0x7e, 0x3b, 0x63, 0xce, 0x87,
+	0x19, 0x73, 0xbe, 0xcd, 0x98, 0xf3, 0xe6, 0x4b, 0xcf, 0x89, 0xde, 0x75, 0xbc, 0xc1, 0xbf, 0x37,
+	0xf7, 0x29, 0xa1, 0x7c, 0x5c, 0x94, 0x70, 0x8a, 0x4d, 0x7e, 0xe8, 0x9d, 0xcf, 0x40, 0x21, 0x15,
+	0x3a, 0xe8, 0xb4, 0x21, 0xd7, 0x97, 0x86, 0xad, 0xa4, 0xc6, 0xb0, 0x4b, 0xab, 0x80, 0x56, 0x88,
+	0xd2, 0xd5, 0xaf, 0xbf, 0x4d, 0xe7, 0xcc, 0xa9, 0x4f, 0x27, 0xba, 0xff, 0x3f, 0xa3, 0x48, 0x81,
+	0x14, 0x4a, 0x82, 0xe1, 0xb3, 0xfd, 0x79, 0xe8, 0x1e, 0xcc, 0x43, 0xf7, 0xeb, 0x3c, 0x74, 0xdf,
+	0x2f, 0x42, 0xe7, 0x60, 0x11, 0x3a, 0x9f, 0x16, 0xa1, 0xf3, 0x72, 0x90, 0x17, 0xfa, 0xd5, 0xce,
+	0x24, 0x16, 0x58, 0x25, 0x87, 0xdb, 0x66, 0x1f, 0x77, 0x29, 0x7b, 0x9d, 0xec, 0xfd, 0xb2, 0x7a,
+	0x7a, 0xaa, 0x80, 0x26, 0xe7, 0xda, 0x9d, 0xbb, 0xf7, 0x3d, 0x00, 0x00, 0xff, 0xff, 0xf5, 0xbc,
+	0x2e, 0x6d, 0x1b, 0x04, 0x00, 0x00,
 }
 
-func (m *UpdateResourceDependencyMappingProposal) Marshal() (dAtA []byte, err error) {
+func (m *MsgUpdateResourceDependencyMappingProposal) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -184,12 +226,12 @@ func (m *UpdateResourceDependencyMappingProposal) Marshal() (dAtA []byte, err er
 	return dAtA[:n], nil
 }
 
-func (m *UpdateResourceDependencyMappingProposal) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgUpdateResourceDependencyMappingProposal) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *UpdateResourceDependencyMappingProposal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgUpdateResourceDependencyMappingProposal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -225,7 +267,7 @@ func (m *UpdateResourceDependencyMappingProposal) MarshalToSizedBuffer(dAtA []by
 	return len(dAtA) - i, nil
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) Marshal() (dAtA []byte, err error) {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -235,12 +277,12 @@ func (m *UpdateResourceDependencyMappingProposalJsonFile) Marshal() (dAtA []byte
 	return dAtA[:n], nil
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) MarshalTo(dAtA []byte) (int, error) {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -283,6 +325,29 @@ func (m *UpdateResourceDependencyMappingProposalJsonFile) MarshalToSizedBuffer(d
 	return len(dAtA) - i, nil
 }
 
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintGov(dAtA []byte, offset int, v uint64) int {
 	offset -= sovGov(v)
 	base := offset
@@ -294,7 +359,7 @@ func encodeVarintGov(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return base
 }
-func (m *UpdateResourceDependencyMappingProposal) Size() (n int) {
+func (m *MsgUpdateResourceDependencyMappingProposal) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -317,7 +382,7 @@ func (m *UpdateResourceDependencyMappingProposal) Size() (n int) {
 	return n
 }
 
-func (m *UpdateResourceDependencyMappingProposalJsonFile) Size() (n int) {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -344,13 +409,22 @@ func (m *UpdateResourceDependencyMappingProposalJsonFile) Size() (n int) {
 	return n
 }
 
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
 func sovGov(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozGov(x uint64) (n int) {
 	return sovGov(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *UpdateResourceDependencyMappingProposal) Unmarshal(dAtA []byte) error {
+func (m *MsgUpdateResourceDependencyMappingProposal) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -373,10 +447,10 @@ func (m *UpdateResourceDependencyMappingProposal) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposal: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgUpdateResourceDependencyMappingProposal: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposal: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgUpdateResourceDependencyMappingProposal: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -498,7 +572,7 @@ func (m *UpdateResourceDependencyMappingProposal) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *UpdateResourceDependencyMappingProposalJsonFile) Unmarshal(dAtA []byte) error {
+func (m *MsgUpdateResourceDependencyMappingProposalJsonFile) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -521,10 +595,10 @@ func (m *UpdateResourceDependencyMappingProposalJsonFile) Unmarshal(dAtA []byte)
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposalJsonFile: wiretype end group for non-group")
+			return fmt.Errorf("proto: MsgUpdateResourceDependencyMappingProposalJsonFile: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: UpdateResourceDependencyMappingProposalJsonFile: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: MsgUpdateResourceDependencyMappingProposalJsonFile: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -657,6 +731,56 @@ func (m *UpdateResourceDependencyMappingProposalJsonFile) Unmarshal(dAtA []byte)
 				return err
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGov(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGov
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MsgUpdateResourceDependencyMappingProposalResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGov
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MsgUpdateResourceDependencyMappingProposalResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MsgUpdateResourceDependencyMappingProposalResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGov(dAtA[iNdEx:])

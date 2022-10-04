@@ -6,4 +6,4 @@ import (
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 )
 
-var ProposalHandler = govclient.NewProposalHandler(cli.UpdateResourceDependencyMappingProposalCmd, rest.ProposalRESTHandler)
+var ProposalHandler = govclient.NewProposalHandler(cli.MsgUpdateResourceDependencyMappingProposalCmd, rest.ProposalRESTHandler)

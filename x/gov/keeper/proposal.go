@@ -40,7 +40,7 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, content types.Content) (typ
 	keeper.SetProposal(ctx, proposal)
 	keeper.InsertInactiveProposalQueue(ctx, proposalID, proposal.DepositEndTime)
 	keeper.SetProposalID(ctx, proposalID+1)
-
+	ctx.Logger().Info(fmt.Sprintf("SubmitProposal:: Recieved Proposal %s", proposal.GetTitle()))
 	// called right after a proposal is submitted
 	keeper.AfterProposalSubmission(ctx, proposalID)
 
@@ -65,7 +65,6 @@ func (keeper Keeper) GetProposal(ctx sdk.Context, proposalID uint64) (types.Prop
 
 	var proposal types.Proposal
 	keeper.MustUnmarshalProposal(bz, &proposal)
-
 	return proposal, true
 }
 
@@ -85,6 +84,8 @@ func (keeper Keeper) DeleteProposal(ctx sdk.Context, proposalID uint64) {
 	if !ok {
 		panic(fmt.Sprintf("couldn't find proposal with id#%d", proposalID))
 	}
+	ctx.Logger().Debug(fmt.Sprintf("Deleted Proposal id=%d", proposalID))
+
 	keeper.RemoveFromInactiveProposalQueue(ctx, proposalID, proposal.DepositEndTime)
 	keeper.RemoveFromActiveProposalQueue(ctx, proposalID, proposal.VotingEndTime)
 	store.Delete(types.ProposalKey(proposalID))

@@ -51,7 +51,7 @@ func newPostPlanHandler(clientCtx client.Context) http.HandlerFunc {
 			return
 		}
 
-		content := types.NewUpdateResourceDependencyMappingProposal(
+		content := types.NewMsgUpdateResourceDependencyMappingProposal(
 			req.Title, req.Description, req.MessageDependencyMapping,
 		)
 		msg, err := govtypes.NewMsgSubmitProposal(content, req.Deposit, fromAddr)

@@ -120,8 +120,9 @@ func (k Keeper) IterateDelegations(ctx sdk.Context, delAddr sdk.AccAddress,
 
 	iterator := sdk.KVStorePrefixIterator(store, delegatorPrefixKey) // smallest to largest
 	defer iterator.Close()
-
+	ctx.Logger().Info("IterateDelegations::CALLED")
 	for i := int64(0); iterator.Valid(); iterator.Next() {
+		ctx.Logger().Info(fmt.Sprintf("IterateDelegations::LLOOOPs=%d, delegateAddr=%s", i, delAddr.String()))
 		del := types.MustUnmarshalDelegation(k.cdc, iterator.Value())
 
 		stop := fn(i, del)

@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
 )
 
-func HandleUpdateResourceDependencyMappingProposal(ctx sdk.Context, k *keeper.Keeper, p *types.UpdateResourceDependencyMappingProposal) error {
+func HandleMsgUpdateResourceDependencyMappingProposal(ctx sdk.Context, k *keeper.Keeper, p *types.MsgUpdateResourceDependencyMappingProposal) error {
 	for _, resourceDepMapping := range p.MessageDependencyMapping {
 		k.SetResourceDependencyMapping(ctx, resourceDepMapping)
 	}
@@ -19,8 +19,8 @@ func HandleUpdateResourceDependencyMappingProposal(ctx sdk.Context, k *keeper.Ke
 func NewProposalHandler(k keeper.Keeper) govtypes.Handler {
 	return func(ctx sdk.Context, content govtypes.Content) error {
 		switch c := content.(type) {
-		case *types.UpdateResourceDependencyMappingProposal:
-			return HandleUpdateResourceDependencyMappingProposal(ctx, &k, c)
+		case *types.MsgUpdateResourceDependencyMappingProposal:
+			return HandleMsgUpdateResourceDependencyMappingProposal(ctx, &k, c)
 		default:
 			return sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized accesscontrol proposal content type: %T", c)
 		}

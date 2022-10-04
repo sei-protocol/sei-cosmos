@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/client/utils"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -12,28 +15,46 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func GetTxCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:                        types.ModuleName,
+		Short:                      fmt.Sprintf("%s transactions subcommands", types.ModuleName),
+		DisableFlagParsing:         true,
+		SuggestionsMinimumDistance: 2,
+		RunE:                       client.ValidateCmd,
+	}
 
-func UpdateResourceDependencyMappingProposalCmd() *cobra.Command {
+	updateResourceDependencyMappingProposalCmd := MsgUpdateResourceDependencyMappingProposalCmd()
+	flags.AddTxFlagsToCmd(updateResourceDependencyMappingProposalCmd)
+
+	cmd.AddCommand(
+		updateResourceDependencyMappingProposalCmd,
+	)
+
+	return cmd
+}
+
+func MsgUpdateResourceDependencyMappingProposalCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update-resource-dependency-mapping [proposal-file]",
 		Args:  cobra.ExactArgs(1),
 		Short: "Submit an UpdateResourceDependencyMapping proposal",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			println("UpdateResourceDependencyMappingProposalCmd:HANDLING CLI REQUEST")
+			println("MsgUpdateResourceDependencyMappingProposalCmd:HANDLING CLI REQUEST")
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			proposal, err := utils.ParseUpdateResourceDependencyMappingProposalFile(clientCtx.Codec, args[0])
+			proposal, err := utils.ParseMsgUpdateResourceDependencyMappingProposalFile(clientCtx.Codec, args[0])
 			if err != nil {
 				return err
 			}
 
-			println("UpdateResourceDependencyMappingProposalCmd:GETTING FROM ADDRESS")
+			println("MsgUpdateResourceDependencyMappingProposalCmd:GETTING FROM ADDRESS")
 			from := clientCtx.GetFromAddress()
 
-			content := types.UpdateResourceDependencyMappingProposal{
+			content := types.MsgUpdateResourceDependencyMappingProposal{
 				Title:	proposal.Title,
 				Description: proposal.Description,
 				MessageDependencyMapping: proposal.MessageDependencyMapping,
@@ -45,13 +66,13 @@ func UpdateResourceDependencyMappingProposalCmd() *cobra.Command {
 				return err
 			}
 
-			println("UpdateResourceDependencyMappingProposalCmd:SUBMITTING PROPOSAL")
+			println("MsgUpdateResourceDependencyMappingProposalCmd:SUBMITTING PROPOSAL")
 			msg, err := govtypes.NewMsgSubmitProposal(&content, deposit, from)
 			if err != nil {
 				println("Unable to submit proposal for UpdateResourceDependencyMapping from CLI")
 				return err
 			}
-			println("UpdateResourceDependencyMappingProposalCmd:SENDING!")
+			println("MsgUpdateResourceDependencyMappingProposalCmd:SENDING!")
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}

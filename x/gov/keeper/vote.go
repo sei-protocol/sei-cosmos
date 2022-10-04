@@ -11,24 +11,31 @@ import (
 // AddVote adds a vote on a specific proposal
 func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.AccAddress, options types.WeightedVoteOptions) error {
 	proposal, ok := keeper.GetProposal(ctx, proposalID)
+
+	ctx.Logger().Info(fmt.Sprintf("AddVote::Trying to vote for proposal id=%d, voterAddr=%s", proposalID, voterAddr))
 	if !ok {
+		ctx.Logger().Info(fmt.Sprintf("AddVote:: failed proposal id=%d - not found", proposalID))
 		return sdkerrors.Wrapf(types.ErrUnknownProposal, "%d", proposalID)
 	}
 	if proposal.Status != types.StatusVotingPeriod {
+		ctx.Logger().Info(fmt.Sprintf("AddVote:: failed to vote proposal id=%d - not in voting period", proposalID))
 		return sdkerrors.Wrapf(types.ErrInactiveProposal, "%d", proposalID)
 	}
 
 	for _, option := range options {
 		if !types.ValidWeightedVoteOption(option) {
+			ctx.Logger().Info(fmt.Sprintf("AddVote:: failed proposal id=%d - invalid weighted vote option", proposalID))
 			return sdkerrors.Wrap(types.ErrInvalidVote, option.String())
 		}
 	}
 
 	vote := types.NewVote(proposalID, voterAddr, options)
 	keeper.SetVote(ctx, vote)
+	ctx.Logger().Info(fmt.Sprintf("AddVote:: set vote! proposal id=%d", proposalID))
 
 	// called after a vote on a proposal is cast
 	keeper.AfterProposalVote(ctx, proposalID, voterAddr)
+	ctx.Logger().Info(fmt.Sprintf("AddVote:: voted proposal hooks! proposal id=%d", proposalID))
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
@@ -37,7 +44,7 @@ func (keeper Keeper) AddVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.A
 			sdk.NewAttribute(types.AttributeKeyProposalID, fmt.Sprintf("%d", proposalID)),
 		),
 	)
-
+	ctx.Logger().Info(fmt.Sprintf("AddVote: Finished adding votes! proposal id=%d", proposalID))
 	return nil
 }
 
@@ -77,8 +84,10 @@ func (keeper Keeper) GetVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.A
 
 // SetVote sets a Vote to the gov store
 func (keeper Keeper) SetVote(ctx sdk.Context, vote types.Vote) {
+	ctx.Logger().Info(fmt.Sprintf("SetVote::Voted for proposal id=%d, voter=%s", vote.ProposalId, vote.Voter))
 	// vote.Option is a deprecated field, we don't set it in state
 	if vote.Option != types.OptionEmpty { //nolint
+		ctx.Logger().Info(fmt.Sprintf("SetVote::No option proposal id=%d", vote.ProposalId))
 		vote.Option = types.OptionEmpty //nolint
 	}
 
@@ -86,9 +95,11 @@ func (keeper Keeper) SetVote(ctx sdk.Context, vote types.Vote) {
 	bz := keeper.cdc.MustMarshal(&vote)
 	addr, err := sdk.AccAddressFromBech32(vote.Voter)
 	if err != nil {
+		ctx.Logger().Info(fmt.Sprintf("SetVote::Failed to vote id=%d", vote.ProposalId))
 		panic(err)
 	}
 	store.Set(types.VoteKey(vote.ProposalId, addr), bz)
+	ctx.Logger().Info(fmt.Sprintf("SetVote:: voted! id=%d", vote.ProposalId))
 }
 
 // IterateAllVotes iterates over the all the stored votes and performs a callback function
@@ -118,7 +129,7 @@ func (keeper Keeper) IterateVotes(ctx sdk.Context, proposalID uint64, cb func(vo
 		var vote types.Vote
 		keeper.cdc.MustUnmarshal(iterator.Value(), &vote)
 		populateLegacyOption(&vote)
-
+		ctx.Logger().Info(fmt.Sprintf("IterateVotes:: Found a vote for id=%d, voter=%s", vote.ProposalId, vote.Voter))
 		if cb(vote) {
 			break
 		}
@@ -127,6 +138,7 @@ func (keeper Keeper) IterateVotes(ctx sdk.Context, proposalID uint64, cb func(vo
 
 // deleteVote deletes a vote from a given proposalID and voter from the store
 func (keeper Keeper) deleteVote(ctx sdk.Context, proposalID uint64, voterAddr sdk.AccAddress) {
+	ctx.Logger().Info(fmt.Sprintf("Deleted vote for proposal id=%d", proposalID))
 	store := ctx.KVStore(keeper.storeKey)
 	store.Delete(types.VoteKey(proposalID, voterAddr))
 }

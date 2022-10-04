@@ -7,10 +7,15 @@ import "cosmos/accesscontrol/accesscontrol.proto";
 
 option go_package = "github.com/cosmos/cosmos-sdk/x/accesscontrol/types";
 
-message UpdateResourceDependencyMappingProposal {
-    option (gogoproto.equal) = false;
-    option (gogoproto.goproto_getters) = false;
+// service Msg {
+//     rpc UpdateResourceDependencyMappingProposal(MsgUpdateResourceDependencyMappingProposal) returns (MsgUpdateResourceDependencyMappingProposalResponse);
+// }
+
+message MsgUpdateResourceDependencyMappingProposal {
+    option (gogoproto.equal)            = false;
     option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.stringer)         = false;
+    option (gogoproto.goproto_getters)  = false;
 
     string title = 1 [
         (gogoproto.moretags) = "yaml:\"title\"",
@@ -26,7 +31,7 @@ message UpdateResourceDependencyMappingProposal {
     ];
 }
 
-message UpdateResourceDependencyMappingProposalJsonFile {
+message MsgUpdateResourceDependencyMappingProposalJsonFile {
     string title = 1 [
         (gogoproto.moretags) = "yaml:\"title\"",
         (gogoproto.jsontag) = "title"
@@ -44,3 +49,5 @@ message UpdateResourceDependencyMappingProposalJsonFile {
         (gogoproto.moretags) = "yaml:\"message_dependency_mapping\""
     ];
 }
+
+message MsgUpdateResourceDependencyMappingProposalResponse {}

@@ -137,7 +137,7 @@ func (keeper Keeper) IterateActiveProposalsQueue(ctx sdk.Context, endTime time.T
 		if !found {
 			panic(fmt.Sprintf("proposal %d does not exist", proposalID))
 		}
-
+		ctx.Logger().Info(fmt.Sprintf("IterateActiveProposalsQueue:: Checking Proposal %d", proposalID))
 		if cb(proposal) {
 			break
 		}

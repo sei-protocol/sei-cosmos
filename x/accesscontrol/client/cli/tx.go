@@ -40,6 +40,7 @@ func MsgUpdateResourceDependencyMappingProposalCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Short: "Submit an UpdateResourceDependencyMapping proposal",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			println("MsgUpdateResourceDependencyMappingProposalCmd:HANDLING CLI REQUEST")
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
@@ -50,6 +51,7 @@ func MsgUpdateResourceDependencyMappingProposalCmd() *cobra.Command {
 				return err
 			}
 
+			println("MsgUpdateResourceDependencyMappingProposalCmd:GETTING FROM ADDRESS")
 			from := clientCtx.GetFromAddress()
 
 			content := types.MsgUpdateResourceDependencyMappingProposal{
@@ -60,15 +62,17 @@ func MsgUpdateResourceDependencyMappingProposalCmd() *cobra.Command {
 
 			deposit, err := sdk.ParseCoinsNormalized(proposal.Deposit)
 			if err != nil {
+				println("Unable to prase coin from UpdateResourceDependencyMapping from CLI")
 				return err
 			}
 
+			println("MsgUpdateResourceDependencyMappingProposalCmd:SUBMITTING PROPOSAL")
 			msg, err := govtypes.NewMsgSubmitProposal(&content, deposit, from)
 			if err != nil {
-
+				println("Unable to submit proposal for UpdateResourceDependencyMapping from CLI")
 				return err
 			}
-
+			println("MsgUpdateResourceDependencyMappingProposalCmd:SENDING!")
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}

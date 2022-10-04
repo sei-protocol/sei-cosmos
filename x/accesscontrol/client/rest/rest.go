@@ -34,7 +34,6 @@ func ProposalRESTHandler(clientCtx client.Context) govrest.ProposalRESTHandler {
 
 func newPostPlanHandler(clientCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		println("HANDLING POST REQUEST")
 		var req UpdateResourceDependencyMappingRequest
 
 		if !rest.ReadRESTReq(w, r, clientCtx.LegacyAmino, &req) {

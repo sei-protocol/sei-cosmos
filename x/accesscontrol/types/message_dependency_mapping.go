@@ -10,8 +10,10 @@ import (
 
 var ErrNoCommitAccessOp = fmt.Errorf("MessageDependencyMapping doesn't terminate with AccessType_COMMIT")
 
-func GenerateMessageKey(msg sdk.Msg) string {
-	return proto.MessageName(msg)
+type MessageKey string
+
+func GenerateMessageKey(msg sdk.Msg) MessageKey {
+	return MessageKey(proto.MessageName(msg))
 }
 
 func ValidateMessageDependencyMapping(mapping acltypes.MessageDependencyMapping) error {
@@ -22,9 +24,9 @@ func ValidateMessageDependencyMapping(mapping acltypes.MessageDependencyMapping)
 	return nil
 }
 
-func SynchronousMessageDependencyMapping(messageKey string) acltypes.MessageDependencyMapping {
+func SynchronousMessageDependencyMapping(messageKey MessageKey) acltypes.MessageDependencyMapping {
 	return acltypes.MessageDependencyMapping{
-		MessageKey: messageKey,
+		MessageKey: string(messageKey),
 		AccessOps: []acltypes.AccessOperation{
 			{AccessType: acltypes.AccessType_UNKNOWN, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},
 			{AccessType: acltypes.AccessType_COMMIT, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},

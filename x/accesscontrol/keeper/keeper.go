@@ -17,11 +17,21 @@ import (
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 )
 
+// Option is an extension point to instantiate keeper with non default values
+type Option interface {
+	apply(*Keeper)
+}
+
+type MessageDependencyGenerator func(ctx sdk.Context, msg sdk.Msg) []acltypes.AccessOperation
+
+type DependencyGeneratorMap map[types.MessageKey]MessageDependencyGenerator
+
 type (
 	Keeper struct {
-		cdc        codec.BinaryCodec
-		storeKey   sdk.StoreKey
-		paramSpace paramtypes.Subspace
+		cdc                              codec.BinaryCodec
+		storeKey                         sdk.StoreKey
+		paramSpace                       paramtypes.Subspace
+		MessageDependencyGeneratorMapper DependencyGeneratorMap
 	}
 )
 
@@ -29,23 +39,31 @@ func NewKeeper(
 	cdc codec.Codec,
 	storeKey sdk.StoreKey,
 	paramSpace paramtypes.Subspace,
+	opts ...Option,
 ) Keeper {
 	if !paramSpace.HasKeyTable() {
 		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
 	}
 
-	return Keeper{
-		cdc:        cdc,
-		storeKey:   storeKey,
-		paramSpace: paramSpace,
+	keeper := &Keeper{
+		cdc:                              cdc,
+		storeKey:                         storeKey,
+		paramSpace:                       paramSpace,
+		MessageDependencyGeneratorMapper: DefaultMessageDependencyGenerator(),
 	}
+
+	for _, o := range opts {
+		o.apply(keeper)
+	}
+
+	return *keeper
 }
 
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
-func (k Keeper) GetResourceDependencyMapping(ctx sdk.Context, messageKey string) acltypes.MessageDependencyMapping {
+func (k Keeper) GetResourceDependencyMapping(ctx sdk.Context, messageKey types.MessageKey) acltypes.MessageDependencyMapping {
 	store := ctx.KVStore(k.storeKey)
 	depMapping := store.Get(types.GetResourceDependencyKey(messageKey))
 	if depMapping == nil {
@@ -68,7 +86,7 @@ func (k Keeper) SetResourceDependencyMapping(
 	}
 	store := ctx.KVStore(k.storeKey)
 	b := k.cdc.MustMarshal(&dependencyMapping)
-	resourceKey := types.GetResourceDependencyKey(dependencyMapping.GetMessageKey())
+	resourceKey := types.GetResourceDependencyKey(types.MessageKey(dependencyMapping.GetMessageKey()))
 	store.Set(resourceKey, b)
 	return nil
 }
@@ -130,11 +148,19 @@ func MeasureBuildDagDuration(start time.Time, method string) {
 }
 
 func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.AccessOperation {
-	switch msg.(type) {
-	default:
-		// Default behavior is to get the static dependency mapping for the message
-		messageKey := types.GenerateMessageKey(msg)
-		dependencyMapping := k.GetResourceDependencyMapping(ctx, messageKey)
-		return dependencyMapping.AccessOps
+	// Default behavior is to get the static dependency mapping for the message
+	messageKey := types.GenerateMessageKey(msg)
+	dependencyMapping := k.GetResourceDependencyMapping(ctx, messageKey)
+	if dependencyGenerator, ok := k.MessageDependencyGeneratorMapper[types.GenerateMessageKey(msg)]; dependencyMapping.DynamicEnabled && ok {
+		// if we have a dependency generator AND dynamic is enabled, use it
+		return dependencyGenerator(ctx, msg)
+	}
+	return dependencyMapping.AccessOps
+
+}
+
+func DefaultMessageDependencyGenerator() DependencyGeneratorMap {
+	return DependencyGeneratorMap{
+		//TODO: define default granular behavior here
 	}
 }

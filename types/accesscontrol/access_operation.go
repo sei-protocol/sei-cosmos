@@ -8,3 +8,4 @@ func (a *AccessOperation) GetResourceID(msg interface{}) string {
 	}
 	return a.GetIdentifierTemplate()
 }
+

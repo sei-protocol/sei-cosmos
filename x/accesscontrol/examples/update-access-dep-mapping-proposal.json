@@ -1,20 +1,20 @@
 {
     "title": "Updating Resource Dependency Mapping",
-    "description": "Updating mapping for message key 'testing'",
+    "description": "Updating seiprotocol.seichain.dex.MsgPlaceOrders",
     "deposit": "10sei",
     "message_dependency_mapping": [
         {
-          "message_key": "testing",
+          "message_key": "seiprotocol.seichain.dex.MsgPlaceOrders",
           "access_ops": [
             {
               "access_type": "UNKNOWN",
               "resource_type": "ANY",
-              "identifier_template": "*"
+              "identifier_template": "%s"
             },
             {
               "access_type": "COMMIT",
               "resource_type": "ANY",
-              "identifier_template": "*"
+              "identifier_template": "%s"
             }
           ]
         }

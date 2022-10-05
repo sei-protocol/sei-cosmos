@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 )
@@ -654,6 +653,7 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // returned if the tx does not run out of gas and if all the messages are valid
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
+	ctx.Logger().Info("runTx:: running Tx")
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
@@ -755,6 +755,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
+	ctx.Logger().Info("runTx:: running Msgs")
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
 
 	if err == nil && mode == runTxModeDeliver {
@@ -774,18 +775,19 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 // Waits for all dependent concurrent resource access operations to complete before handling
 // message. Defers completion signal to the end of the method once the real handler is called
-func wrappedHandler(ctx sdk.Context, msg sdk.Msg, handler sdk.Handler) (*sdk.Result, error) {
-	messageIndex := ctx.MessageIndex()
+// func wrappedHandler(ctx sdk.Context, msg sdk.Msg, handler sdk.Handler) (*sdk.Result, error) {
+// 	messageIndex := ctx.MessageIndex()
 
-	// Defer sending completion channels to the end of the message 
-	defer acltypes.SendAllSignals(ctx.TxCompletionChannels()[messageIndex])
+// 	// Defer sending completion channels to the end of the message
+// 	defer acltypes.SendAllSignals(ctx.TxCompletionChannels()[messageIndex])
 
-	// Wait for signals to complete, this should be blocking 
-	// TODO:: More granular waits on access time instead
-	acltypes.WaitForAllSignals(ctx.TxBlockingChannels()[messageIndex])
-
-	return handler(ctx, msg)
-}
+// 	// Wait for signals to complete, this should be blocking
+// 	// TODO:: More granular waits on access time instead
+// 	ctx.Logger().Info("wrappedHandler:: waiting for signals")
+// 	acltypes.WaitForAllSignals(ctx.TxBlockingChannels()[messageIndex])
+// 	ctx.Logger().Info("wrappedHandler:: recieved all for signals")
+// 	return handler(ctx, msg)
+// }
 
 // runMsgs iterates through a list of messages and executes them with the provided
 // Context and execution mode. Messages will only be executed during simulation
@@ -821,7 +823,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
 			ctx = ctx.WithMessageIndex(i)
 			// ADR 031 request type routing
-			msgResult, err = wrappedHandler(ctx, msg, handler)
+			ctx.Logger().Info("runMsgs:: handling msg")
+			msgResult, err = handler(ctx, msg)
+			ctx.Logger().Info("runMsgs:: msg handled!")
 			eventMsgName = sdk.MsgTypeURL(msg)
 		} else if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 			// legacy sdk.Msg routing

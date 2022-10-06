@@ -35,7 +35,8 @@ func ValidateMessageDependencyMapping(mapping acltypes.MessageDependencyMapping)
 
 func SynchronousMessageDependencyMapping(messageKey MessageKey) acltypes.MessageDependencyMapping {
 	return acltypes.MessageDependencyMapping{
-		MessageKey: string(messageKey),
+		MessageKey:     string(messageKey),
+		DynamicEnabled: false,
 		AccessOps: []acltypes.AccessOperation{
 			{AccessType: acltypes.AccessType_UNKNOWN, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},
 			{AccessType: acltypes.AccessType_COMMIT, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},
@@ -47,4 +48,12 @@ func DefaultMessageDependencyMapping() []acltypes.MessageDependencyMapping {
 	return []acltypes.MessageDependencyMapping{
 		SynchronousMessageDependencyMapping(""),
 	}
+}
+
+func ValidateWasmFunctionDependencyMapping(mapping acltypes.WasmFunctionDependencyMapping) error {
+	lastAccessOp := mapping.AccessOps[len(mapping.AccessOps)-1]
+	if lastAccessOp.AccessType != acltypes.AccessType_COMMIT {
+		return ErrNoCommitAccessOp
+	}
+	return nil
 }

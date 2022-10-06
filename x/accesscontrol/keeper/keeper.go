@@ -154,7 +154,13 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 	if dependencyGenerator, ok := k.MessageDependencyGeneratorMapper[types.GenerateMessageKey(msg)]; dependencyMapping.DynamicEnabled && ok {
 		// if we have a dependency generator AND dynamic is enabled, use it
 		if dependencies, err := dependencyGenerator(ctx, msg); err == nil {
-			return dependencies
+			// validate the access ops before using them
+			validateErr := types.ValidateAccessOps(dependencies)
+			if validateErr == nil {
+				return dependencies
+			} else {
+				ctx.Logger().Error(validateErr.Error())
+			}
 		} else {
 			ctx.Logger().Error("Error generating message dependencies: ", err)
 		}

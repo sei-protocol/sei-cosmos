@@ -96,7 +96,7 @@ func (cgts ConsumeTxSizeGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 
 	txSize := len(ctx.TxBytes())
 	gas := params.TxSizeCostPerByte * sdk.Gas(txSize)
-	ctx.Logger().Info(fmt.Sprintf("ConsumeTxSizeGasDecorator:TxIndex=%d Consuming gas=%d for txSize=%d bytes", ctx.TxIndex(), gas, txSize))
+	ctx.Logger().Info(fmt.Sprintf("ConsumeTxSizeGasDecorator:Height=%d:TxIndex=%d Consuming gas=%d for txSize=%d bytes", ctx.BlockHeight(), ctx.TxIndex(), gas, txSize))
 	ctx.GasMeter().ConsumeGas(gas, "txSize")
 
 	// simulate gas cost for signatures in simulate mode

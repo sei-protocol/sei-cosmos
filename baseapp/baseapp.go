@@ -655,6 +655,9 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 	ctx.Logger().Info("runTx:: running Tx")
+	// Defer sending completion channels to the end of the message
+	defer acltypes.SendAllSignals(ctx.TxCompletionChannels())
+
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
@@ -799,9 +802,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			panic(err)
 		}
 	}()
-
-	// Defer sending completion channels to the end of the message
-	defer acltypes.SendAllSignals(ctx.TxCompletionChannels())
 
 	msgLogs := make(sdk.ABCIMessageLogs, 0, len(msgs))
 	events := sdk.EmptyEvents()

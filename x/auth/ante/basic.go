@@ -1,6 +1,8 @@
 package ante
 
 import (
+	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -92,7 +94,10 @@ func (cgts ConsumeTxSizeGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 	}
 	params := cgts.ak.GetParams(ctx)
 
-	ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*sdk.Gas(len(ctx.TxBytes())), "txSize")
+	txSize := len(ctx.TxBytes())
+	gas := params.TxSizeCostPerByte * sdk.Gas(txSize)
+	ctx.Logger().Info(fmt.Sprintf("ConsumeTxSizeGasDecorator:TxIndex=%d Consuming gas=%d for txSize=%d bytes", ctx.TxIndex(), gas, txSize))
+	ctx.GasMeter().ConsumeGas(gas, "txSize")
 
 	// simulate gas cost for signatures in simulate mode
 	if simulate {

@@ -22,7 +22,7 @@ type Option interface {
 	apply(*Keeper)
 }
 
-type MessageDependencyGenerator func(ctx sdk.Context, msg sdk.Msg) []acltypes.AccessOperation
+type MessageDependencyGenerator func(ctx sdk.Context, msg sdk.Msg) ([]acltypes.AccessOperation, error)
 
 type DependencyGeneratorMap map[types.MessageKey]MessageDependencyGenerator
 
@@ -153,7 +153,11 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 	dependencyMapping := k.GetResourceDependencyMapping(ctx, messageKey)
 	if dependencyGenerator, ok := k.MessageDependencyGeneratorMapper[types.GenerateMessageKey(msg)]; dependencyMapping.DynamicEnabled && ok {
 		// if we have a dependency generator AND dynamic is enabled, use it
-		return dependencyGenerator(ctx, msg)
+		if dependencies, err := dependencyGenerator(ctx, msg); err == nil {
+			return dependencies
+		} else {
+			ctx.Logger().Error("Error generating message dependencies: ", err)
+		}
 	}
 	return dependencyMapping.AccessOps
 

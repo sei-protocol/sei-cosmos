@@ -779,9 +779,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 func wrappedHandler(ctx sdk.Context, msg sdk.Msg, handler sdk.Handler) (*sdk.Result, error) {
 	messageIndex := ctx.MessageIndex()
 
-	// Defer sending completion channels to the end of the message
-	defer acltypes.SendAllSignals(ctx.TxCompletionChannels()[messageIndex])
-
 	// Wait for signals to complete, this should be blocking
 	// TODO:: More granular waits on access time instead
 	ctx.Logger().Info("wrappedHandler:: waiting for signals")
@@ -802,6 +799,10 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			panic(err)
 		}
 	}()
+
+	// Defer sending completion channels to the end of the message
+	defer acltypes.SendAllSignals(ctx.TxCompletionChannels())
+
 	msgLogs := make(sdk.ABCIMessageLogs, 0, len(msgs))
 	events := sdk.EmptyEvents()
 	txMsgData := &sdk.TxMsgData{

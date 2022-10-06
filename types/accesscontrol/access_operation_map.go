@@ -16,12 +16,14 @@ func WaitForAllSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
 	println("WaitForallSignals:: Recieved all signals")
 }
 
-func SendAllSignals(accessOpsToChannelsMap AccessOpsChannelMapping) {
+func SendAllSignals(MessageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
 	println("SendAllSignal:: Preparing to send")
-	for _, channels := range accessOpsToChannelsMap {
-		for _, channel := range channels {
-			channel <- struct{}{}
+	for _, accessOpsToChannelsMap  := range MessageIndexToAccessOpsChannelMapping {
+		for _, channels := range accessOpsToChannelsMap {
+			for _, channel := range channels {
+				channel <- struct{}{}
+			}
 		}
+		println("SendAllSignal:: Sent")
 	}
-	println("SendAllSignal:: Sent")
 }

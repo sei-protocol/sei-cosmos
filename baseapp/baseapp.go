@@ -759,7 +759,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
-	ctx.Logger().Info("runTx:: running Msgs")
+
+	// Wait for signals to complete, this should be blocking
+	// TODO:: More granular waits on access time instead
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
 
 	if err == nil && mode == runTxModeDeliver {
@@ -777,19 +779,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	return gInfo, result, anteEvents, priority, err
 }
 
-// Waits for all dependent concurrent resource access operations to complete before handling
-// message. Defers completion signal to the end of the method once the real handler is called
-func wrappedHandler(ctx sdk.Context, msg sdk.Msg, handler sdk.Handler) (*sdk.Result, error) {
-	messageIndex := ctx.MessageIndex()
-
-	// Wait for signals to complete, this should be blocking
-	// TODO:: More granular waits on access time instead
-	ctx.Logger().Info("wrappedHandler:: waiting for signals")
-	acltypes.WaitForAllSignals(ctx.TxBlockingChannels()[messageIndex])
-	ctx.Logger().Info("wrappedHandler:: recieved all for signals")
-	return handler(ctx, msg)
-}
-
 // runMsgs iterates through a list of messages and executes them with the provided
 // Context and execution mode. Messages will only be executed during simulation
 // and DeliverTx. An error is returned if any single message fails or if a
@@ -802,6 +791,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			panic(err)
 		}
 	}()
+	ctx.Logger().Info("runMsgs:: running Msgs")
+
+	defer ctx.Logger().Info("runMsgs:: handled all messages!")
 
 	msgLogs := make(sdk.ABCIMessageLogs, 0, len(msgs))
 	events := sdk.EmptyEvents()
@@ -809,6 +801,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		Data: make([]*sdk.MsgData, 0, len(msgs)),
 	}
 
+	ctx.Logger().Info("wrappedHandler:: waiting for signals")
+	acltypes.WaitForAllSignals(ctx.TxBlockingChannels())
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
 	for i, msg := range msgs {
 		// skip actual execution for (Re)CheckTx mode
@@ -826,7 +820,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			ctx = ctx.WithMessageIndex(i)
 			// ADR 031 request type routing
 			ctx.Logger().Info("runMsgs:: handling msg")
-			msgResult, err = wrappedHandler(ctx, msg, handler)
+			msgResult, err = handler(ctx, msg)
 			ctx.Logger().Info("runMsgs:: msg handled!")
 			eventMsgName = sdk.MsgTypeURL(msg)
 		} else if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
@@ -841,9 +835,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			if handler == nil {
 				return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s; message index: %d", msgRoute, i)
 			}
-			ctx.Logger().Info("runMsgs:: legacy handling msg")
-			msgResult, err = wrappedHandler(ctx, msg, handler)
-			ctx.Logger().Info("runMsgs:: legacy handling msg")
+			msgResult, err = handler(ctx, msg)
+
 		} else {
 			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 		}
@@ -865,6 +858,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		txMsgData.Data = append(txMsgData.Data, &sdk.MsgData{MsgType: sdk.MsgTypeURL(msg), Data: msgResult.Data})
 		msgLogs = append(msgLogs, sdk.NewABCIMessageLog(uint32(i), msgResult.Log, msgEvents))
+		ctx.Logger().Info("runMsgs:: message handled!", i)
 	}
 
 	data, err := proto.Marshal(txMsgData)

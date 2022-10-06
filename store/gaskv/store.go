@@ -43,8 +43,8 @@ func (gs *Store) Get(key []byte) (value []byte) {
 	gs.gasMeter.ConsumeGas(gs.gasConfig.ReadCostFlat, types.GasReadCostFlatDesc)
 	value = gs.parent.Get(key)
 
-	keyGas := gs.gasConfig.ReadCostPerByte * types.Gas(len(key))
-	valueGas := gs.gasConfig.ReadCostPerByte * types.Gas(len(value))
+	keyGas := 0 * types.Gas(len(key))
+	valueGas := 0 * types.Gas(len(value))
 
 	println(fmt.Printf("GasFee:READ: key=%s gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", string(key), keyGas, len(key), gs.gasConfig.ReadCostPerByte, gs.gasConfig.ReadCostPerByte * types.Gas(len(key))))
 	println(fmt.Printf("GasFee:READ: value=%s gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", string(value), keyGas, len(value), gs.gasConfig.ReadCostPerByte, gs.gasConfig.ReadCostPerByte * types.Gas(len(value))))

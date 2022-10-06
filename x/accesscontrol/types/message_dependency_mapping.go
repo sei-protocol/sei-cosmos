@@ -16,12 +16,17 @@ func GenerateMessageKey(msg sdk.Msg) MessageKey {
 	return MessageKey(proto.MessageName(msg))
 }
 
-func ValidateMessageDependencyMapping(mapping acltypes.MessageDependencyMapping) error {
-	lastAccessOp := mapping.AccessOps[len(mapping.AccessOps)-1]
+// Validates access operation sequence for a message, requires the last access operation to be a COMMIT
+func ValidateAccessOps(accessOps []acltypes.AccessOperation) error {
+	lastAccessOp := accessOps[len(accessOps)-1]
 	if lastAccessOp.AccessType != acltypes.AccessType_COMMIT {
 		return ErrNoCommitAccessOp
 	}
 	return nil
+}
+
+func ValidateMessageDependencyMapping(mapping acltypes.MessageDependencyMapping) error {
+	return ValidateAccessOps(mapping.AccessOps)
 }
 
 func SynchronousMessageDependencyMapping(messageKey MessageKey) acltypes.MessageDependencyMapping {

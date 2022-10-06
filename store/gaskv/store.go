@@ -46,8 +46,8 @@ func (gs *Store) Get(key []byte) (value []byte) {
 	keyGas := 0 * types.Gas(len(key))
 	valueGas := 0 * types.Gas(len(value))
 
-	println(fmt.Printf("GasFee:READ: key=%s gas=%d bytes=%d configuredGasPerByte=%d", string(key), keyGas, len(key), gs.gasConfig.ReadCostPerByte))
-	println(fmt.Printf("GasFee:READ: value=%s gas=%d bytes=%d configuredGasPerByte=%d", string(value), keyGas, len(value), gs.gasConfig.ReadCostPerByte))
+	println(fmt.Printf("GasFee:READ: key=%s gas=%d bytes=%d configuredGasPerByte=%d workingHash=%s", string(key), keyGas, len(key), gs.gasConfig.ReadCostPerByte, gs.GetWorkingHash()))
+	println(fmt.Printf("GasFee:READ: value=%s gas=%d bytes=%d configuredGasPerByte=%d workingHash=%s", string(value), keyGas, len(value), gs.gasConfig.ReadCostPerByte, gs.GetWorkingHash()))
 
 	// TODO overflow-safe math?
 	gs.gasMeter.ConsumeGas(keyGas, types.GasReadPerByteDesc)
@@ -72,8 +72,8 @@ func (gs *Store) Set(key []byte, value []byte) {
 	gs.gasMeter.ConsumeGas(valueGas, types.GasWritePerByteDesc)
 
 	println(fmt.Printf("GasFee:WRITE: flat write gas=%d ", gs.gasConfig.WriteCostFlat))
-	println(fmt.Printf("GasFee:WRITE: key=%s gas=%d bytes=%d configuredGasPerByte=%d", string(key), keyGas, len(key), gs.gasConfig.WriteCostPerByte))
-	println(fmt.Printf("GasFee:WRITE: value=%s gas=%d bytes=%d configuredGasPerByte=%d", string(value), keyGas, len(value), gs.gasConfig.WriteCostPerByte))
+	println(fmt.Printf("GasFee:WRITE: key=%s gas=%d bytes=%d configuredGasPerByte=%d workingHash=%s", string(key), keyGas, len(key), gs.gasConfig.WriteCostPerByte, gs.GetWorkingHash()))
+	println(fmt.Printf("GasFee:WRITE: value=%s gas=%d bytes=%d configuredGasPerByte=%d workingHash=%s", string(value), keyGas, len(value), gs.gasConfig.WriteCostPerByte, gs.GetWorkingHash()))
 
 	gs.parent.Set(key, value)
 }

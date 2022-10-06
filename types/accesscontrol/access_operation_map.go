@@ -1,5 +1,9 @@
 package accesscontrol
 
+import (
+	"github.com/k0kubun/pp"
+)
+
 // Alias for Map of MessageIndex -> AccessOperation -> Channel
 type MessageAccessOpsChannelMapping = map[int]AccessOpsChannelMapping
 
@@ -8,7 +12,8 @@ type AccessOpsChannelMapping = map[AccessOperation][]chan interface{}
 
 
 func WaitForAllSignals(messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
-	println("WaitForallSignals:: Waiting for signals =========")
+	println("=========WaitForallSignals:: Waiting for signals =========")
+	pp.Println(messageIndexToAccessOpsChannelMapping)
 	for _, accessOpsToChannelsMap  := range messageIndexToAccessOpsChannelMapping {
 		for _, channels := range accessOpsToChannelsMap {
 			for i, channel := range channels {
@@ -22,7 +27,8 @@ func WaitForAllSignals(messageIndexToAccessOpsChannelMapping MessageAccessOpsCha
 }
 
 func SendAllSignals(messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
-	println("SendAllSignal:: Preparing to send=========")
+	println("=========SendAllSignal:: Preparing to send=========")
+	pp.Println(messageIndexToAccessOpsChannelMapping)
 	for _, accessOpsToChannelsMap  := range messageIndexToAccessOpsChannelMapping {
 		for _, channels := range accessOpsToChannelsMap {
 			for i, channel := range channels {

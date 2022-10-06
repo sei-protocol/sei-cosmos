@@ -67,7 +67,6 @@ func (c Context) EventManager() *EventManager { return c.eventManager }
 func (c Context) Priority() int64             { return c.priority }
 func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping { return c.txCompletionChannels }
 func (c Context) TxBlockingChannels() 	acltypes.MessageAccessOpsChannelMapping { return c.txBlockingChannels }
-func (c Context) MessageIndex() int		  { return c.messageIndex }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
@@ -239,12 +238,6 @@ func (c Context) WithTxCompletionChannels(completionChannels acltypes.MessageAcc
 // WithTxBlockingChannels returns a Context with an updated list of blocking channels for completion signals
 func (c Context) WithTxBlockingChannels(blockingChannels acltypes.MessageAccessOpsChannelMapping) Context {
 	c.txBlockingChannels = blockingChannels
-	return c
-}
-
-// WithMessageIndex returns a Context with the current message index that's being processed
-func (c Context) WithMessageIndex(messageIndex int) Context {
-	c.messageIndex = messageIndex
 	return c
 }
 

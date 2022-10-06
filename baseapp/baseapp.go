@@ -760,8 +760,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
 
-	// Wait for signals to complete, this should be blocking
-	// TODO:: More granular waits on access time instead
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
 
 	if err == nil && mode == runTxModeDeliver {
@@ -801,6 +799,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		Data: make([]*sdk.MsgData, 0, len(msgs)),
 	}
 
+	// Wait for signals to complete, this should be blocking
+	// TODO:: More granular waits on access time instead
 	ctx.Logger().Info("wrappedHandler:: waiting for signals")
 	acltypes.WaitForAllSignals(ctx.TxBlockingChannels())
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
@@ -817,7 +817,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		)
 
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
-			ctx = ctx.WithMessageIndex(i)
 			// ADR 031 request type routing
 			ctx.Logger().Info("runMsgs:: handling msg")
 			msgResult, err = handler(ctx, msg)

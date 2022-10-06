@@ -1,6 +1,8 @@
 package accesscontrol
 
 import (
+	"fmt"
+
 	"github.com/k0kubun/pp"
 )
 
@@ -11,32 +13,32 @@ type MessageAccessOpsChannelMapping = map[int]AccessOpsChannelMapping
 type AccessOpsChannelMapping = map[AccessOperation][]chan interface{}
 
 
-func WaitForAllSignals(messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
-	println("=========WaitForallSignals:: Waiting for signals =========")
+func WaitForAllSignals(txIndex int, messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
+	println(fmt.Printf("%d=========WaitForallSignals:: Waiting for signals =========", txIndex))
 	pp.Println(messageIndexToAccessOpsChannelMapping)
 	for _, accessOpsToChannelsMap  := range messageIndexToAccessOpsChannelMapping {
 		for _, channels := range accessOpsToChannelsMap {
-			for i, channel := range channels {
-				println("WaitForallSignals:: Waiting", i)
+			for _, channel := range channels {
+				println(fmt.Printf("%d==WaitForallSignals:: Waiting", txIndex))
 				<-channel
-				println("WaitForallSignals:: Got Signal!", i)
+				println(fmt.Printf("%d==WaitForallSignals:: Got Signal", txIndex))
 			}
 		}
 	}
 	println("WaitForallSignals:: Recieved all signals=========")
 }
 
-func SendAllSignals(messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
-	println("=========SendAllSignal:: Preparing to send=========")
+func SendAllSignals(txIndex int, messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
+	println(fmt.Printf("%d=========SendAllSignals:: Sending Signals =========", txIndex))
 	pp.Println(messageIndexToAccessOpsChannelMapping)
 	for _, accessOpsToChannelsMap  := range messageIndexToAccessOpsChannelMapping {
 		for _, channels := range accessOpsToChannelsMap {
-			for i, channel := range channels {
-				println("SendAllSignal:: Sending", i)
+			for _, channel := range channels {
+				println(fmt.Printf("%d==SendAllSignals:: Sending Signal", txIndex))
 				channel <- struct{}{}
-				println("SendAllSignal:: Sent", i)
+				println(fmt.Printf("%d==SendAllSignals:: Sent Signal", txIndex))
 			}
 		}
 	}
-	println("SendAllSignal:: Sent all Signals=========")
+	println(fmt.Printf("%d==SendAllSignals:: Sent All Signals", txIndex))
 }

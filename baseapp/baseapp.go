@@ -656,7 +656,7 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 	ctx.Logger().Info("runTx:: running Tx")
 	// Defer sending completion channels to the end of the message
-	defer acltypes.SendAllSignals(ctx.TxCompletionChannels())
+	defer acltypes.SendAllSignals(ctx.TxIndex(), ctx.TxCompletionChannels())
 
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
@@ -802,7 +802,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 	// Wait for signals to complete, this should be blocking
 	// TODO:: More granular waits on access time instead
 	ctx.Logger().Info("wrappedHandler:: waiting for signals")
-	acltypes.WaitForAllSignals(ctx.TxBlockingChannels())
+	acltypes.WaitForAllSignals(ctx.TxIndex(), ctx.TxBlockingChannels())
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
 	for i, msg := range msgs {
 		// skip actual execution for (Re)CheckTx mode

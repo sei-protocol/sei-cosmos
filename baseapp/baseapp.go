@@ -761,7 +761,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// Result if any single message fails or does not have a registered Handler.
 
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
-
 	if err == nil && mode == runTxModeDeliver {
 		// When block gas exceeds, it'll panic and won't commit the cached store.
 		consumeBlockGas()

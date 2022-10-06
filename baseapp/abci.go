@@ -234,10 +234,10 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) abci.R
 	}()
 
 	gInfo, result, anteEvents, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
-	ctx.Logger().Info(fmt.Sprintf("DeliverTx:Height=%d:TxIndex=%d GasUsed=%d for txSize=%d", ctx.BlockHeight(), ctx.TxIndex(), gInfo.GasUsed, len(req.Tx)))
+	ctx.Logger().Info(fmt.Sprintf("GasFee:DeliverTx:Height=%d:TxIndex=%d GasUsed=%d for txSize=%d", ctx.BlockHeight(), ctx.TxIndex(), gInfo.GasUsed, len(req.Tx)))
 	if err != nil {
 		resultStr = "failed"
-		ctx.Logger().Info("DeliverTx:Deliever Failed")
+		ctx.Logger().Info("DeliverTx:DeliverTx Failed")
 		return sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)
 	}
 

@@ -201,7 +201,7 @@ func KVGasConfig() GasConfig {
 		HasCost:          1000,
 		DeleteCost:       1000,
 		ReadCostFlat:     1000,
-		ReadCostPerByte:  3,
+		ReadCostPerByte:  0,
 		WriteCostFlat:    2000,
 		WriteCostPerByte: 30,
 		IterNextCostFlat: 30,
@@ -216,7 +216,7 @@ func TransientGasConfig() GasConfig {
 		ReadCostFlat:     100,
 		ReadCostPerByte:  0,
 		WriteCostFlat:    200,
-		WriteCostPerByte: 3,
-		IterNextCostFlat: 3,
+		WriteCostPerByte: 0,
+		IterNextCostFlat: 0,
 	}
 }

@@ -42,8 +42,8 @@ func (gs *Store) Get(key []byte) (value []byte) {
 	gs.gasMeter.ConsumeGas(gs.gasConfig.ReadCostFlat, types.GasReadCostFlatDesc)
 	value = gs.parent.Get(key)
 
-	keyGas := 0 * types.Gas(len(key))
-	valueGas := 0 * types.Gas(len(value))
+	keyGas :=  gs.gasConfig.ReadCostPerByte * types.Gas(len(key))
+	valueGas :=  gs.gasConfig.ReadCostPerByte * types.Gas(len(value))
 
 	// if keyGas > 0 {
 	// 	println(fmt.Printf("GasFee:READ:key key=%s gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", string(key), keyGas, len(key), gs.gasConfig.ReadCostPerByte, gs.gasConfig.ReadCostPerByte * types.Gas(len(key))))
@@ -69,8 +69,8 @@ func (gs *Store) Set(key []byte, value []byte) {
 	types.AssertValidValue(value)
 
 
-	keyGas := 0 * types.Gas(len(key))
-	valueGas := 0 * types.Gas(len(value))
+	keyGas := gs.gasConfig.WriteCostPerByte * types.Gas(len(key))
+	valueGas := gs.gasConfig.WriteCostPerByte * types.Gas(len(value))
 
 	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostFlat, types.GasWriteCostFlatDesc)
 
@@ -215,8 +215,8 @@ func (gi *gasIterator) consumeSeekGas() {
 		key := gi.Key()
 		value := gi.Value()
 
-		keyGas := 0 * types.Gas(len(key))
-		valueGas := 0 * types.Gas(len(value))
+		keyGas := gi.gasConfig.ReadCostPerByte * types.Gas(len(key))
+		valueGas := gi.gasConfig.ReadCostPerByte * types.Gas(len(value))
 
 		// if keyGas > 0 {
 		// 	println(fmt.Printf("GasFee:SEEK:key key=%s gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", string(key), keyGas, len(key), gi.gasConfig.ReadCostPerByte, gi.gasConfig.ReadCostPerByte*types.Gas(len(key))))

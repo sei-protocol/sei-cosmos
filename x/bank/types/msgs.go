@@ -1,7 +1,10 @@
 package types
 
 import (
+	fmt "fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkacltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
@@ -47,6 +50,12 @@ func (msg MsgSend) ValidateBasic() error {
 
 	return nil
 }
+
+// Used for concurrent message processing
+func (msg MsgSend) GetMsgResourceIdentifier(accessOp sdkacltypes.AccessOperation) string {
+	return fmt.Sprintf(accessOp.GetIdentifierTemplate(), msg.FromAddress, msg.ToAddress)
+}
+
 
 // GetSignBytes Implements Msg.
 func (msg MsgSend) GetSignBytes() []byte {

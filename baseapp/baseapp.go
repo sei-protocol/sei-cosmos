@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 )
@@ -655,9 +654,6 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 	ctx.Logger().Info("runTx:: running Tx")
-	// Defer sending completion channels to the end of the message
-	// defer acltypes.SendAllSignals(ctx.TxIndex(), ctx.TxCompletionChannels())
-
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
 	// meter so we initialize upfront.
@@ -798,10 +794,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		Data: make([]*sdk.MsgData, 0, len(msgs)),
 	}
 
-	// Wait for signals to complete, this should be blocking
-	// TODO:: More granular waits on access time instead
-	ctx.Logger().Info("wrappedHandler:: waiting for signals")
-	acltypes.WaitForAllSignals(ctx.TxIndex(), ctx.TxBlockingChannels())
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
 	for i, msg := range msgs {
 		// skip actual execution for (Re)CheckTx mode

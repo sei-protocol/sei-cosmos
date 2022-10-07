@@ -1,7 +1,6 @@
 package gaskv
 
 import (
-	"fmt"
 	"io"
 	"time"
 
@@ -219,15 +218,15 @@ func (gi *gasIterator) consumeSeekGas() {
 		keyGas := 0 * types.Gas(len(key))
 		valueGas := 0 * types.Gas(len(value))
 
-		if keyGas > 0 {
-			println(fmt.Printf("GasFee:SEEK:key key=%s gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", string(key), keyGas, len(key), gi.gasConfig.ReadCostPerByte, gi.gasConfig.ReadCostPerByte*types.Gas(len(key))))
-		}
-		if valueGas > 0 {
-			println(fmt.Printf("GasFee:SEEK:value gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", keyGas, len(value), gi.gasConfig.ReadCostPerByte, gi.gasConfig.ReadCostPerByte*types.Gas(len(value))))
-		}
-		if keyGas == 0 && valueGas == 0 {
-			println(fmt.Printf("GasFee:SEEK:key=%s value=%s bytes=%d", string(key), string(value), len(value)))
-		}
+		// if keyGas > 0 {
+		// 	println(fmt.Printf("GasFee:SEEK:key key=%s gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", string(key), keyGas, len(key), gi.gasConfig.ReadCostPerByte, gi.gasConfig.ReadCostPerByte*types.Gas(len(key))))
+		// }
+		// if valueGas > 0 {
+		// 	println(fmt.Printf("GasFee:SEEK:value gas=%d bytes=%d configuredGasPerByte=%d actualGas=%d", keyGas, len(value), gi.gasConfig.ReadCostPerByte, gi.gasConfig.ReadCostPerByte*types.Gas(len(value))))
+		// }
+		// if keyGas == 0 && valueGas == 0 {
+		// 	println(fmt.Printf("GasFee:SEEK:key=%s value=%s bytes=%d", string(key), string(value), len(value)))
+		// }
 
 		gi.gasMeter.ConsumeGas(keyGas, types.GasValuePerByteDesc)
 		gi.gasMeter.ConsumeGas(valueGas, types.GasValuePerByteDesc)

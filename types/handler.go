@@ -1,15 +1,28 @@
 package types
 
+import (
+	sdkacltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
+)
+
 // Handler defines the core of the state transition function of an application.
 type Handler func(ctx Context, msg Msg) (*Result, error)
 
 // AnteHandler authenticates transactions, before their internal messages are handled.
 // If newCtx.IsZero(), ctx is used instead.
 type AnteHandler func(ctx Context, tx Tx, simulate bool) (newCtx Context, err error)
+type AnteDepGenerator func(txDeps []sdkacltypes.AccessOperation, tx Tx) (newTxDeps []sdkacltypes.AccessOperation, err error)
 
 // AnteDecorator wraps the next AnteHandler to perform custom pre- and post-processing.
 type AnteDecorator interface {
 	AnteHandle(ctx Context, tx Tx, simulate bool, next AnteHandler) (newCtx Context, err error)
+	AnteDeps(txDeps []sdkacltypes.AccessOperation, tx Tx, next AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error)
+}
+
+func ChainAnteDecorators(chain ...AnteDecorator) (AnteHandler, AnteDepGenerator) {
+	anteHandlerChainFunc := chainAnteDecoratorHandlers(chain...)
+	anteHandlerDepGenFunc := chainAnteDecoratorDepGenerators(chain...)
+	return anteHandlerChainFunc, anteHandlerDepGenFunc
+
 }
 
 // ChainDecorator chains AnteDecorators together with each AnteDecorator
@@ -26,7 +39,7 @@ type AnteDecorator interface {
 // transactions to be processed with an infinite gasmeter and open a DOS attack vector.
 // Use `ante.SetUpContextDecorator` or a custom Decorator with similar functionality.
 // Returns nil when no AnteDecorator are supplied.
-func ChainAnteDecorators(chain ...AnteDecorator) AnteHandler {
+func chainAnteDecoratorHandlers(chain ...AnteDecorator) AnteHandler {
 	if len(chain) == 0 {
 		return nil
 	}
@@ -37,30 +50,51 @@ func ChainAnteDecorators(chain ...AnteDecorator) AnteHandler {
 	}
 
 	return func(ctx Context, tx Tx, simulate bool) (Context, error) {
-		return chain[0].AnteHandle(ctx, tx, simulate, ChainAnteDecorators(chain[1:]...))
+		return chain[0].AnteHandle(ctx, tx, simulate, chainAnteDecoratorHandlers(chain[1:]...))
+	}
+}
+
+func chainAnteDecoratorDepGenerators(chain ...AnteDecorator) AnteDepGenerator {
+	if len(chain) == 0 {
+		return nil
+	}
+
+	// handle non-terminated decorators chain
+	if (chain[len(chain)-1] != Terminator{}) {
+		chain = append(chain, Terminator{})
+	}
+
+	return func(txDeps []sdkacltypes.AccessOperation, tx Tx) ([]sdkacltypes.AccessOperation, error) {
+		return chain[0].AnteDeps(txDeps, tx, chainAnteDecoratorDepGenerators(chain[1:]...))
 	}
 }
 
 // Terminator AnteDecorator will get added to the chain to simplify decorator code
 // Don't need to check if next == nil further up the chain
-//                        ______
-//                     <((((((\\\
-//                     /      . }\
-//                     ;--..--._|}
-//  (\                 '--/\--'  )
-//   \\                | '-'  :'|
-//    \\               . -==- .-|
-//     \\               \.__.'   \--._
-//     [\\          __.--|       //  _/'--.
-//     \ \\       .'-._ ('-----'/ __/      \
-//      \ \\     /   __>|      | '--.       |
-//       \ \\   |   \   |     /    /       /
-//        \ '\ /     \  |     |  _/       /
-//         \  \       \ |     | /        /
-//   snd    \  \      \        /
+//
+//	                      ______
+//	                   <((((((\\\
+//	                   /      . }\
+//	                   ;--..--._|}
+//	(\                 '--/\--'  )
+//	 \\                | '-'  :'|
+//	  \\               . -==- .-|
+//	   \\               \.__.'   \--._
+//	   [\\          __.--|       //  _/'--.
+//	   \ \\       .'-._ ('-----'/ __/      \
+//	    \ \\     /   __>|      | '--.       |
+//	     \ \\   |   \   |     /    /       /
+//	      \ '\ /     \  |     |  _/       /
+//	       \  \       \ |     | /        /
+//	 snd    \  \      \        /
 type Terminator struct{}
 
 // Simply return provided Context and nil error
 func (t Terminator) AnteHandle(ctx Context, _ Tx, _ bool, _ AnteHandler) (Context, error) {
 	return ctx, nil
+}
+
+// Simply return provided txDeps and nil error
+func (t Terminator) AnteDeps(txDeps []sdkacltypes.AccessOperation, _ Tx, _ AnteDepGenerator) ([]sdkacltypes.AccessOperation, error) {
+	return txDeps, nil
 }

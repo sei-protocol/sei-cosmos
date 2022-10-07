@@ -12,7 +12,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/gaskv"
 	stypes "github.com/cosmos/cosmos-sdk/store/types"
-	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 )
 
 /*
@@ -40,10 +39,6 @@ type Context struct {
 	consParams    *tmproto.ConsensusParams
 	eventManager  *EventManager
 	priority      int64 // The tx priority, only relevant in CheckTx
-
-	txBlockingChannels		acltypes.MessageAccessOpsChannelMapping
-	txCompletionChannels	acltypes.MessageAccessOpsChannelMapping
-	messageIndex int	// Used to track current message being processed
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -65,9 +60,6 @@ func (c Context) IsReCheckTx() bool           { return c.recheckTx }
 func (c Context) MinGasPrices() DecCoins      { return c.minGasPrice }
 func (c Context) EventManager() *EventManager { return c.eventManager }
 func (c Context) Priority() int64             { return c.priority }
-func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping { return c.txCompletionChannels }
-func (c Context) TxBlockingChannels() 	acltypes.MessageAccessOpsChannelMapping { return c.txBlockingChannels }
-func (c Context) MessageIndex() int		  { return c.messageIndex }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
@@ -227,24 +219,6 @@ func (c Context) WithConsensusParams(params *tmproto.ConsensusParams) Context {
 // WithEventManager returns a Context with an updated event manager
 func (c Context) WithEventManager(em *EventManager) Context {
 	c.eventManager = em
-	return c
-}
-
-// WithTxCompletionChannels returns a Context with an updated list of completion channel
-func (c Context) WithTxCompletionChannels(completionChannels acltypes.MessageAccessOpsChannelMapping) Context {
-	c.txCompletionChannels = completionChannels
-	return c
-}
-
-// WithTxBlockingChannels returns a Context with an updated list of blocking channels for completion signals
-func (c Context) WithTxBlockingChannels(blockingChannels acltypes.MessageAccessOpsChannelMapping) Context {
-	c.txBlockingChannels = blockingChannels
-	return c
-}
-
-// WithMessageIndex returns a Context with the current message index that's being processed
-func (c Context) WithMessageIndex(messageIndex int) Context {
-	c.messageIndex = messageIndex
 	return c
 }
 

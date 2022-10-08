@@ -16,10 +16,14 @@ func GenerateMessageKey(msg sdk.Msg) MessageKey {
 	return MessageKey(proto.MessageName(msg))
 }
 
+func CommitAccessOp() acltypes.AccessOperation {
+	return acltypes.AccessOperation{ResourceType: acltypes.ResourceType_ANY, AccessType: acltypes.AccessType_COMMIT, IdentifierTemplate: "*"}
+}
+
 // Validates access operation sequence for a message, requires the last access operation to be a COMMIT
 func ValidateAccessOps(accessOps []acltypes.AccessOperation) error {
 	lastAccessOp := accessOps[len(accessOps)-1]
-	if lastAccessOp.AccessType != acltypes.AccessType_COMMIT {
+	if lastAccessOp != CommitAccessOp() {
 		return ErrNoCommitAccessOp
 	}
 	return nil

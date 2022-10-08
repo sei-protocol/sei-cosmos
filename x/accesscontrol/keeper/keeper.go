@@ -104,6 +104,12 @@ func (k Keeper) IterateResourceKeys(ctx sdk.Context, handler func(dependencyMapp
 	}
 }
 
+func (k Keeper) SetDependencyMappingDynamicFlag(ctx sdk.Context, messageKey types.MessageKey, enabled bool) error {
+	dependencyMapping := k.GetResourceDependencyMapping(ctx, messageKey)
+	dependencyMapping.DynamicEnabled = enabled
+	return k.SetResourceDependencyMapping(ctx, dependencyMapping)
+}
+
 func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, txs [][]byte) (*types.Dag, error) {
 	defer MeasureBuildDagDuration(time.Now(), "BuildDependencyDag")
 	// contains the latest msg index for a specific Access Operation
@@ -163,6 +169,13 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 			}
 		} else {
 			ctx.Logger().Error("Error generating message dependencies: ", err)
+		}
+	}
+	if dependencyMapping.DynamicEnabled {
+		// there was an issue with dynamic generation, so lets disable it
+		err := k.SetDependencyMappingDynamicFlag(ctx, messageKey, false)
+		if err != nil {
+			ctx.Logger().Error("Error disabling dynamic enabled: ", err)
 		}
 	}
 	return dependencyMapping.AccessOps

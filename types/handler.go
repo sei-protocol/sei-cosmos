@@ -28,6 +28,12 @@ func (d DefaultDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx T
 	return next(append(txDeps, defaultDeps...), tx)
 }
 
+type NoDepDecorator struct{}
+
+func (d NoDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx Tx, next AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error) {
+	return next(txDeps, tx)
+}
+
 type AnteFullDecorator interface {
 	AnteDecorator
 	AnteDepDecorator

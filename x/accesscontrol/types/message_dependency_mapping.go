@@ -50,6 +50,10 @@ func DefaultMessageDependencyMapping() []acltypes.MessageDependencyMapping {
 	}
 }
 
+func DefaultWasmDependencyMappings() []acltypes.WasmFunctionDependencyMapping {
+	return []acltypes.WasmFunctionDependencyMapping{}
+}
+
 func ValidateWasmFunctionDependencyMapping(mapping acltypes.WasmFunctionDependencyMapping) error {
 	lastAccessOp := mapping.AccessOps[len(mapping.AccessOps)-1]
 	if lastAccessOp.AccessType != acltypes.AccessType_COMMIT {

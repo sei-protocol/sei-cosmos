@@ -152,6 +152,19 @@ func (k Keeper) IterateWasmDependenciesForCodeID(ctx sdk.Context, codeID uint64,
 	}
 }
 
+func (k Keeper) IterateWasmDependencies(ctx sdk.Context, handler func(wasmDependencyMapping acltypes.WasmFunctionDependencyMapping) (stop bool)) {
+	store := ctx.KVStore(k.storeKey)
+	iter := sdk.KVStorePrefixIterator(store, types.GetWasmMappingKey())
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		dependencyMapping := acltypes.WasmFunctionDependencyMapping{}
+		k.cdc.MustUnmarshal(iter.Value(), &dependencyMapping)
+		if handler(dependencyMapping) {
+			break
+		}
+	}
+}
+
 func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, txs [][]byte) (*types.Dag, error) {
 	defer MeasureBuildDagDuration(time.Now(), "BuildDependencyDag")
 	// contains the latest msg index for a specific Access Operation

@@ -62,12 +62,13 @@ type BaseApp struct { //nolint: maligned
 	interfaceRegistry types.InterfaceRegistry
 	txDecoder         sdk.TxDecoder // unmarshal []byte into sdk.Tx
 
-	anteHandler            sdk.AnteHandler  // ante handler for fee and auth
-	initChainer            sdk.InitChainer  // initialize state with validators and state blob
-	beginBlocker           sdk.BeginBlocker // logic to run before any txs
-	endBlocker             sdk.EndBlocker   // logic to run after all txs, and to determine valset changes
-	addrPeerFilter         sdk.PeerFilter   // filter peers by address and port
-	idPeerFilter           sdk.PeerFilter   // filter peers by node ID
+	anteHandler            sdk.AnteHandler      // ante handler for fee and auth
+	anteDepGenerator       sdk.AnteDepGenerator // ante dep generator for parallelization
+	initChainer            sdk.InitChainer      // initialize state with validators and state blob
+	beginBlocker           sdk.BeginBlocker     // logic to run before any txs
+	endBlocker             sdk.EndBlocker       // logic to run after all txs, and to determine valset changes
+	addrPeerFilter         sdk.PeerFilter       // filter peers by address and port
+	idPeerFilter           sdk.PeerFilter       // filter peers by node ID
 	prepareProposalHandler sdk.PrepareProposalHandler
 	processProposalHandler sdk.ProcessProposalHandler
 	finalizeBlocker        sdk.FinalizeBlocker

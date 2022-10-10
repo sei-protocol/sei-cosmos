@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/k0kubun/pp"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/yourbasic/graph"
 
@@ -213,20 +214,23 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 	messageKey := types.GenerateMessageKey(msg)
 	dependencyMapping := k.GetResourceDependencyMapping(ctx, messageKey)
 
-	if dependencyGenerator, ok := k.MessageDependencyGeneratorMapper[types.GenerateMessageKey(msg)]; ok {
+	if dependencyGenerator, ok := k.MessageDependencyGeneratorMapper[types.GenerateMessageKey(msg)]; dependencyMapping.DynamicEnabled && ok {
 		// if we have a dependency generator AND dynamic is enabled, use it
 		if dependencies, err := dependencyGenerator(k, ctx, msg); err == nil {
 			// validate the access ops before using them
 			validateErr := types.ValidateAccessOps(dependencies)
 			if validateErr == nil {
+				ctx.Logger().Info("GetMessageDependencies: Using Dynamic Dependencies")
+				pp.Println(dependencies)
 				return dependencies
-			} else {
-				ctx.Logger().Error(validateErr.Error())
 			}
+			ctx.Logger().Error("GetMessageDependencies: Invalid Access Operation")
+			ctx.Logger().Error(validateErr.Error())
 		} else {
 			ctx.Logger().Error("Error generating message dependencies: ", err)
 		}
 	}
+
 	if dependencyMapping.DynamicEnabled {
 		// there was an issue with dynamic generation, so lets disable it
 		err := k.SetDependencyMappingDynamicFlag(ctx, messageKey, false)

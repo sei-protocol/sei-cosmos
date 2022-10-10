@@ -288,6 +288,8 @@ func (dag *Dag) GetNodeDependencies(node DagNode) []DagNodeID {
 	// get all parent resource types, we'll need to create edges for any of these
 	parentResources := accessOp.ResourceType.GetResourceDependencies()
 	nodeIDSet := mapset.NewSet()
+	nodeIDSet = nodeIDSet.Union(dag.getNodeDependenciesForResource(node, accessOp.ResourceType))
+
 	for _, resource := range parentResources {
 		nodeIDSet = nodeIDSet.Union(dag.getNodeDependenciesForResource(node, resource))
 	}

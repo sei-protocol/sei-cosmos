@@ -9,45 +9,34 @@ import (
 	"github.com/yourbasic/graph"
 )
 
-func TestCreateGraph(t *testing.T) {
+var commitAccessOp = acltypes.AccessOperation{
+	AccessType:         acltypes.AccessType_COMMIT,
+	ResourceType:       acltypes.ResourceType_ANY,
+	IdentifierTemplate: "*",
+}
+var writeAccessA = acltypes.AccessOperation{
+	AccessType:         acltypes.AccessType_WRITE,
+	ResourceType:       acltypes.ResourceType_KV,
+	IdentifierTemplate: "ResourceA",
+}
+var readAccessA = acltypes.AccessOperation{
+	AccessType:         acltypes.AccessType_READ,
+	ResourceType:       acltypes.ResourceType_KV,
+	IdentifierTemplate: "ResourceA",
+}
+var writeAccessB = acltypes.AccessOperation{
+	AccessType:         acltypes.AccessType_WRITE,
+	ResourceType:       acltypes.ResourceType_KV,
+	IdentifierTemplate: "ResourceB",
+}
+var readAccessB = acltypes.AccessOperation{
+	AccessType:         acltypes.AccessType_READ,
+	ResourceType:       acltypes.ResourceType_KV,
+	IdentifierTemplate: "ResourceB",
+}
+
+func CreateTestGraph() Dag {
 	dag := NewDag()
-	/**
-	tx1: write to A, read B, commit 1
-	tx2: read A, read B, commit 2
-	tx3: read A, read B, commit 3
-	tx4: write B, commit 4
-	expected dag
-	1wA -> 1rB -> 1c =>v 2rA -> 2rB ----=\---> 2c
-	3rB -------------> 3rA -> 3c		  V
-	\-----------------------------------=> 4wB -> 4c
-	**/
-
-	commitAccessOp := acltypes.AccessOperation{
-		AccessType:         acltypes.AccessType_COMMIT,
-		ResourceType:       acltypes.ResourceType_ANY,
-		IdentifierTemplate: "*",
-	}
-	writeAccessA := acltypes.AccessOperation{
-		AccessType:         acltypes.AccessType_WRITE,
-		ResourceType:       acltypes.ResourceType_KV,
-		IdentifierTemplate: "ResourceA",
-	}
-	readAccessA := acltypes.AccessOperation{
-		AccessType:         acltypes.AccessType_READ,
-		ResourceType:       acltypes.ResourceType_KV,
-		IdentifierTemplate: "ResourceA",
-	}
-	writeAccessB := acltypes.AccessOperation{
-		AccessType:         acltypes.AccessType_WRITE,
-		ResourceType:       acltypes.ResourceType_KV,
-		IdentifierTemplate: "ResourceB",
-	}
-	readAccessB := acltypes.AccessOperation{
-		AccessType:         acltypes.AccessType_READ,
-		ResourceType:       acltypes.ResourceType_KV,
-		IdentifierTemplate: "ResourceB",
-	}
-
 	dag.AddNodeBuildDependency(0, 0, writeAccessA)   // node id 0
 	dag.AddNodeBuildDependency(0, 0, readAccessB)    // node id 1
 	dag.AddNodeBuildDependency(0, 0, commitAccessOp) // node id 2
@@ -59,6 +48,22 @@ func TestCreateGraph(t *testing.T) {
 	dag.AddNodeBuildDependency(0, 2, commitAccessOp) // node id 8
 	dag.AddNodeBuildDependency(0, 3, writeAccessB)   // node id 9
 	dag.AddNodeBuildDependency(0, 3, commitAccessOp) // node id 10
+	return dag
+}
+
+
+func TestCreateGraph(t *testing.T) {
+	dag := CreateTestGraph()
+	/**
+	tx1: write to A, read B, commit 1
+	tx2: read A, read B, commit 2
+	tx3: read A, read B, commit 3
+	tx4: write B, commit 4
+	expected dag
+	1wA -> 1rB -> 1c =>v 2rA -> 2rB ----=\---> 2c
+	3rB -------------> 3rA -> 3c		  V
+	\-----------------------------------=> 4wB -> 4c
+	**/
 
 	require.Equal(t, []DagEdge(nil), dag.EdgesMap[0])
 	require.Equal(
@@ -252,5 +257,53 @@ func TestHierarchyDag(t *testing.T) {
 		t,
 		[]CompletionSignal{signal2},
 		blockingSignalsMap[2][0][writeB],
+	)
+}
+
+func TestGetDependencies(t *testing.T) {
+	dag := CreateTestGraph()
+
+
+	node := DagNode{
+		NodeID: dag.NextID,
+		MessageIndex: 0,
+		TxIndex: 4,
+		AccessOperation: writeAccessA,
+	}
+	dependencies := dag.GetNodeDependencies(node)
+	require.ElementsMatch(
+		t,
+		dependencies,
+		[]DagNodeID{2, 3 ,7},
+	)
+
+	require.ElementsMatch(
+		t,
+		dag.getDependencyWrites(node, writeAccessA.ResourceType).ToSlice(),
+		[]DagNodeID{2},
+	)
+	require.ElementsMatch(
+		t,
+		dag.getDependencyReads(node, writeAccessA.ResourceType).ToSlice(),
+		[]DagNodeID{3, 7},
+	)
+
+	node = DagNode{
+		NodeID: dag.NextID,
+		MessageIndex: 0,
+		TxIndex: 4,
+		AccessOperation: readAccessA,
+	}
+	dependencies = dag.GetNodeDependencies(node)
+	require.ElementsMatch(
+		t,
+		dependencies,
+		[]DagNodeID{2},
+	)
+
+	require.ElementsMatch(
+		t,
+		dag.getDependencyWrites(node, writeAccessA.ResourceType).ToSlice(),
+		[]DagNodeID{2},
 	)
 }

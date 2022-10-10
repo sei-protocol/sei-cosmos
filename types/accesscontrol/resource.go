@@ -7,7 +7,6 @@ type TreeNode struct {
 
 // This returns a slice of all resource types that are dependent to a specific resource type
 // Travel up the parents to add them all, and add all children as well.
-// TODO: alternatively, hardcode all dependencies (parent and children) for a specific resource type, so we don't need to do a traversal when building dag
 func (r ResourceType) GetResourceDependencies() []ResourceType {
 	// resource is its own dependency
 	resources := []ResourceType{r}

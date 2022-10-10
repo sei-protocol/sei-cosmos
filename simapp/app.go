@@ -27,7 +27,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	"github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -281,7 +280,12 @@ func NewSimApp(
 	)
 
 	app.AuthzKeeper = authzkeeper.NewKeeper(keys[authzkeeper.StoreKey], appCodec, app.BaseApp.MsgServiceRouter())
-	app.AccessControlKeeper = aclkeeper.NewKeeper(appCodec, keys[acltypes.StoreKey], app.GetSubspace(acltypes.ModuleName), aclkeeper.WithDependencyMappingGenerator(testutil.MessageDependencyGeneratorTestHelper()))
+	app.AccessControlKeeper = aclkeeper.NewKeeper(
+		appCodec,
+		keys[acltypes.StoreKey],
+		app.GetSubspace(acltypes.ModuleName),
+		aclkeeper.WithDependencyMappingGenerator(aclkeeper.DefaultMessageDependencyGenerator()),
+	)
 
 	// register the proposal types
 	govRouter := govtypes.NewRouter()

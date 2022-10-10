@@ -714,7 +714,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	if app.anteHandler != nil {
 		var (
 			anteCtx sdk.Context
-			// msCache sdk.CacheMultiStore
+			msCache sdk.CacheMultiStore
 		)
 
 		// Branch context before AnteHandler call in case it aborts.
@@ -724,7 +724,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		// NOTE: Alternatively, we could require that AnteHandler ensures that
 		// writes do not happen if aborted/failed.  This may have some
 		// performance benefits, but it'll be more difficult to get right.
-		anteCtx, _ = app.cacheTxContext(ctx, txBytes)
+		anteCtx, msCache = app.cacheTxContext(ctx, txBytes)
 		anteCtx = anteCtx.WithEventManager(sdk.NewEventManager())
 		newCtx, err := app.anteHandler(anteCtx, tx, mode == runTxModeSimulate)
 
@@ -748,7 +748,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		}
 
 		priority = ctx.Priority()
-		// msCache.Write()
+		msCache.Write()
 		anteEvents = events.ToABCIEvents()
 	}
 

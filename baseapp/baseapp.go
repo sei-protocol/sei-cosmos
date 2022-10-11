@@ -654,7 +654,20 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) sdk.Context 
 // Note, gas execution info is always returned. A reference to a Result is
 // returned if the tx does not run out of gas and if all the messages are valid
 // and execute successfully. An error is returned otherwise.
+
+// Writes the cache to store immediately after transaction completes
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
+	updatedContext, gInfo, result, anteEvents, priority, err := app.runTxWithoutWrite(ctx, mode, txBytes)
+	if err != nil {
+		// By default we write if no errors
+		updatedContext.MultiStore().CacheMultiStore().Write()
+	}
+	return gInfo, result, anteEvents, priority, err
+}
+
+// runTxWithoutWrite processes a transaction and stores the data in the context cache
+// it returns the context with the cache for the group write in transaction order
+func (app *BaseApp) runTxWithoutWrite(ctx sdk.Context, mode runTxMode, txBytes []byte) (updatedContext sdk.Context, gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 	// Wait for signals to complete before starting the transaction. This is needed before any of the
 	// resources are acceessed by the ante handlers and message handlers.
 	// TODO(bweng):: add unit tests to enforce this
@@ -669,7 +682,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 	// only run the tx if there is block gas remaining
 	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
-		return gInfo, nil, nil, -1, sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
+		return ctx, gInfo, nil, nil, -1, sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
 	}
 
 	defer func() {
@@ -704,12 +717,12 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 	tx, err := app.txDecoder(txBytes)
 	if err != nil {
-		return sdk.GasInfo{}, nil, nil, 0, err
+		return ctx, sdk.GasInfo{}, nil, nil, 0, err
 	}
 
 	msgs := tx.GetMsgs()
 	if err := validateBasicTxMsgs(msgs); err != nil {
-		return sdk.GasInfo{}, nil, nil, 0, err
+		return ctx, sdk.GasInfo{}, nil, nil, 0, err
 	}
 
 	if app.anteHandler != nil {
@@ -744,11 +757,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		gasWanted = ctx.GasMeter().Limit()
 
 		if err != nil {
-			return gInfo, nil, nil, 0, err
+			return ctx, gInfo, nil, nil, 0, err
 		}
 
 		// Update context with ante handler data since it didn't fail
-		ctx = anteCtx
 		priority = ctx.Priority()
 		anteEvents = events.ToABCIEvents()
 	}
@@ -756,7 +768,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// Create a new Context based off of the existing Context with a MultiStore branch
 	// in case message processing fails. At this point, the MultiStore
 	// is a branch of a branch.
-	runMsgCtx := app.cacheTxContext(ctx, txBytes)
+	runMsgCtx := app.cacheTxContext(updatedContext, txBytes)
 
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
@@ -768,7 +780,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		consumeBlockGas()
 
 		// Update context with run message data since it didn't fail
-		ctx = runMsgCtx
+		updatedContext = ctx
 
 		if len(anteEvents) > 0 {
 			// append the events in the order of occurrence
@@ -776,7 +788,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		}
 	}
 
-	return gInfo, result, anteEvents, priority, err
+	return updatedContext, gInfo, result, anteEvents, priority, err
 }
 
 // Waits for all dependent concurrent resource access operations to complete before handling

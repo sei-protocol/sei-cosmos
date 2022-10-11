@@ -220,7 +220,17 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // Otherwise, the ResponseDeliverTx will contain releveant error information.
 // Regardless of tx execution outcome, the ResponseDeliverTx will contain relevant
 // gas execution context.
+
+// Use DeliverTx for non-concurrent executions as it will immediately write transaction cache to
+// store
 func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) abci.ResponseDeliverTx {
+	_, response := app.DeliverTxWithContext(ctx, req, false)
+	return response
+}
+
+// Use DeliverTxWithContext for concurrent executions
+// Returns the context for the upstream client to aggregate and decide on the write order
+func (app *BaseApp) DeliverTxWithContext(ctx sdk.Context, req abci.RequestDeliverTx, concurrentRun bool) (sdk.Context, abci.ResponseDeliverTx) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
 
 	gInfo := sdk.GasInfo{}
@@ -233,13 +243,22 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) abci.R
 		telemetry.SetGauge(float32(gInfo.GasWanted), "tx", "gas", "wanted")
 	}()
 
-	gInfo, result, anteEvents, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
-	if err != nil {
-		resultStr = "failed"
-		return sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)
+	var result *sdk.Result
+	var anteEvents []abci.Event
+	var err error
+
+	if concurrentRun {
+		ctx, gInfo, result, anteEvents, _, err = app.runTxWithoutWrite(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
+	} else {
+		gInfo, result, anteEvents, _, err = app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
 	}
 
-	return abci.ResponseDeliverTx{
+	if err != nil {
+		resultStr = "failed"
+		return ctx, sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)
+	}
+
+	return ctx, abci.ResponseDeliverTx{
 		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
 		GasUsed:   int64(gInfo.GasUsed),   // TODO: Should type accept unsigned ints?
 		Log:       result.Log,

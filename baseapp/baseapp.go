@@ -762,11 +762,11 @@ func (app *BaseApp) runTxWithoutWrite(ctx sdk.Context, mode runTxMode, txBytes [
 		}
 
 		// Update context with ante handler data since it didn't fail
-		updatedContext = newCtx
+		ctx = newCtx
 
 		pp.Printf("anteCtx: %s", anteCtx)
 		pp.Printf("newCtx: %s", newCtx)
-		pp.Printf("updatedContext: %s", newCtx)
+		pp.Printf("ctx: %s", ctx)
 
 		priority = ctx.Priority()
 		anteEvents = events.ToABCIEvents()
@@ -775,7 +775,7 @@ func (app *BaseApp) runTxWithoutWrite(ctx sdk.Context, mode runTxMode, txBytes [
 	// Create a new Context based off of the existing Context with a MultiStore branch
 	// in case message processing fails. At this point, the MultiStore
 	// is a branch of a branch.
-	runMsgCtx := app.cacheTxContext(updatedContext, txBytes)
+	runMsgCtx := app.cacheTxContext(ctx, txBytes)
 
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
@@ -787,8 +787,9 @@ func (app *BaseApp) runTxWithoutWrite(ctx sdk.Context, mode runTxMode, txBytes [
 		consumeBlockGas()
 
 		// Update context with run message data since it didn't fail
-		updatedContext = ctx
-		pp.Printf("anteCtx: %s", runMsgCtx)
+		updatedContext = runMsgCtx
+
+		pp.Printf("runMsgCtx: %s", runMsgCtx)
 		pp.Printf("updatedContext: %s", ctx)
 
 		if len(anteEvents) > 0 {

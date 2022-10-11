@@ -747,6 +747,8 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			return gInfo, nil, nil, 0, err
 		}
 
+		// Update context with ante handler data since it didn't fail
+		ctx = anteCtx
 		priority = ctx.Priority()
 		anteEvents = events.ToABCIEvents()
 	}
@@ -764,6 +766,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	if err == nil && mode == runTxModeDeliver {
 		// When block gas exceeds, it'll panic and won't commit the cached store.
 		consumeBlockGas()
+
+		// Update context with run message data since it didn't fail
+		ctx = runMsgCtx
+
 		if len(anteEvents) > 0 {
 			// append the events in the order of occurrence
 			result.Events = append(anteEvents, result.Events...)

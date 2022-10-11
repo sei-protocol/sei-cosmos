@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/k0kubun/pp"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -761,6 +762,12 @@ func (app *BaseApp) runTxWithoutWrite(ctx sdk.Context, mode runTxMode, txBytes [
 		}
 
 		// Update context with ante handler data since it didn't fail
+		updatedContext = newCtx
+
+		pp.Printf("anteCtx: %s", anteCtx)
+		pp.Printf("newCtx: %s", newCtx)
+		pp.Printf("updatedContext: %s", newCtx)
+
 		priority = ctx.Priority()
 		anteEvents = events.ToABCIEvents()
 	}
@@ -781,6 +788,8 @@ func (app *BaseApp) runTxWithoutWrite(ctx sdk.Context, mode runTxMode, txBytes [
 
 		// Update context with run message data since it didn't fail
 		updatedContext = ctx
+		pp.Printf("anteCtx: %s", runMsgCtx)
+		pp.Printf("updatedContext: %s", ctx)
 
 		if len(anteEvents) > 0 {
 			// append the events in the order of occurrence

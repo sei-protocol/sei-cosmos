@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/k0kubun/pp"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	"google.golang.org/grpc/codes"
@@ -234,12 +233,15 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) abci.R
 		telemetry.SetGauge(float32(gInfo.GasWanted), "tx", "gas", "wanted")
 	}()
 
+	fmt.Printf("DeliverTx::runTx:first:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
 	gInfo, result, anteEvents, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
+	fmt.Printf("DeliverTx::runTx::second:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
+
 	if err != nil {
 		resultStr = "failed"
 		return sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)
 	}
-	pp.Printf("DeliverTx:Postrun:%s", ctx.MultiStore().CacheMultiStore())
+
 	return abci.ResponseDeliverTx{
 		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
 		GasUsed:   int64(gInfo.GasUsed),   // TODO: Should type accept unsigned ints?

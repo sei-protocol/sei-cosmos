@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/k0kubun/pp"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -657,7 +656,7 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 	// Wait for signals to complete before starting the transaction. This is needed before any of the
 	// resources are acceessed by the ante handlers and message handlers.
-	// TODO(bweng):: add unit tests to enforce this 
+	// TODO(bweng):: add unit tests to enforce this
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
@@ -666,7 +665,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	var gasWanted uint64
 
 	ms := ctx.MultiStore()
-	pp.Printf("runTx:first:ctx:%s", ctx.MultiStore().CacheMultiStore())
+	fmt.Printf("runTx:first:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
 
 	// only run the tx if there is block gas remaining
 	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
@@ -750,12 +749,12 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		}
 
 		priority = ctx.Priority()
-		pp.Printf("runTx:second:ctx:%s", ctx.MultiStore().CacheMultiStore())
-		pp.Printf("runTx:anteCtx:%s", anteCtx.MultiStore().CacheMultiStore())
-		pp.Printf("runTx:newCtx:%s", newCtx.MultiStore().CacheMultiStore())
-		pp.Printf("runTx:msCache:%s", msCache)
+		fmt.Printf("runTx:second:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
+		fmt.Printf("runTx:anteCtx:%s", anteCtx.MultiStore().CacheMultiStore().GetWorkingHash())
+		fmt.Printf("runTx:newCtx:%s", newCtx.MultiStore().CacheMultiStore().GetWorkingHash())
+		fmt.Printf("runTx:msCache:%s", msCache)
 		msCache.Write()
-		pp.Printf("runTx:msCache - post write: %s", msCache)
+		fmt.Printf("runTx:msCache - post write: %s", msCache)
 		anteEvents = events.ToABCIEvents()
 	}
 
@@ -772,10 +771,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	if err == nil && mode == runTxModeDeliver {
 		// When block gas exceeds, it'll panic and won't commit the cached store.
 		consumeBlockGas()
-		pp.Printf("runTx:third:ctx:%s", ctx.MultiStore().CacheMultiStore())
-		pp.Printf("runTx:runMsgCtx:%s", runMsgCtx.MultiStore().CacheMultiStore())
+		fmt.Printf("runTx:third:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
+		fmt.Printf("runTx:runMsgCtx:%s", runMsgCtx.MultiStore().CacheMultiStore().GetWorkingHash())
 		msCache.Write()
-		pp.Printf("runTx:msCache - post write: %s", msCache)
+		fmt.Printf("runTx:msCache - post write: %s", msCache.GetWorkingHash())
 		if len(anteEvents) > 0 {
 			// append the events in the order of occurrence
 			result.Events = append(anteEvents, result.Events...)

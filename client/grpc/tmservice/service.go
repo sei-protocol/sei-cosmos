@@ -22,8 +22,10 @@ type queryServer struct {
 	interfaceRegistry codectypes.InterfaceRegistry
 }
 
-var _ ServiceServer = queryServer{}
-var _ codectypes.UnpackInterfacesMessage = &GetLatestValidatorSetResponse{}
+var (
+	_ ServiceServer                      = queryServer{}
+	_ codectypes.UnpackInterfacesMessage = &GetLatestValidatorSetResponse{}
+)
 
 // NewQueryServer creates a new tendermint query server.
 func NewQueryServer(clientCtx client.Context, interfaceRegistry codectypes.InterfaceRegistry) ServiceServer {
@@ -159,7 +161,6 @@ func validatorsOutput(ctx context.Context, cctx client.Context, height *int64, p
 // GetNodeInfo implements ServiceServer.GetNodeInfo
 func (s queryServer) GetNodeInfo(ctx context.Context, req *GetNodeInfoRequest) (*GetNodeInfoResponse, error) {
 	status, err := getNodeStatus(ctx, s.clientCtx)
-
 	if err != nil {
 		return nil, err
 	}

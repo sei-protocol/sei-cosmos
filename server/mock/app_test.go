@@ -24,7 +24,7 @@ func TestInitApp(t *testing.T) {
 	appState, err := AppGenState(nil, types.GenesisDoc{}, nil)
 	require.NoError(t, err)
 
-	//TODO test validators in the init chain?
+	// TODO test validators in the init chain?
 	req := abci.RequestInitChain{
 		AppStateBytes: appState,
 	}
@@ -60,7 +60,7 @@ func TestDeliverTx(t *testing.T) {
 	appState, err := AppGenState(nil, types.GenesisDoc{}, nil)
 	require.NoError(t, err)
 
-	//TODO test validators in the init chain?
+	// TODO test validators in the init chain?
 	req := abci.RequestInitChain{
 		AppStateBytes: appState,
 	}

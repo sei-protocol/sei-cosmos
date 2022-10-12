@@ -31,16 +31,17 @@ var (
 	Sr25519 = sr25519Algo{}
 )
 
-type DeriveFn func(mnemonic string, bip39Passphrase, hdPath string) ([]byte, error)
-type GenerateFn func(bz []byte) types.PrivKey
+type (
+	DeriveFn   func(mnemonic string, bip39Passphrase, hdPath string) ([]byte, error)
+	GenerateFn func(bz []byte) types.PrivKey
+)
 
 type WalletGenerator interface {
 	Derive(mnemonic string, bip39Passphrase, hdPath string) ([]byte, error)
 	Generate(bz []byte) types.PrivKey
 }
 
-type secp256k1Algo struct {
-}
+type secp256k1Algo struct{}
 
 func (s secp256k1Algo) Name() PubKeyType {
 	return Secp256k1Type
@@ -67,15 +68,14 @@ func (s secp256k1Algo) Derive() DeriveFn {
 // Generate generates a secp256k1 private key from the given bytes.
 func (s secp256k1Algo) Generate() GenerateFn {
 	return func(bz []byte) types.PrivKey {
-		var bzArr = make([]byte, secp256k1.PrivKeySize)
+		bzArr := make([]byte, secp256k1.PrivKeySize)
 		copy(bzArr, bz)
 
 		return &secp256k1.PrivKey{Key: bzArr}
 	}
 }
 
-type sr25519Algo struct {
-}
+type sr25519Algo struct{}
 
 func (s sr25519Algo) Name() PubKeyType {
 	return Sr25519Type
@@ -102,7 +102,7 @@ func (s sr25519Algo) Derive() DeriveFn {
 // Generate generates a sr25519 private key from the given bytes.
 func (s sr25519Algo) Generate() GenerateFn {
 	return func(bz []byte) types.PrivKey {
-		var bzArr = make([]byte, secp256k1.PrivKeySize)
+		bzArr := make([]byte, secp256k1.PrivKeySize)
 		copy(bzArr, bz)
 
 		return &sr25519.PrivKey{PrivKey: tmsr25519.GenPrivKeyFromSecret(bzArr)}

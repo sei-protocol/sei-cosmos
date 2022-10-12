@@ -266,7 +266,6 @@ func TestAdvancedKeyManagementKeyRing(t *testing.T) {
 	// make sure key works with initial password
 	_, _, err = kb.NewMnemonic(n1, English, sdk.FullFundraiserPath, DefaultBIP39Passphrase, algo)
 	require.Nil(t, err, "%+v", err)
-
 }
 
 func TestSeedPhraseKeyRing(t *testing.T) {

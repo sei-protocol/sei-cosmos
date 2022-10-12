@@ -68,6 +68,7 @@ func (c Context) Priority() int64             { return c.priority }
 func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping {
 	return c.txCompletionChannels
 }
+
 func (c Context) TxBlockingChannels() acltypes.MessageAccessOpsChannelMapping {
 	return c.txBlockingChannels
 }
@@ -75,7 +76,7 @@ func (c Context) MessageIndex() int { return c.messageIndex }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
-	var msg = proto.Clone(&c.header).(*tmproto.Header)
+	msg := proto.Clone(&c.header).(*tmproto.Header)
 	return *msg
 }
 

@@ -125,7 +125,7 @@ func (s *IntegrationTestSuite) TestQueryBalancesRequestHandlerFn() {
 			respJSON, err := rest.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var resp = rest.ResponseWithHeight{}
+			resp := rest.ResponseWithHeight{}
 			err = val.ClientCtx.LegacyAmino.UnmarshalJSON(respJSON, &resp)
 			s.Require().NoError(err)
 

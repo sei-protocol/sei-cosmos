@@ -12,7 +12,6 @@ import (
 )
 
 func (s *IntegrationTestSuite) TestQueryABCIHeight() {
-
 	testCases := []struct {
 		name      string
 		reqHeight int64

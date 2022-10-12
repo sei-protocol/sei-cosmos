@@ -57,8 +57,10 @@ func DecodeArmor(armorStr string) (blockType string, headers map[string]string, 
 	return block.Type, block.Header, data, nil
 }
 
-const nonceLen = 24
-const secretLen = 32
+const (
+	nonceLen  = 24
+	secretLen = 32
+)
 
 // secret must be 32 bytes long. Use something like Sha256(Bcrypt(passphrase))
 // The ciphertext is (secretbox.Overhead + 24) bytes longer than the plaintext.
@@ -140,7 +142,6 @@ func EncryptArmorPrivKey(privKeyBytes []byte, passphrase string, algo string) st
 func encryptPrivKey(privKeyBytes []byte, passphrase string) (saltBytes []byte, encBytes []byte) {
 	saltBytes = crypto.CRandBytes(16)
 	key, err := bcrypt.GenerateFromPassword(saltBytes, []byte(passphrase), BcryptSecurityParameter)
-
 	if err != nil {
 		panic(sdkerrors.Wrap(err, "error generating bcrypt key from passphrase"))
 	}

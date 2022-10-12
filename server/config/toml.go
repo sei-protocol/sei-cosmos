@@ -251,7 +251,7 @@ func WriteConfigFile(configFilePath string, config interface{}) {
 		panic(err)
 	}
 
-	if err := ioutil.WriteFile(configFilePath, buffer.Bytes(), 0644); err != nil {
+	if err := ioutil.WriteFile(configFilePath, buffer.Bytes(), 0o644); err != nil {
 		fmt.Printf("MustWriteFile failed: %v\n", err)
 		os.Exit(1)
 	}

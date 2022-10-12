@@ -65,7 +65,6 @@ func MsgUpdateResourceDependencyMappingProposalCmd() *cobra.Command {
 
 			msg, err := govtypes.NewMsgSubmitProposal(&content, deposit, from)
 			if err != nil {
-
 				return err
 			}
 

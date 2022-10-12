@@ -4,9 +4,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
-	"github.com/tendermint/tendermint/crypto"
 	"math/big"
 	"testing"
+
+	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -38,10 +39,10 @@ func (suite *SKSuite) TestMarshal() {
 	require := suite.Require()
 	const size = 32
 
-	var buffer = make([]byte, size)
+	buffer := make([]byte, size)
 	suite.sk.MarshalTo(buffer)
 
-	var sk = new(PrivKey)
+	sk := new(PrivKey)
 	err := sk.Unmarshal(buffer, secp256r1, size)
 	require.NoError(err)
 	require.True(sk.Equal(&suite.sk.PrivateKey))

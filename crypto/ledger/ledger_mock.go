@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 
 	secp256k1 "github.com/tendermint/btcd/btcec"
-	"github.com/tendermint/tendermint/crypto"
 
 	"github.com/cosmos/go-bip39"
 
@@ -30,8 +29,7 @@ func init() {
 	}
 }
 
-type LedgerSECP256K1Mock struct {
-}
+type LedgerSECP256K1Mock struct{}
 
 func (mock LedgerSECP256K1Mock) Close() error {
 	return nil

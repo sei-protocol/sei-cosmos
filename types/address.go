@@ -113,12 +113,17 @@ type Address interface {
 
 // Ensure that different address types implement the interface
 var _ Address = AccAddress{}
-var _ Address = ValAddress{}
-var _ Address = ConsAddress{}
 
-var _ yaml.Marshaler = AccAddress{}
-var _ yaml.Marshaler = ValAddress{}
-var _ yaml.Marshaler = ConsAddress{}
+var (
+	_ Address = ValAddress{}
+	_ Address = ConsAddress{}
+)
+
+var (
+	_ yaml.Marshaler = AccAddress{}
+	_ yaml.Marshaler = ValAddress{}
+	_ yaml.Marshaler = ConsAddress{}
+)
 
 // ----------------------------------------------------------------------------
 // account
@@ -216,7 +221,6 @@ func (aa AccAddress) MarshalYAML() (interface{}, error) {
 func (aa *AccAddress) UnmarshalJSON(data []byte) error {
 	var s string
 	err := json.Unmarshal(data, &s)
-
 	if err != nil {
 		return err
 	}
@@ -266,7 +270,7 @@ func (aa AccAddress) String() string {
 		return ""
 	}
 
-	var key = conv.UnsafeBytesToStr(aa)
+	key := conv.UnsafeBytesToStr(aa)
 	accAddrMu.Lock()
 	defer accAddrMu.Unlock()
 	addr, ok := accAddrCache.Get(key)
@@ -416,7 +420,7 @@ func (va ValAddress) String() string {
 		return ""
 	}
 
-	var key = conv.UnsafeBytesToStr(va)
+	key := conv.UnsafeBytesToStr(va)
 	valAddrMu.Lock()
 	defer valAddrMu.Unlock()
 	addr, ok := valAddrCache.Get(key)
@@ -571,7 +575,7 @@ func (ca ConsAddress) String() string {
 		return ""
 	}
 
-	var key = conv.UnsafeBytesToStr(ca)
+	key := conv.UnsafeBytesToStr(ca)
 	consAddrMu.Lock()
 	defer consAddrMu.Unlock()
 	addr, ok := consAddrCache.Get(key)

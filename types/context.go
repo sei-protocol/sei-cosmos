@@ -68,7 +68,6 @@ func (c Context) Priority() int64             { return c.priority }
 func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping {
 	return c.txCompletionChannels
 }
-
 func (c Context) TxBlockingChannels() acltypes.MessageAccessOpsChannelMapping {
 	return c.txBlockingChannels
 }

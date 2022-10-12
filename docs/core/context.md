@@ -76,7 +76,7 @@ For example, here is a snippet from the [`runTx`](./baseapp.md#runtx-and-runmsgs
 [`baseapp`](./baseapp.md):
 
 ```go
-runMsgCtx, msCache := app.cacheTxContext(ctx, txBytes)
+runMsgCtx, msCache := app.CacheTxContext(ctx, txBytes)
 result = app.runMsgs(runMsgCtx, msgs, mode)
 result.GasWanted = gasWanted
 
@@ -91,7 +91,7 @@ if result.IsOK() {
 
 Here is the process:
 
-1. Prior to calling `runMsgs` on the message(s) in the transaction, it uses `app.cacheTxContext()`
+1. Prior to calling `runMsgs` on the message(s) in the transaction, it uses `app.CacheTxContext()`
    to branch and cache the context and multistore.
 2. `runMsgCtx` - the context with branched store, is used in `runMsgs` to return a result.
 3. If the process is running in [`checkTxMode`](./baseapp.md#checktx), there is no need to write the

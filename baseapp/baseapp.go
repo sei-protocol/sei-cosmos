@@ -627,9 +627,9 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 	return ctx
 }
 
-// cacheTxContext returns a new context based off of the provided context with
+// CacheTxContext returns a new context based off of the provided context with
 // a branched multi-store.
-func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
+func (app *BaseApp) CacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
 	ms := ctx.MultiStore()
 	// TODO: https://github.com/cosmos/cosmos-sdk/issues/2824
 	msCache := ms.CacheMultiStore()
@@ -665,7 +665,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	var gasWanted uint64
 
 	ms := ctx.MultiStore()
-	fmt.Printf("runTx:first:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
 
 	// only run the tx if there is block gas remaining
 	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
@@ -725,7 +724,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		// NOTE: Alternatively, we could require that AnteHandler ensures that
 		// writes do not happen if aborted/failed.  This may have some
 		// performance benefits, but it'll be more difficult to get right.
-		anteCtx, msCache = app.cacheTxContext(ctx, txBytes)
+		anteCtx, msCache = app.CacheTxContext(ctx, txBytes)
 		anteCtx = anteCtx.WithEventManager(sdk.NewEventManager())
 		newCtx, err := app.anteHandler(anteCtx, tx, mode == runTxModeSimulate)
 
@@ -749,19 +748,13 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		}
 
 		priority = ctx.Priority()
-		fmt.Printf("runTx:second:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
-		fmt.Printf("runTx:anteCtx:%s", anteCtx.MultiStore().CacheMultiStore().GetWorkingHash())
-		fmt.Printf("runTx:newCtx:%s", newCtx.MultiStore().CacheMultiStore().GetWorkingHash())
-		fmt.Printf("runTx:msCache:%s", msCache)
-		msCache.Write()
-		fmt.Printf("runTx:msCache - post write: %s", msCache)
 		anteEvents = events.ToABCIEvents()
 	}
 
 	// Create a new Context based off of the existing Context with a MultiStore branch
 	// in case message processing fails. At this point, the MultiStore
 	// is a branch of a branch.
-	runMsgCtx, msCache := app.cacheTxContext(ctx, txBytes)
+	runMsgCtx, msCache := app.CacheTxContext(ctx, txBytes)
 
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
@@ -771,10 +764,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	if err == nil && mode == runTxModeDeliver {
 		// When block gas exceeds, it'll panic and won't commit the cached store.
 		consumeBlockGas()
-		fmt.Printf("runTx:third:ctx:%s", ctx.MultiStore().CacheMultiStore().GetWorkingHash())
-		fmt.Printf("runTx:runMsgCtx:%s", runMsgCtx.MultiStore().CacheMultiStore().GetWorkingHash())
-		msCache.Write()
-		fmt.Printf("runTx:msCache - post write: %s", msCache.GetWorkingHash())
+		defer msCache.Write()
 		if len(anteEvents) > 0 {
 			// append the events in the order of occurrence
 			result.Events = append(anteEvents, result.Events...)

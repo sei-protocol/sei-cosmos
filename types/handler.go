@@ -43,7 +43,6 @@ func ChainAnteDecorators(chain ...AnteFullDecorator) (AnteHandler, AnteDepGenera
 	anteHandlerChainFunc := chainAnteDecoratorHandlers(chain...)
 	anteHandlerDepGenFunc := chainAnteDecoratorDepGenerators(chain...)
 	return anteHandlerChainFunc, anteHandlerDepGenFunc
-
 }
 
 // ChainDecorator chains AnteDecorators together with each AnteDecorator

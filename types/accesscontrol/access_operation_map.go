@@ -7,7 +7,7 @@ type MessageAccessOpsChannelMapping = map[int]AccessOpsChannelMapping
 type AccessOpsChannelMapping = map[AccessOperation][]chan interface{}
 
 func WaitForAllSignalsForTx(messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
-	for _, accessOpsToChannelsMap  := range messageIndexToAccessOpsChannelMapping {
+	for _, accessOpsToChannelsMap := range messageIndexToAccessOpsChannelMapping {
 		for _, channels := range accessOpsToChannelsMap {
 			for _, channel := range channels {
 				<-channel

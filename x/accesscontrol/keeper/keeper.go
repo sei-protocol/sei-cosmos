@@ -245,11 +245,10 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 		}
 	}
 	return dependencyMapping.AccessOps
-
 }
 
 func DefaultMessageDependencyGenerator() DependencyGeneratorMap {
 	return DependencyGeneratorMap{
-		//TODO: define default granular behavior here
+		// TODO: define default granular behavior here
 	}
 }

@@ -112,9 +112,9 @@ func (k Keeper) SetDependencyMappingDynamicFlag(ctx sdk.Context, messageKey type
 	return k.SetResourceDependencyMapping(ctx, dependencyMapping)
 }
 
-func (k Keeper) GetWasmFunctionDependencyMapping(ctx sdk.Context, codeID uint64, wasmFunction string) (acltypes.WasmFunctionDependencyMapping, error) {
+func (k Keeper) GetWasmFunctionDependencyMapping(ctx sdk.Context, contractAddress sdk.AccAddress, wasmFunction string) (acltypes.WasmFunctionDependencyMapping, error) {
 	store := ctx.KVStore(k.storeKey)
-	b := store.Get(types.GetWasmFunctionDependencyKey(codeID, wasmFunction))
+	b := store.Get(types.GetWasmFunctionDependencyKey(contractAddress, wasmFunction))
 	if b == nil {
 		return acltypes.WasmFunctionDependencyMapping{}, ErrWasmFunctionDependencyMappingNotFound
 	}
@@ -125,7 +125,7 @@ func (k Keeper) GetWasmFunctionDependencyMapping(ctx sdk.Context, codeID uint64,
 
 func (k Keeper) SetWasmFunctionDependencyMapping(
 	ctx sdk.Context,
-	codeID uint64,
+	contractAddress sdk.AccAddress,
 	dependencyMapping acltypes.WasmFunctionDependencyMapping,
 ) error {
 	err := types.ValidateWasmFunctionDependencyMapping(dependencyMapping)
@@ -134,22 +134,9 @@ func (k Keeper) SetWasmFunctionDependencyMapping(
 	}
 	store := ctx.KVStore(k.storeKey)
 	b := k.cdc.MustMarshal(&dependencyMapping)
-	resourceKey := types.GetWasmFunctionDependencyKey(codeID, dependencyMapping.WasmFunction)
+	resourceKey := types.GetWasmFunctionDependencyKey(contractAddress, dependencyMapping.WasmFunction)
 	store.Set(resourceKey, b)
 	return nil
-}
-
-func (k Keeper) IterateWasmDependenciesForCodeID(ctx sdk.Context, codeID uint64, handler func(wasmDependencyMapping acltypes.WasmFunctionDependencyMapping) (stop bool)) {
-	store := ctx.KVStore(k.storeKey)
-	iter := sdk.KVStorePrefixIterator(store, types.GetKeyForCodeID(codeID))
-	defer iter.Close()
-	for ; iter.Valid(); iter.Next() {
-		dependencyMapping := acltypes.WasmFunctionDependencyMapping{}
-		k.cdc.MustUnmarshal(iter.Value(), &dependencyMapping)
-		if handler(dependencyMapping) {
-			break
-		}
-	}
 }
 
 func (k Keeper) IterateWasmDependencies(ctx sdk.Context, handler func(wasmDependencyMapping acltypes.WasmFunctionDependencyMapping) (stop bool)) {

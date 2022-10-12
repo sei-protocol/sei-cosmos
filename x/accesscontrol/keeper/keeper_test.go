@@ -91,7 +91,7 @@ func TestWasmFunctionDependencyMapping(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
-	wasmCodeID := uint64(1)
+	wasmContractAddress := simapp.AddTestAddrsIncremental(app, ctx, 1, sdk.NewInt(30000000))[0]
 	wasmFunction := "execute_wasm_testfunction"
 	wasmMapping := acltypes.WasmFunctionDependencyMapping{
 		WasmFunction: wasmFunction,
@@ -102,14 +102,14 @@ func TestWasmFunctionDependencyMapping(t *testing.T) {
 		},
 	}
 	// set the dependency mapping
-	err := app.AccessControlKeeper.SetWasmFunctionDependencyMapping(ctx, wasmCodeID, wasmMapping)
+	err := app.AccessControlKeeper.SetWasmFunctionDependencyMapping(ctx, wasmContractAddress, wasmMapping)
 	require.NoError(t, err)
 	// test getting the dependency mapping
-	mapping, err := app.AccessControlKeeper.GetWasmFunctionDependencyMapping(ctx, wasmCodeID, wasmFunction)
+	mapping, err := app.AccessControlKeeper.GetWasmFunctionDependencyMapping(ctx, wasmContractAddress, wasmFunction)
 	require.NoError(t, err)
 	require.Equal(t, wasmMapping, mapping)
 	// test getting a dependency mapping for something function that isn't present
-	_, err = app.AccessControlKeeper.GetWasmFunctionDependencyMapping(ctx, wasmCodeID, "some_other_function")
+	_, err = app.AccessControlKeeper.GetWasmFunctionDependencyMapping(ctx, wasmContractAddress, "some_other_function")
 	require.Error(t, aclkeeper.ErrWasmFunctionDependencyMappingNotFound, err)
 }
 

@@ -35,11 +35,6 @@ func GetWasmMappingKey() []byte {
 	return []byte{byte(WasmMappingKey)}
 }
 
-func GetWasmContractAddressPrefix(contractAddress sdk.AccAddress) []byte {
+func GetWasmContractAddressKey(contractAddress sdk.AccAddress) []byte {
 	return append(GetWasmMappingKey(), address.MustLengthPrefix(contractAddress)...)
-}
-
-// wasmFunctionName is the top level object key in the execute JSON payload
-func GetWasmFunctionDependencyKey(contractAddress sdk.AccAddress, wasmFunctionName string) []byte {
-	return append(GetWasmContractAddressPrefix(contractAddress), []byte(wasmFunctionName)...)
 }

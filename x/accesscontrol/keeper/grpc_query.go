@@ -24,7 +24,6 @@ func (k Keeper) ResourceDependencyMappingFromMessageKey(ctx context.Context, req
 	return &types.ResourceDependencyMappingFromMessageKeyResponse{MessageDependencyMapping: resourceDependency}, nil
 }
 
-
 func (k Keeper) ListResourceDependencyMapping(ctx context.Context, req *types.ListResourceDependencyMappingRequest) (*types.ListResourceDependencyMappingResponse, error) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	resourceDependencyMappings := []acltypes.MessageDependencyMapping{}

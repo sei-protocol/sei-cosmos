@@ -41,9 +41,9 @@ type Context struct {
 	eventManager  *EventManager
 	priority      int64 // The tx priority, only relevant in CheckTx
 
-	txBlockingChannels		acltypes.MessageAccessOpsChannelMapping
-	txCompletionChannels	acltypes.MessageAccessOpsChannelMapping
-	messageIndex int	// Used to track current message being processed
+	txBlockingChannels   acltypes.MessageAccessOpsChannelMapping
+	txCompletionChannels acltypes.MessageAccessOpsChannelMapping
+	messageIndex         int // Used to track current message being processed
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -65,9 +65,13 @@ func (c Context) IsReCheckTx() bool           { return c.recheckTx }
 func (c Context) MinGasPrices() DecCoins      { return c.minGasPrice }
 func (c Context) EventManager() *EventManager { return c.eventManager }
 func (c Context) Priority() int64             { return c.priority }
-func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping { return c.txCompletionChannels }
-func (c Context) TxBlockingChannels() 	acltypes.MessageAccessOpsChannelMapping { return c.txBlockingChannels }
-func (c Context) MessageIndex() int		  { return c.messageIndex }
+func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping {
+	return c.txCompletionChannels
+}
+func (c Context) TxBlockingChannels() acltypes.MessageAccessOpsChannelMapping {
+	return c.txBlockingChannels
+}
+func (c Context) MessageIndex() int { return c.messageIndex }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
@@ -255,9 +259,12 @@ func (c Context) IsZero() bool {
 
 // WithValue is deprecated, provided for backwards compatibility
 // Please use
-//     ctx = ctx.WithContext(context.WithValue(ctx.Context(), key, false))
+//
+//	ctx = ctx.WithContext(context.WithValue(ctx.Context(), key, false))
+//
 // instead of
-//     ctx = ctx.WithValue(key, false)
+//
+//	ctx = ctx.WithValue(key, false)
 func (c Context) WithValue(key, value interface{}) Context {
 	c.ctx = context.WithValue(c.ctx, key, value)
 	return c
@@ -265,9 +272,12 @@ func (c Context) WithValue(key, value interface{}) Context {
 
 // Value is deprecated, provided for backwards compatibility
 // Please use
-//     ctx.Context().Value(key)
+//
+//	ctx.Context().Value(key)
+//
 // instead of
-//     ctx.Value(key)
+//
+//	ctx.Value(key)
 func (c Context) Value(key interface{}) interface{} {
 	return c.ctx.Value(key)
 }

@@ -17,12 +17,11 @@ import (
 
 // PlanRequest defines a proposal for a new upgrade plan.
 type UpdateResourceDependencyMappingRequest struct {
-	BaseReq       rest.BaseReq `json:"base_req" yaml:"base_req"`
-	Title         string       `json:"title" yaml:"title"`
-	Description   string       `json:"description" yaml:"description"`
-	Deposit     sdk.Coins        `json:"deposit" yaml:"deposit"`
+	BaseReq                  rest.BaseReq                             `json:"base_req" yaml:"base_req"`
+	Title                    string                                   `json:"title" yaml:"title"`
+	Description              string                                   `json:"description" yaml:"description"`
+	Deposit                  sdk.Coins                                `json:"deposit" yaml:"deposit"`
 	MessageDependencyMapping []accesscontrol.MessageDependencyMapping `json:"message_dependency_mapping" yaml:"message_dependency_mapping"`
-
 }
 
 func ProposalRESTHandler(clientCtx client.Context) govrest.ProposalRESTHandler {

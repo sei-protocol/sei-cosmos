@@ -23,9 +23,9 @@ var _ govtypes.Content = &MsgUpdateResourceDependencyMappingProposal{}
 
 func NewRegisterPairsProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) MsgUpdateResourceDependencyMappingProposal {
 	return MsgUpdateResourceDependencyMappingProposal{
-		Title:       title,
-		Description: description,
-		MessageDependencyMapping : messageDependencyMapping,
+		Title:                    title,
+		Description:              description,
+		MessageDependencyMapping: messageDependencyMapping,
 	}
 }
 
@@ -56,7 +56,7 @@ func (p MsgUpdateResourceDependencyMappingProposal) String() string {
 			Description: %s
 			Changes:
 			`,
-		p.Title, p.Description))
+			p.Title, p.Description))
 
 	for _, depMapping := range p.MessageDependencyMapping {
 		b.WriteString(fmt.Sprintf(`		Change:

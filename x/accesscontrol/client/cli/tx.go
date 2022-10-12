@@ -53,8 +53,8 @@ func MsgUpdateResourceDependencyMappingProposalCmd() *cobra.Command {
 			from := clientCtx.GetFromAddress()
 
 			content := types.MsgUpdateResourceDependencyMappingProposal{
-				Title:	proposal.Title,
-				Description: proposal.Description,
+				Title:                    proposal.Title,
+				Description:              proposal.Description,
 				MessageDependencyMapping: proposal.MessageDependencyMapping,
 			}
 

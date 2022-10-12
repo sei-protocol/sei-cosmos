@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/k0kubun/pp"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -666,6 +667,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	var gasWanted uint64
 
 	ms := ctx.MultiStore()
+	pp.Printf("runTx:first:ctx:%s", ctx.MultiStore().CacheMultiStore())
 
 	// only run the tx if there is block gas remaining
 	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
@@ -749,7 +751,12 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		}
 
 		priority = ctx.Priority()
+		pp.Printf("runTx:second:ctx:%s", ctx.MultiStore().CacheMultiStore())
+		pp.Printf("runTx:anteCtx:%s", anteCtx.MultiStore().CacheMultiStore())
+		pp.Printf("runTx:newCtx:%s", newCtx.MultiStore().CacheMultiStore())
+		pp.Printf("runTx:msCache:%s", msCache)
 		msCache.Write()
+		pp.Printf("runTx:msCache - post write: %s", msCache)
 		anteEvents = events.ToABCIEvents()
 	}
 
@@ -766,9 +773,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	if err == nil && mode == runTxModeDeliver {
 		// When block gas exceeds, it'll panic and won't commit the cached store.
 		consumeBlockGas()
-
+		pp.Printf("runTx:third:ctx:%s", ctx.MultiStore().CacheMultiStore())
+		pp.Printf("runTx:runMsgCtx:%s", runMsgCtx.MultiStore().CacheMultiStore())
 		msCache.Write()
-
+		pp.Printf("runTx:msCache - post write: %s", msCache)
 		if len(anteEvents) > 0 {
 			// append the events in the order of occurrence
 			result.Events = append(anteEvents, result.Events...)

@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -70,6 +71,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 	} else {
 		value = cacheValue.value
 	}
+	fmt.Printf("CacheKv:Get:%s \n", key)
 
 	return value
 }
@@ -81,7 +83,7 @@ func (store *Store) Set(key []byte, value []byte) {
 
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
-
+	fmt.Printf("CacheKv:Set:%s \n", key)
 	store.setCacheValue(key, value, false, true)
 }
 
@@ -96,7 +98,7 @@ func (store *Store) Delete(key []byte) {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
-
+	fmt.Printf("CacheKv:Delete:%s \n", key)
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
 }
@@ -118,10 +120,10 @@ func (store *Store) Write() {
 	}
 
 	sort.Strings(keys)
-
 	// TODO: Consider allowing usage of Batch, which would allow the write to
 	// at least happen atomically.
 	for _, key := range keys {
+		fmt.Printf("CacheKv:Write:%s \n", key)
 		if store.isDeleted(key) {
 			// We use []byte(key) instead of conv.UnsafeStrToBytes because we cannot
 			// be sure if the underlying store might do a save with the byteslice or

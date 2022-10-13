@@ -2,6 +2,7 @@ package gaskv
 
 import (
 	"io"
+	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
@@ -16,6 +17,7 @@ type Store struct {
 	gasMeter  types.GasMeter
 	gasConfig types.GasConfig
 	parent    types.KVStore
+	mtx		 sync.Mutex
 }
 
 // NewStore returns a reference to a new GasKVStore.
@@ -30,15 +32,24 @@ func NewStore(parent types.KVStore, gasMeter types.GasMeter, gasConfig types.Gas
 
 // Implements Store.
 func (gs *Store) GetStoreType() types.StoreType {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	return gs.parent.GetStoreType()
 }
 
 func (gs *Store) GetWorkingHash() []byte {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	return gs.parent.GetWorkingHash()
 }
 
 // Implements KVStore.
 func (gs *Store) Get(key []byte) (value []byte) {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	gs.gasMeter.ConsumeGas(gs.gasConfig.ReadCostFlat, types.GasReadCostFlatDesc)
 	value = gs.parent.Get(key)
 
@@ -51,6 +62,9 @@ func (gs *Store) Get(key []byte) (value []byte) {
 
 // Implements KVStore.
 func (gs *Store) Set(key []byte, value []byte) {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostFlat, types.GasWriteCostFlatDesc)
@@ -62,6 +76,9 @@ func (gs *Store) Set(key []byte, value []byte) {
 
 // Implements KVStore.
 func (gs *Store) Has(key []byte) bool {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	defer telemetry.MeasureSince(time.Now(), "store", "gaskv", "has")
 	gs.gasMeter.ConsumeGas(gs.gasConfig.HasCost, types.GasHasDesc)
 	return gs.parent.Has(key)
@@ -69,6 +86,9 @@ func (gs *Store) Has(key []byte) bool {
 
 // Implements KVStore.
 func (gs *Store) Delete(key []byte) {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	defer telemetry.MeasureSince(time.Now(), "store", "gaskv", "delete")
 	// charge gas to prevent certain attack vectors even though space is being freed
 	gs.gasMeter.ConsumeGas(gs.gasConfig.DeleteCost, types.GasDeleteDesc)
@@ -79,6 +99,9 @@ func (gs *Store) Delete(key []byte) {
 // incurs a flat gas cost for seeking to the first key/value pair and a variable
 // gas cost based on the current value's length if the iterator is valid.
 func (gs *Store) Iterator(start, end []byte) types.Iterator {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	return gs.iterator(start, end, true)
 }
 
@@ -87,6 +110,9 @@ func (gs *Store) Iterator(start, end []byte) types.Iterator {
 // and a variable gas cost based on the current value's length if the iterator
 // is valid.
 func (gs *Store) ReverseIterator(start, end []byte) types.Iterator {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	return gs.iterator(start, end, false)
 }
 
@@ -106,6 +132,8 @@ func (gs *Store) CacheWrapWithListeners(_ types.StoreKey, _ []types.WriteListene
 }
 
 func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
 	var parent types.Iterator
 	if ascending {
 		parent = gs.parent.Iterator(start, end)

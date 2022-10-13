@@ -83,12 +83,13 @@ func (g *basicGasMeter) Limit() Gas {
 
 func (g *basicGasMeter) GasConsumedToLimit() Gas {
 	println("GAS:GasConsumedToLimit:Waiting for lock")
-	g.mtx.Lock()
-	defer g.mtx.Unlock()
-
 	if g.IsPastLimit() {
 		return g.limit
 	}
+
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
+
 	return g.consumed
 }
 

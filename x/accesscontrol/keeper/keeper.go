@@ -232,7 +232,7 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 		if dependencies, err := dependencyGenerator(k, ctx, msg); err == nil {
 			// validate the access ops before using them
 			validateErr := types.ValidateAccessOps(dependencies)
-			if validateErr == nil && dependencyMapping.DynamicEnabled {
+			if validateErr == nil {
 				return dependencies
 			} else {
 				ctx.Logger().Error(validateErr.Error())

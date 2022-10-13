@@ -2,7 +2,6 @@ package cachekv
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -119,7 +118,6 @@ func (store *Store) Write() {
 	// TODO: Consider allowing usage of Batch, which would allow the write to
 	// at least happen atomically.
 	for _, key := range keys {
-		fmt.Printf("CacheKv:Write:%s \n", key)
 		if store.isDeleted(key) {
 			// We use []byte(key) instead of conv.UnsafeStrToBytes because we cannot
 			// be sure if the underlying store might do a save with the byteslice or

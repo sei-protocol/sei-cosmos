@@ -80,14 +80,11 @@ type ConsumeTxSizeGasDecorator struct {
 	ak AccountKeeper
 }
 
-type ConsumeTxSizeGasDepDecorator struct {}
-
-func (d ConsumeTxSizeGasDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sdk.Tx, next sdk.AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error) {
+func (d ConsumeTxSizeGasDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sdk.Tx, next sdk.AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error) {
 	sigTx, _ := tx.(authsigning.SigVerifiableTx)
 	deps := []sdkacltypes.AccessOperation{}
 	for _, signer := range sigTx.GetSigners() {
 		deps = append(deps,
-			// Consumes gas fee!
 			sdkacltypes.AccessOperation{
 				AccessType:         sdkacltypes.AccessType_WRITE,
 				ResourceType:       sdkacltypes.ResourceType_KV,
@@ -99,11 +96,8 @@ func (d ConsumeTxSizeGasDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperat
 	return next(append(txDeps, deps...), tx)
 }
 
-func NewConsumeGasForTxSizeDecorator(ak AccountKeeper) sdk.WrappedAnteDecorator {
-	return sdk.WrappedAnteDecorator{
-		Decorator: ConsumeTxSizeGasDecorator{ak: ak},
-		DepDecorator: ConsumeTxSizeGasDepDecorator{},
-	}
+func NewConsumeGasForTxSizeDecorator(ak AccountKeeper) ConsumeTxSizeGasDecorator {
+	return ConsumeTxSizeGasDecorator{ak: ak}
 }
 
 func (cgts ConsumeTxSizeGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {

@@ -23,8 +23,15 @@ type AnteDepDecorator interface {
 
 type DefaultDepDecorator struct{}
 
+// Defeault AnteDeps returned
 func (d DefaultDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx Tx, next AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error) {
-	defaultDeps := []sdkacltypes.AccessOperation{{ResourceType: sdkacltypes.ResourceType_ANY, AccessType: sdkacltypes.AccessType_UNKNOWN, IdentifierTemplate: "*"}}
+	defaultDeps := []sdkacltypes.AccessOperation{
+		{
+			ResourceType: sdkacltypes.ResourceType_ANY,
+			AccessType: sdkacltypes.AccessType_UNKNOWN,
+			IdentifierTemplate: "*",
+		},
+	}
 	return next(append(txDeps, defaultDeps...), tx)
 }
 

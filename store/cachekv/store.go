@@ -71,7 +71,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 	} else {
 		value = cacheValue.value
 	}
-	fmt.Printf("CacheKv:Get:%s \n", key)
+	fmt.Printf("CacheKv:Set:%s \n", conv.UnsafeBytesToStr(key))
 
 	return value
 }
@@ -83,7 +83,7 @@ func (store *Store) Set(key []byte, value []byte) {
 
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
-	fmt.Printf("CacheKv:Set:%s \n", key)
+	fmt.Printf("CacheKv:Set:%s \n", conv.UnsafeBytesToStr(key))
 	store.setCacheValue(key, value, false, true)
 }
 
@@ -98,7 +98,7 @@ func (store *Store) Delete(key []byte) {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
-	fmt.Printf("CacheKv:Delete:%s \n", key)
+	fmt.Printf("CacheKv:Delete:%s \n", conv.UnsafeBytesToStr(key))
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
 }

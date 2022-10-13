@@ -191,6 +191,7 @@ func (g *infiniteGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	fmt.Printf("GAS:InfiniteConsumeGas:Waiting for lock amount=%d descriptor=%s \n", amount, descriptor)
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
+
 	var overflow bool
 	// TODO: Should we set the consumed field after overflow checking?
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)

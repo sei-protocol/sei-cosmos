@@ -164,8 +164,6 @@ func (gi *gasIterator) Valid() bool {
 // in the iterator. It incurs a flat gas cost for seeking and a variable gas
 // cost based on the current value's length if the iterator is valid.
 func (gi *gasIterator) Next() {
-	gi.mtx.Lock()
-	defer gi.mtx.Unlock()
 	gi.consumeSeekGas()
 	gi.parent.Next()
 }
@@ -180,8 +178,6 @@ func (gi *gasIterator) Key() (key []byte) {
 // Value implements the Iterator interface. It returns the current value and it
 // does not incur any gas cost.
 func (gi *gasIterator) Value() (value []byte) {
-	gi.mtx.Lock()
-	defer gi.mtx.Unlock()
 	value = gi.parent.Value()
 	return value
 }

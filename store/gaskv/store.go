@@ -2,6 +2,7 @@ package gaskv
 
 import (
 	"io"
+	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
@@ -13,6 +14,7 @@ var _ types.KVStore = &Store{}
 // Store applies gas tracking to an underlying KVStore. It implements the
 // KVStore interface.
 type Store struct {
+	mtx           sync.Mutex
 	gasMeter  types.GasMeter
 	gasConfig types.GasConfig
 	parent    types.KVStore
@@ -34,11 +36,16 @@ func (gs *Store) GetStoreType() types.StoreType {
 }
 
 func (gs *Store) GetWorkingHash() []byte {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
 	return gs.parent.GetWorkingHash()
 }
 
 // Implements KVStore.
 func (gs *Store) Get(key []byte) (value []byte) {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	gs.gasMeter.ConsumeGas(gs.gasConfig.ReadCostFlat, types.GasReadCostFlatDesc)
 	value = gs.parent.Get(key)
 
@@ -51,6 +58,9 @@ func (gs *Store) Get(key []byte) (value []byte) {
 
 // Implements KVStore.
 func (gs *Store) Set(key []byte, value []byte) {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostFlat, types.GasWriteCostFlatDesc)
@@ -69,6 +79,9 @@ func (gs *Store) Has(key []byte) bool {
 
 // Implements KVStore.
 func (gs *Store) Delete(key []byte) {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	defer telemetry.MeasureSince(time.Now(), "store", "gaskv", "delete")
 	// charge gas to prevent certain attack vectors even though space is being freed
 	gs.gasMeter.ConsumeGas(gs.gasConfig.DeleteCost, types.GasDeleteDesc)
@@ -106,6 +119,9 @@ func (gs *Store) CacheWrapWithListeners(_ types.StoreKey, _ []types.WriteListene
 }
 
 func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
+
 	var parent types.Iterator
 	if ascending {
 		parent = gs.parent.Iterator(start, end)
@@ -120,6 +136,7 @@ func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 }
 
 type gasIterator struct {
+	mtx           sync.Mutex
 	gasMeter  types.GasMeter
 	gasConfig types.GasConfig
 	parent    types.Iterator
@@ -147,6 +164,8 @@ func (gi *gasIterator) Valid() bool {
 // in the iterator. It incurs a flat gas cost for seeking and a variable gas
 // cost based on the current value's length if the iterator is valid.
 func (gi *gasIterator) Next() {
+	gi.mtx.Lock()
+	defer gi.mtx.Unlock()
 	gi.consumeSeekGas()
 	gi.parent.Next()
 }
@@ -161,6 +180,8 @@ func (gi *gasIterator) Key() (key []byte) {
 // Value implements the Iterator interface. It returns the current value and it
 // does not incur any gas cost.
 func (gi *gasIterator) Value() (value []byte) {
+	gi.mtx.Lock()
+	defer gi.mtx.Unlock()
 	value = gi.parent.Value()
 	return value
 }

@@ -65,6 +65,7 @@ func NewGasMeter(limit Gas) GasMeter {
 }
 
 func (g *basicGasMeter) GasConsumed() Gas {
+	println("GAS:GasConsumed:Waiting for lock")
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 
@@ -72,10 +73,16 @@ func (g *basicGasMeter) GasConsumed() Gas {
 }
 
 func (g *basicGasMeter) Limit() Gas {
+	println("GAS:Limit:Waiting for lock")
+
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
+
 	return g.limit
 }
 
 func (g *basicGasMeter) GasConsumedToLimit() Gas {
+	println("GAS:GasConsumedToLimit:Waiting for lock")
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 
@@ -96,6 +103,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 }
 
 func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
+	println("GAS:ConsumeGas:Waiting for lock")
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 
@@ -118,6 +126,7 @@ func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
 // EVM-compatible chains can fully support the go-ethereum StateDb interface.
 // See https://github.com/cosmos/cosmos-sdk/pull/9403 for reference.
 func (g *basicGasMeter) RefundGas(amount Gas, descriptor string) {
+	println("GAS:RefundGas:Waiting for lock")
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 
@@ -129,6 +138,7 @@ func (g *basicGasMeter) RefundGas(amount Gas, descriptor string) {
 }
 
 func (g *basicGasMeter) IsPastLimit() bool {
+	println("GAS:IsPastLimit:Waiting for lock")
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 
@@ -136,6 +146,7 @@ func (g *basicGasMeter) IsPastLimit() bool {
 }
 
 func (g *basicGasMeter) IsOutOfGas() bool {
+	println("GAS:IsOutOfGas:Waiting for lock")
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 

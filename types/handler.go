@@ -23,7 +23,8 @@ type AnteDepDecorator interface {
 
 type DefaultDepDecorator struct{}
 
-// Defeault AnteDeps returned
+// Defeault AnteDeps returned 
+// TODO:: enabling this causes dead lock in some cases at the moment, need to debug futher
 func (d DefaultDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx Tx, next AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error) {
 	defaultDeps := []sdkacltypes.AccessOperation{
 		{

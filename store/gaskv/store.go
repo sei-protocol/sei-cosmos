@@ -14,10 +14,10 @@ var _ types.KVStore = &Store{}
 // Store applies gas tracking to an underlying KVStore. It implements the
 // KVStore interface.
 type Store struct {
+	mtx           sync.Mutex
 	gasMeter  types.GasMeter
 	gasConfig types.GasConfig
 	parent    types.KVStore
-	mtx		 sync.Mutex
 }
 
 // NewStore returns a reference to a new GasKVStore.
@@ -32,16 +32,12 @@ func NewStore(parent types.KVStore, gasMeter types.GasMeter, gasConfig types.Gas
 
 // Implements Store.
 func (gs *Store) GetStoreType() types.StoreType {
-	gs.mtx.Lock()
-	defer gs.mtx.Unlock()
-
 	return gs.parent.GetStoreType()
 }
 
 func (gs *Store) GetWorkingHash() []byte {
 	gs.mtx.Lock()
 	defer gs.mtx.Unlock()
-
 	return gs.parent.GetWorkingHash()
 }
 
@@ -76,9 +72,6 @@ func (gs *Store) Set(key []byte, value []byte) {
 
 // Implements KVStore.
 func (gs *Store) Has(key []byte) bool {
-	gs.mtx.Lock()
-	defer gs.mtx.Unlock()
-
 	defer telemetry.MeasureSince(time.Now(), "store", "gaskv", "has")
 	gs.gasMeter.ConsumeGas(gs.gasConfig.HasCost, types.GasHasDesc)
 	return gs.parent.Has(key)
@@ -99,9 +92,6 @@ func (gs *Store) Delete(key []byte) {
 // incurs a flat gas cost for seeking to the first key/value pair and a variable
 // gas cost based on the current value's length if the iterator is valid.
 func (gs *Store) Iterator(start, end []byte) types.Iterator {
-	gs.mtx.Lock()
-	defer gs.mtx.Unlock()
-
 	return gs.iterator(start, end, true)
 }
 
@@ -110,9 +100,6 @@ func (gs *Store) Iterator(start, end []byte) types.Iterator {
 // and a variable gas cost based on the current value's length if the iterator
 // is valid.
 func (gs *Store) ReverseIterator(start, end []byte) types.Iterator {
-	gs.mtx.Lock()
-	defer gs.mtx.Unlock()
-
 	return gs.iterator(start, end, false)
 }
 
@@ -131,9 +118,10 @@ func (gs *Store) CacheWrapWithListeners(_ types.StoreKey, _ []types.WriteListene
 	panic("cannot CacheWrapWithListeners a GasKVStore")
 }
 
-func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
+func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {\
 	gs.mtx.Lock()
 	defer gs.mtx.Unlock()
+
 	var parent types.Iterator
 	if ascending {
 		parent = gs.parent.Iterator(start, end)
@@ -148,6 +136,7 @@ func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 }
 
 type gasIterator struct {
+	mtx           sync.Mutex
 	gasMeter  types.GasMeter
 	gasConfig types.GasConfig
 	parent    types.Iterator
@@ -175,6 +164,8 @@ func (gi *gasIterator) Valid() bool {
 // in the iterator. It incurs a flat gas cost for seeking and a variable gas
 // cost based on the current value's length if the iterator is valid.
 func (gi *gasIterator) Next() {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
 	gi.consumeSeekGas()
 	gi.parent.Next()
 }
@@ -189,6 +180,8 @@ func (gi *gasIterator) Key() (key []byte) {
 // Value implements the Iterator interface. It returns the current value and it
 // does not incur any gas cost.
 func (gi *gasIterator) Value() (value []byte) {
+	gs.mtx.Lock()
+	defer gs.mtx.Unlock()
 	value = gi.parent.Value()
 	return value
 }

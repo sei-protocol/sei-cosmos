@@ -70,6 +70,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 	} else {
 		value = cacheValue.value
 	}
+
 	return value
 }
 
@@ -80,6 +81,7 @@ func (store *Store) Set(key []byte, value []byte) {
 
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
+
 	store.setCacheValue(key, value, false, true)
 }
 
@@ -94,6 +96,7 @@ func (store *Store) Delete(key []byte) {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
+
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
 }
@@ -115,6 +118,7 @@ func (store *Store) Write() {
 	}
 
 	sort.Strings(keys)
+
 	// TODO: Consider allowing usage of Batch, which would allow the write to
 	// at least happen atomically.
 	for _, key := range keys {

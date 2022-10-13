@@ -5,6 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkacltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
@@ -79,9 +80,30 @@ type ConsumeTxSizeGasDecorator struct {
 	ak AccountKeeper
 }
 
-func NewConsumeGasForTxSizeDecorator(ak AccountKeeper) ConsumeTxSizeGasDecorator {
-	return ConsumeTxSizeGasDecorator{
-		ak: ak,
+type ConsumeTxSizeGasDepDecorator struct {}
+
+
+func (d ConsumeTxSizeGasDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sdk.Tx, next sdk.AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error) {
+	sigTx, _ := tx.(authsigning.SigVerifiableTx)
+	deps := []sdkacltypes.AccessOperation{}
+	for _, signer := range sigTx.GetSigners() {
+		deps = append(deps,
+			// Consumes gas fee!
+			sdkacltypes.AccessOperation{
+				AccessType:         sdkacltypes.AccessType_WRITE,
+				ResourceType:       sdkacltypes.ResourceType_KV,
+				IdentifierTemplate:  signer.String(),
+			},
+		)
+
+	}
+	return next(append(txDeps, deps...), tx)
+}
+
+func NewConsumeGasForTxSizeDecorator(ak AccountKeeper) sdk.WrappedAnteDecorator {
+	return sdk.WrappedAnteDecorator{
+		Decorator: ConsumeTxSizeGasDecorator{ak: ak},
+		DepDecorator: ConsumeTxSizeGasDepDecorator{},
 	}
 }
 

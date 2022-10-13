@@ -31,6 +31,11 @@ func (d DefaultDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx T
 			AccessType: sdkacltypes.AccessType_UNKNOWN,
 			IdentifierTemplate: "*",
 		},
+		{
+			ResourceType: sdkacltypes.ResourceType_ANY,
+			AccessType: sdkacltypes.AccessType_COMMIT,
+			IdentifierTemplate: "*",
+		},
 	}
 	return next(append(txDeps, defaultDeps...), tx)
 }
@@ -112,7 +117,8 @@ func CustomDepWrappedAnteDecorator(decorator AnteDecorator, depDecorator AnteDep
 func DefaultWrappedAnteDecorator(decorator AnteDecorator) WrappedAnteDecorator {
 	return WrappedAnteDecorator{
 		Decorator:    decorator,
-		DepDecorator: DefaultDepDecorator{},
+		// TODO:: Use DefaultDepDecorator when each decorator defines their own
+		DepDecorator: NoDepDecorator{},
 	}
 }
 

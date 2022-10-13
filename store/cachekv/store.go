@@ -71,7 +71,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 	} else {
 		value = cacheValue.value
 	}
-	fmt.Printf("CacheKv:Set:%s \n", conv.UnsafeBytesToStr(key))
+	fmt.Printf("CacheKv:Set:%s - %s \n", conv.UnsafeBytesToStr(key), conv.UnsafeBytesToStr(value))
 
 	return value
 }
@@ -83,7 +83,7 @@ func (store *Store) Set(key []byte, value []byte) {
 
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
-	fmt.Printf("CacheKv:Set:%s \n", conv.UnsafeBytesToStr(key))
+	fmt.Printf("CacheKv:Set:%s - %s \n", conv.UnsafeBytesToStr(key), conv.UnsafeBytesToStr(value))
 	store.setCacheValue(key, value, false, true)
 }
 

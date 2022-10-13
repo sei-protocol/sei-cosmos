@@ -17,7 +17,10 @@ var ResourceTree = map[ResourceType]TreeNode{
 // TODO: alternatively, hardcode all dependencies (parent and children) for a specific resource type, so we don't need to do a traversal when building dag
 func (r ResourceType) GetResourceDependencies() []ResourceType {
 	// resource is its own dependency
-	resources := r.GetParentResources()
+	resources := []ResourceType{r}
+
+	//get parents
+	resources = append(resources, r.GetParentResources()...)
 
 	// traverse children
 	queue := ResourceTree[r].Children
@@ -34,7 +37,7 @@ func (r ResourceType) GetResourceDependencies() []ResourceType {
 }
 
 func (r ResourceType) GetParentResources() []ResourceType {
-	parentResources := []ResourceType{r}
+	parentResources := []ResourceType{}
 
 	// traverse up the parents chain
 	currResource := r

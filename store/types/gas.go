@@ -104,7 +104,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 }
 
 func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
-	println("GAS:ConsumeGas:Waiting for lock")
+	fmt.Printf("GAS:ConsumeGas:Waiting for lock amount=%d \n", amount)
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 
@@ -159,6 +159,7 @@ func (g *basicGasMeter) String() string {
 }
 
 type infiniteGasMeter struct {
+	mtx		 sync.Mutex
 	consumed Gas
 }
 
@@ -170,10 +171,15 @@ func NewInfiniteGasMeter() GasMeter {
 }
 
 func (g *infiniteGasMeter) GasConsumed() Gas {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	return g.consumed
 }
 
 func (g *infiniteGasMeter) GasConsumedToLimit() Gas {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
+
 	return g.consumed
 }
 
@@ -182,6 +188,8 @@ func (g *infiniteGasMeter) Limit() Gas {
 }
 
 func (g *infiniteGasMeter) ConsumeGas(amount Gas, descriptor string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	var overflow bool
 	// TODO: Should we set the consumed field after overflow checking?
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
@@ -197,6 +205,9 @@ func (g *infiniteGasMeter) ConsumeGas(amount Gas, descriptor string) {
 // EVM-compatible chains can fully support the go-ethereum StateDb interface.
 // See https://github.com/cosmos/cosmos-sdk/pull/9403 for reference.
 func (g *infiniteGasMeter) RefundGas(amount Gas, descriptor string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
+
 	if g.consumed < amount {
 		panic(ErrorNegativeGasConsumed{Descriptor: descriptor})
 	}

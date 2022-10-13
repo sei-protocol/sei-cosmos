@@ -188,6 +188,7 @@ func (g *infiniteGasMeter) Limit() Gas {
 }
 
 func (g *infiniteGasMeter) ConsumeGas(amount Gas, descriptor string) {
+	fmt.Printf("GAS:InfiniteConsumeGas:Waiting for lock amount=%d \n", amount)
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 	var overflow bool

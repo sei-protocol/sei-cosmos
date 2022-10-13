@@ -31,11 +31,6 @@ func (d DefaultDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx T
 			AccessType: sdkacltypes.AccessType_UNKNOWN,
 			IdentifierTemplate: "*",
 		},
-		{
-			ResourceType: sdkacltypes.ResourceType_ANY,
-			AccessType: sdkacltypes.AccessType_COMMIT,
-			IdentifierTemplate: "*",
-		},
 	}
 	return next(append(txDeps, defaultDeps...), tx)
 }

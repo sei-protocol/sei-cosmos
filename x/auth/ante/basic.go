@@ -82,7 +82,6 @@ type ConsumeTxSizeGasDecorator struct {
 
 type ConsumeTxSizeGasDepDecorator struct {}
 
-
 func (d ConsumeTxSizeGasDepDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sdk.Tx, next sdk.AnteDepGenerator) (newTxDeps []sdkacltypes.AccessOperation, err error) {
 	sigTx, _ := tx.(authsigning.SigVerifiableTx)
 	deps := []sdkacltypes.AccessOperation{}

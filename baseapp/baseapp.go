@@ -659,6 +659,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// resources are acceessed by the ante handlers and message handlers.
 
 	// TODO:: Make this more granular by moving antehandler and messagehandler
+
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 

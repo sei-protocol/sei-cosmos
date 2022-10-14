@@ -50,6 +50,11 @@ func (d DeductFeeDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sd
 			ResourceType:       sdkacltypes.ResourceType_KV,
 			IdentifierTemplate:  feeTx.FeeGranter().String(),
 		},
+		{
+			AccessType:         sdkacltypes.AccessType_WRITE,
+			ResourceType:       sdkacltypes.ResourceType_KV,
+			IdentifierTemplate:  types.FeeCollectorName,
+		},
 	}
 
 	return next(append(txDeps, deps...), tx)

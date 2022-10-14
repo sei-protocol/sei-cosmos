@@ -2,6 +2,7 @@ package gaskv_test
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -122,3 +123,77 @@ func TestGasKVStoreOutOfGasIterator(t *testing.T) {
 	iterator.Next()
 	require.Panics(t, func() { iterator.Value() }, "Expected out-of-gas")
 }
+
+func TestGasKVStoreIteratorConcurrent(t *testing.T) {
+	mem := dbadapter.Store{DB: dbm.NewMemDB()}
+	meter := types.NewGasMeter(1000000000)
+	st := gaskv.NewStore(mem, meter, types.KVGasConfig())
+
+	var waitGroup sync.WaitGroup
+	for i := 1; i < 50; i++ {
+		waitGroup.Add(1)
+		go func() {
+            defer waitGroup.Done()
+            GasKvStoreIteratorHelper(t, meter, st, mem)
+        }()
+	}
+	waitGroup.Wait()
+}
+
+
+func GasKvStoreIteratorHelper(t *testing.T, meter types.GasMeter, st *gaskv.Store, mem dbadapter.Store) {
+	st.Set(keyFmt(1), valFmt(1))
+	require.True(t, st.Has(keyFmt(1)))
+	st.Set(keyFmt(2), valFmt(2))
+	require.True(t, st.Has(keyFmt(2)))
+	st.Set(keyFmt(3), valFmt(0))
+
+	iterator := st.Iterator(nil, nil)
+	start, end := iterator.Domain()
+	require.Nil(t, start)
+	require.Nil(t, end)
+	require.NoError(t, iterator.Error())
+
+	t.Cleanup(func() {
+		if err := iterator.Close(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	ka := iterator.Key()
+	require.Equal(t, ka, keyFmt(1))
+	va := iterator.Value()
+	require.Equal(t, va, valFmt(1))
+	iterator.Next()
+	kb := iterator.Key()
+	require.Equal(t, kb, keyFmt(2))
+	vb := iterator.Value()
+	require.Equal(t, vb, valFmt(2))
+	iterator.Next()
+
+	kc := iterator.Key()
+	require.Equal(t, kc, keyFmt(3))
+	vc := iterator.Value()
+	require.Equal(t, vc, valFmt(0))
+	iterator.Next()
+
+	require.False(t, iterator.Valid())
+	require.Panics(t, iterator.Next)
+
+	require.NoError(t, iterator.Error())
+
+	reverseIterator := st.ReverseIterator(nil, nil)
+	t.Cleanup(func() {
+		if err := reverseIterator.Close(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	require.Equal(t, reverseIterator.Key(), keyFmt(3))
+	reverseIterator.Next()
+	require.Equal(t, reverseIterator.Key(), keyFmt(2))
+	reverseIterator.Next()
+	require.Equal(t, reverseIterator.Key(), keyFmt(1))
+	reverseIterator.Next()
+	require.False(t, reverseIterator.Valid())
+	require.Panics(t, reverseIterator.Next)
+}
+

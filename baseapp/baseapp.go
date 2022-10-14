@@ -757,7 +757,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		// GasMeter expected to be set in AnteHandler
 		gasWanted = ctx.GasMeter().Limit()
 		gasUsed = ctx.GasMeter().GasConsumed()
-		fmt.Println("GAS:anteHandler:after ", gasUsed)
+
+		fmt.Println("GAS:anteHandler:ctx:after ", gasUsed)
+		fmt.Println("GAS:anteHandler:anteCtx:after ", newCtx.GasMeter().GasConsumed())
+		fmt.Println("GAS:anteHandler:newCtx:after ", newCtx.GasMeter().GasConsumed())
 
 		if err != nil {
 			return gInfo, nil, nil, 0, err

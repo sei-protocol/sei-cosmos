@@ -679,8 +679,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			recoveryMW := newOutOfGasRecoveryMiddleware(gasWanted, ctx, app.runTxRecoveryMiddleware)
 			err, result = processRecovery(r, recoveryMW), nil
 		}
-
-		gInfo = sdk.GasInfo{GasWanted: gasWanted, GasUsed: ctx.GasMeter().GasConsumed()}
+		gasUsed := ctx.GasMeter().GasConsumed()
+		fmt.Println("GAS:runTx:recovery ", gasUsed)
+		gInfo = sdk.GasInfo{GasWanted: gasWanted, GasUsed: gasUsed}
 	}()
 
 	blockGasConsumed := false
@@ -689,9 +690,15 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	consumeBlockGas := func() {
 		if !blockGasConsumed {
 			blockGasConsumed = true
+			gasUsed := ctx.GasMeter().GasConsumed()
+			fmt.Println("GAS:consumeBlockGas:before ", gasUsed)
+
 			ctx.BlockGasMeter().ConsumeGas(
 				ctx.GasMeter().GasConsumedToLimit(), "block gas meter",
 			)
+
+			gasUsed = ctx.GasMeter().GasConsumed()
+			fmt.Println("GAS:consumeBlockGas:after ", gasUsed)
 		}
 	}
 
@@ -729,7 +736,11 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		// performance benefits, but it'll be more difficult to get right.
 		anteCtx, msCache = app.cacheTxContext(ctx, txBytes)
 		anteCtx = anteCtx.WithEventManager(sdk.NewEventManager())
+
+		gasUsed := ctx.GasMeter().GasConsumed()
+		fmt.Println("GAS:anteHandler:before ", gasUsed)
 		newCtx, err := app.anteHandler(anteCtx, tx, mode == runTxModeSimulate)
+
 
 		if !newCtx.IsZero() {
 			// At this point, newCtx.MultiStore() is a store branch, or something else
@@ -745,6 +756,8 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 		// GasMeter expected to be set in AnteHandler
 		gasWanted = ctx.GasMeter().Limit()
+		gasUsed = ctx.GasMeter().GasConsumed()
+		fmt.Println("GAS:anteHandler:after ", gasUsed)
 
 		if err != nil {
 			return gInfo, nil, nil, 0, err
@@ -763,7 +776,13 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
+	gasUsed := runMsgCtx.GasMeter().GasConsumed()
+	fmt.Println("GAS:runMsgCtx:before ", gasUsed)
+	fmt.Println("GAS:runMsgCtx:ctx:before ", ctx.GasMeter().GasConsumed())
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
+	gasUsed = runMsgCtx.GasMeter().GasConsumed()
+	fmt.Println("GAS:anteHandler:after ", gasUsed)
+	fmt.Println("GAS:runMsgCtx:ctx:after ", ctx.GasMeter().GasConsumed())
 
 	if err == nil && mode == runTxModeDeliver {
 		// When block gas exceeds, it'll panic and won't commit the cached store.

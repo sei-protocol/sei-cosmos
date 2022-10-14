@@ -104,7 +104,7 @@ func addUint64Overflow(a, b uint64) (uint64, bool) {
 }
 
 func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
-	// fmt.Printf("GAS:ConsumeGas:Waiting for lock amount=%d descriptor=%s \n", amount, descriptor)
+	fmt.Printf("GAS:ConsumeGas:Waiting for lock amount=%d descriptor=%s \n", amount, descriptor)
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
 

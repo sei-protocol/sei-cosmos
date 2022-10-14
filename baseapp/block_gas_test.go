@@ -105,10 +105,14 @@ func TestBaseApp_BlockGas(t *testing.T) {
 			_, txBytes, err := createTestTx(encCfg.TxConfig, txBuilder, privs, accNums, accSeqs, ctx.ChainID())
 			require.NoError(t, err)
 
-			rsp, _ := app.FinalizeBlock(context.Background(), &abci.RequestFinalizeBlock{
+			rsp, error := app.FinalizeBlock(context.Background(), &abci.RequestFinalizeBlock{
 				Height: 1,
 				Txs:    [][]byte{txBytes},
 			})
+
+			if error != nil {
+				panic("unexpected error from FinalizeBlock")
+			}
 
 			// check result
 			ctx = app.GetContextForDeliverTx(txBytes)
@@ -116,13 +120,14 @@ func TestBaseApp_BlockGas(t *testing.T) {
 
 			if tc.expErr {
 				if tc.panicTx {
-					require.Equal(t, sdkerrors.ErrPanic.ABCICode(), rsp.TxResults[0].Code)
+					println(rsp.TxResults[0].Log)
+					require.Equal(t, int(sdkerrors.ErrPanic.ABCICode()), int(rsp.TxResults[0].GetCode()))
 				} else {
-					require.Equal(t, sdkerrors.ErrOutOfGas.ABCICode(), rsp.TxResults[0].Code)
+					require.Equal(t, int(sdkerrors.ErrOutOfGas.ABCICode()), int(rsp.TxResults[0].Code))
 				}
 				require.Empty(t, okValue)
 			} else {
-				require.Equal(t, uint32(0), rsp.TxResults[0].Code)
+				require.Equal(t, int(uint32(0)), int(rsp.TxResults[0].Code))
 				require.Equal(t, []byte("ok"), okValue)
 			}
 			// check block gas is always consumed
@@ -132,7 +137,7 @@ func TestBaseApp_BlockGas(t *testing.T) {
 				// capped by gasLimit
 				expGasConsumed = txtypes.MaxGasWanted
 			}
-			require.Equal(t, expGasConsumed, ctx.BlockGasMeter().GasConsumed())
+			require.Equal(t, int(expGasConsumed), int(ctx.BlockGasMeter().GasConsumed()))
 			// tx fee is always deducted
 			require.Equal(t, int64(0), app.BankKeeper.GetBalance(ctx, addr1, feeCoin.Denom).Amount.Int64())
 			// sender's sequence is always increased

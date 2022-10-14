@@ -233,7 +233,11 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) abci.R
 		telemetry.SetGauge(float32(gInfo.GasWanted), "tx", "gas", "wanted")
 	}()
 
+	fmt.Println("GAS:DeliverTx:ctx:before ", ctx.GasMeter().GasConsumed())
 	gInfo, result, anteEvents, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
+	fmt.Println("GAS:DeliverTx:ctx:after ", ctx.GasMeter().GasConsumed())
+	fmt.Println("GAS:DeliverTx:gInfo:after ", int64(gInfo.GasUsed))
+
 	if err != nil {
 		resultStr = "failed"
 		return sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)

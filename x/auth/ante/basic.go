@@ -110,7 +110,7 @@ func (cgts ConsumeTxSizeGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 	}
 	params := cgts.ak.GetParams(ctx)
 
-	ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*sdk.Gas(len(ctx.TxBytes())), "txSize")
+	ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*sdk.Gas(len(ctx.TxBytes())), "ConsumeTxSizeGasDecoratorAnteHandle")
 
 	// simulate gas cost for signatures in simulate mode
 	if simulate {
@@ -153,7 +153,7 @@ func (cgts ConsumeTxSizeGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 				cost *= params.TxSigLimit
 			}
 
-			ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*cost, "txSize")
+			ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*cost, fmt.Sprintf("txSizeSigners_%d", i))
 		}
 	}
 

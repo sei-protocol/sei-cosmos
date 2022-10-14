@@ -79,7 +79,7 @@ func (a StakeAuthorization) Accept(ctx sdk.Context, msg sdk.Msg) (authz.AcceptRe
 	isValidatorExists := false
 	allowedList := a.GetAllowList().GetAddress()
 	for _, validator := range allowedList {
-		ctx.GasMeter().ConsumeGas(gasCostPerIteration, "stake authorization")
+		ctx.GasMeter().ConsumeGas(gasCostPerIteration, "stake authorization allowedList")
 		if validator == validatorAddress {
 			isValidatorExists = true
 			break
@@ -88,7 +88,7 @@ func (a StakeAuthorization) Accept(ctx sdk.Context, msg sdk.Msg) (authz.AcceptRe
 
 	denyList := a.GetDenyList().GetAddress()
 	for _, validator := range denyList {
-		ctx.GasMeter().ConsumeGas(gasCostPerIteration, "stake authorization")
+		ctx.GasMeter().ConsumeGas(gasCostPerIteration, "stake authorization denyList")
 		if validator == validatorAddress {
 			return authz.AcceptResponse{}, sdkerrors.ErrUnauthorized.Wrapf(" cannot delegate/undelegate to %s validator", validator)
 		}

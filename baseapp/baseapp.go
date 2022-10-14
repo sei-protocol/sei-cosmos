@@ -742,6 +742,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		newCtx, err := app.anteHandler(anteCtx, tx, mode == runTxModeSimulate)
 
 
+		// This is always true wtf? - so this point the newCtx replaces the old one :)
 		if !newCtx.IsZero() {
 			// At this point, newCtx.MultiStore() is a store branch, or something else
 			// replaced by the AnteHandler. We want the original multistore.

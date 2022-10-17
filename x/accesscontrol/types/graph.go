@@ -131,7 +131,7 @@ func (dag *Dag) AddEdge(fromIndex DagNodeID, toIndex DagNodeID) *DagEdge {
 		return nil
 	}
 
-	// Processing in a given TX is sequential so no need for depedency
+	// Processing in a given TX is sequential so no need for dependency
 	if dag.NodeMap[fromIndex].TxIndex == dag.NodeMap[toIndex].TxIndex {
 		return nil
 	}

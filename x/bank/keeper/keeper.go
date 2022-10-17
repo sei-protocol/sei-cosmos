@@ -14,6 +14,7 @@ import (
 	vestexported "github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 var _ Keeper = (*BaseKeeper)(nil)
@@ -396,9 +397,11 @@ func (k BaseKeeper) LazyDepositToModule(recipientModule string, amount sdk.Coins
 }
 
 // Iterates on all the lazy deposits and deposit them into the store
-func (k BaseKeeper) WriteLazyDepositsToModuleAccounts(ctx sdk.Context) {
+func (k BaseKeeper) WriteLazyDepositsToModuleAccounts(ctx sdk.Context) []abci.Event {
 	k.moduleAccountDepositMappingLock.Lock()
 	defer k.moduleAccountDepositMappingLock.Unlock()
+
+	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	for recipientModule, amount := range k.moduleAccountDepositMapping {
 		recipientAcc := k.ak.GetModuleAccount(ctx, recipientModule)
 		if recipientAcc == nil {
@@ -410,6 +413,7 @@ func (k BaseKeeper) WriteLazyDepositsToModuleAccounts(ctx sdk.Context) {
 
 	// Clear the Previous Mapping
 	k.moduleAccountDepositMapping = make(map[string]sdk.Coins)
+	return ctx.EventManager().ABCIEvents()
 }
 
 

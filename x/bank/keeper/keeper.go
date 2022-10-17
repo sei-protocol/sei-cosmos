@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -35,6 +36,7 @@ type Keeper interface {
 	SendCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	SendCoinsFromModuleToModule(ctx sdk.Context, senderModule, recipientModule string, amt sdk.Coins) error
 	SendCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
+	LazySendCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	DelegateCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	UndelegateCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	MintCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
@@ -55,6 +57,13 @@ type BaseKeeper struct {
 	storeKey               sdk.StoreKey
 	paramSpace             paramtypes.Subspace
 	mintCoinsRestrictionFn MintingRestrictionFn
+
+	// Mapping of Module Account to the amount of tokens that have been deducted from
+	// Sender accounts but not yet deposited into module accounts. Use this to remove
+	// bottle neck for concurrent transacation processing and perform batch deposit
+	// in the end block
+	moduleAccountDepositMapping map[string]sdk.Coins
+	moduleAccountDepositMappingLock sync.Mutex
 }
 
 type MintingRestrictionFn func(ctx sdk.Context, coins sdk.Coins) error
@@ -346,7 +355,6 @@ func (k BaseKeeper) SendCoinsFromModuleToModule(
 func (k BaseKeeper) SendCoinsFromAccountToModule(
 	ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins,
 ) error {
-
 	recipientAcc := k.ak.GetModuleAccount(ctx, recipientModule)
 	if recipientAcc == nil {
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))
@@ -354,6 +362,50 @@ func (k BaseKeeper) SendCoinsFromAccountToModule(
 
 	return k.SendCoins(ctx, senderAddr, recipientAcc.GetAddress(), amt)
 }
+
+
+// LazyDepositFromAccountToModule transfers coins from an AccAddress to a ModuleAccount.
+// It deducts the balance from an accAddress and stores the balance in a mapping for ModuleAccounts.
+// In the EndBlocker, it will then perform one deposit for each module account.
+// It will panic if the module account does not exist.
+func (k BaseKeeper) LazySendCoinsFromAccountToModule(
+	ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins,
+) error {
+	// Deducts Fees from the Sender Account
+	err := k.subUnlockedCoins(ctx, senderAddr, amt)
+	if err != nil {
+		return err
+	}
+	k.LazyDepositToModule(recipientModule, amt)
+
+	return nil
+}
+
+func (k BaseKeeper) LazyDepositToModule(recipientModule string, amt sdk.Coins) {
+	k.moduleAccountDepositMappingLock.Lock()
+	defer k.moduleAccountDepositMappingLock.Unlock()
+
+	newAmount := amt
+	if v, ok := k.moduleAccountDepositMapping[recipientModule]; ok {
+		newAmount = v.Add(amt...)
+	}
+	k.moduleAccountDepositMapping[recipientModule] = newAmount
+}
+
+// Iterates on all the lazy deposits and deposit them into the store
+func (k BaseKeeper) WriteLazyDepositsToModuleAccounts(ctx sdk.Context) {
+	k.moduleAccountDepositMappingLock.Lock()
+	defer k.moduleAccountDepositMappingLock.Unlock()
+	for recipientModule, amount := range k.moduleAccountDepositMapping {
+		recipientAcc := k.ak.GetModuleAccount(ctx, recipientModule)
+		if recipientAcc == nil {
+			panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))
+		}
+		k.addCoins(ctx, recipientAcc.GetAddress(), amount)
+	}
+
+}
+
 
 // DelegateCoinsFromAccountToModule delegates coins and transfers them from a
 // delegator account to a module account. It will panic if the module account
@@ -545,3 +597,4 @@ func (k BaseViewKeeper) IterateTotalSupply(ctx sdk.Context, cb func(sdk.Coin) bo
 		}
 	}
 }
+

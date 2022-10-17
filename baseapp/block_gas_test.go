@@ -132,9 +132,9 @@ func TestBaseApp_BlockGas(t *testing.T) {
 				// capped by gasLimit
 				expGasConsumed = txtypes.MaxGasWanted
 			}
-			require.Equal(t, expGasConsumed, ctx.BlockGasMeter().GasConsumed())
+			require.Equal(t, int(expGasConsumed), int(ctx.BlockGasMeter().GasConsumed()))
 			// tx fee is always deducted
-			require.Equal(t, int64(0), app.BankKeeper.GetBalance(ctx, addr1, feeCoin.Denom).Amount.Int64())
+			require.Equal(t, 0, int(app.BankKeeper.GetBalance(ctx, addr1, feeCoin.Denom).Amount.Int64()))
 			// sender's sequence is always increased
 			seq, err = app.AccountKeeper.GetSequence(ctx, addr1)
 			require.NoError(t, err)

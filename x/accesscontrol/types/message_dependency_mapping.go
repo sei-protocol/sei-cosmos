@@ -10,6 +10,8 @@ import (
 
 var ErrNoCommitAccessOp = fmt.Errorf("MessageDependencyMapping doesn't terminate with AccessType_COMMIT")
 
+var ErrEmptyIdentifierString = fmt.Errorf("IdentifierTemplate cannot be an empty string")
+
 type MessageKey string
 
 func GenerateMessageKey(msg sdk.Msg) MessageKey {
@@ -25,6 +27,20 @@ func ValidateAccessOps(accessOps []acltypes.AccessOperation) error {
 	lastAccessOp := accessOps[len(accessOps)-1]
 	if lastAccessOp != CommitAccessOp() {
 		return ErrNoCommitAccessOp
+	}
+	for _, accessOp := range accessOps {
+		err := ValidateAccessOp(accessOp)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ValidateAccessOp(accessOp acltypes.AccessOperation) error {
+	if accessOp.IdentifierTemplate == "" {
+		return ErrEmptyIdentifierString
 	}
 	return nil
 }

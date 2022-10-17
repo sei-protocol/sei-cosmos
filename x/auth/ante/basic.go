@@ -86,6 +86,9 @@ func (d ConsumeTxSizeGasDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation
 	sigTx, _ := tx.(authsigning.SigVerifiableTx)
 	deps := []sdkacltypes.AccessOperation{}
 	for _, signer := range sigTx.GetSigners() {
+		if signer == nil {
+			continue
+		}
 		deps = append(deps,
 			sdkacltypes.AccessOperation{
 				AccessType:         sdkacltypes.AccessType_WRITE,

@@ -125,7 +125,8 @@ func TestBaseApp_BlockGas(t *testing.T) {
 				require.Equal(t, uint32(0), rsp.TxResults[0].Code)
 				require.Equal(t, []byte("ok"), okValue)
 			}
-			// check block gas is always consumed
+			// check block gas is always consumed - this value may change if we update the logic for
+			// how gas is consumed
 			baseGas := uint64(52585) // baseGas is the gas consumed before tx msg
 			expGasConsumed := addUint64Saturating(tc.gasToConsume, baseGas)
 			if expGasConsumed > txtypes.MaxGasWanted {

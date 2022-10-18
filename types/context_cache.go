@@ -29,18 +29,6 @@ func (c *ContextMemCache) UpsertDeferredSends(recipientModule string, amount Coi
 	c.deferredSends[recipientModule] = newAmount
 }
 
-
-func (c *ContextMemCache) GetSortedDeferredSendsKeys() []string {
-	// Need to sort keys for deterministic iterating
-	keys := make([]string, 0, len(c.deferredSends))
-	for key := range c.deferredSends {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-
 func (c *ContextMemCache) RangeOnDeferredSendsAndDelete(apply func (recipient string, amount Coins)) {
 	// The whole operation needs to be atomic
 	c.deferredSendsLock.Lock()

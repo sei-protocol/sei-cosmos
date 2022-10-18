@@ -405,7 +405,7 @@ func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abc
 
 	// Need to sort keys for deterministic iterating
 	keys := make([]string, len(k.moduleAccountDepositMapping))
-	for key, _ := range k.moduleAccountDepositMapping {
+	for key := range k.moduleAccountDepositMapping {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)

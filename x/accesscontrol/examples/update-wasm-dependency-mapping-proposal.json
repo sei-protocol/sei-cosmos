@@ -3,7 +3,7 @@
     "description": "Updating mapping for contract address 'sei14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sh9m79m'",
     "deposit": "10sei",
     "contract_address": "sei14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9sh9m79m",
-    "wasm_dependency_mapping": [
+    "wasm_dependency_mapping":
         {
           "enabled": true,
           "access_ops": [
@@ -19,5 +19,4 @@
             }
           ]
         }
-      ]
 }

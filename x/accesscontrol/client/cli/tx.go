@@ -90,14 +90,14 @@ func MsgUpdateWasmDependencyMappingProposalCmd() *cobra.Command {
 				return err
 			}
 
-			proposal, err := utils.ParseUpdateWasmDependencyMappingProposalJSON(clientCtx.LegacyAmino, args[0])
+			proposal, err := utils.ParseUpdateWasmDependencyMappingProposalJSON(clientCtx.Codec, args[0])
 			if err != nil {
 				return err
 			}
 
 			from := clientCtx.GetFromAddress()
 			content := types.NewMsgUpdateWasmDependencyMappingProposal(
-				proposal.Title, proposal.Description, proposal.ContractAddress, proposal.WasmDependencyMappings,
+				proposal.Title, proposal.Description, proposal.ContractAddress, proposal.WasmDependencyMapping,
 			)
 
 			deposit, err := sdk.ParseCoinsNormalized(proposal.Deposit)

@@ -16,11 +16,14 @@ const (
 func init() {
 	// for routing
 	govtypes.RegisterProposalType(ProposalUpdateResourceDependencyMapping)
+	govtypes.RegisterProposalType(ProposalUpdateWasmDependencyMapping)
 	// for marshal and unmarshal
-	govtypes.RegisterProposalTypeCodec(&MsgUpdateResourceDependencyMappingProposal{}, "tokenfactory/MsgUpdateResourceDependencyMappingProposal")
+	govtypes.RegisterProposalTypeCodec(&MsgUpdateResourceDependencyMappingProposal{}, "accesscontrol/MsgUpdateResourceDependencyMappingProposal")
+	govtypes.RegisterProposalTypeCodec(&MsgUpdateWasmDependencyMappingProposal{}, "accesscontrol/MsgUpdateWasmDependencyMappingProposal")
 }
 
 var _ govtypes.Content = &MsgUpdateResourceDependencyMappingProposal{}
+var _ govtypes.Content = &MsgUpdateWasmDependencyMappingProposal{}
 
 func NewMsgUpdateResourceDependencyMappingProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) *MsgUpdateResourceDependencyMappingProposal {
 	return &MsgUpdateResourceDependencyMappingProposal{title, description, messageDependencyMapping}
@@ -59,8 +62,8 @@ func (p MsgUpdateResourceDependencyMappingProposal) String() string {
 	return b.String()
 }
 
-func NewMsgUpdateWasmDependencyMappingProposal(title, description, contractAddr string, messageDependencyMapping []acltypes.WasmDependencyMapping) *MsgUpdateWasmDependencyMappingProposal {
-	return &MsgUpdateWasmDependencyMappingProposal{title, description, contractAddr, messageDependencyMapping}
+func NewMsgUpdateWasmDependencyMappingProposal(title, description, contractAddr string, wasmDependencyMapping acltypes.WasmDependencyMapping) *MsgUpdateWasmDependencyMappingProposal {
+	return &MsgUpdateWasmDependencyMappingProposal{title, description, contractAddr, wasmDependencyMapping}
 }
 
 func (p *MsgUpdateWasmDependencyMappingProposal) GetTitle() string { return p.Title }
@@ -85,14 +88,12 @@ func (p MsgUpdateWasmDependencyMappingProposal) String() string {
 			Title:       %s
 			Description: %s
 			ContractAddress: %s
-			Changes:
+			Change:
 			`,
 			p.Title, p.Description, p.ContractAddress))
 
-	for _, depMapping := range p.WasmDependencyMapping {
-		b.WriteString(fmt.Sprintf(`		Change:
-			MessageDependencyMapping: %s
-		`, depMapping.String()))
-	}
+	b.WriteString(fmt.Sprintf(`
+		WasmDependencyMapping: %s
+	`, p.WasmDependencyMapping.String()))
 	return b.String()
 }

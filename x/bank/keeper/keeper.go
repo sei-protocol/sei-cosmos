@@ -407,7 +407,7 @@ func (k BaseKeeper) WriteLazyDepositsToModuleAccounts(ctx sdk.Context) []abci.Ev
 		if recipientAcc == nil {
 			panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))
 		}
-		log.Printf("Adding coin=%s to module=%s", amount, recipientModule)
+		log.Printf("Adding coin=%s to module=%s address=%s", amount, recipientModule, recipientAcc.GetAddress())
 		k.addCoins(ctx, recipientAcc.GetAddress(), amount)
 	}
 

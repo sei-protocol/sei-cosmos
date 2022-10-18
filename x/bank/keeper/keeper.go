@@ -409,10 +409,10 @@ func (k BaseKeeper) WriteLazyDepositsToModuleAccounts(ctx sdk.Context) []abci.Ev
 		}
 		log.Printf("Adding coin=%s to module=%s address=%s", amount, recipientModule, recipientAcc.GetAddress())
 		k.addCoins(ctx, recipientAcc.GetAddress(), amount)
-	}
 
-	// Clear the Previous Mapping
-	k.moduleAccountDepositMapping = make(map[string]sdk.Coins)
+		// Clear the Mapping once it's deposited
+		delete(k.moduleAccountDepositMapping, recipientModule)
+	}
 	return ctx.EventManager().ABCIEvents()
 }
 

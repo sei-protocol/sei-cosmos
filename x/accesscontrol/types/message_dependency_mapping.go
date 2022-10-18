@@ -52,7 +52,7 @@ func ValidateMessageDependencyMapping(mapping acltypes.MessageDependencyMapping)
 func SynchronousMessageDependencyMapping(messageKey MessageKey) acltypes.MessageDependencyMapping {
 	return acltypes.MessageDependencyMapping{
 		MessageKey:     string(messageKey),
-		DynamicEnabled: false,
+		DynamicEnabled: true,
 		AccessOps: []acltypes.AccessOperation{
 			{AccessType: acltypes.AccessType_UNKNOWN, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},
 			{AccessType: acltypes.AccessType_COMMIT, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},

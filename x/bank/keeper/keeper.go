@@ -66,7 +66,7 @@ type BaseKeeper struct {
 	// bottle neck for concurrent transacation processing and perform batch deposit
 	// in the end block
 	moduleAccountDepositMapping map[string]sdk.Coins
-	moduleAccountDepositMappingLock sync.Mutex
+	moduleAccountDepositMappingLock *sync.Mutex
 }
 
 type MintingRestrictionFn func(ctx sdk.Context, coins sdk.Coins) error
@@ -124,6 +124,7 @@ func NewBaseKeeper(
 		paramSpace:             paramSpace,
 		mintCoinsRestrictionFn: func(ctx sdk.Context, coins sdk.Coins) error { return nil },
 		moduleAccountDepositMapping: make(map[string]sdk.Coins),
+		moduleAccountDepositMappingLock: &sync.Mutex{},
 	}
 }
 

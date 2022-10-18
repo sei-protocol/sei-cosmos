@@ -157,7 +157,7 @@ func (suite *AnteTestSuite) TestLazySendToModuleAccoutn() {
 	)
 
 	// Fee Collector actual account balance deposit coins into the fee collector account
-	suite.app.BankKeeper.WriteLazyDepositsToModuleAccounts(suite.ctx)
+	suite.app.BankKeeper.WriteDeferredDepositsToModuleAccounts(suite.ctx)
 
 	depositFeeCollectorBalance := suite.app.BankKeeper.GetBalance(suite.ctx, feeCollectorAcc.GetAddress(), "atom")
 

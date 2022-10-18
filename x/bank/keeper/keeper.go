@@ -38,8 +38,8 @@ type Keeper interface {
 	SendCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	SendCoinsFromModuleToModule(ctx sdk.Context, senderModule, recipientModule string, amt sdk.Coins) error
 	SendCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
-	LazySendCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
-	WriteLazyDepositsToModuleAccounts(ctx sdk.Context) []abci.Event
+	DeferredSendCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
+	WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abci.Event
 	DelegateCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	UndelegateCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	MintCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
@@ -369,11 +369,11 @@ func (k BaseKeeper) SendCoinsFromAccountToModule(
 }
 
 
-// LazyDepositFromAccountToModule transfers coins from an AccAddress to a ModuleAccount.
+// DeferredSendCoinsFromAccountToModule transfers coins from an AccAddress to a ModuleAccount.
 // It deducts the balance from an accAddress and stores the balance in a mapping for ModuleAccounts.
 // In the EndBlocker, it will then perform one deposit for each module account.
 // It will panic if the module account does not exist.
-func (k BaseKeeper) LazySendCoinsFromAccountToModule(
+func (k BaseKeeper) DeferredSendCoinsFromAccountToModule(
 	ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amount sdk.Coins,
 ) error {
 	// Deducts Fees from the Sender Account
@@ -381,12 +381,12 @@ func (k BaseKeeper) LazySendCoinsFromAccountToModule(
 	if err != nil {
 		return err
 	}
-	k.LazyDepositToModule(recipientModule, amount)
+	k.DeferredDepositToModule(recipientModule, amount)
 
 	return nil
 }
 
-func (k BaseKeeper) LazyDepositToModule(recipientModule string, amount sdk.Coins) {
+func (k BaseKeeper) DeferredDepositToModule(recipientModule string, amount sdk.Coins) {
 	k.moduleAccountDepositMappingLock.Lock()
 	defer k.moduleAccountDepositMappingLock.Unlock()
 
@@ -398,7 +398,7 @@ func (k BaseKeeper) LazyDepositToModule(recipientModule string, amount sdk.Coins
 }
 
 // Iterates on all the lazy deposits and deposit them into the store
-func (k BaseKeeper) WriteLazyDepositsToModuleAccounts(ctx sdk.Context) []abci.Event {
+func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abci.Event {
 	k.moduleAccountDepositMappingLock.Lock()
 	defer k.moduleAccountDepositMappingLock.Unlock()
 

@@ -390,7 +390,7 @@ func (k BaseKeeper) DeferredSendCoinsFromAccountToModule(
 func (k BaseKeeper) DeferredDepositToModule(recipientModule string, amount sdk.Coins) {
 	k.moduleAccountDepositMappingLock.Lock()
 	defer k.moduleAccountDepositMappingLock.Unlock()
-
+	log.Printf("Deferring coin=%s to module=%s", amount, recipientModule)
 	newAmount := amount
 	if v, ok := k.moduleAccountDepositMapping[recipientModule]; ok {
 		newAmount = v.Add(amount...)
@@ -410,7 +410,6 @@ func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abc
 	}
 	sort.Strings(keys)
 
-
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	for _, recipientModule := range keys {
 		amount := k.moduleAccountDepositMapping[recipientModule]
@@ -421,10 +420,13 @@ func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abc
 		}
 		log.Printf("Adding coin=%s to module=%s address=%s", amount, recipientModule, recipientAcc.GetAddress())
 		k.addCoins(ctx, recipientAcc.GetAddress(), amount)
+	}
 
+	for _, recipientModule := range keys {
 		// Clear the Mapping once it's deposited
 		delete(k.moduleAccountDepositMapping, recipientModule)
 	}
+
 	return ctx.EventManager().ABCIEvents()
 }
 

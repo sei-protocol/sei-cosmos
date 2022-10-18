@@ -3,6 +3,7 @@ package keeper
 import (
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -402,8 +403,18 @@ func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abc
 	k.moduleAccountDepositMappingLock.Lock()
 	defer k.moduleAccountDepositMappingLock.Unlock()
 
+	// Need to sort keys for deterministic iterating
+	keys := make([]string, len(k.moduleAccountDepositMapping))
+	for key, _ := range k.moduleAccountDepositMapping {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
-	for recipientModule, amount := range k.moduleAccountDepositMapping {
+	for _, recipientModule := range keys {
+		amount := k.moduleAccountDepositMapping[recipientModule]
+
 		recipientAcc := k.ak.GetModuleAccount(ctx, recipientModule)
 		if recipientAcc == nil {
 			panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))

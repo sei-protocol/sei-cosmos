@@ -394,7 +394,6 @@ func (k BaseKeeper) DeferredDepositToModule(recipientModule string, amount sdk.C
 	if v, ok := k.moduleAccountDepositMapping[recipientModule]; ok {
 		newAmount = v.Add(amount...)
 	}
-	log.Printf("Deferring coin=%s to module=%s", newAmount, recipientModule)
 	k.moduleAccountDepositMapping[recipientModule] = newAmount
 }
 

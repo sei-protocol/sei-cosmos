@@ -1,7 +1,6 @@
 package types
 
 import (
-	"log"
 	"sort"
 	"sync"
 )
@@ -27,7 +26,6 @@ func (c *ContextMemCache) UpsertDeferredSends(recipientModule string, amount Coi
 	if v, ok := c.deferredSends[recipientModule]; ok {
 		newAmount = v.Add(amount...)
 	}
-	log.Printf("Deferring coin=%s to module=%s", newAmount, recipientModule)
 	c.deferredSends[recipientModule] = newAmount
 }
 

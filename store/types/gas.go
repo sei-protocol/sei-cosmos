@@ -109,7 +109,6 @@ func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
 		g.consumed = math.MaxUint64
 		panic(ErrorGasOverflow{descriptor})
 	}
-
 	if g.consumed > g.limit {
 		panic(ErrorOutOfGas{descriptor})
 	}

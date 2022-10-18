@@ -3,7 +3,6 @@ package keeper
 import (
 	"fmt"
 	"log"
-	"sort"
 	"sync"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -382,7 +381,8 @@ func (k BaseKeeper) DeferredSendCoinsFromAccountToModule(
 	if err != nil {
 		return err
 	}
-	k.DeferredDepositToModule(recipientModule, amount)
+
+	ctx.ContextMemCache().UpsertDeferredSends(recipientModule, amount)
 
 	return nil
 }
@@ -400,34 +400,17 @@ func (k BaseKeeper) DeferredDepositToModule(recipientModule string, amount sdk.C
 
 // Iterates on all the lazy deposits and deposit them into the store
 func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abci.Event {
-	k.moduleAccountDepositMappingLock.Lock()
-	defer k.moduleAccountDepositMappingLock.Unlock()
-
-	log.Println("WriteDeferredDepositsToModuleAccounts...")
-
-	// Need to sort keys for deterministic iterating
-	keys := make([]string, 0, len(k.moduleAccountDepositMapping))
-	for key := range k.moduleAccountDepositMapping {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
-	for _, recipientModule := range keys {
-		amount := k.moduleAccountDepositMapping[recipientModule]
-		recipientAcc := k.ak.GetModuleAccount(ctx, recipientModule)
-		if recipientAcc == nil {
-			panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))
-		}
-		log.Printf("Adding coin=%s to module=%s address=%s", amount, recipientModule, recipientAcc.GetAddress())
-		k.addCoins(ctx, recipientAcc.GetAddress(), amount)
-	}
-
-	for _, recipientModule := range keys {
-		// Clear the Mapping once it's deposited
-		delete(k.moduleAccountDepositMapping, recipientModule)
-	}
-
+	ctx.ContextMemCache().RangeOnDeferredSendsAndDelete(
+		func(recipient string, amount sdk.Coins) {
+			recipientAcc := k.ak.GetModuleAccount(ctx, recipient)
+			if recipientAcc == nil {
+				panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipient))
+			}
+			log.Printf("Adding coin=%s to module=%s address=%s", amount, recipient, recipientAcc.GetAddress())
+			k.addCoins(ctx, recipientAcc.GetAddress(), amount)
+		},
+	)
 	return ctx.EventManager().ABCIEvents()
 }
 

@@ -390,11 +390,11 @@ func (k BaseKeeper) DeferredSendCoinsFromAccountToModule(
 func (k BaseKeeper) DeferredDepositToModule(recipientModule string, amount sdk.Coins) {
 	k.moduleAccountDepositMappingLock.Lock()
 	defer k.moduleAccountDepositMappingLock.Unlock()
-	log.Printf("Deferring coin=%s to module=%s", amount, recipientModule)
 	newAmount := amount
 	if v, ok := k.moduleAccountDepositMapping[recipientModule]; ok {
 		newAmount = v.Add(amount...)
 	}
+	log.Printf("Deferring coin=%s to module=%s", newAmount, recipientModule)
 	k.moduleAccountDepositMapping[recipientModule] = newAmount
 }
 
@@ -403,9 +403,11 @@ func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abc
 	k.moduleAccountDepositMappingLock.Lock()
 	defer k.moduleAccountDepositMappingLock.Unlock()
 
+	log.Println("WriteDeferredDepositsToModuleAccounts...")
+
 	// Need to sort keys for deterministic iterating
 	keys := make([]string, len(k.moduleAccountDepositMapping))
-	for key := range k.moduleAccountDepositMapping {
+	for key, _ := range k.moduleAccountDepositMapping {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)

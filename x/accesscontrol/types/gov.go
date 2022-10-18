@@ -10,6 +10,7 @@ import (
 
 const (
 	ProposalUpdateResourceDependencyMapping = "UpdateResourceDependencyMapping"
+	ProposalUpdateWasmDependencyMapping     = "UpdateWasmDependencyMapping"
 )
 
 func init() {
@@ -20,14 +21,6 @@ func init() {
 }
 
 var _ govtypes.Content = &MsgUpdateResourceDependencyMappingProposal{}
-
-func NewRegisterPairsProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) MsgUpdateResourceDependencyMappingProposal {
-	return MsgUpdateResourceDependencyMappingProposal{
-		Title:       title,
-		Description: description,
-		MessageDependencyMapping : messageDependencyMapping,
-	}
-}
 
 func NewMsgUpdateResourceDependencyMappingProposal(title, description string, messageDependencyMapping []acltypes.MessageDependencyMapping) *MsgUpdateResourceDependencyMappingProposal {
 	return &MsgUpdateResourceDependencyMappingProposal{title, description, messageDependencyMapping}
@@ -56,9 +49,47 @@ func (p MsgUpdateResourceDependencyMappingProposal) String() string {
 			Description: %s
 			Changes:
 			`,
-		p.Title, p.Description))
+			p.Title, p.Description))
 
 	for _, depMapping := range p.MessageDependencyMapping {
+		b.WriteString(fmt.Sprintf(`		Change:
+			MessageDependencyMapping: %s
+		`, depMapping.String()))
+	}
+	return b.String()
+}
+
+func NewMsgUpdateWasmDependencyMappingProposal(title, description, contractAddr string, messageDependencyMapping []acltypes.WasmDependencyMapping) *MsgUpdateWasmDependencyMappingProposal {
+	return &MsgUpdateWasmDependencyMappingProposal{title, description, contractAddr, messageDependencyMapping}
+}
+
+func (p *MsgUpdateWasmDependencyMappingProposal) GetTitle() string { return p.Title }
+
+func (p *MsgUpdateWasmDependencyMappingProposal) GetDescription() string { return p.Description }
+
+func (p *MsgUpdateWasmDependencyMappingProposal) ProposalRoute() string { return RouterKey }
+
+func (p *MsgUpdateWasmDependencyMappingProposal) ProposalType() string {
+	return ProposalUpdateWasmDependencyMapping
+}
+
+func (p *MsgUpdateWasmDependencyMappingProposal) ValidateBasic() error {
+	err := govtypes.ValidateAbstract(p)
+	return err
+}
+
+func (p MsgUpdateWasmDependencyMappingProposal) String() string {
+	var b strings.Builder
+	b.WriteString(
+		fmt.Sprintf(`Add Creators to Denom Fee Whitelist Proposal:
+			Title:       %s
+			Description: %s
+			ContractAddress: %s
+			Changes:
+			`,
+			p.Title, p.Description, p.ContractAddress))
+
+	for _, depMapping := range p.WasmDependencyMapping {
 		b.WriteString(fmt.Sprintf(`		Change:
 			MessageDependencyMapping: %s
 		`, depMapping.String()))

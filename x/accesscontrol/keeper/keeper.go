@@ -214,6 +214,7 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 	// Default behavior is to get the static dependency mapping for the message
 	messageKey := types.GenerateMessageKey(msg)
 	dependencyMapping := k.GetResourceDependencyMapping(ctx, messageKey)
+	// TODO(bweng):: re-enable after
 	if dependencyGenerator, ok := k.MessageDependencyGeneratorMapper[types.GenerateMessageKey(msg)]; ok {
 		// if we have a dependency generator AND dynamic is enabled, use it
 		if dependencies, err := dependencyGenerator(k, ctx, msg); err == nil {

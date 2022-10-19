@@ -7,6 +7,7 @@ import "cosmos/accesscontrol/accesscontrol.proto";
 
 option go_package = "github.com/cosmos/cosmos-sdk/x/accesscontrol/types";
 
+// dummy comment
 message MsgUpdateResourceDependencyMappingProposal {
     option (gogoproto.equal)            = false;
     option (gogoproto.goproto_stringer) = false;

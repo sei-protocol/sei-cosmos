@@ -42,6 +42,7 @@ type Keeper interface {
 	WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abci.Event
 	DelegateCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	UndelegateCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
+	WriteDeferredOperations(ctx sdk.Context) []abci.Event
 	MintCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
 	BurnCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
 
@@ -343,6 +344,11 @@ func (k BaseKeeper) DeferredSendCoinsFromModuleToAccount(
 		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", recipientAddr)
 	}
 
+	err := k.addCoins(ctx, recipientAddr, amount)
+	if err != nil {
+		return err
+	}
+
 	ctx.ContextMemCache().UpsertDeferredWithdrawals(moduleAccount, amount)
 	return nil
 }
@@ -399,7 +405,6 @@ func (k BaseKeeper) DeferredSendCoinsFromAccountToModule(
 }
 
 func (k BaseKeeper) WriteDeferredOperations(ctx sdk.Context) []abci.Event {
-	log.Printf("WriteDeferredOperations")
 	return append(
 		k.WriteDeferredDepositsToModuleAccounts(ctx),
 		k.WriteDeferredWrithdrawlFromModuleAccounts(ctx)...,
@@ -408,7 +413,6 @@ func (k BaseKeeper) WriteDeferredOperations(ctx sdk.Context) []abci.Event {
 
 // Iterates on all the lazy deposits and deposit them into the store
 func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abci.Event {
-	log.Printf("WriteDeferredDepositsToModuleAccounts")
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	ctx.ContextMemCache().RangeOnDeferredSendsAndDelete(
 		func(recipient string, amount sdk.Coins) {
@@ -425,7 +429,6 @@ func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abc
 
 // Process all lazy withdrawls stored previously
 func (k BaseKeeper) WriteDeferredWrithdrawlFromModuleAccounts(ctx sdk.Context) []abci.Event {
-	log.Printf("WriteDeferredWrithdrawlFromModuleAccounts")
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	ctx.ContextMemCache().RangeOnDeferredWithdrawalsAndDelete(
 		func(recipient string, amount sdk.Coins) {

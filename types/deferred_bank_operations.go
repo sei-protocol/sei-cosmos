@@ -3,6 +3,8 @@ package types
 import (
 	"sort"
 	"sync"
+
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 type DeferredBankOperationMapping struct {
@@ -45,6 +47,10 @@ func (m *DeferredBankOperationMapping) SafeSub(moduleAccount string, amount Coin
 }
 
 func (m *DeferredBankOperationMapping) UpsertMapping(moduleAccount string, amount Coins) {
+	if !amount.IsValid() {
+		panic(sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amount.String()))
+	}
+
 	m.mappingLock.Lock()
 	defer m.mappingLock.Unlock()
 

@@ -122,7 +122,7 @@ func (suite *IntegrationTestSuite) TestSupply() {
 
 	// set burnerAcc balance
 	authKeeper.SetModuleAccount(ctx, burnerAcc)
-	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply))
+	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply, false))
 	require.NoError(keeper.SendCoinsFromModuleToAccount(ctx, authtypes.Minter, burnerAcc.GetAddress(), totalSupply))
 
 	total, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
@@ -145,7 +145,7 @@ func (suite *IntegrationTestSuite) TestSendCoinsFromModuleToAccount_Blocklist() 
 	addr1 := sdk.AccAddress([]byte("addr1_______________"))
 	_, keeper := suite.initKeepersWithmAccPerms(map[string]bool{addr1.String(): true})
 
-	suite.Require().NoError(keeper.MintCoins(ctx, minttypes.ModuleName, initCoins))
+	suite.Require().NoError(keeper.MintCoins(ctx, minttypes.ModuleName, initCoins, false))
 	suite.Require().Error(keeper.SendCoinsFromModuleToAccount(
 		ctx, minttypes.ModuleName, addr1, initCoins,
 	))
@@ -162,7 +162,7 @@ func (suite *IntegrationTestSuite) TestSupply_SendCoins() {
 	// set initial balances
 	suite.
 		Require().
-		NoError(keeper.MintCoins(ctx, minttypes.ModuleName, initCoins))
+		NoError(keeper.MintCoins(ctx, minttypes.ModuleName, initCoins, false))
 
 	suite.
 		Require().
@@ -219,15 +219,15 @@ func (suite *IntegrationTestSuite) TestSupply_MintCoins() {
 	initialSupply, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
 	suite.Require().NoError(err)
 
-	suite.Require().Panics(func() { keeper.MintCoins(ctx, "", initCoins) }, "no module account")                // nolint:errcheck
-	suite.Require().Panics(func() { keeper.MintCoins(ctx, authtypes.Burner, initCoins) }, "invalid permission") // nolint:errcheck
+	suite.Require().Panics(func() { keeper.MintCoins(ctx, "", initCoins, false) }, "no module account")                // nolint:errcheck
+	suite.Require().Panics(func() { keeper.MintCoins(ctx, authtypes.Burner, initCoins, false) }, "invalid permission") // nolint:errcheck
 
-	err = keeper.MintCoins(ctx, authtypes.Minter, sdk.Coins{sdk.Coin{Denom: "denom", Amount: sdk.NewInt(-10)}})
+	err = keeper.MintCoins(ctx, authtypes.Minter, sdk.Coins{sdk.Coin{Denom: "denom", Amount: sdk.NewInt(-10)}}, false)
 	suite.Require().Error(err, "insufficient coins")
 
-	suite.Require().Panics(func() { keeper.MintCoins(ctx, randomPerm, initCoins) }) // nolint:errcheck
+	suite.Require().Panics(func() { keeper.MintCoins(ctx, randomPerm, initCoins, false) }) // nolint:errcheck
 
-	err = keeper.MintCoins(ctx, authtypes.Minter, initCoins)
+	err = keeper.MintCoins(ctx, authtypes.Minter, initCoins, false)
 	suite.Require().NoError(err)
 
 	suite.Require().Equal(initCoins, getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter))
@@ -240,14 +240,14 @@ func (suite *IntegrationTestSuite) TestSupply_MintCoins() {
 	initialSupply, _, err = keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
 	suite.Require().NoError(err)
 
-	err = keeper.MintCoins(ctx, multiPermAcc.GetName(), initCoins)
+	err = keeper.MintCoins(ctx, multiPermAcc.GetName(), initCoins, false)
 	suite.Require().NoError(err)
 
 	totalSupply, _, err = keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
 	suite.Require().NoError(err)
 	suite.Require().Equal(initCoins, getCoinsByName(ctx, keeper, authKeeper, multiPermAcc.GetName()))
 	suite.Require().Equal(initialSupply.Add(initCoins...), totalSupply)
-	suite.Require().Panics(func() { keeper.MintCoins(ctx, authtypes.Burner, initCoins) }) // nolint:errcheck
+	suite.Require().Panics(func() { keeper.MintCoins(ctx, authtypes.Burner, initCoins, false) }) // nolint:errcheck
 }
 
 func (suite *IntegrationTestSuite) TestSupply_BurnCoins() {
@@ -259,7 +259,7 @@ func (suite *IntegrationTestSuite) TestSupply_BurnCoins() {
 	authKeeper.SetModuleAccount(ctx, burnerAcc)
 	suite.
 		Require().
-		NoError(keeper.MintCoins(ctx, authtypes.Minter, initCoins))
+		NoError(keeper.MintCoins(ctx, authtypes.Minter, initCoins, false))
 	suite.
 		Require().
 		NoError(keeper.SendCoinsFromModuleToAccount(ctx, authtypes.Minter, burnerAcc.GetAddress(), initCoins))
@@ -267,7 +267,7 @@ func (suite *IntegrationTestSuite) TestSupply_BurnCoins() {
 	// inflate supply
 	suite.
 		Require().
-		NoError(keeper.MintCoins(ctx, authtypes.Minter, initCoins))
+		NoError(keeper.MintCoins(ctx, authtypes.Minter, initCoins, false))
 	supplyAfterInflation, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
 
 	suite.Require().Panics(func() { keeper.BurnCoins(ctx, "", initCoins) }, "no module account")                    // nolint:errcheck
@@ -286,7 +286,7 @@ func (suite *IntegrationTestSuite) TestSupply_BurnCoins() {
 	// test same functionality on module account with multiple permissions
 	suite.
 		Require().
-		NoError(keeper.MintCoins(ctx, authtypes.Minter, initCoins))
+		NoError(keeper.MintCoins(ctx, authtypes.Minter, initCoins, false))
 
 	supplyAfterInflation, _, err = keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
 	suite.Require().NoError(err)
@@ -1055,7 +1055,9 @@ func (suite *IntegrationTestSuite) TestBalanceTrackingEvents() {
 		suite.app.BankKeeper.MintCoins(
 			suite.ctx,
 			multiPermAcc.Name,
-			sdk.NewCoins(sdk.NewCoin("utxo", sdk.NewInt(100000)))),
+			sdk.NewCoins(sdk.NewCoin("utxo", sdk.NewInt(100000)))
+			false,
+		),
 	)
 	// send coins to address
 	addr1 := sdk.AccAddress("addr1_______________")
@@ -1065,6 +1067,7 @@ func (suite *IntegrationTestSuite) TestBalanceTrackingEvents() {
 			multiPermAcc.Name,
 			addr1,
 			sdk.NewCoins(sdk.NewCoin("utxo", sdk.NewInt(50000))),
+			false,
 		),
 	)
 
@@ -1214,6 +1217,7 @@ func (suite *IntegrationTestSuite) TestMintCoinRestrictions() {
 						suite.ctx,
 						multiPermAcc.Name,
 						sdk.NewCoins(testCase.coinsToTry),
+						false,
 					),
 				)
 			} else {
@@ -1222,6 +1226,7 @@ func (suite *IntegrationTestSuite) TestMintCoinRestrictions() {
 						suite.ctx,
 						multiPermAcc.Name,
 						sdk.NewCoins(testCase.coinsToTry),
+						false,
 					),
 				)
 			}
@@ -1243,7 +1248,7 @@ func (suite *IntegrationTestSuite) TestDeferredSendCoinsFromModuleToAccount() {
 
 	// set burnerAcc balance
 	authKeeper.SetModuleAccount(ctx, holderAcc)
-	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply))
+	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply, false))
 
 	beforeCoins := getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter)
 	require.NoError(keeper.DeferredSendCoinsFromModuleToAccount(ctx, authtypes.Minter, holderAcc.GetAddress(), totalSupply))
@@ -1271,7 +1276,7 @@ func (suite *IntegrationTestSuite) TestDeferredOperationsFromModuleToAccount() {
 
 	// set burnerAcc balance
 	authKeeper.SetModuleAccount(ctx, holderAcc)
-	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply))
+	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply, false))
 
 	beforeCoins := getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter)
 	require.NoError(keeper.DeferredSendCoinsFromModuleToAccount(ctx, authtypes.Minter, holderAcc.GetAddress(), totalSupply))

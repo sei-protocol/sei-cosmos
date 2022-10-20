@@ -91,7 +91,7 @@ func (suite *AnteTestSuite) CreateTestAccounts(numAccs int) []TestAccount {
 		someCoins := sdk.Coins{
 			sdk.NewInt64Coin("atom", 10000000),
 		}
-		err = suite.app.BankKeeper.MintCoins(suite.ctx, minttypes.ModuleName, someCoins)
+		err = suite.app.BankKeeper.MintCoins(suite.ctx, minttypes.ModuleName, someCoins, false)
 		suite.Require().NoError(err)
 
 		err = suite.app.BankKeeper.SendCoinsFromModuleToAccount(suite.ctx, minttypes.ModuleName, addr, someCoins)

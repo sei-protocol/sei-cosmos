@@ -344,7 +344,15 @@ func (k BaseKeeper) DeferredSendCoinsFromModuleToAccount(
 		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", recipientAddr)
 	}
 
-	err := k.addCoins(ctx, recipientAddr, amount)
+	// Branch Context for validation and fail if the module doesn't have enough coins
+	// but don't write this to the underlying store
+	validationContext, _ := ctx.CacheContext()
+	err := k.subUnlockedCoins(validationContext, moduleAddr, amount)
+	if err != nil {
+		return err
+	}
+
+	err = k.addCoins(ctx, recipientAddr, amount)
 	if err != nil {
 		return err
 	}

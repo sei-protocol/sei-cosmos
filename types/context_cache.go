@@ -1,7 +1,6 @@
 package types
 
 import (
-	"log"
 	"sync"
 )
 
@@ -23,7 +22,6 @@ func NewContextMemCache() *ContextMemCache {
 
 func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins) {
 	// Separate locks needed for all mappings - atmoic transaction needed
-	log.Printf("UpsertDeferredSends")
 	c.deferredBankOpsLock.Lock()
 	defer c.deferredBankOpsLock.Unlock()
 

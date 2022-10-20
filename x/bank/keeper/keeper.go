@@ -357,6 +357,13 @@ func (k BaseKeeper) DeferredSendCoinsFromModuleToAccount(
 		return err
 	}
 
+	// Branch then subtract - do some testing here
+	err := k.subUnlockedCoins(ctx, fromAddr, amt)
+
+	if err != nil {
+		return err
+	}
+
 	ctx.ContextMemCache().UpsertDeferredWithdrawals(moduleAccount, amount)
 	return nil
 }

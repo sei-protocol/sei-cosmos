@@ -269,7 +269,7 @@ func addTestAddrs(app *SimApp, ctx sdk.Context, accNum int, accAmt sdk.Int, stra
 }
 
 func initAccountWithCoins(app *SimApp, ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins) {
-	err := app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, coins)
+	err := app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, coins, false)
 	if err != nil {
 		panic(err)
 	}
@@ -441,7 +441,7 @@ type EmptyAppOptions = testutil.TestAppOpts
 // TODO: Instead of using the mint module account, which has the
 // permission of minting, create a "faucet" account. (@fdymylja)
 func FundAccount(bankKeeper bankkeeper.Keeper, ctx sdk.Context, addr sdk.AccAddress, amounts sdk.Coins) error {
-	if err := bankKeeper.MintCoins(ctx, minttypes.ModuleName, amounts); err != nil {
+	if err := bankKeeper.MintCoins(ctx, minttypes.ModuleName, amounts, false); err != nil {
 		return err
 	}
 
@@ -455,7 +455,7 @@ func FundAccount(bankKeeper bankkeeper.Keeper, ctx sdk.Context, addr sdk.AccAddr
 // TODO: Instead of using the mint module account, which has the
 // permission of minting, create a "faucet" account. (@fdymylja)
 func FundModuleAccount(bankKeeper bankkeeper.Keeper, ctx sdk.Context, recipientMod string, amounts sdk.Coins) error {
-	if err := bankKeeper.MintCoins(ctx, minttypes.ModuleName, amounts); err != nil {
+	if err := bankKeeper.MintCoins(ctx, minttypes.ModuleName, amounts, false); err != nil {
 		return err
 	}
 

@@ -141,7 +141,7 @@ func (suite *AnteTestSuite) TestAnteHandlerSigErrors() {
 			func() {
 				acc1 := suite.app.AccountKeeper.NewAccountWithAddress(suite.ctx, addr0)
 				suite.app.AccountKeeper.SetAccount(suite.ctx, acc1)
-				err := suite.app.BankKeeper.MintCoins(suite.ctx, minttypes.ModuleName, feeAmount)
+				err := suite.app.BankKeeper.MintCoins(suite.ctx, minttypes.ModuleName, feeAmount, false)
 				suite.Require().NoError(err)
 				err = suite.app.BankKeeper.SendCoinsFromModuleToAccount(suite.ctx, minttypes.ModuleName, addr0, feeAmount)
 				suite.Require().NoError(err)

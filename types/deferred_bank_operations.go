@@ -1,9 +1,10 @@
 package types
 
 import (
-	"log"
 	"sort"
 	"sync"
+
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 type DeferredBankOperationMapping struct {
@@ -32,7 +33,6 @@ func (m *DeferredBankOperationMapping) set(moduleAccount string, amount Coins) {
 // If there's already a pending opposite operation then subtract it from that amount first
 // returns true if amount was subtracted
 func (m *DeferredBankOperationMapping) SafeSub(moduleAccount string, amount Coins) bool {
-	log.Printf("SafeSub")
 	m.mappingLock.Lock()
 	defer m.mappingLock.Unlock()
 
@@ -47,7 +47,10 @@ func (m *DeferredBankOperationMapping) SafeSub(moduleAccount string, amount Coin
 }
 
 func (m *DeferredBankOperationMapping) UpsertMapping(moduleAccount string, amount Coins) {
-	log.Printf("UpsertMapping")
+	if !amount.IsValid() {
+		panic(sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amount.String()))
+	}
+
 	m.mappingLock.Lock()
 	defer m.mappingLock.Unlock()
 

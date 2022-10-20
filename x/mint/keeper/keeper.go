@@ -94,13 +94,13 @@ func (k Keeper) BondedRatio(ctx sdk.Context) sdk.Dec {
 
 // MintCoins implements an alias call to the underlying supply keeper's
 // MintCoins to be used in BeginBlocker.
-func (k Keeper) MintCoins(ctx sdk.Context, newCoins sdk.Coins) error {
+func (k Keeper) MintCoins(ctx sdk.Context, newCoins sdk.Coins, deferredDeposit bool) error {
 	if newCoins.Empty() {
 		// skip as no coins need to be minted
 		return nil
 	}
 
-	return k.bankKeeper.MintCoins(ctx, types.ModuleName, newCoins)
+	return k.bankKeeper.MintCoins(ctx, types.ModuleName, newCoins, false)
 }
 
 // AddCollectedFees implements an alias call to the underlying supply keeper's

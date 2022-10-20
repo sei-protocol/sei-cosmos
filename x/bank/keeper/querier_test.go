@@ -93,7 +93,7 @@ func (suite *IntegrationTestSuite) TestQuerier_QueryTotalSupply() {
 	expectedTotalSupply := sdk.NewCoins(sdk.NewInt64Coin("test", 400000000))
 	suite.
 		Require().
-		NoError(app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, expectedTotalSupply))
+		NoError(app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, expectedTotalSupply, false))
 
 	req := abci.RequestQuery{
 		Path: fmt.Sprintf("custom/%s/%s", types.ModuleName, types.QueryTotalSupply),
@@ -126,7 +126,7 @@ func (suite *IntegrationTestSuite) TestQuerier_QueryTotalSupplyOf() {
 	expectedTotalSupply := sdk.NewCoins(test1Supply, test2Supply)
 	suite.
 		Require().
-		NoError(app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, expectedTotalSupply))
+		NoError(app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, expectedTotalSupply, false))
 
 	req := abci.RequestQuery{
 		Path: fmt.Sprintf("custom/%s/%s", types.ModuleName, types.QuerySupplyOf),

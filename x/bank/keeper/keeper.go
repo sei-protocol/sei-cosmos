@@ -43,7 +43,7 @@ type Keeper interface {
 	DelegateCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	UndelegateCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	WriteDeferredOperations(ctx sdk.Context) []abci.Event
-	MintCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
+	MintCoins(ctx sdk.Context, moduleName string, amt sdk.Coins, deferredDeposit bool) error
 	BurnCoins(ctx sdk.Context, moduleName string, amt sdk.Coins) error
 
 	DelegateCoins(ctx sdk.Context, delegatorAddr, moduleAccAddr sdk.AccAddress, amt sdk.Coins) error
@@ -484,7 +484,7 @@ func (k BaseKeeper) UndelegateCoinsFromModuleToAccount(
 
 // MintCoins creates new coins from thin air and adds it to the module account.
 // It will panic if the module account does not exist or is unauthorized.
-func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins, deferredDeposit bool) error {
 	err := k.mintCoinsRestrictionFn(ctx, amounts)
 	if err != nil {
 		ctx.Logger().Error(fmt.Sprintf("Module %q attempted to mint coins %s it doesn't have permission for, error %v", moduleName, amounts, err))
@@ -499,9 +499,15 @@ func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "module account %s does not have permissions to mint tokens", moduleName))
 	}
 
-	err = k.addCoins(ctx, acc.GetAddress(), amounts)
-	if err != nil {
-		return err
+	// Defer the deposit until an explcit write is called to the MemCache
+	// deferring is used for concurrency to achieve deterministic ordering of deposits
+	if 	deferredDeposit {
+		ctx.ContextMemCache().UpsertDeferredSends(moduleName, amounts)
+	} else {
+		err = k.addCoins(ctx, acc.GetAddress(), amounts)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, amount := range amounts {

@@ -85,7 +85,7 @@ func TestBaseApp_BlockGas(t *testing.T) {
 
 			// test account and fund
 			priv1, _, addr1 := testdata.KeyTestPubAddr()
-			err = app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, feeAmount)
+			err = app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, feeAmount, false)
 			require.NoError(t, err)
 			err = app.BankKeeper.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, addr1, feeAmount)
 			require.NoError(t, err)

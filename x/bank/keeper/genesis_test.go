@@ -21,7 +21,7 @@ func (suite *IntegrationTestSuite) TestExportGenesis() {
 		// set balances via mint and send
 		suite.
 			Require().
-			NoError(app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, expectedBalances[i].Coins))
+			NoError(app.BankKeeper.MintCoins(ctx, minttypes.ModuleName, expectedBalances[i].Coins, false))
 		suite.
 			Require().
 			NoError(app.BankKeeper.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, accAddr, expectedBalances[i].Coins))

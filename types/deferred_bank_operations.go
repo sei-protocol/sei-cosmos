@@ -26,9 +26,6 @@ func (m *DeferredBankOperationMapping) get(moduleAccount string) (Coins, bool) {
 }
 
 func (m *DeferredBankOperationMapping) set(moduleAccount string, amount Coins) {
-	m.mappingLock.Lock()
-	defer m.mappingLock.Unlock()
-
 	m.deferredOperations[moduleAccount] = amount
 }
 
@@ -50,6 +47,7 @@ func (m *DeferredBankOperationMapping) SafeSub(moduleAccount string, amount Coin
 }
 
 func (m *DeferredBankOperationMapping) UpsertMapping(moduleAccount string, amount Coins) {
+	log.Printf("UpsertMapping")
 	m.mappingLock.Lock()
 	defer m.mappingLock.Unlock()
 

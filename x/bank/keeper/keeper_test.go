@@ -1242,18 +1242,53 @@ func (suite *IntegrationTestSuite) TestDeferredSendCoinsFromModuleToAccount() {
 	totalSupply := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, initTokens))
 
 	// set burnerAcc balance
-	authKeeper.SetModuleAccount(ctx, burnerAcc)
+	authKeeper.SetModuleAccount(ctx, holderAcc)
 	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply))
 
-	beforeCoins := getCoinsByName(ctx, keeper, authKeeper, burnerAcc.GetName())
-	require.NoError(keeper.DeferredSendCoinsFromModuleToAccount(ctx, authtypes.Minter, burnerAcc.GetAddress(), totalSupply))
-	suite.Require().Equal(beforeCoins, getCoinsByName(ctx, keeper, authKeeper, burnerAcc.GetName()))
+	beforeCoins := getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter)
+	require.NoError(keeper.DeferredSendCoinsFromModuleToAccount(ctx, authtypes.Minter, holderAcc.GetAddress(), totalSupply))
+	suite.Require().Equal(beforeCoins, getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter))
+	suite.Require().Equal(totalSupply, getCoinsByName(ctx, keeper, authKeeper, holderAcc.GetName()))
 
 	keeper.WriteDeferredOperations(ctx)
 
 	// No Coins after the deferred writes are processed
-	suite.Require().Equal(sdk.NewCoins().String(), getCoinsByName(ctx, keeper, authKeeper, burnerAcc.GetName()).String())
+	suite.Require().Equal(sdk.NewCoins().String(), getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter).String())
+	suite.Require().Equal(totalSupply.String(), getCoinsByName(ctx, keeper, authKeeper, holderAcc.GetName()).String())
 }
+
+func (suite *IntegrationTestSuite) TestDeferredOperationsFromModuleToAccount() {
+	ctx := suite.ctx
+
+	require := suite.Require()
+
+	// add module accounts to supply keeper
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+
+	initialPower := int64(100)
+	initTokens := suite.app.StakingKeeper.TokensFromConsensusPower(ctx, initialPower)
+	totalSupply := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, initTokens))
+
+	// set burnerAcc balance
+	authKeeper.SetModuleAccount(ctx, holderAcc)
+	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply))
+
+	beforeCoins := getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter)
+	require.NoError(keeper.DeferredSendCoinsFromModuleToAccount(ctx, authtypes.Minter, holderAcc.GetAddress(), totalSupply))
+	suite.Require().Equal(beforeCoins, getCoinsByName(ctx, keeper, authKeeper, holderAcc.GetName()))
+	suite.Require().Equal(beforeCoins, getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter))
+
+	require.NoError(keeper.DeferredSendCoinsFromAccountToModule(ctx, holderAcc.GetAddress(), authtypes.Minter, totalSupply))
+	suite.Require().Equal(sdk.NewCoins().String(), getCoinsByName(ctx, keeper, authKeeper, holderAcc.GetName()).String())
+	suite.Require().Equal(beforeCoins, getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter))
+
+	keeper.WriteDeferredOperations(ctx)
+
+	// No Coins after the deferred writes are processed
+	suite.Require().Equal(sdk.NewCoins().String(), getCoinsByName(ctx, keeper, authKeeper, holderAcc.GetName()).String())
+	suite.Require().Equal(totalSupply.String(), getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter).String())
+}
+
 
 func TestKeeperTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))

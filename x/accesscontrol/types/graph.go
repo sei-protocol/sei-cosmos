@@ -197,9 +197,11 @@ func (dag *Dag) getDependencyWrites(node DagNode, dependentResource acltypes.Res
 			// we can add all node IDs as dependencies if applicable
 			nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 		} else {
-			// TODO: otherwise we need to have partial filtering on identifiers
-			// for now, lets just perform exact matching on identifiers
 			nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
+			// if we have an identifier, we also need to use the "*" as a dependency since that covers ALL identifiers within the resource access
+			if node.AccessOperation.IdentifierTemplate != "*" {
+				nodeIDsMaybeDependency = append(nodeIDsMaybeDependency, identifierNodeMapping["*"]...)
+			}
 		}
 		for _, wn := range nodeIDsMaybeDependency {
 			writeNode := dag.NodeMap[wn]
@@ -227,9 +229,11 @@ func (dag *Dag) getDependencyUnknowns(node DagNode, dependentResource acltypes.R
 			// we can add all node IDs as dependencies if applicable
 			nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 		} else {
-			// TODO: otherwise we need to have partial filtering on identifiers
-			// for now, lets just perform exact matching on identifiers
 			nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
+			// if we have an identifier, we also need to use the "*" as a dependency since that covers ALL identifiers within the resource access
+			if node.AccessOperation.IdentifierTemplate != "*" {
+				nodeIDsMaybeDependency = append(nodeIDsMaybeDependency, identifierNodeMapping["*"]...)
+			}
 		}
 		for _, un := range nodeIDsMaybeDependency {
 			uNode := dag.NodeMap[un]
@@ -257,9 +261,11 @@ func (dag *Dag) getDependencyReads(node DagNode, dependentResource acltypes.Reso
 			// we can add all node IDs as dependencies if applicable
 			nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 		} else {
-			// TODO: otherwise we need to have partial filtering on identifiers
-			// for now, lets just perform exact matching on identifiers
 			nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
+			// if we have an identifier, we also need to use the "*" as a dependency since that covers ALL identifiers within the resource access
+			if node.AccessOperation.IdentifierTemplate != "*" {
+				nodeIDsMaybeDependency = append(nodeIDsMaybeDependency, identifierNodeMapping["*"]...)
+			}
 		}
 		for _, rn := range nodeIDsMaybeDependency {
 			readNode := dag.NodeMap[rn]

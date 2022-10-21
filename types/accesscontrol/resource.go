@@ -66,3 +66,7 @@ func (r ResourceType) GetParentResources() []ResourceType {
 
 	return parentResources
 }
+
+func (r ResourceType) HasChildren() bool {
+	return len(ResourceTree[r].Children) > 0
+}

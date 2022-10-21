@@ -197,10 +197,11 @@ func (dag *Dag) getDependencyWrites(node DagNode, dependentResource acltypes.Res
 			// we can add all node IDs as dependencies if applicable
 			nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 		} else {
-			nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
-			// if we have an identifier, we also need to use the "*" as a dependency since that covers ALL identifiers within the resource access
 			if node.AccessOperation.IdentifierTemplate != "*" {
+				nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
 				nodeIDsMaybeDependency = append(nodeIDsMaybeDependency, identifierNodeMapping["*"]...)
+			} else {
+				nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 			}
 		}
 		for _, wn := range nodeIDsMaybeDependency {
@@ -229,10 +230,11 @@ func (dag *Dag) getDependencyUnknowns(node DagNode, dependentResource acltypes.R
 			// we can add all node IDs as dependencies if applicable
 			nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 		} else {
-			nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
-			// if we have an identifier, we also need to use the "*" as a dependency since that covers ALL identifiers within the resource access
 			if node.AccessOperation.IdentifierTemplate != "*" {
+				nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
 				nodeIDsMaybeDependency = append(nodeIDsMaybeDependency, identifierNodeMapping["*"]...)
+			} else {
+				nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 			}
 		}
 		for _, un := range nodeIDsMaybeDependency {
@@ -261,10 +263,11 @@ func (dag *Dag) getDependencyReads(node DagNode, dependentResource acltypes.Reso
 			// we can add all node IDs as dependencies if applicable
 			nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 		} else {
-			nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
-			// if we have an identifier, we also need to use the "*" as a dependency since that covers ALL identifiers within the resource access
 			if node.AccessOperation.IdentifierTemplate != "*" {
+				nodeIDsMaybeDependency = identifierNodeMapping[node.AccessOperation.IdentifierTemplate]
 				nodeIDsMaybeDependency = append(nodeIDsMaybeDependency, identifierNodeMapping["*"]...)
+			} else {
+				nodeIDsMaybeDependency = getAllNodeIDsFromIdentifierMapping(identifierNodeMapping)
 			}
 		}
 		for _, rn := range nodeIDsMaybeDependency {

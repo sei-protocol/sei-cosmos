@@ -33,6 +33,10 @@ func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins
 	}
 }
 
+func (c *ContextMemCache) SafeSubDeferredSends(moduleAccount string, amount Coins) bool {
+	return c.deferredSends.SafeSub(moduleAccount, amount)
+}
+
 func (c *ContextMemCache) RangeOnDeferredSendsAndDelete(apply func (recipient string, amount Coins)) {
 	c.deferredSends.RangeOnMapping(apply)
 }

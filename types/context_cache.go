@@ -21,7 +21,7 @@ func NewContextMemCache() *ContextMemCache {
 }
 
 func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins) {
-	// Separate locks needed for all mappings - atmoic transaction needed
+	// Separate locks needed for all mappings - atomic transaction needed
 	c.deferredBankOpsLock.Lock()
 	defer c.deferredBankOpsLock.Unlock()
 
@@ -38,7 +38,7 @@ func (c *ContextMemCache) RangeOnDeferredSendsAndDelete(apply func (recipient st
 }
 
 func (c *ContextMemCache) UpsertDeferredWithdrawals(moduleAccount string, amount Coins) {
-	// Separate locks needed for all mappings - atmoic transaction needed
+	// Separate locks needed for all mappings - atomic transaction needed
 	c.deferredBankOpsLock.Lock()
 	defer c.deferredBankOpsLock.Unlock()
 

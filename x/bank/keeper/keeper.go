@@ -68,6 +68,8 @@ type BaseKeeper struct {
 }
 
 type MintingRestrictionFn func(ctx sdk.Context, coins sdk.Coins) error
+type SubFn func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error
+type AddFn func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error
 
 // GetPaginatedTotalSupply queries for the supply, ignoring 0 coins, with a given pagination
 func (k BaseKeeper) GetPaginatedTotalSupply(ctx sdk.Context, pagination *query.PageRequest) (sdk.Coins, *query.PageResponse, error) {
@@ -508,7 +510,7 @@ func (k BaseKeeper) UndelegateCoinsFromModuleToAccount(
 	return k.UndelegateCoins(ctx, acc.GetAddress(), recipientAddr, amt)
 }
 
-func (k BaseKeeper) createCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+func (k BaseKeeper) createCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins, addFn AddFn) error {
 	err := k.mintCoinsRestrictionFn(ctx, amounts)
 	if err != nil {
 		ctx.Logger().Error(fmt.Sprintf("Module %q attempted to mint coins %s it doesn't have permission for, error %v", moduleName, amounts, err))
@@ -523,6 +525,10 @@ func (k BaseKeeper) createCoins(ctx sdk.Context, moduleName string, amounts sdk.
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "module account %s does not have permissions to mint tokens", moduleName))
 	}
 
+	err = addFn(ctx, moduleName, amounts)
+	if err != nil {
+		return err
+	}
 	for _, amount := range amounts {
 		supply := k.GetSupply(ctx, amount.GetDenom())
 		supply = supply.Add(amount)
@@ -543,14 +549,12 @@ func (k BaseKeeper) createCoins(ctx sdk.Context, moduleName string, amounts sdk.
 // MintCoins creates new coins from thin air and adds it to the module account.
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-	err := k.createCoins(ctx, moduleName, amounts)
-	if err != nil {
-		return err
+	addFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+		acc := k.ak.GetModuleAccount(ctx, moduleName)
+		return k.addCoins(ctx, acc.GetAddress(), amounts)
 	}
 
-	// Acc already validated in createCoins call that it exists
-	acc := k.ak.GetModuleAccount(ctx, moduleName)
-	err = k.addCoins(ctx, acc.GetAddress(), amounts)
+	err := k.createCoins(ctx, moduleName, amounts, addFn)
 	if err != nil {
 		return err
 	}
@@ -563,16 +567,20 @@ func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 // writes at the end of a block.
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) DeferredMintCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-	err := k.createCoins(ctx, moduleName, amounts)
+	addFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+		ctx.ContextMemCache().UpsertDeferredSends(moduleName, amounts)
+		return nil
+	}
+
+	err := k.createCoins(ctx, moduleName, amounts, addFn)
 	if err != nil {
 		return err
 	}
 
-	ctx.ContextMemCache().UpsertDeferredSends(moduleName, amounts)
 	return nil
 }
 
-func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins, subFn SubFn) error {
 	acc := k.ak.GetModuleAccount(ctx, moduleName)
 	if acc == nil {
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", moduleName))
@@ -580,6 +588,11 @@ func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk
 
 	if !acc.HasPermission(authtypes.Burner) {
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "module account %s does not have permissions to burn tokens", moduleName))
+	}
+
+	err := subFn(ctx, moduleName, amounts)
+	if err != nil {
+		return err
 	}
 
 	for _, amount := range amounts {
@@ -601,14 +614,13 @@ func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk
 // BurnCoins burns coins deletes coins from the balance of the module account.
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-	err := k.destroyCoins(ctx, moduleName, amounts)
-	if err != nil {
-		return err
+	subFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+		// Acc already validated in destryCoins call that it exists
+		acc := k.ak.GetModuleAccount(ctx, moduleName)
+		return k.subUnlockedCoins(ctx, acc.GetAddress(), amounts)
 	}
 
-	// Acc already validated in destryCoins call that it exists
-	acc := k.ak.GetModuleAccount(ctx, moduleName)
-	err = k.subUnlockedCoins(ctx, acc.GetAddress(), amounts)
+	err := k.destroyCoins(ctx, moduleName, amounts, subFn)
 	if err != nil {
 		return err
 	}
@@ -622,12 +634,16 @@ func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 // writes at the end of a block.
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) DeferredBurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-	err := k.destroyCoins(ctx, moduleName, amounts)
+	subFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+		ctx.ContextMemCache().UpsertDeferredWithdrawals(moduleName, amounts)
+		return nil
+	}
+
+	err := k.destroyCoins(ctx, moduleName, amounts, subFn)
 	if err != nil {
 		return err
 	}
 
-	ctx.ContextMemCache().UpsertDeferredWithdrawals(moduleName, amounts)
 	return nil
 }
 

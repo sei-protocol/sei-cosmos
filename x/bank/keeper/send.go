@@ -209,16 +209,6 @@ func (k BaseSendKeeper) addCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.C
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amt.String())
 	}
 
-	// Create account if recipient does not exist.
-	//
-	// NOTE: This should ultimately be removed in favor a more flexible approach
-	// such as delegated fee messages.
-	accExists := k.ak.HasAccount(ctx, addr)
-	if !accExists {
-		defer telemetry.IncrCounter(1, "new", "account")
-		k.ak.SetAccount(ctx, k.ak.NewAccountWithAddress(ctx, addr))
-	}
-
 	for _, coin := range amt {
 		balance := k.GetBalance(ctx, addr, coin.Denom)
 		newBalance := balance.Add(coin)

@@ -17,6 +17,7 @@ func NewDeferredBankOperationMap() *DeferredBankOperationMapping {
 	}
 }
 
+// get should only be used internally with mutex control before if the call is not read safe
 func (m *DeferredBankOperationMapping) get(moduleAccount string) (Coins, bool) {
 	if v, ok := m.deferredOperations[moduleAccount]; ok {
 		return v, true
@@ -24,6 +25,7 @@ func (m *DeferredBankOperationMapping) get(moduleAccount string) (Coins, bool) {
 	return nil, false
 }
 
+// set should only be used internally with mutex control before if the call is not write safe
 func (m *DeferredBankOperationMapping) set(moduleAccount string, amount Coins) {
 	m.deferredOperations[moduleAccount] = amount
 }

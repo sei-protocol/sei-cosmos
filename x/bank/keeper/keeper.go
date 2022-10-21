@@ -329,6 +329,13 @@ func (k BaseKeeper) SendCoinsFromModuleToAccount(
 		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", recipientAddr)
 	}
 
+	// Try subtract from the in mem var first, prevents the condition where
+	// the module may have a pending deposit that would be enough to pay for this send
+	ok := ctx.ContextMemCache().SafeSubDeferredSends(senderModule, amt)
+	if ok {
+		return k.addCoins(ctx, recipientAddr, amt)
+	}
+
 	return k.SendCoins(ctx, senderAddr, recipientAddr, amt)
 }
 
@@ -379,6 +386,13 @@ func (k BaseKeeper) SendCoinsFromModuleToModule(
 	recipientAcc := k.ak.GetModuleAccount(ctx, recipientModule)
 	if recipientAcc == nil {
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))
+	}
+
+	// Try subtract from the in mem var first, prevents the condition where
+	// the module may have a pending deposit that would be enough to pay for this send
+	ok := ctx.ContextMemCache().SafeSubDeferredSends(senderModule, amt)
+	if ok {
+		return k.addCoins(ctx, recipientAcc.GetAddress(), amt)
 	}
 
 	return k.SendCoins(ctx, senderAddr, recipientAcc.GetAddress(), amt)

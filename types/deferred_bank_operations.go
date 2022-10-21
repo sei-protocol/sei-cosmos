@@ -17,29 +17,16 @@ func NewDeferredBankOperationMap() *DeferredBankOperationMapping {
 	}
 }
 
-// get should only be used internally with mutex control before if the call is not read safe
-func (m *DeferredBankOperationMapping) get(moduleAccount string) (Coins, bool) {
-	if v, ok := m.deferredOperations[moduleAccount]; ok {
-		return v, true
-	}
-	return nil, false
-}
-
-// set should only be used internally with mutex control before if the call is not write safe
-func (m *DeferredBankOperationMapping) set(moduleAccount string, amount Coins) {
-	m.deferredOperations[moduleAccount] = amount
-}
-
 // If there's already a pending opposite operation then subtract it from that amount first
 // returns true if amount was subtracted
 func (m *DeferredBankOperationMapping) SafeSub(moduleAccount string, amount Coins) bool {
 	m.mappingLock.Lock()
 	defer m.mappingLock.Unlock()
 
-	if deferredAmount, ok  := m.get(moduleAccount); ok {
+	if deferredAmount, ok  := m.deferredOperations[moduleAccount]; ok {
 		newAmount, isNegative := deferredAmount.SafeSub(amount)
 		if !isNegative {
-			m.set(moduleAccount, newAmount)
+			m.deferredOperations[moduleAccount] = newAmount
 			return true
 		}
 	}

@@ -464,6 +464,11 @@ func (k BaseKeeper) WriteDeferredWrithdrawlFromModuleAccounts(ctx sdk.Context) [
 			if recipientAcc == nil {
 				panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipient))
 			}
+
+			if amount.Empty() {
+				return
+			}
+
 			log.Printf("Removing coin=%s from module=%s address=%s", amount, recipient, recipientAcc.GetAddress())
 			k.subUnlockedCoins(ctx, recipientAcc.GetAddress(), amount)
 		},
@@ -568,8 +573,7 @@ func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) DeferredMintCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 	addFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-		ctx.ContextMemCache().UpsertDeferredSends(moduleName, amounts)
-		return nil
+		return ctx.ContextMemCache().UpsertDeferredSends(moduleName, amounts)
 	}
 
 	err := k.createCoins(ctx, moduleName, amounts, addFn)
@@ -615,7 +619,6 @@ func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 	subFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-		// Acc already validated in destryCoins call that it exists
 		acc := k.ak.GetModuleAccount(ctx, moduleName)
 		return k.subUnlockedCoins(ctx, acc.GetAddress(), amounts)
 	}
@@ -635,8 +638,17 @@ func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) DeferredBurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 	subFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-		ctx.ContextMemCache().UpsertDeferredWithdrawals(moduleName, amounts)
-		return nil
+
+		// Branch Context for validation and fail if the module doesn't have enough coins
+		// but don't write this to the underlying store
+		validationContext, _ := ctx.CacheContext()
+		acc := k.ak.GetModuleAccount(ctx, moduleName)
+		err := k.subUnlockedCoins(validationContext, acc.GetAddress(), amounts)
+		if err != nil {
+			return err
+		}
+
+		return ctx.ContextMemCache().UpsertDeferredWithdrawals(moduleName, amounts)
 	}
 
 	err := k.destroyCoins(ctx, moduleName, amounts, subFn)

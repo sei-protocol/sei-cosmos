@@ -24,5 +24,7 @@ enum ResourceType {
     KV_ORACLE_VOTE_TARGETS = 10; // child of KV_ORACLE
     KV_ORACLE_AGGREGATE_VOTES = 11; // child of KV_ORACLE
     KV_ORACLE_FEEDERS = 12; // child of KV_ORACLE
+    KV_STAKING_DELEGATION = 13; // child of KV_STAKING
+    KV_STAKING_VALIDATOR = 14; // child of KV_STAKING
 }
 

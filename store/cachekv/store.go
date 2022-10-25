@@ -7,14 +7,15 @@ import (
 	"sync"
 	"time"
 
-	dbm "github.com/tendermint/tm-db"
-
 	"github.com/cosmos/cosmos-sdk/internal/conv"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/kv"
+	abci "github.com/tendermint/tendermint/abci/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 // If value is nil but deleted is false, it means the parent doesn't have the
@@ -32,6 +33,7 @@ type Store struct {
 	unsortedCache map[string]struct{}
 	sortedCache   *dbm.MemDB // always ascending sorted
 	parent        types.KVStore
+	eventManager  *sdktypes.EventManager
 }
 
 var _ types.CacheKVStore = (*Store)(nil)
@@ -44,11 +46,17 @@ func NewStore(parent types.KVStore) *Store {
 		unsortedCache: make(map[string]struct{}),
 		sortedCache:   dbm.NewMemDB(),
 		parent:        parent,
+		eventManager:  sdktypes.NewEventManager(),
 	}
 }
 
 func (store *Store) GetWorkingHash() []byte {
 	panic("should never attempt to get working hash from cache kv store")
+}
+
+// Implements Store
+func (store *Store) GetEvents() []abci.Event {
+	return store.eventManager.ABCIEvents()
 }
 
 // GetStoreType implements Store.
@@ -70,6 +78,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 	} else {
 		value = cacheValue.value
 	}
+	store.eventManager.EmitResourceAccessReadEvent(key)
 
 	return value
 }
@@ -83,11 +92,13 @@ func (store *Store) Set(key []byte, value []byte) {
 	types.AssertValidValue(value)
 
 	store.setCacheValue(key, value, false, true)
+	store.eventManager.EmitResourceAccessWriteEvent(key)
 }
 
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
 	value := store.Get(key)
+	store.eventManager.EmitResourceAccessReadEvent(key)
 	return value != nil
 }
 

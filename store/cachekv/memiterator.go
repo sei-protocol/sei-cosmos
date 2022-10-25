@@ -6,6 +6,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 // Iterates over iterKVCache items.
@@ -16,9 +17,10 @@ type memIterator struct {
 
 	lastKey []byte
 	deleted map[string]struct{}
+	eventManager  *sdktypes.EventManager
 }
 
-func newMemIterator(start, end []byte, items *dbm.MemDB, deleted map[string]struct{}, ascending bool) *memIterator {
+func newMemIterator(start, end []byte, items *dbm.MemDB, deleted map[string]struct{}, ascending bool, eventManager *sdktypes.EventManager) *memIterator {
 	var iter types.Iterator
 	var err error
 
@@ -51,6 +53,8 @@ func (mi *memIterator) Value() []byte {
 	if _, ok := mi.deleted[string(key)]; ok && !reCallingOnOldLastKey {
 		return nil
 	}
+	mi.eventManager.EmitResourceAccessReadEvent(key)
+
 	mi.lastKey = key
 	return mi.Iterator.Value()
 }

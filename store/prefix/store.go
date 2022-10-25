@@ -9,6 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 var _ types.KVStore = Store{}
@@ -19,12 +20,14 @@ var _ types.KVStore = Store{}
 type Store struct {
 	parent types.KVStore
 	prefix []byte
+	eventManager *sdktypes.EventManager
 }
 
 func NewStore(parent types.KVStore, prefix []byte) Store {
 	return Store{
 		parent: parent,
 		prefix: prefix,
+		eventManager: sdktypes.NewEventManager(),
 	}
 }
 
@@ -67,14 +70,37 @@ func (s Store) GetWorkingHash() []byte {
 	return s.parent.GetWorkingHash()
 }
 
+
+func EmitReadEvent(prefix []byte, key []byte, eventManager *sdktypes.EventManager) {
+	eventManager.EmitEvent(
+		sdktypes.NewEvent(
+			EventTypeResourceAccess,
+			sdktypes.NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeRead),
+			sdktypes.NewAttribute(AttributeKeyResourcePrefix, string(key)),
+		),
+	)
+}
+
+func EmitWriteEvent(prefix []byte, key []byte, eventManager *sdktypes.EventManager) {
+	eventManager.EmitEvent(
+		sdktypes.NewEvent(
+			EventTypeResourceAccess,
+			sdktypes.NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeWrite),
+			sdktypes.NewAttribute(AttributeKeyResourcePrefix, string(key)),
+		),
+	)
+}
+
 // Implements KVStore
 func (s Store) Get(key []byte) []byte {
 	res := s.parent.Get(s.key(key))
+	EmitReadEvent(s.prefix, key, s.eventManager)
 	return res
 }
 
 // Implements KVStore
 func (s Store) Has(key []byte) bool {
+	EmitReadEvent(s.prefix, key, s.eventManager)
 	return s.parent.Has(s.key(key))
 }
 
@@ -83,11 +109,13 @@ func (s Store) Set(key, value []byte) {
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	s.parent.Set(s.key(key), value)
+	EmitWriteEvent(s.prefix, key, s.eventManager)
 }
 
 // Implements KVStore
 func (s Store) Delete(key []byte) {
 	s.parent.Delete(s.key(key))
+	EmitWriteEvent(s.prefix, key, s.eventManager)
 }
 
 // Implements KVStore
@@ -104,7 +132,7 @@ func (s Store) Iterator(start, end []byte) types.Iterator {
 
 	iter := s.parent.Iterator(newstart, newend)
 
-	return newPrefixIterator(s.prefix, start, end, iter)
+	return newPrefixIterator(s.prefix, start, end, iter, s.eventManager)
 }
 
 // ReverseIterator implements KVStore
@@ -121,7 +149,7 @@ func (s Store) ReverseIterator(start, end []byte) types.Iterator {
 
 	iter := s.parent.ReverseIterator(newstart, newend)
 
-	return newPrefixIterator(s.prefix, start, end, iter)
+	return newPrefixIterator(s.prefix, start, end, iter, s.eventManager)
 }
 
 var _ types.Iterator = (*prefixIterator)(nil)
@@ -132,15 +160,17 @@ type prefixIterator struct {
 	end    []byte
 	iter   types.Iterator
 	valid  bool
+	eventManager *sdktypes.EventManager
 }
 
-func newPrefixIterator(prefix, start, end []byte, parent types.Iterator) *prefixIterator {
+func newPrefixIterator(prefix, start, end []byte, parent types.Iterator, eventManager *sdktypes.EventManager) *prefixIterator {
 	return &prefixIterator{
 		prefix: prefix,
 		start:  start,
 		end:    end,
 		iter:   parent,
 		valid:  parent.Valid() && bytes.HasPrefix(parent.Key(), prefix),
+		eventManager: eventManager,
 	}
 }
 
@@ -159,10 +189,15 @@ func (pi *prefixIterator) Next() {
 	if !pi.valid {
 		panic("prefixIterator invalid, cannot call Next()")
 	}
+	pi.iter.Next()
 
-	if pi.iter.Next(); !pi.iter.Valid() || !bytes.HasPrefix(pi.iter.Key(), pi.prefix) {
+	key := pi.iter.Key()
+	if !pi.iter.Valid() || !bytes.HasPrefix(key, pi.prefix) {
 		// TODO: shouldn't pi be set to nil instead?
 		pi.valid = false
+	} else {
+		// Emit Event if iterator is valid and has Next()
+		EmitReadEvent(pi.prefix, key, pi.eventManager)
 	}
 }
 

@@ -145,6 +145,7 @@ type MultiStore interface {
 type CacheMultiStore interface {
 	MultiStore
 	Write() // Writes operations to underlying KVStore
+	GetEvents() []abci.Event // Returns Events Emitted from the internal event manager
 }
 
 // CommitMultiStore is an interface for a MultiStore without cache capabilities.
@@ -243,6 +244,9 @@ type CacheKVStore interface {
 
 	// Writes operations to underlying KVStore
 	Write()
+
+	// Returns Events Emitted from the internal event manager
+	GetEvents() []abci.Event
 }
 
 // CommitKVStore is an interface for MultiStore.
@@ -261,6 +265,8 @@ type CommitKVStore interface {
 type CacheWrap interface {
 	// Write syncs with the underlying store.
 	Write()
+
+	GetEvents() []abci.Event
 
 	// CacheWrap recursively wraps again.
 	CacheWrap() CacheWrap

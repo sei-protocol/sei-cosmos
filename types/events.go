@@ -12,6 +12,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/internal/conv"
 )
 
 // ----------------------------------------------------------------------------
@@ -28,8 +29,9 @@ type EventManager struct {
 const (
 	EventTypeResourceAccess   	= "resource_access"
 
-	AttributeKeyResourcePrefix    = "prefix"
+	AttributeKeyResourceValue    = "value"
 	AttributeKeyResourceKey    = "key"
+	AttributeKeyOperationKey    = "operation"
 	AttributeKeyAccessType       = "access_type"
 	AttributeKeyAccessTypeWrite  = "write"
 	AttributeKeyAccessTypeRead   = "read"
@@ -85,22 +87,26 @@ func (em *EventManager) EmitTypedEvents(tevs ...proto.Message) error {
 	return nil
 }
 
-func (em *EventManager) EmitResourceAccessReadEvent(key []byte) {
+func (em *EventManager) EmitResourceAccessReadEvent(operation string, key, value []byte) {
 	em.EmitEvent(
 		NewEvent(
 			EventTypeResourceAccess,
 			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeRead),
-			NewAttribute(AttributeKeyResourceKey, string(key)),
+			NewAttribute(AttributeKeyResourceKey, conv.UnsafeBytesToStr(key)),
+			NewAttribute(AttributeKeyResourceValue, conv.UnsafeBytesToStr(value)),
+			NewAttribute(AttributeKeyOperationKey, operation),
 		),
 	)
 }
 
-func (em *EventManager) EmitResourceAccessWriteEvent(key []byte) {
+func (em *EventManager) EmitResourceAccessWriteEvent(operation string, key, value []byte) {
 	em.EmitEvent(
 		NewEvent(
 			EventTypeResourceAccess,
 			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeWrite),
-			NewAttribute(AttributeKeyResourceKey, string(key)),
+			NewAttribute(AttributeKeyResourceKey, conv.UnsafeBytesToStr(key)),
+			NewAttribute(AttributeKeyResourceValue, conv.UnsafeBytesToStr(value)),
+			NewAttribute(AttributeKeyOperationKey, operation),
 		),
 	)
 }

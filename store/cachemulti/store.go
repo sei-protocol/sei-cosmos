@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
@@ -140,6 +141,15 @@ func (cms Store) Write() {
 	for _, store := range cms.stores {
 		store.Write()
 	}
+}
+
+// Write calls Write on each underlying store.
+func (cms Store) GetEvents() []abci.Event {
+	events := []abci.Event{}
+	for _, store := range cms.stores {
+		events = append(events, store.GetEvents()...)
+	}
+	return events
 }
 
 // Implements CacheWrapper.

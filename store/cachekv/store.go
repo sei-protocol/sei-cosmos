@@ -78,7 +78,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 	} else {
 		value = cacheValue.value
 	}
-	store.eventManager.EmitResourceAccessReadEvent(key)
+	store.eventManager.EmitResourceAccessReadEvent("get", key, value)
 
 	return value
 }
@@ -92,13 +92,13 @@ func (store *Store) Set(key []byte, value []byte) {
 	types.AssertValidValue(value)
 
 	store.setCacheValue(key, value, false, true)
-	store.eventManager.EmitResourceAccessWriteEvent(key)
+	store.eventManager.EmitResourceAccessWriteEvent("set", key, value)
 }
 
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
 	value := store.Get(key)
-	store.eventManager.EmitResourceAccessReadEvent(key)
+	store.eventManager.EmitResourceAccessReadEvent("has", key, value)
 	return value != nil
 }
 
@@ -110,6 +110,7 @@ func (store *Store) Delete(key []byte) {
 
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
+	store.eventManager.EmitResourceAccessReadEvent("delete", key, []byte{})
 }
 
 // Implements Cachetypes.KVStore.
@@ -205,7 +206,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	}
 
 	store.dirtyItems(start, end)
-	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending)
+	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager)
 
 	return newCacheMergeIterator(parent, cache, ascending)
 }

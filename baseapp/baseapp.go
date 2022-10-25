@@ -769,7 +769,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// Result if any single message fails or does not have a registered Handler.
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
 
-	events := msCache.GetResourceAccessEvents()
+	events := msCache.GetEvents()
 	pp.Default.SetColoringEnabled(false)
 
 	pp.Println(events)

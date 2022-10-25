@@ -53,8 +53,10 @@ func (mi *memIterator) Value() []byte {
 	if _, ok := mi.deleted[string(key)]; ok && !reCallingOnOldLastKey {
 		return nil
 	}
-	mi.eventManager.EmitResourceAccessReadEvent(key)
+
+	value := mi.Iterator.Value()
+	mi.eventManager.EmitResourceAccessReadEvent("iterator", key, value)
 
 	mi.lastKey = key
-	return mi.Iterator.Value()
+	return value
 }

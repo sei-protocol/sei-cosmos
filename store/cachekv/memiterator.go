@@ -39,6 +39,7 @@ func newMemIterator(start, end []byte, items *dbm.MemDB, deleted map[string]stru
 
 		lastKey: nil,
 		deleted: deleted,
+		eventManager: eventManager,
 	}
 }
 

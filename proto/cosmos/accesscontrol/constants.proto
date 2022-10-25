@@ -4,10 +4,10 @@ package cosmos.accesscontrol.v1beta1;
 option go_package = "github.com/cosmos/cosmos-sdk/types/accesscontrol";
 
 enum AccessType {
-    UNKNOWN = 0;
-    READ = 1;
-    WRITE = 2;
-    COMMIT = 3;
+  UNKNOWN = 0;
+  READ    = 1;
+  WRITE   = 2;
+  COMMIT  = 3;
 }
 
 enum ResourceType {
@@ -27,5 +27,5 @@ enum ResourceType {
     KV_ORACLE_FEEDERS = 13; // child of KV_ORACLE
     KV_STAKING_DELEGATION = 14; // child of KV_STAKING
     KV_STAKING_VALIDATOR = 15; // child of KV_STAKING
+    KV_AUTH = 16; // child of KV
 }
-

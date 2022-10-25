@@ -29,12 +29,13 @@ type EventManager struct {
 const (
 	EventTypeResourceAccess   	= "resource_access"
 
-	AttributeKeyResourceValue    = "value"
-	AttributeKeyResourceKey    = "key"
-	AttributeKeyOperationKey    = "operation"
-	AttributeKeyAccessType       = "access_type"
-	AttributeKeyAccessTypeWrite  = "write"
-	AttributeKeyAccessTypeRead   = "read"
+	AttributeKeyResourceValue   = "value"
+	AttributeKeyResourceKey    	= "key"
+	AttributeKeyOperation    	= "operation"
+
+	AttributeKeyAccessType		= "access_type"
+	AttributeKeyAccessTypeWrite = "write"
+	AttributeKeyAccessTypeRead  = "read"
 )
 
 
@@ -94,7 +95,7 @@ func (em *EventManager) EmitResourceAccessReadEvent(operation string, key, value
 			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeRead),
 			NewAttribute(AttributeKeyResourceKey, conv.UnsafeBytesToStr(key)),
 			NewAttribute(AttributeKeyResourceValue, conv.UnsafeBytesToStr(value)),
-			NewAttribute(AttributeKeyOperationKey, operation),
+			NewAttribute(AttributeKeyOperation, operation),
 		),
 	)
 }
@@ -106,7 +107,7 @@ func (em *EventManager) EmitResourceAccessWriteEvent(operation string, key, valu
 			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeWrite),
 			NewAttribute(AttributeKeyResourceKey, conv.UnsafeBytesToStr(key)),
 			NewAttribute(AttributeKeyResourceValue, conv.UnsafeBytesToStr(value)),
-			NewAttribute(AttributeKeyOperationKey, operation),
+			NewAttribute(AttributeKeyOperation, operation),
 		),
 	)
 }

@@ -125,17 +125,17 @@ func (suite *IntegrationTestSuite) TestSupply() {
 	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, totalSupply))
 	require.NoError(keeper.SendCoinsFromModuleToAccount(ctx, authtypes.Minter, burnerAcc.GetAddress(), totalSupply))
 
-	// total, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
-	// require.NoError(err)
-	// require.Equal(totalSupply, total)
+	total, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
+	require.NoError(err)
+	require.Equal(totalSupply, total)
 
-	// // burning all supplied tokens
-	// err = keeper.BurnCoins(ctx, authtypes.Burner, totalSupply)
-	// require.NoError(err)
+	// burning all supplied tokens
+	err = keeper.BurnCoins(ctx, authtypes.Burner, totalSupply)
+	require.NoError(err)
 
-	// total, _, err = keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
-	// require.NoError(err)
-	// require.Equal(total.String(), "")
+	total, _, err = keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
+	require.NoError(err)
+	require.Equal(total.String(), "")
 }
 
 func (suite *IntegrationTestSuite) TestSendCoinsFromModuleToAccount_Blocklist() {

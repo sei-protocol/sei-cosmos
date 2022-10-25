@@ -22,7 +22,7 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_STAKING:                {ResourceType_KV, []ResourceType{}},
 	ResourceType_KV_WASM:                   {ResourceType_KV, []ResourceType{}},
 	ResourceType_KV_EPOCH:                  {ResourceType_KV, []ResourceType{}},
-	ResourceType_KV_ORACLE:                 {ResourceType_KV, []ResourceType{ResourceType_KV_ORACLE_AGGREGATE_VOTES, ResourceType_KV_ORACLE_VOTE_TARGETS}},
+	ResourceType_KV_ORACLE:                 {ResourceType_KV, []ResourceType{ResourceType_KV_ORACLE_AGGREGATE_VOTES, ResourceType_KV_ORACLE_VOTE_TARGETS, ResourceType_KV_ORACLE_FEEDERS}},
 	ResourceType_KV_ORACLE_VOTE_TARGETS:    {ResourceType_KV_ORACLE, []ResourceType{}},
 	ResourceType_KV_ORACLE_AGGREGATE_VOTES: {ResourceType_KV_ORACLE, []ResourceType{}},
 	ResourceType_KV_ORACLE_FEEDERS:         {ResourceType_KV_ORACLE, []ResourceType{}},

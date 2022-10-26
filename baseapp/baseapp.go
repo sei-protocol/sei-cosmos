@@ -860,6 +860,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		accessOps = append(accessOps, acltypes.GetMessageAccessOps(i, msgCtx.TxBlockingChannels())...)
 		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
 
+		// TODO(bweng) add metrics
 		if len(missingAccessOps) != 0 {
 			errMessage := fmt.Sprintf("Invalid Concurrent Execution, missing %d access operations", len(missingAccessOps))
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)

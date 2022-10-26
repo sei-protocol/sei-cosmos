@@ -92,6 +92,7 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 		for _, accessOpComparator := range accessOpsComparators {
 			if eventComparator.IsWhitelistedIdentifier() || eventComparator.Contains(accessOpComparator){
 				matched = true
+				fmt.Println(fmt.Printf("Matched: %s", eventComparator.String()))
 				break
 			}
 		}

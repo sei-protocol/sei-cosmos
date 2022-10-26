@@ -151,6 +151,11 @@ func (rs *Store) GetStores() map[types.StoreKey]types.CommitKVStore {
 	return rs.stores
 }
 
+// GetStores returns mounted stores
+func (rs *Store) GetEvents() []abci.Event {
+	panic("getevents should not be called on the root multi store")
+}
+
 // LoadLatestVersionAndUpgrade implements CommitMultiStore
 func (rs *Store) LoadLatestVersionAndUpgrade(upgrades *types.StoreUpgrades) error {
 	ver := getLatestVersion(rs.db)

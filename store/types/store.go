@@ -139,13 +139,17 @@ type MultiStore interface {
 	AddListeners(key StoreKey, listeners []WriteListener)
 
 	GetWorkingHash() []byte
+
+	// Returns Events Emitted from the internal event manager
+	GetEvents() []abci.Event
 }
 
 // From MultiStore.CacheMultiStore()....
 type CacheMultiStore interface {
 	MultiStore
-	Write() // Writes operations to underlying KVStore
-	GetEvents() []abci.Event // Returns Events Emitted from the internal event manager
+
+	// Writes operations to underlying KVStore
+	Write()
 }
 
 // CommitMultiStore is an interface for a MultiStore without cache capabilities.

@@ -862,6 +862,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		// TODO(bweng) add metrics
 		if len(missingAccessOps) != 0 {
+			for op := range missingAccessOps {
+				ctx.Logger().Error((fmt.Sprintf("Missing Access Operation:%s ", op.String())))
+			}
 			errMessage := fmt.Sprintf("Invalid Concurrent Execution, missing %d access operations", len(missingAccessOps))
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 		}

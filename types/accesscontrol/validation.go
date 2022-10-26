@@ -30,6 +30,10 @@ func (c *Comparator) IsWhitelistedIdentifier() bool {
 	return identifierWhitelistParams[c.Identifier]
 }
 
+func (c *Comparator) String() string {
+	return fmt.Sprintf("AccessType=%s, Identifier=%s\n", c.AccessType, c.Identifier)
+}
+
 func AccessTypeStringToEnum(accessType string) AccessType {
 	switch strings.ToUpper(accessType) {
 	case "WRITE":

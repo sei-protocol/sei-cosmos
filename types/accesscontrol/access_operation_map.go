@@ -25,3 +25,12 @@ func SendAllSignalsForTx(messageIndexToAccessOpsChannelMapping MessageAccessOpsC
 		}
 	}
 }
+
+func GetMessageAccessOps(messageIndex int, messageAccessOpsChannelMapping MessageAccessOpsChannelMapping) []AccessOperation{
+	accessOps := []AccessOperation{}
+
+	for accessOp, _ := range messageAccessOpsChannelMapping[messageIndex] {
+		accessOps = append(accessOps, accessOp)
+	}
+	return accessOps
+}

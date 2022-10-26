@@ -813,10 +813,11 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			err          error
 		)
 
+		msgCtx, msgMsCache := app.cacheTxContext(ctx, []byte{})
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
-			ctx = ctx.WithMessageIndex(i)
+			msgCtx = msgCtx.WithMessageIndex(i)
 			// ADR 031 request type routing
-			msgResult, err = handler(ctx, msg)
+			msgResult, err = handler(msgCtx, msg)
 			eventMsgName = sdk.MsgTypeURL(msg)
 		} else if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 			// legacy sdk.Msg routing
@@ -826,12 +827,12 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			// registered within the `msgServiceRouter` already.
 			msgRoute := legacyMsg.Route()
 			eventMsgName = legacyMsg.Type()
-			handler := app.router.Route(ctx, msgRoute)
+			handler := app.router.Route(msgCtx, msgRoute)
 			if handler == nil {
 				return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s; message index: %d", msgRoute, i)
 			}
 
-			msgResult, err = handler(ctx, msg)
+			msgResult, err = handler(msgCtx, msg)
 		} else {
 			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 		}
@@ -853,6 +854,17 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		txMsgData.Data = append(txMsgData.Data, &sdk.MsgData{MsgType: sdk.MsgTypeURL(msg), Data: msgResult.Data})
 		msgLogs = append(msgLogs, sdk.NewABCIMessageLog(uint32(i), msgResult.Log, msgEvents))
+
+		accessOpEvents := msgMsCache.GetEvents()
+		accessOps := acltypes.GetMessageAccessOps(i, msgCtx.TxCompletionChannels())
+		accessOps = append(accessOps, acltypes.GetMessageAccessOps(i, msgCtx.TxBlockingChannels())...)
+		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
+
+		if len(missingAccessOps) != 0 {
+			errMessage := fmt.Sprintf("Invalid Concurrent Execution, missing %d access operations", len(missingAccessOps))
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
+		}
+		msgMsCache.Write()
 	}
 
 	data, err := proto.Marshal(txMsgData)

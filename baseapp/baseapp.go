@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
+	pp "github.com/k0kubun/pp/v3"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -814,8 +815,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		)
 
 		msgCtx, msgMsCache := app.cacheTxContext(ctx, []byte{})
+		msgCtx = msgCtx.WithMessageIndex(i)
+
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
-			msgCtx = msgCtx.WithMessageIndex(i)
 			// ADR 031 request type routing
 			msgResult, err = handler(msgCtx, msg)
 			eventMsgName = sdk.MsgTypeURL(msg)
@@ -857,12 +859,13 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		accessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[ctx.MessageIndex()]
-		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
 
+		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
 		// TODO(bweng) add metrics
 		if len(missingAccessOps) != 0 {
+			pp.Printf("messageIndex=%d, accessops=%s \n", ctx.MessageIndex(), accessOps)
 			for op := range missingAccessOps {
-				ctx.Logger().Error((fmt.Sprintf("Missing Access Operation:%s ", op.String())))
+				ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
 			}
 			errMessage := fmt.Sprintf("Invalid Concurrent Execution, missing %d access operations", len(missingAccessOps))
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)

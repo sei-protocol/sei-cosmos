@@ -112,6 +112,10 @@ func NewContext(ms MultiStore, header tmproto.Header, isCheckTx bool, logger log
 		minGasPrice:  DecCoins{},
 		eventManager: NewEventManager(),
 		contextMemCache: NewContextMemCache(),
+
+		txBlockingChannels:		make(acltypes.MessageAccessOpsChannelMapping),
+		txCompletionChannels:	make(acltypes.MessageAccessOpsChannelMapping),
+		txMsgAccessOps:			make(map[int][]acltypes.AccessOperation),
 	}
 }
 

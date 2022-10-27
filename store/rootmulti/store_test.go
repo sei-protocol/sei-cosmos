@@ -671,10 +671,10 @@ func TestCacheWraps(t *testing.T) {
 	db := dbm.NewMemDB()
 	multi := newMultiStoreWithMounts(db, types.PruneNothing)
 
-	cacheWrapper := multi.CacheWrap()
+	cacheWrapper := multi.CacheWrap(nil)
 	require.IsType(t, cachemulti.Store{}, cacheWrapper)
 
-	cacheWrappedWithTrace := multi.CacheWrapWithTrace(nil, nil)
+	cacheWrappedWithTrace := multi.CacheWrapWithTrace(nil, nil, nil)
 	require.IsType(t, cachemulti.Store{}, cacheWrappedWithTrace)
 
 	cacheWrappedWithListeners := multi.CacheWrapWithListeners(nil, nil)

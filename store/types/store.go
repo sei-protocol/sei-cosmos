@@ -263,7 +263,7 @@ type CommitKVStore interface {
 // CacheWrap
 
 // CacheWrap is the most appropriate interface for store ephemeral branching and cache.
-// For example, IAVLStore.CacheWrap() returns a CacheKVStore. CacheWrap should not return
+// For example, IAVLStore.CacheWrap(storeKey) returns a CacheKVStore. CacheWrap should not return
 // a Committer, since Commit ephemeral store make no sense. It can return KVStore,
 // HeapStore, SpaceStore, etc.
 type CacheWrap interface {
@@ -273,10 +273,10 @@ type CacheWrap interface {
 	GetEvents() []abci.Event
 
 	// CacheWrap recursively wraps again.
-	CacheWrap() CacheWrap
+	CacheWrap(storeKey StoreKey) CacheWrap
 
 	// CacheWrapWithTrace recursively wraps again with tracing enabled.
-	CacheWrapWithTrace(w io.Writer, tc TraceContext) CacheWrap
+	CacheWrapWithTrace(storeKey StoreKey, w io.Writer, tc TraceContext) CacheWrap
 
 	// CacheWrapWithListeners recursively wraps again with listening enabled
 	CacheWrapWithListeners(storeKey StoreKey, listeners []WriteListener) CacheWrap
@@ -284,10 +284,10 @@ type CacheWrap interface {
 
 type CacheWrapper interface {
 	// CacheWrap branches a store.
-	CacheWrap() CacheWrap
+	CacheWrap(storeKey StoreKey) CacheWrap
 
 	// CacheWrapWithTrace branches a store with tracing enabled.
-	CacheWrapWithTrace(w io.Writer, tc TraceContext) CacheWrap
+	CacheWrapWithTrace(storeKey StoreKey, w io.Writer, tc TraceContext) CacheWrap
 
 	// CacheWrapWithListeners recursively wraps again with listening enabled
 	CacheWrapWithListeners(storeKey StoreKey, listeners []WriteListener) CacheWrap

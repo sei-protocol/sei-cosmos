@@ -403,7 +403,8 @@ func (app *BaseApp) Query(ctx context.Context, req *abci.RequestQuery) (res *abc
 
 	path := splitPath(req.Path)
 	if len(path) == 0 {
-		sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "no query path provided"), app.trace)
+		resp := sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "no query path provided"), app.trace)
+		return &resp, nil
 	}
 
 	var resp abci.ResponseQuery

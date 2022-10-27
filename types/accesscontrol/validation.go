@@ -28,7 +28,10 @@ func (c *Comparator) Contains(comparator Comparator) bool {
 }
 
 func (c *Comparator) IsWhitelistedIdentifier() bool {
-	return identifierWhitelistParams[c.Identifier]
+	if val, ok := identifierWhitelistParams[c.Identifier]; ok {
+		return val
+	}
+	return false
 }
 
 func (c *Comparator) String() string {

@@ -1,6 +1,12 @@
 package accesscontrol
 
 import (
+	"log"
+
+<<<<<<< HEAD
+=======
+	pp "github.com/k0kubun/pp/v3"
+>>>>>>> be45fd7 (Unit tests working - need to add more)
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -32,6 +38,26 @@ func NewMsgValidator(storeKeyToResourceTypePrefixMap StoreKeyToResourceTypePrefi
 	}
 }
 
+
+// GetPrefix tries to get the prefix for the ResourceType from the StoreKey Mapping
+// and the default mapping, if it doesn't exist in either then it will return a nil, false
+func (validator *MsgValidator) GetPrefix(storeKey string, resourceType ResourceType) ([]byte, bool) {
+	if resourcePrefixMap, ok := validator.storeKeyToResourceTypePrefixMap[storeKey]; ok {
+		if val, ok := resourcePrefixMap[resourceType]; ok {
+			return val, true
+		}
+	}
+
+	// Check if the resource type in one of the parent nodes where the identifier has to be *
+	if resourcePrefixMap, ok := validator.storeKeyToResourceTypePrefixMap[ParentNodeKey]; ok {
+		if val, ok := resourcePrefixMap[resourceType]; ok {
+			return val, true
+		}
+	}
+
+	return nil, false
+}
+
 // ValidateAccessOperations compares a list of events and a predefined list of access operations and determines if all the
 // events that occurred are represented in the accessOperations
 func (validator *MsgValidator) ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) map[Comparator]bool {
@@ -47,19 +73,30 @@ func (validator *MsgValidator) ValidateAccessOperations(accessOps []AccessOperat
 		if eventComparator.IsConcurrentSafeIdentifier() {
 			continue
 		}
-
+		storeKey := eventComparator.StoreKey
 		matched := false
-		for _, accessOps := range accessOps {
-			if  eventComparator.DependencyMatch(accessOps) {
+		for _, accessOp := range accessOps {
+			prefix, ok := validator.GetPrefix(storeKey, accessOp.GetResourceType())
+
+			// The resource type was not a parent type where it could match anything nor was it found in the respective store key mapping
+			if !ok {
+				log.Printf("ResourceType=%s not found in mapping for StoreKey=%s or default key", accessOp.GetResourceType(), storeKey)
+				matched = false
+				continue
+			}
+
+			if  eventComparator.DependencyMatch(accessOp, prefix) {
+				pp.Printf("%s == %s\n", eventComparator.Identifier, accessOp.GetIdentifierTemplate())
 				matched = true
 				break
 			}
+			pp.Printf("%s != %s\n", eventComparator.Identifier, accessOp.GetIdentifierTemplate())
 		}
 
 		if !matched {
 			missingAccessOps[eventComparator] = true
 		}
-
 	}
+
 	return missingAccessOps
 }

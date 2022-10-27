@@ -70,58 +70,6 @@ func TestComparator_IsConcurrentSafeIdentifier(t *testing.T) {
 	}
 }
 
-func TestComparator_Contains(t *testing.T) {
-	type fields struct {
-		AccessType AccessType
-		Identifier string
-	}
-	type args struct {
-		comparator Comparator
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
-	}{
-		{
-			name:   "contains same type",
-			fields: fields{AccessType: AccessType_WRITE, Identifier: "a/b/c/d/e"},
-			args:   args{comparator: Comparator{AccessType: AccessType_WRITE, Identifier: "a/b/c/d"}},
-			want:   true,
-		},
-		{
-			name:   "contains diff type",
-			fields: fields{AccessType: AccessType_WRITE, Identifier: "a/b/c/d/e"},
-			args:   args{comparator: Comparator{AccessType: AccessType_READ, Identifier: "a/b/c/d"}},
-			want:   false,
-		},
-		{
-			name:   "does not contains same type",
-			fields: fields{AccessType: AccessType_READ, Identifier: "a/b/c/d/e"},
-			args:   args{comparator: Comparator{AccessType: AccessType_READ, Identifier: "d/a/b/c"}},
-			want:   false,
-		},
-		{
-			name:   "does not contains diff type",
-			fields: fields{AccessType: AccessType_READ, Identifier: "a/b/c/d/e"},
-			args:   args{comparator: Comparator{AccessType: AccessType_WRITE, Identifier: "d/a/b/c"}},
-			want:   false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Comparator{
-				AccessType: tt.fields.AccessType,
-				Identifier: tt.fields.Identifier,
-			}
-			if got := c.Contains(tt.args.comparator); got != tt.want {
-				t.Errorf("Comparator.Contains() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestValidateAccessOperations(t *testing.T) {
 	type args struct {
 		accessOps []AccessOperation
@@ -159,6 +107,25 @@ func TestValidateAccessOperations(t *testing.T) {
 			},
 		},
 		{
+			name:   "missing with store key",
+			args:   args{
+						accessOps: []AccessOperation{},
+						events: []abci.Event{
+							{
+								Type: "resource_access",
+								Attributes: []abci.EventAttribute{
+									{Key: "key", Value: "a/b/c/d/e"},
+									{Key: "access_type", Value: "write"},
+									{Key: "store_key", Value: "storex"},
+								},
+							},
+						},
+					},
+			want:   map[Comparator]bool{
+				{AccessType: AccessType_WRITE, Identifier: "a/b/c/d/e", StoreKey: "storex"}: true,
+			},
+		},
+		{
 			name:   "extra access ops",
 			args:   args{
 						accessOps: []AccessOperation{
@@ -180,6 +147,63 @@ func TestValidateAccessOperations(t *testing.T) {
 								Attributes: []abci.EventAttribute{
 									{Key: "key", Value: "abc/defg/e"},
 									{Key: "access_type", Value: "write"},
+								},
+							},
+						},
+					},
+			want:   map[Comparator]bool{},
+		},
+		{
+			name:   "matched parent",
+			args:   args{
+						accessOps: []AccessOperation{
+							{AccessType: AccessType_WRITE, IdentifierTemplate: "abc/defg", ResourceType: ResourceType_KV},
+						},
+						events: []abci.Event{
+							{
+								Type: "resource_access",
+								Attributes: []abci.EventAttribute{
+									{Key: "key", Value: "abc/defg/e"},
+									{Key: "access_type", Value: "write"},
+									{Key: "store_key", Value: "ParentNode"},
+								},
+							},
+						},
+					},
+			want:   map[Comparator]bool{},
+		},
+		{
+			name:   "matched *",
+			args:   args{
+						accessOps: []AccessOperation{
+							{AccessType: AccessType_WRITE, IdentifierTemplate: "*", ResourceType: ResourceType_KV},
+						},
+						events: []abci.Event{
+							{
+								Type: "resource_access",
+								Attributes: []abci.EventAttribute{
+									{Key: "key", Value: "abc/defg/e"},
+									{Key: "access_type", Value: "write"},
+									{Key: "store_key", Value: "ParentNode"},
+								},
+							},
+						},
+					},
+			want:   map[Comparator]bool{},
+		},
+		{
+			name:   "matched UNKNOWN",
+			args:   args{
+						accessOps: []AccessOperation{
+							{AccessType: AccessType_UNKNOWN, IdentifierTemplate: "abc/defg/e", ResourceType: ResourceType_KV},
+						},
+						events: []abci.Event{
+							{
+								Type: "resource_access",
+								Attributes: []abci.EventAttribute{
+									{Key: "key", Value: "abc/defg/e"},
+									{Key: "access_type", Value: "write"},
+									{Key: "store_key", Value: "ParentNode"},
 								},
 							},
 						},

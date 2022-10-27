@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"log"
-
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -22,8 +20,6 @@ type Comparator struct {
 	AccessType AccessType
 	Identifier 	string
 	StoreKey string
-	ResourceTypePrefixMap *map[ResourceType][]byte
-	ParentResourceTypePrefixMap *map[ResourceType][]byte
 }
 
 func AccessTypeStringToEnum(accessType string) AccessType {
@@ -38,8 +34,6 @@ func AccessTypeStringToEnum(accessType string) AccessType {
 }
 
 func BuildComparatorFromEvents(events []abci.Event, storeKeyToResourceTypePrefixMap StoreKeyToResourceTypePrefixMap) (comparators []Comparator) {
-	parentResourcePrefixMap := storeKeyToResourceTypePrefixMap[ParentNodeKey]
-
 	for _, event := range events {
 		if event.Type != "resource_access" {
 			continue
@@ -56,56 +50,26 @@ func BuildComparatorFromEvents(events []abci.Event, storeKeyToResourceTypePrefix
 			if attribute.Key == "access_type" {
 				accessType =  AccessTypeStringToEnum(attribute.Value)
 			}
-			if attribute.Key == "storage_key" {
+			if attribute.Key == "store_key" {
 				storeKey =  attribute.Value
 			}
-		}
-
-		var resourceTypePrefixMap = parentResourcePrefixMap
-		if val, ok := storeKeyToResourceTypePrefixMap[storeKey]; ok {
-			resourceTypePrefixMap = val
 		}
 
 		comparators = append(comparators, Comparator{
 			AccessType: accessType,
 			Identifier: identifier,
 			StoreKey: storeKey,
-			ResourceTypePrefixMap: &resourceTypePrefixMap,
-			ParentResourceTypePrefixMap: &parentResourcePrefixMap,
+
 		})
 	}
 	return comparators
 }
 
-// GetPrefix tries to get the prefix for the ResourceType from the StoreKey Mapping
-// and the default mapping, if it doesn't exist in either then it will return a nil, false
-func (c *Comparator) GetPrefix(resourceType ResourceType) ([]byte, bool) {
-	if val, ok := (*c.ResourceTypePrefixMap)[resourceType]; ok {
-		return val, true
-	}
-
-	// Check if the resource type in one of the parent nodes where the identifier has to be *
-	if val, ok := (*c.ParentResourceTypePrefixMap)[resourceType]; ok {
-		return val, true
-	}
-
-	return nil, false
-}
-
-func (c *Comparator) DependencyMatch(accessOp AccessOperation) bool {
+func (c *Comparator) DependencyMatch(accessOp AccessOperation, prefix []byte) bool {
 	// If the resource prefixes are the same, then its just the access type, if they're not the same
 	// then they do not match. Make this the first condition check to avoid additional matching
-	// as most of the time this will be enough to determine if they're depedency matches
+	// as most of the time this will be enough to determine if they're dependency matches
 	if c.AccessType != accessOp.AccessType && accessOp.AccessType != AccessType_UNKNOWN {
-		return false
-	}
-
-	prefix, ok := c.GetPrefix(accessOp.GetResourceType())
-
-	// The resource type was not a parent type where it could match anything nor
-	// was it found in the respective store key mapping
-	if !ok {
-		log.Printf("ResourceType=%s not found for mapping for StoreKey=%s or default key", accessOp.GetResourceType(), c.StoreKey)
 		return false
 	}
 

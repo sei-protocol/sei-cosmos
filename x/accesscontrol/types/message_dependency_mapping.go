@@ -58,7 +58,7 @@ func SynchronousMessageDependencyMapping(messageKey MessageKey) acltypes.Message
 	return acltypes.MessageDependencyMapping{
 		MessageKey:     string(messageKey),
 		DynamicEnabled: true,
-		AccessOps:      SynchronousAccessOps(),
+		AccessOps:      acltypes.SynchronousAccessOps(),
 	}
 }
 

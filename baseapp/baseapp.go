@@ -779,7 +779,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// in case message processing fails. At this point, the MultiStore
 	// is a branch of a branch.
 	runMsgCtx, msCache := app.cacheTxContext(ctx, txBytes)
-	runMsgCtx = runMsgCtx.WithTxMsgAccessOps(ctx.TxMsgAccessOps())
+	// runMsgCtx = runMsgCtx.WithTxMsgAccessOps(ctx.TxMsgAccessOps())
 
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
@@ -833,12 +833,12 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			err          error
 		)
 
-		msgCtx, msgMsCache := app.cacheTxContext(ctx, []byte{})
-		msgCtx = msgCtx.WithMessageIndex(i)
+		// msgCtx, msgMsCache := app.cacheTxContext(ctx, []byte{})
+		// msgCtx = msgCtx.WithMessageIndex(i)
 
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
 			// ADR 031 request type routing
-			msgResult, err = handler(msgCtx, msg)
+			msgResult, err = handler(ctx, msg)
 			eventMsgName = sdk.MsgTypeURL(msg)
 		} else if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 			// legacy sdk.Msg routing
@@ -848,12 +848,12 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			// registered within the `msgServiceRouter` already.
 			msgRoute := legacyMsg.Route()
 			eventMsgName = legacyMsg.Type()
-			handler := app.router.Route(msgCtx, msgRoute)
+			handler := app.router.Route(ctx, msgRoute)
 			if handler == nil {
 				return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s; message index: %d", msgRoute, i)
 			}
 
-			msgResult, err = handler(msgCtx, msg)
+			msgResult, err = handler(ctx, msg)
 		} else {
 			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 		}
@@ -877,20 +877,20 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		msgLogs = append(msgLogs, sdk.NewABCIMessageLog(uint32(i), msgResult.Log, msgEvents))
 
 		ctx.Logger().Info(fmt.Sprintf("Validating MsgIndex=%d", i))
-		accessOpEvents := msgMsCache.GetEvents()
-		accessOps := ctx.TxMsgAccessOps()[ctx.MessageIndex()]
+		// accessOpEvents := msgMsCache.GetEvents()
+		// accessOps := ctx.TxMsgAccessOps()[ctx.MessageIndex()]
 
-		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
+		// missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
 
 		// TODO(bweng) add metrics
-		if len(missingAccessOps) != 0 {
-			for op := range missingAccessOps {
-				ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
-			}
-			errMessage := fmt.Sprintf("Invalid Concurrent Execution, missing %d access operations", len(missingAccessOps))
-			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
-		}
-		msgMsCache.Write()
+		// if len(missingAccessOps) != 0 {
+		// 	for op := range missingAccessOps {
+		// 		ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
+		// 	}
+		// 	errMessage := fmt.Sprintf("Invalid Concurrent Execution, missing %d access operations", len(missingAccessOps))
+		// 	return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
+		// }
+		// msgMsCache.Write()
 		ctx.Logger().Info(fmt.Sprintf("Finished MsgIndex=%d", i))
 	}
 

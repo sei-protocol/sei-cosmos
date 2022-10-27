@@ -3,10 +3,6 @@ package accesscontrol
 import (
 	"log"
 
-<<<<<<< HEAD
-=======
-	pp "github.com/k0kubun/pp/v3"
->>>>>>> be45fd7 (Unit tests working - need to add more)
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -86,11 +82,9 @@ func (validator *MsgValidator) ValidateAccessOperations(accessOps []AccessOperat
 			}
 
 			if  eventComparator.DependencyMatch(accessOp, prefix) {
-				pp.Printf("%s == %s\n", eventComparator.Identifier, accessOp.GetIdentifierTemplate())
 				matched = true
 				break
 			}
-			pp.Printf("%s != %s\n", eventComparator.Identifier, accessOp.GetIdentifierTemplate())
 		}
 
 		if !matched {

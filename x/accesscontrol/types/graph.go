@@ -104,6 +104,7 @@ func NewDag() Dag {
 		NextID:                 0,
 		CompletionSignalingMap: make(map[int]MessageCompletionSignalMapping),
 		BlockingSignalsMap:     make(map[int]MessageCompletionSignalMapping),
+		TxMsgAccessOpMapping:   make(map[int]MsgIndexToAccessOpMapping),
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	pp "github.com/k0kubun/pp/v3"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -115,13 +114,5 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 		}
 
 	}
-
-	if len(missingAccessOps) > 0 {
-		pp.Default.SetColoringEnabled(false)
-		pp.Printf("Missing Ops: %s \n", missingAccessOps)
-		pp.Printf("Access Ops: %s \n", accessOps)
-	}
-
-
 	return missingAccessOps
 }

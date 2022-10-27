@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
-	pp "github.com/k0kubun/pp/v3"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -878,7 +877,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
 		// TODO(bweng) add metrics
 		if len(missingAccessOps) != 0 {
-			pp.Printf("messageIndex=%d, accessops=%s \n", ctx.MessageIndex(), accessOps)
 			for op := range missingAccessOps {
 				ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
 			}

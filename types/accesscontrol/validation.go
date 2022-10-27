@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	pp "github.com/k0kubun/pp/v3"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -83,8 +84,8 @@ func BuildComparatorFromEvents(events []abci.Event) (comparators []Comparator) {
 // ValidateAccessOperations compares a list of events and a predefined list of access operations and determines if all the
 // events that occurred are represented in the accessOperations
 func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) map[Comparator]bool {
-	accessOpsComparators := BuildComparatorFromAccessOp(accessOps)
 	eventsComparators := BuildComparatorFromEvents(events)
+	accessOpsComparators := BuildComparatorFromAccessOp(accessOps)
 
 	missingAccessOps := make(map[Comparator]bool)
 	for _, eventComparator := range eventsComparators {
@@ -102,6 +103,9 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 		}
 
 	}
+
+	pp.Default.SetColoringEnabled(false)
+	pp.Println(missingAccessOps)
 
 	return missingAccessOps
 }

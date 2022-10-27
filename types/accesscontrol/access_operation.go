@@ -17,6 +17,11 @@ func (a *AccessOperation) GetResourceIDTemplate(args []any) string {
 
 func IsDefaultSynchronousAccessOps(accessOps []AccessOperation) bool {
 	defaultAccessOps := SynchronousAccessOps()
+
+	if len(accessOps) != len(defaultAccessOps) {
+		return false
+	}
+
 	for index, accessOp := range accessOps {
 		if accessOp != defaultAccessOps[index] {
 			return false

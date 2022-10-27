@@ -69,6 +69,17 @@ func SynchronousAccessOps() []acltypes.AccessOperation {
 	}
 }
 
+func IsDefaultSynchronousAccessOps(accessOps []acltypes.AccessOperation) bool {
+	defaultAccessOps := SynchronousAccessOps()
+	for index, accessOp := range accessOps {
+		if accessOp != defaultAccessOps[index] {
+			return false
+		}
+	}
+	return true
+}
+
+
 func DefaultMessageDependencyMapping() []acltypes.MessageDependencyMapping {
 	return []acltypes.MessageDependencyMapping{
 		SynchronousMessageDependencyMapping(""),

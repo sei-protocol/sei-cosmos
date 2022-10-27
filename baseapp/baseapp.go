@@ -882,8 +882,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			for op := range missingAccessOps {
 				ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
 			}
-			// errMessage := fmt.Sprintf("Invalid Concurrent Execution, missing %d access operations", len(missingAccessOps))
-			// return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
+			errMessage := fmt.Sprintf("Invalid Concurrent Execution messageIndex=%d, missing %d access operations", i, len(missingAccessOps))
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 		}
 
 	}

@@ -90,17 +90,13 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 	accessOpsComparators := BuildComparatorFromAccessOp(accessOps)
 
 	missingAccessOps := make(map[Comparator]bool)
-	println(len(eventsComparators))
 
 	// If it's using default synchronous access op mapping then no need to verify
 	if IsDefaultSynchronousAccessOps(accessOps) {
 		return missingAccessOps
 	}
 
-	println(len(eventsComparators))
-
 	for _, eventComparator := range eventsComparators {
-		println("EVENT")
 		if eventComparator.IsConcurrentSafeIdentifier() {
 			continue
 		}
@@ -114,7 +110,6 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 		}
 
 		if !matched {
-			println("NOT MATCHED")
 			missingAccessOps[eventComparator] = true
 		}
 

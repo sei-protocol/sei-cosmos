@@ -44,6 +44,8 @@ type Context struct {
 	txBlockingChannels		acltypes.MessageAccessOpsChannelMapping
 	txCompletionChannels	acltypes.MessageAccessOpsChannelMapping
 	txMsgAccessOps			map[int][]acltypes.AccessOperation
+
+	msgValidator *acltypes.MsgValidator
 	messageIndex int	// Used to track current message being processed
 
 	contextMemCache *ContextMemCache
@@ -72,6 +74,7 @@ func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping 
 func (c Context) TxBlockingChannels() 	acltypes.MessageAccessOpsChannelMapping { return c.txBlockingChannels }
 func (c Context) TxMsgAccessOps() map[int][]acltypes.AccessOperation		  { return c.txMsgAccessOps }
 func (c Context) MessageIndex() int		  { return c.messageIndex }
+func (c Context) MsgValidator() *acltypes.MsgValidator { return c.msgValidator }
 func (c Context) ContextMemCache() *ContextMemCache { return c.contextMemCache }
 
 // clone the header before returning
@@ -262,6 +265,11 @@ func (c Context) WithTxBlockingChannels(blockingChannels acltypes.MessageAccessO
 // WithMessageIndex returns a Context with the current message index that's being processed
 func (c Context) WithMessageIndex(messageIndex int) Context {
 	c.messageIndex = messageIndex
+	return c
+}
+
+func (c Context) WithMsgValidator(msgValidator *acltypes.MsgValidator) Context {
+	c.msgValidator = msgValidator
 	return c
 }
 

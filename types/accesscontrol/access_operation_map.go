@@ -1,6 +1,10 @@
 package accesscontrol
 
-import "fmt"
+import (
+	"fmt"
+
+	pp "github.com/k0kubun/pp/v3"
+)
 
 // Alias for Map of MessageIndex -> AccessOperation -> Channel
 type MessageAccessOpsChannelMapping = map[int]AccessOpsChannelMapping
@@ -19,6 +23,7 @@ func WaitForAllSignalsForTx(messageIndexToAccessOpsChannelMapping MessageAccessO
 }
 
 func SendAllSignalsForTx(messageIndexToAccessOpsChannelMapping MessageAccessOpsChannelMapping) {
+	pp.Printf("Sending Signals:%s\n", messageIndexToAccessOpsChannelMapping)
 	for _, accessOpsToChannelsMap := range messageIndexToAccessOpsChannelMapping {
 		for _, channels := range accessOpsToChannelsMap {
 			for _, channel := range channels {

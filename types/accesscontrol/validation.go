@@ -105,7 +105,7 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 	}
 
 	pp.Default.SetColoringEnabled(false)
-	pp.Println(missingAccessOps)
+	pp.Printf("Missing Ops: %s \n", missingAccessOps)
 
 	return missingAccessOps
 }

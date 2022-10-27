@@ -115,13 +115,12 @@ func GetResourceAccess(accessOp acltypes.AccessOperation) ResourceAccess {
 	}
 }
 
+
 func (dag *Dag) AddAccessOpsForMsg(messageIndex int, txIndex int, accessOps []acltypes.AccessOperation) {
-	if val, ok := dag.TxMsgAccessOpMapping[txIndex]; ok {
-		val[messageIndex] = accessOps
-		return
+	if _, ok := dag.TxMsgAccessOpMapping[txIndex]; !ok {
+		dag.TxMsgAccessOpMapping[txIndex] = make(MsgIndexToAccessOpMapping)
 	}
 
-	dag.TxMsgAccessOpMapping[txIndex] = make(MsgIndexToAccessOpMapping)
 	dag.TxMsgAccessOpMapping[txIndex][messageIndex] = accessOps
 	return
 }

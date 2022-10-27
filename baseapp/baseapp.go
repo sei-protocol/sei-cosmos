@@ -856,8 +856,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		msgLogs = append(msgLogs, sdk.NewABCIMessageLog(uint32(i), msgResult.Log, msgEvents))
 
 		accessOpEvents := msgMsCache.GetEvents()
-		accessOps := acltypes.GetMessageAccessOps(i, msgCtx.TxCompletionChannels())
-		accessOps = append(accessOps, acltypes.GetMessageAccessOps(i, msgCtx.TxBlockingChannels())...)
+		accessOps := ctx.TxMsgAccessOps()[ctx.MessageIndex()]
 		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
 
 		// TODO(bweng) add metrics

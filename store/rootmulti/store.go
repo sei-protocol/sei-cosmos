@@ -14,6 +14,7 @@ import (
 	gogotypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
@@ -39,6 +40,7 @@ const (
 // the CommitMultiStore interface.
 type Store struct {
 	db              dbm.DB
+	logger          log.Logger
 	archivalDb      dbm.DB
 	lastCommitInfo  *types.CommitInfo
 	pruningOpts     types.PruningOptions
@@ -69,9 +71,10 @@ var (
 // store will be created with a PruneNothing pruning strategy by default. After
 // a store is created, KVStores must be mounted and finally LoadLatestVersion or
 // LoadVersion must be called.
-func NewStore(db dbm.DB) *Store {
+func NewStore(db dbm.DB, logger log.Logger) *Store {
 	return &Store{
 		db:            db,
+		logger:        logger,
 		pruningOpts:   types.PruneNothing,
 		iavlCacheSize: iavl.DefaultIAVLCacheSize,
 		storesParams:  make(map[types.StoreKey]storeParams),
@@ -82,8 +85,8 @@ func NewStore(db dbm.DB) *Store {
 	}
 }
 
-func NewStoreWithArchival(db, archivalDb dbm.DB, archivalVersion int64) *Store {
-	store := NewStore(db)
+func NewStoreWithArchival(db, archivalDb dbm.DB, archivalVersion int64, logger log.Logger) *Store {
+	store := NewStore(db, logger)
 	store.archivalDb = archivalDb
 	store.archivalVersion = archivalVersion
 	return store
@@ -400,13 +403,16 @@ func (rs *Store) LastCommitID() types.CommitID {
 	return rs.lastCommitInfo.CommitID()
 }
 
-func (rs *Store) GetWorkingHash() []byte {
+func (rs *Store) GetWorkingHash() ([]byte, error) {
 	storeInfos := []types.StoreInfo{}
 	for key, store := range rs.stores {
 		if store.GetStoreType() == types.StoreTypeTransient {
 			continue
 		}
-		hash := store.GetWorkingHash()
+		hash, err := store.GetWorkingHash()
+		if err != nil {
+			return nil, err
+		}
 		storeInfos = append(storeInfos, types.StoreInfo{
 			Name: key.Name(),
 			CommitId: types.CommitID{
@@ -415,7 +421,7 @@ func (rs *Store) GetWorkingHash() []byte {
 		})
 	}
 	commitInfo := types.CommitInfo{StoreInfos: storeInfos}
-	return commitInfo.Hash()
+	return commitInfo.Hash(), nil
 }
 
 // Commit implements Committer/CommitStore.
@@ -877,9 +883,9 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID
 		var err error
 
 		if params.initialVersion == 0 {
-			store, err = iavl.LoadStore(db, id, rs.lazyLoading, rs.iavlCacheSize)
+			store, err = iavl.LoadStore(db, rs.logger, key, id, rs.lazyLoading, rs.iavlCacheSize)
 		} else {
-			store, err = iavl.LoadStoreWithInitialVersion(db, id, rs.lazyLoading, params.initialVersion, rs.iavlCacheSize)
+			store, err = iavl.LoadStoreWithInitialVersion(db, rs.logger, key, id, rs.lazyLoading, params.initialVersion, rs.iavlCacheSize)
 		}
 
 		if err != nil {

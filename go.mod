@@ -11,7 +11,7 @@ require (
 	github.com/confio/ics23/go v0.7.0
 	github.com/cosmos/btcutil v1.0.4
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/iavl v0.17.3
+	github.com/cosmos/iavl v0.19.4
 	github.com/cosmos/ledger-cosmos-go v0.11.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/gogo/gateway v1.1.0
@@ -50,7 +50,7 @@ require (
 	go.opentelemetry.io/otel v1.9.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.9.0
 	go.opentelemetry.io/otel/sdk v1.9.0
-	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
+	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	google.golang.org/genproto v0.0.0-20220822174746-9e6da59bd2fc
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.1

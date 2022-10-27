@@ -249,7 +249,12 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) abci.R
 
 func (app *BaseApp) WriteStateToCommitAndGetWorkingHash() []byte {
 	app.stateToCommit.ms.Write()
-	return app.cms.GetWorkingHash()
+	hash, err := app.cms.GetWorkingHash()
+	if err != nil {
+		// this should never happen
+		panic(fmt.Errorf("error when getting working hash: %s", err))
+	}
+	return hash
 }
 
 func (app *BaseApp) SetProcessProposalStateToCommit() {

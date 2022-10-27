@@ -143,7 +143,7 @@ func (ms multiStore) Restore(
 	panic("not implemented")
 }
 
-func (ms multiStore) GetWorkingHash() []byte {
+func (ms multiStore) GetWorkingHash() ([]byte, error) {
 	panic("not implemented")
 }
 
@@ -169,7 +169,7 @@ func (kv kvStore) GetStoreType() sdk.StoreType {
 	panic("not implemented")
 }
 
-func (kv kvStore) GetWorkingHash() []byte {
+func (kv kvStore) GetWorkingHash() ([]byte, error) {
 	panic("not implemented")
 }
 

@@ -63,3 +63,9 @@ func CreateAccountBalancesPrefixFromBech32(addr string) []byte {
 	accAdrrPrefix := CreateAccountBalancesPrefix(accAdrr)
 	return accAdrrPrefix
 }
+
+// CreatePrefixedAccountStoreKey returns the key for the given account and denomination.
+// This method can be used when performing an ABCI query for the balance of an account.
+func CreatePrefixedAccountStoreKey(addr []byte, denom []byte) []byte {
+	return append(CreateAccountBalancesPrefix(addr), denom...)
+}

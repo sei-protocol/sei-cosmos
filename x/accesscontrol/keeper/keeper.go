@@ -224,7 +224,7 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 			if validateErr == nil {
 				return dependencies
 			} else {
-				ctx.Logger().Error(validateErr.Error())
+				ctx.Logger().Error("Invalid Access Ops", validateErr.Error())
 			}
 		} else {
 			ctx.Logger().Error("Error generating message dependencies: ", err)
@@ -238,7 +238,6 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 		}
 	}
 	return dependencyMapping.AccessOps
-
 }
 
 func DefaultMessageDependencyGenerator() DependencyGeneratorMap {

@@ -665,7 +665,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// resources are acceessed by the ante handlers and message handlers.
 
 	// TODO:: Make this more granular by moving antehandler and messagehandler
-
 	ctx.Logger().Info("Waiting for TxIndex")
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
@@ -877,6 +876,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		txMsgData.Data = append(txMsgData.Data, &sdk.MsgData{MsgType: sdk.MsgTypeURL(msg), Data: msgResult.Data})
 		msgLogs = append(msgLogs, sdk.NewABCIMessageLog(uint32(i), msgResult.Log, msgEvents))
 
+		ctx.Logger().Info(fmt.Sprintf("Validating MsgIndex=%d", i))
 		accessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[ctx.MessageIndex()]
 
@@ -891,6 +891,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 		}
 		msgMsCache.Write()
+		ctx.Logger().Info(fmt.Sprintf("Finished MsgIndex=%d", i))
 	}
 
 	data, err := proto.Marshal(txMsgData)

@@ -28,6 +28,7 @@ type EventManager struct {
 const (
 	EventTypeResourceAccess   	= "resource_access"
 
+	AttributeKeyStoreKey    	= "store_key"
 	AttributeKeyResourceValue   = "value"
 	AttributeKeyResourceKey    	= "key"
 	AttributeKeyOperation    	= "operation"
@@ -87,11 +88,12 @@ func (em *EventManager) EmitTypedEvents(tevs ...proto.Message) error {
 	return nil
 }
 
-func (em *EventManager) EmitResourceAccessReadEvent(operation string, key, value []byte) {
+func (em *EventManager) EmitResourceAccessReadEvent(operation string, storeKey StoreKey, key, value []byte) {
 	em.EmitEvent(
 		NewEvent(
 			EventTypeResourceAccess,
 			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeRead),
+			NewAttribute(AttributeKeyStoreKey, storeKey.Name()),
 			NewAttribute(AttributeKeyResourceKey, string(key)),
 			NewAttribute(AttributeKeyResourceValue, string(value)),
 			NewAttribute(AttributeKeyOperation, operation),
@@ -99,11 +101,12 @@ func (em *EventManager) EmitResourceAccessReadEvent(operation string, key, value
 	)
 }
 
-func (em *EventManager) EmitResourceAccessWriteEvent(operation string, key, value []byte) {
+func (em *EventManager) EmitResourceAccessWriteEvent(operation string, storeKey StoreKey, key, value []byte) {
 	em.EmitEvent(
 		NewEvent(
 			EventTypeResourceAccess,
 			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeWrite),
+			NewAttribute(AttributeKeyStoreKey, storeKey.Name()),
 			NewAttribute(AttributeKeyResourceKey, string(key)),
 			NewAttribute(AttributeKeyResourceValue, string(value)),
 			NewAttribute(AttributeKeyOperation, operation),

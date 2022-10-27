@@ -477,18 +477,18 @@ func (rs *Store) pruneStores() {
 }
 
 // CacheWrap implements CacheWrapper/Store/CommitStore.
-func (rs *Store) CacheWrap() types.CacheWrap {
+func (rs *Store) CacheWrap(storeKey types.StoreKey) types.CacheWrap {
 	return rs.CacheMultiStore().(types.CacheWrap)
 }
 
 // CacheWrapWithTrace implements the CacheWrapper interface.
-func (rs *Store) CacheWrapWithTrace(_ io.Writer, _ types.TraceContext) types.CacheWrap {
-	return rs.CacheWrap()
+func (rs *Store) CacheWrapWithTrace(storeKey types.StoreKey, _ io.Writer, _ types.TraceContext) types.CacheWrap {
+	return rs.CacheWrap(storeKey)
 }
 
 // CacheWrapWithListeners implements the CacheWrapper interface.
-func (rs *Store) CacheWrapWithListeners(_ types.StoreKey, _ []types.WriteListener) types.CacheWrap {
-	return rs.CacheWrap()
+func (rs *Store) CacheWrapWithListeners(storeKey types.StoreKey, _ []types.WriteListener) types.CacheWrap {
+	return rs.CacheWrap(storeKey)
 }
 
 // CacheMultiStore creates ephemeral branch of the multi-store and returns a CacheMultiStore.

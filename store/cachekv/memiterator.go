@@ -18,9 +18,17 @@ type memIterator struct {
 	lastKey []byte
 	deleted map[string]struct{}
 	eventManager  *sdktypes.EventManager
+	storeKey sdktypes.StoreKey
 }
 
-func newMemIterator(start, end []byte, items *dbm.MemDB, deleted map[string]struct{}, ascending bool, eventManager *sdktypes.EventManager) *memIterator {
+func newMemIterator(
+	start, end []byte,
+	items *dbm.MemDB,
+	deleted map[string]struct{},
+	ascending bool,
+	eventManager *sdktypes.EventManager,
+	storeKey sdktypes.StoreKey,
+) *memIterator {
 	var iter types.Iterator
 	var err error
 
@@ -40,6 +48,7 @@ func newMemIterator(start, end []byte, items *dbm.MemDB, deleted map[string]stru
 		lastKey: nil,
 		deleted: deleted,
 		eventManager: eventManager,
+		storeKey: storeKey,
 	}
 }
 
@@ -56,7 +65,7 @@ func (mi *memIterator) Value() []byte {
 	}
 
 	value := mi.Iterator.Value()
-	mi.eventManager.EmitResourceAccessReadEvent("iterator", key, value)
+	mi.eventManager.EmitResourceAccessReadEvent("iterator", mi.storeKey, key, value)
 
 	mi.lastKey = key
 	return value

@@ -11,7 +11,7 @@ import (
 var (
 	// Param Store Values can only be set during genesis and updated
 	// through a gov proposal and those are always processed sequentially
-	identifierWhitelistParams = map[string]bool{
+	ConcurrentSafeIdentifiers = map[string]bool{
 		"bank/SendEnabled": true,
 		"bank/DefaultSendEnabled": true,
 	}
@@ -27,8 +27,8 @@ func (c *Comparator) Contains(comparator Comparator) bool {
 	return c.AccessType == comparator.AccessType && strings.Contains(c.Identifier, comparator.Identifier)
 }
 
-func (c *Comparator) IsWhitelistedIdentifier() bool {
-	if val, ok := identifierWhitelistParams[c.Identifier]; ok {
+func (c *Comparator) IsConcurrentSafeIdentifier() bool {
+	if val, ok := ConcurrentSafeIdentifiers[c.Identifier]; ok {
 		return val
 	}
 	return false
@@ -92,11 +92,14 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 
 	missingAccessOps := make(map[Comparator]bool)
 	for _, eventComparator := range eventsComparators {
+		if eventComparator.IsConcurrentSafeIdentifier() {
+			continue
+		}
+
 		matched := false
 		for _, accessOpComparator := range accessOpsComparators {
-			if eventComparator.IsWhitelistedIdentifier() || eventComparator.Contains(accessOpComparator){
+			if  eventComparator.Contains(accessOpComparator){
 				matched = true
-				fmt.Println(fmt.Printf("Matched: %s", eventComparator.String()))
 				break
 			}
 		}
@@ -107,8 +110,13 @@ func ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) 
 
 	}
 
-	pp.Default.SetColoringEnabled(false)
-	pp.Printf("Missing Ops: %s \n", missingAccessOps)
+	if len(missingAccessOps) > 0 {
+		pp.Default.SetColoringEnabled(false)
+		pp.Printf("Missing Ops: %s \n", missingAccessOps)
+		pp.Printf("Events: %s \n", events)
+		pp.Printf("Access Ops: %s \n", accessOps)
+	}
+
 
 	return missingAccessOps
 }

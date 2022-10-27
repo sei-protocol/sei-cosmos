@@ -27,5 +27,6 @@ enum ResourceType {
     KV_ORACLE_FEEDERS = 13; // child of KV_ORACLE
     KV_STAKING_DELEGATION = 14; // child of KV_STAKING
     KV_STAKING_VALIDATOR = 15; // child of KV_STAKING
+    KV_AUTH = 16; // child of KV
 }
 

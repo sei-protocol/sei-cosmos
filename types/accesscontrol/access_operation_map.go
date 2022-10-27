@@ -35,8 +35,7 @@ func GetMessageAccessOps(
 	messageAccessOpsChannelMapping MessageAccessOpsChannelMapping,
 ) []AccessOperation {
 	accessOps := []AccessOperation{}
-
-	for accessOp, _ := range messageAccessOpsChannelMapping[messageIndex] {
+	for accessOp := range messageAccessOpsChannelMapping[messageIndex] {
 		accessOps = append(accessOps, accessOp)
 	}
 	return accessOps

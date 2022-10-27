@@ -122,7 +122,6 @@ func (dag *Dag) AddAccessOpsForMsg(messageIndex int, txIndex int, accessOps []ac
 	}
 
 	dag.TxMsgAccessOpMapping[txIndex][messageIndex] = accessOps
-	return
 }
 
 

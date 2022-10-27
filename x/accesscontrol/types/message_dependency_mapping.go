@@ -58,27 +58,9 @@ func SynchronousMessageDependencyMapping(messageKey MessageKey) acltypes.Message
 	return acltypes.MessageDependencyMapping{
 		MessageKey:     string(messageKey),
 		DynamicEnabled: true,
-		AccessOps:      SynchronousAccessOps(),
+		AccessOps:      acltypes.SynchronousAccessOps(),
 	}
 }
-
-func SynchronousAccessOps() []acltypes.AccessOperation {
-	return []acltypes.AccessOperation{
-		{AccessType: acltypes.AccessType_UNKNOWN, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},
-		{AccessType: acltypes.AccessType_COMMIT, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},
-	}
-}
-
-func IsDefaultSynchronousAccessOps(accessOps []acltypes.AccessOperation) bool {
-	defaultAccessOps := SynchronousAccessOps()
-	for index, accessOp := range accessOps {
-		if accessOp != defaultAccessOps[index] {
-			return false
-		}
-	}
-	return true
-}
-
 
 func DefaultMessageDependencyMapping() []acltypes.MessageDependencyMapping {
 	return []acltypes.MessageDependencyMapping{

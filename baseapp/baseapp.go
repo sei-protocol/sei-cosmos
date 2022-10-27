@@ -665,8 +665,11 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// resources are acceessed by the ante handlers and message handlers.
 
 	// TODO:: Make this more granular by moving antehandler and messagehandler
+
+	ctx.Logger().Info("Waiting for TxIndex")
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
+	ctx.Logger().Info("Unblocked for TxIndex")
 
 	if v := ctx.Context().Value(RunTxPreHookKey); v != nil {
 		callable := v.(func())
@@ -778,6 +781,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// is a branch of a branch.
 	runMsgCtx, msCache := app.cacheTxContext(ctx, txBytes)
 	runMsgCtx = runMsgCtx.WithTxMsgAccessOps(ctx.TxMsgAccessOps())
+
 	// Attempt to execute all messages and only update state if all messages pass
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
@@ -821,6 +825,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if mode == runTxModeCheck || mode == runTxModeReCheck {
 			break
 		}
+
+		ctx.Logger().Info(fmt.Sprintf("Running MsgIndex=%d", i))
 
 		var (
 			msgResult    *sdk.Result
@@ -875,6 +881,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		accessOps := ctx.TxMsgAccessOps()[ctx.MessageIndex()]
 
 		missingAccessOps := acltypes.ValidateAccessOperations(accessOps, accessOpEvents)
+
 		// TODO(bweng) add metrics
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {

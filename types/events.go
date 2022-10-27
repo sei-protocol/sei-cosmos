@@ -24,6 +24,20 @@ type EventManager struct {
 	events Events
 }
 
+// Common Event Types and Attributes
+const (
+	EventTypeResourceAccess   	= "resource_access"
+
+	AttributeKeyResourceValue   = "value"
+	AttributeKeyResourceKey    	= "key"
+	AttributeKeyOperation    	= "operation"
+
+	AttributeKeyAccessType		= "access_type"
+	AttributeKeyAccessTypeWrite = "write"
+	AttributeKeyAccessTypeRead  = "read"
+)
+
+
 func NewEventManager() *EventManager {
 	return &EventManager{EmptyEvents()}
 }
@@ -71,6 +85,30 @@ func (em *EventManager) EmitTypedEvents(tevs ...proto.Message) error {
 
 	em.EmitEvents(events)
 	return nil
+}
+
+func (em *EventManager) EmitResourceAccessReadEvent(operation string, key, value []byte) {
+	em.EmitEvent(
+		NewEvent(
+			EventTypeResourceAccess,
+			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeRead),
+			NewAttribute(AttributeKeyResourceKey, string(key)),
+			NewAttribute(AttributeKeyResourceValue, string(value)),
+			NewAttribute(AttributeKeyOperation, operation),
+		),
+	)
+}
+
+func (em *EventManager) EmitResourceAccessWriteEvent(operation string, key, value []byte) {
+	em.EmitEvent(
+		NewEvent(
+			EventTypeResourceAccess,
+			NewAttribute(AttributeKeyAccessType, AttributeKeyAccessTypeWrite),
+			NewAttribute(AttributeKeyResourceKey, string(key)),
+			NewAttribute(AttributeKeyResourceValue, string(value)),
+			NewAttribute(AttributeKeyOperation, operation),
+		),
+	)
 }
 
 // TypedEventToEvent takes typed event and converts to Event object

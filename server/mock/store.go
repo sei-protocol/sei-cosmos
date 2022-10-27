@@ -3,12 +3,12 @@ package mock
 import (
 	"io"
 
-	protoio "github.com/gogo/protobuf/io"
-	dbm "github.com/tendermint/tm-db"
-
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	protoio "github.com/gogo/protobuf/io"
+	abci "github.com/tendermint/tendermint/abci/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 var _ sdk.MultiStore = multiStore{}
@@ -106,6 +106,11 @@ func (ms multiStore) GetKVStore(key sdk.StoreKey) sdk.KVStore {
 }
 
 func (ms multiStore) GetStore(key sdk.StoreKey) sdk.Store {
+	panic("not implemented")
+}
+
+// GetStores returns mounted stores
+func (ms multiStore) GetEvents() []abci.Event {
 	panic("not implemented")
 }
 

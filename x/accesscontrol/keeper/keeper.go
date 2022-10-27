@@ -177,12 +177,14 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 		for accessOp := range anteDepSet {
 			dependencyDag.AddNodeBuildDependency(ANTE_MSG_INDEX, txIndex, accessOp)
 		}
+
 		msgs := tx.GetMsgs()
 		for messageIndex, msg := range msgs {
 			if types.IsGovMessage(msg) {
 				return nil, types.ErrGovMsgInBlock
 			}
 			msgDependencies := k.GetMessageDependencies(ctx, msg)
+			dependencyDag.AddAccessOpsForMsg(messageIndex, txIndex, msgDependencies)
 			for _, accessOp := range msgDependencies {
 				// make a new node in the dependency dag
 				dependencyDag.AddNodeBuildDependency(messageIndex, txIndex, accessOp)

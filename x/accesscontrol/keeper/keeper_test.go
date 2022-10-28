@@ -150,7 +150,7 @@ func TestResetWasmDependencyMapping(t *testing.T) {
 	require.NoError(t, err)
 	mapping, err = app.AccessControlKeeper.GetWasmDependencyMapping(ctx, wasmContractAddress, []byte{}, false)
 	require.NoError(t, err)
-	require.Equal(t, types.SynchronousAccessOps(), mapping.AccessOps)
+	require.Equal(t, types.SynchronousAccessOpsWithSelector(), mapping.AccessOps)
 	require.Equal(t, "some reason", mapping.ResetReason)
 }
 

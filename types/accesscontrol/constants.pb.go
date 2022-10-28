@@ -104,6 +104,13 @@ const (
 	ResourceType_KV_TOKENFACTORY_METADATA  ResourceType = 22
 	ResourceType_KV_TOKENFACTORY_ADMIN     ResourceType = 23
 	ResourceType_KV_TOKENFACTORY_CREATOR   ResourceType = 24
+	ResourceType_KV_ORACLE_FEEDERS         ResourceType = 13
+	ResourceType_KV_ORACLE_FEEDERS         ResourceType = 13
+	ResourceType_KV_ORACLE_FEEDERS         ResourceType = 13
+	ResourceType_KV_ORACLE_FEEDERS         ResourceType = 13
+	ResourceType_KV_ORACLE_FEEDERS         ResourceType = 13
+	ResourceType_KV_ORACLE_FEEDERS         ResourceType = 13
+
 )
 
 var ResourceType_name = map[int32]string{

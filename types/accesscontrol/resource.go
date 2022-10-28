@@ -15,6 +15,7 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_STAKING,
 		ResourceType_KV_WASM,
 		ResourceType_KV_AUTH,
+		ResourceType_KV_TOKENFACTORY,
 	}},
 	ResourceType_Mem:                       {ResourceType_ANY, []ResourceType{ResourceType_DexMem}},
 	ResourceType_DexMem:                    {ResourceType_Mem, []ResourceType{}},
@@ -30,10 +31,10 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_ORACLE_FEEDERS:         {ResourceType_KV_ORACLE, []ResourceType{}},
 	ResourceType_KV_DEX:                    {ResourceType_KV, []ResourceType{}},
 	ResourceType_KV_TOKENFACTORY:           {ResourceType_KV, []ResourceType{ResourceType_KV_TOKENFACTORY_DENOM, ResourceType_KV_TOKENFACTORY_METADATA, ResourceType_KV_TOKENFACTORY_ADMIN, ResourceType_KV_TOKENFACTORY_CREATOR}},
-	ResourceType_KV_TOKENFACTORY_DENOM:     {ResourceType_KV, []ResourceType{}},
-	ResourceType_KV_TOKENFACTORY_METADATA:  {ResourceType_KV, []ResourceType{}},
-	ResourceType_KV_TOKENFACTORY_ADMIN:     {ResourceType_KV, []ResourceType{}},
-	ResourceType_KV_TOKENFACTORY_CREATOR:   {ResourceType_KV, []ResourceType{}},
+	ResourceType_KV_TOKENFACTORY_DENOM:     {ResourceType_KV_TOKENFACTORY, []ResourceType{}},
+	ResourceType_KV_TOKENFACTORY_METADATA:  {ResourceType_KV_TOKENFACTORY, []ResourceType{}},
+	ResourceType_KV_TOKENFACTORY_ADMIN:     {ResourceType_KV_TOKENFACTORY, []ResourceType{}},
+	ResourceType_KV_TOKENFACTORY_CREATOR:   {ResourceType_KV_TOKENFACTORY, []ResourceType{}},
 	ResourceType_KV_AUTH:           		{ResourceType_KV, []ResourceType{}},
 }
 

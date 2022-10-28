@@ -151,24 +151,24 @@ func (g *basicGasMeter) String() string {
 
 type multiplierGasMeter struct {
 	basicGasMeter
-	multiplierNominator   uint64
+	multiplierNumerator   uint64
 	multiplierDenominator uint64
 }
 
-func NewMultiplierGasMeter(limit Gas, multiplierNominator uint64, multiplierDenominator uint64) GasMeter {
+func NewMultiplierGasMeter(limit Gas, multiplierNumerator uint64, multiplierDenominator uint64) GasMeter {
 	return &multiplierGasMeter{
 		basicGasMeter: basicGasMeter{
 			limit:    limit,
 			consumed: 0,
 			lock:     &sync.Mutex{},
 		},
-		multiplierNominator:   multiplierNominator,
+		multiplierNumerator:   multiplierNumerator,
 		multiplierDenominator: multiplierDenominator,
 	}
 }
 
 func (g *multiplierGasMeter) adjustGas(original Gas) Gas {
-	return original * g.multiplierNominator / g.multiplierDenominator
+	return original * g.multiplierNumerator / g.multiplierDenominator
 }
 
 func (g *multiplierGasMeter) ConsumeGas(amount Gas, descriptor string) {

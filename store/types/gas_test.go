@@ -76,7 +76,7 @@ func TestMultiplierGasMeter(t *testing.T) {
 	cases := []struct {
 		limit                 Gas
 		usage                 []Gas
-		multiplierNominator   uint64
+		multiplierNumerator   uint64
 		multiplierDenominator uint64
 	}{
 		{10, []Gas{1, 2, 3, 4}, 1, 1},
@@ -88,12 +88,12 @@ func TestMultiplierGasMeter(t *testing.T) {
 	}
 
 	for tcnum, tc := range cases {
-		meter := NewMultiplierGasMeter(tc.limit, tc.multiplierNominator, tc.multiplierDenominator)
+		meter := NewMultiplierGasMeter(tc.limit, tc.multiplierNumerator, tc.multiplierDenominator)
 		used := uint64(0)
 
 		for unum, usage := range tc.usage {
 			usage := usage
-			used += usage * tc.multiplierNominator / tc.multiplierDenominator
+			used += usage * tc.multiplierNumerator / tc.multiplierDenominator
 			require.NotPanics(t, func() { meter.ConsumeGas(usage, "") }, "Not exceeded limit but panicked. tc #%d, usage #%d", tcnum, unum)
 			require.Equal(t, used, meter.GasConsumed(), "Gas consumption not match. tc #%d, usage #%d", tcnum, unum)
 			require.Equal(t, used, meter.GasConsumedToLimit(), "Gas consumption (to limit) not match. tc #%d, usage #%d", tcnum, unum)

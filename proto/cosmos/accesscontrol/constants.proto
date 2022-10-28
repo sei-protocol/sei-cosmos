@@ -37,5 +37,9 @@ enum ResourceType {
     KV_BANK_SUPPLY = 18; // child of KV
     KV_BANK_DENOM = 19; // child of KV
     KV_BANK_BALANCES = 20; // child of KV
+    KV_TOKENFACTORY_DENOM = 21; // child of KV_TOKENFACTORY
+    KV_TOKENFACTORY_METADATA = 22; // child of KV_TOKENFACTORY
+    KV_TOKENFACTORY_ADMIN = 23; // child of KV_TOKENFACTORY
+    KV_TOKENFACTORY_CREATOR = 24; // child of KV_TOKENFACTORY
 }
 

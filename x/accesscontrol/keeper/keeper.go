@@ -14,8 +14,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	minttypes "github.com/sei-protocol/sei-chain/x/mint/types"
 )
 
 // Option is an extension point to instantiate keeper with non default values
@@ -33,7 +33,7 @@ type (
 		storeKey                         sdk.StoreKey
 		paramSpace                       paramtypes.Subspace
 		MessageDependencyGeneratorMapper DependencyGeneratorMap
-		AccountKeeper       			 minttypes.AccountKeeper
+		AccountKeeper       			 authkeeper.AccountKeeper
 	}
 )
 
@@ -43,7 +43,7 @@ func NewKeeper(
 	cdc codec.Codec,
 	storeKey sdk.StoreKey,
 	paramSpace paramtypes.Subspace,
-	ak 		minttypes.AccountKeeper,
+	ak 		authkeeper.AccountKeeper,
 	opts ...Option,
 ) Keeper {
 	if !paramSpace.HasKeyTable() {

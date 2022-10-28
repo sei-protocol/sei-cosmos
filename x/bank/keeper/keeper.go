@@ -623,6 +623,14 @@ func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 	subFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+
+		// Try subtract from the in mem var first, prevents the condition where
+		// the module may have a pending deposit that would be enough to pay for this send
+		ok := ctx.ContextMemCache().SafeSubDeferredSends(moduleName, amounts)
+		if ok {
+			return nil
+		}
+
 		acc := k.ak.GetModuleAccount(ctx, moduleName)
 		return k.subUnlockedCoins(ctx, acc.GetAddress(), amounts)
 	}
@@ -646,8 +654,16 @@ func (k BaseKeeper) DeferredBurnCoins(ctx sdk.Context, moduleName string, amount
 		// Branch Context for validation and fail if the module doesn't have enough coins
 		// but don't write this to the underlying store
 		validationContext, _ := ctx.CacheContext()
-		acc := k.ak.GetModuleAccount(ctx, moduleName)
-		err := k.subUnlockedCoins(validationContext, acc.GetAddress(), amounts)
+		moduleAcc := k.ak.GetModuleAccount(ctx, moduleName)
+
+		// Try subtract from the in mem var first, prevents the condition where
+		// the module may have a pending deposit that would be enough to pay for this send
+		ok := ctx.ContextMemCache().SafeSubDeferredSends(moduleName, amounts)
+		if ok {
+			return nil
+		}
+
+		err := k.subUnlockedCoins(validationContext, moduleAcc.GetAddress(), amounts)
 		if err != nil {
 			return err
 		}

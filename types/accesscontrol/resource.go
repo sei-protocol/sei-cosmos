@@ -14,7 +14,6 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_ORACLE,
 		ResourceType_KV_STAKING,
 		ResourceType_KV_WASM,
-		ResourceType_KV_TOKENFACTORY,
 		ResourceType_KV_AUTH,
 	}},
 	ResourceType_Mem:                       {ResourceType_ANY, []ResourceType{ResourceType_DexMem}},
@@ -30,7 +29,10 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_ORACLE_AGGREGATE_VOTES: {ResourceType_KV_ORACLE, []ResourceType{}},
 	ResourceType_KV_ORACLE_FEEDERS:         {ResourceType_KV_ORACLE, []ResourceType{}},
 	ResourceType_KV_DEX:                    {ResourceType_KV, []ResourceType{}},
-	ResourceType_KV_TOKENFACTORY:           {ResourceType_KV, []ResourceType{}},
+	ResourceType_KV_TOKENFACTORY:           {ResourceType_KV, []ResourceType{ResourceType_KV_BANK_BALANCES, ResourceType_KV_BANK_DENOM, ResourceType_KV_BANK_SUPPLY}},
+	ResourceType_KV_BANK_SUPPLY:			{ResourceType_KV_TOKENFACTORY, []ResourceType{}},
+	ResourceType_KV_BANK_BALANCES:          {ResourceType_KV_TOKENFACTORY, []ResourceType{}},
+	ResourceType_KV_BANK_DENOM:           	{ResourceType_KV_TOKENFACTORY, []ResourceType{}},
 	ResourceType_KV_AUTH:           		{ResourceType_KV, []ResourceType{}},
 }
 

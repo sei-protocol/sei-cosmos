@@ -2,6 +2,7 @@ package accesscontrol
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -70,28 +71,33 @@ func (c *Comparator) DependencyMatch(accessOp AccessOperation, prefix []byte) bo
 	// then they do not match. Make this the first condition check to avoid additional matching
 	// as most of the time this will be enough to determine if they're dependency matches
 	if c.AccessType != accessOp.AccessType && accessOp.AccessType != AccessType_UNKNOWN {
+		log.Println("NO TYPE EQ")
 		return false
 	}
 
 	// The resource type was found in the parent store mapping or the child mapping
 	if accessOp.GetIdentifierTemplate() == "*" {
+		log.Println("STAR")
 		return true
 	}
 
 	// Both Identifiers should be starting with the same prefix expected for the resource type
 	// e.g if the StoreKey and resource type is ResourceType_KV_BANK_BALANCES, then they both must start with BalancesPrefix
 	if !strings.HasPrefix(c.Identifier, string(prefix)) || !strings.HasPrefix(accessOp.GetIdentifierTemplate(), string(prefix)) {
+		log.Println("NO PREFIX")
 		return false
 	}
 
 	// With the same prefix, c.Identififer should be a superset of IdentifierTemplate, it not equal
 	if !strings.Contains(c.Identifier, accessOp.GetIdentifierTemplate()) {
+		log.Println("NO CONTAIN")
 		return false
 	}
 
 	// At this point the resource identifier matches, but the access type is unknown, therefore
 	// it will match both read and writes
 	if accessOp.AccessType == AccessType_UNKNOWN {
+		log.Println("UNKNOWN")
 		return true
 	}
 

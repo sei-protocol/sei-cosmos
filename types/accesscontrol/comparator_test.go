@@ -18,7 +18,84 @@ func TestComparator_DependencyMatch(t *testing.T) {
 		args   args
 		want   bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Unknown Access Type",
+			fields: fields{AccessType: AccessType_READ, Identifier: "a/b/c/d", StoreKey: "123"},
+			args: args{
+				prefix: []byte("a"),
+				accessOp: AccessOperation{
+					AccessType: AccessType_UNKNOWN,
+					IdentifierTemplate: "a/b/c",
+					ResourceType: ResourceType_KV_AUTH_ADDRESS_STORE,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "No contain",
+			fields: fields{AccessType: AccessType_READ, Identifier: "a/b/c/d", StoreKey: "123"},
+			args: args{
+				prefix: []byte("a"),
+				accessOp: AccessOperation{
+					AccessType: AccessType_READ,
+					IdentifierTemplate: "a/b/d/e/c",
+					ResourceType: ResourceType_KV_AUTH_ADDRESS_STORE,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "No Prefix comparator",
+			fields: fields{AccessType: AccessType_WRITE, Identifier: "c/b/c/d", StoreKey: "123"},
+			args: args{
+				prefix: []byte("a"),
+				accessOp: AccessOperation{
+					AccessType: AccessType_WRITE,
+					IdentifierTemplate: "a/b/d/e/c",
+					ResourceType: ResourceType_KV_AUTH_ADDRESS_STORE,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "No Prefix accessop",
+			fields: fields{AccessType: AccessType_WRITE, Identifier: "a/b/c/d", StoreKey: "123"},
+			args: args{
+				prefix: []byte("a"),
+				accessOp: AccessOperation{
+					AccessType: AccessType_WRITE,
+					IdentifierTemplate: "c/b/d/e/c",
+					ResourceType: ResourceType_KV_AUTH_ADDRESS_STORE,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Star type",
+			fields: fields{AccessType: AccessType_WRITE, Identifier: "a/b/c/d", StoreKey: "123"},
+			args: args{
+				prefix: []byte("a"),
+				accessOp: AccessOperation{
+					AccessType: AccessType_WRITE,
+					IdentifierTemplate: "*",
+					ResourceType: ResourceType_KV_AUTH_ADDRESS_STORE,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "Star type only when accesstype equal",
+			fields: fields{AccessType: AccessType_READ, Identifier: "a/b/c/d", StoreKey: "123"},
+			args: args{
+				prefix: []byte("a"),
+				accessOp: AccessOperation{
+					AccessType: AccessType_WRITE,
+					IdentifierTemplate: "*",
+					ResourceType: ResourceType_KV_AUTH_ADDRESS_STORE,
+				},
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

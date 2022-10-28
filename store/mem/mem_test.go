@@ -31,7 +31,7 @@ func TestStore(t *testing.T) {
 	cacheWrapper := db.CacheWrap(nil)
 	require.IsType(t, &cachekv.Store{}, cacheWrapper)
 
-	cacheWrappedWithTrace := db.CacheWrapWithTrace(nil, nil)
+	cacheWrappedWithTrace := db.CacheWrapWithTrace(nil, nil, nil)
 	require.IsType(t, &cachekv.Store{}, cacheWrappedWithTrace)
 
 	cacheWrappedWithListeners := db.CacheWrapWithListeners(nil, nil)

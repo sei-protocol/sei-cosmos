@@ -118,7 +118,7 @@ const (
 	ResourceType_KV_STAKING_REDELEGATION_QUEUE           ResourceType = 36
 	ResourceType_KV_STAKING_VALIDATOR_QUEUE              ResourceType = 37
 	ResourceType_KV_STAKING_HISTORICAL_INFO              ResourceType = 38
-	ResourceType_KV_STAKING_UNBOUNDING                   ResourceType = 39
+	ResourceType_KV_STAKING_UNBONDING                   ResourceType = 39
 	ResourceType_KV_DISTRIBUTION                         ResourceType = 40
 	ResourceType_KV_DISTRIBUTION_FEE_POOL                ResourceType = 41
 	ResourceType_KV_DISTRIBUTION_PROPOSER_KEY            ResourceType = 42

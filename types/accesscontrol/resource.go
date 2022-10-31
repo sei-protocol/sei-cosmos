@@ -85,6 +85,7 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_STAKING_HISTORICAL_INFO:           	{ResourceType_KV_STAKING, []ResourceType{}},
 	ResourceType_KV_STAKING_UNBONDING:                	{ResourceType_KV_STAKING, []ResourceType{}},
 	ResourceType_KV_DISTRIBUTION:                         {ResourceType_KV, []ResourceType{
+		ResourceType_KV_DISTRIBUTION_FEE_POOL,
 		ResourceType_KV_DISTRIBUTION_PROPOSER_KEY,
 		ResourceType_KV_DISTRIBUTION_OUTSTANDING_REWARDS,
 		ResourceType_KV_DISTRIBUTION_DELEGATOR_WITHDRAW_ADDR,

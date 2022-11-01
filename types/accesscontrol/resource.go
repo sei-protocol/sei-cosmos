@@ -41,6 +41,7 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_STAKING_VALIDATOR_QUEUE,
 		ResourceType_KV_STAKING_HISTORICAL_INFO,
 		ResourceType_KV_STAKING_UNBONDING,
+		ResourceType_KV_STAKING_VALIDATORS_BY_POWER,
 	}},
 	ResourceType_KV_STAKING_DELEGATION: {ResourceType_KV_STAKING, []ResourceType{}},
 	ResourceType_KV_STAKING_VALIDATOR:  {ResourceType_KV_STAKING, []ResourceType{}},

@@ -21,6 +21,7 @@ import (
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkacltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/legacytm"
 )
@@ -222,6 +223,11 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // gas execution context.
 func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) abci.ResponseDeliverTx {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
+
+	// If no validator was configured then use default validator
+	if ctx.MsgValidator() == nil {
+		ctx = ctx.WithMsgValidator(sdkacltypes.NewMsgValidator(sdkacltypes.DefaultStoreKeyToResourceTypePrefixMap()))
+	}
 
 	gInfo := sdk.GasInfo{}
 	resultStr := "successful"

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/k0kubun/pp/v3"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -768,15 +769,20 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			return gInfo, nil, nil, 0, err
 		}
 
-		storeAccessOpEvents := msCache.GetEvents()
-		accessOps, _:= app.anteDepGenerator([]acltypes.AccessOperation{}, tx)
-		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
-		if len(missingAccessOps) != 0 {
-			for op := range missingAccessOps {
-				ctx.Logger().Error((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))
+		if ctx.MsgValidator() != nil {
+			storeAccessOpEvents := msCache.GetEvents()
+			accessOps, _:= app.anteDepGenerator([]acltypes.AccessOperation{}, tx)
+
+			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+			if len(missingAccessOps) != 0 {
+				for op := range missingAccessOps {
+					pp.Default.SetColoringEnabled(false)
+					pp.Println(missingAccessOps)
+					ctx.Logger().Info((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))
+				}
+				errMessage := fmt.Sprintf("Invalid Concurrent Execution antehandler missing %d access operations", len(missingAccessOps))
+				return gInfo, nil, nil, 0, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 			}
-			errMessage := fmt.Sprintf("Invalid Concurrent Execution antehandler missing %d access operations", len(missingAccessOps))
-			return gInfo, nil, nil, 0, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 		}
 
 		priority = ctx.Priority()
@@ -884,12 +890,15 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		msgMsCache.Write()
 
+		if ctx.MsgValidator() == nil {
+			continue
+		}
 		storeAccessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[i]
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {
-				ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
+				ctx.Logger().Info((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
 			}
 			errMessage := fmt.Sprintf("Invalid Concurrent Execution messageIndex=%d, missing %d access operations", i, len(missingAccessOps))
 			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)

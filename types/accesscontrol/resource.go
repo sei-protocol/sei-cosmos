@@ -22,7 +22,14 @@ var ResourceTree = map[ResourceType]TreeNode{
         ResourceType_DexMem,
     }},
     ResourceType_DexMem:                    			{ResourceType_Mem, []ResourceType{}},
-    ResourceType_KV_BANK:                   			{ResourceType_KV, []ResourceType{}},
+    ResourceType_KV_BANK:                   			{ResourceType_KV, []ResourceType{
+        ResourceType_KV_BANK_SUPPLY,
+        ResourceType_KV_BANK_DENOM,
+        ResourceType_KV_BANK_BALANCES,
+    }},
+    ResourceType_KV_BANK_SUPPLY:                        {ResourceType_KV_BANK, []ResourceType{}},
+    ResourceType_KV_BANK_DENOM:                         {ResourceType_KV_BANK, []ResourceType{}},
+    ResourceType_KV_BANK_BALANCES:                      {ResourceType_KV_BANK, []ResourceType{}},
     ResourceType_KV_STAKING:                			{ResourceType_KV, []ResourceType{
         ResourceType_KV_STAKING_DELEGATION,
         ResourceType_KV_STAKING_VALIDATOR,

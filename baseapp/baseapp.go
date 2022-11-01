@@ -768,6 +768,17 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			return gInfo, nil, nil, 0, err
 		}
 
+		storeAccessOpEvents := msCache.GetEvents()
+		accessOps, _:= app.anteDepGenerator([]acltypes.AccessOperation{}, tx)
+		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+		if len(missingAccessOps) != 0 {
+			for op := range missingAccessOps {
+				ctx.Logger().Error((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))
+			}
+			errMessage := fmt.Sprintf("Invalid Concurrent Execution antehandler missing %d access operations", len(missingAccessOps))
+			return gInfo, nil, nil, 0, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
+		}
+
 		priority = ctx.Priority()
 		msCache.Write()
 		anteEvents = events.ToABCIEvents()
@@ -873,19 +884,16 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		msgMsCache.Write()
 
-		// storeAccessOpEvents := msgMsCache.GetEvents()
-		// accessOps := ctx.TxMsgAccessOps()[i]
-		// missingAccessOps := acltypes.ValidateAccessOperations(accessOps, storeAccessOpEvents)
-
-		// // TODO(bweng) add metrics
-		// if len(missingAccessOps) != 0 {
-		// 	for op := range missingAccessOps {
-		// 		ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
-		// 	}
-		// 	errMessage := fmt.Sprintf("Invalid Concurrent Execution messageIndex=%d, missing %d access operations", i, len(missingAccessOps))
-		// 	return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
-		// }
-
+		storeAccessOpEvents := msgMsCache.GetEvents()
+		accessOps := ctx.TxMsgAccessOps()[i]
+		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+		if len(missingAccessOps) != 0 {
+			for op := range missingAccessOps {
+				ctx.Logger().Error((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
+			}
+			errMessage := fmt.Sprintf("Invalid Concurrent Execution messageIndex=%d, missing %d access operations", i, len(missingAccessOps))
+			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
+		}
 	}
 
 	data, err := proto.Marshal(txMsgData)

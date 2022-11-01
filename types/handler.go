@@ -153,6 +153,7 @@ func (t Terminator) AnteHandle(ctx Context, _ Tx, _ bool, _ AnteHandler) (Contex
 
 // Simply return provided txDeps and nil error
 func (t Terminator) AnteDeps(txDeps []sdkacltypes.AccessOperation, _ Tx, _ AnteDepGenerator) ([]sdkacltypes.AccessOperation, error) {
+	// TODO:: use the commit access helper - blocked by circular dep. Should move it to the type/accesscontrol instead
 	commit := sdkacltypes.AccessOperation{
 		ResourceType: sdkacltypes.ResourceType_ANY,
 		AccessType: sdkacltypes.AccessType_COMMIT,

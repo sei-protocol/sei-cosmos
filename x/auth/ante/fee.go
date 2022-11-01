@@ -42,9 +42,19 @@ func (d DeductFeeDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sd
 	feeTx, _ := tx.(sdk.FeeTx)
 	deps := []sdkacltypes.AccessOperation{
 		{
+			AccessType:         sdkacltypes.AccessType_READ,
+			ResourceType:       sdkacltypes.ResourceType_KV_BANK_BALANCES,
+			IdentifierTemplate:  string(banktypes.CreateAccountBalancesPrefix(feeTx.FeePayer())),
+		},
+		{
 			AccessType:         sdkacltypes.AccessType_WRITE,
 			ResourceType:       sdkacltypes.ResourceType_KV_BANK_BALANCES,
 			IdentifierTemplate:  string(banktypes.CreateAccountBalancesPrefix(feeTx.FeePayer())),
+		},
+		{
+			AccessType:         sdkacltypes.AccessType_READ,
+			ResourceType:       sdkacltypes.ResourceType_KV_BANK_BALANCES,
+			IdentifierTemplate:  string(banktypes.CreateAccountBalancesPrefix(feeTx.FeeGranter())),
 		},
 		{
 			AccessType:         sdkacltypes.AccessType_WRITE,

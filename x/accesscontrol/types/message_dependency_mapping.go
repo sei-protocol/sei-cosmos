@@ -45,6 +45,7 @@ func ValidateAccessOp(accessOp acltypes.AccessOperation) error {
 		return ErrEmptyIdentifierString
 	}
 	if accessOp.ResourceType.HasChildren() && accessOp.IdentifierTemplate != "*" {
+		println(accessOp.ResourceType.String())
 		return ErrNonLeafResourceTypeWithIdentifier
 	}
 	return nil

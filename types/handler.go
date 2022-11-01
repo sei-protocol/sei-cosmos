@@ -153,5 +153,6 @@ func (t Terminator) AnteHandle(ctx Context, _ Tx, _ bool, _ AnteHandler) (Contex
 
 // Simply return provided txDeps and nil error
 func (t Terminator) AnteDeps(txDeps []sdkacltypes.AccessOperation, _ Tx, _ AnteDepGenerator) ([]sdkacltypes.AccessOperation, error) {
-	return txDeps, nil
+	commit := sdkacltypes.AccessOperation{ResourceType: sdkacltypes.ResourceType_ANY, AccessType: sdkacltypes.AccessType_COMMIT, IdentifierTemplate: "*"}
+	return append(txDeps, commit), nil
 }

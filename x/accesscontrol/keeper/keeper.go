@@ -278,7 +278,8 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 			if validateErr == nil {
 				return dependencies
 			} else {
-				ctx.Logger().Error("Invalid Access Ops", validateErr.Error())
+				errorMessage := fmt.Sprintf("Invalid Access Ops for message=%s", messageKey)
+				ctx.Logger().Error(errorMessage, validateErr.Error())
 			}
 		} else {
 			ctx.Logger().Error("Error generating message dependencies: ", err)

@@ -3,7 +3,7 @@ package accesscontrol
 import (
 	"fmt"
 
-	"github.com/k0kubun/pp"
+	"github.com/k0kubun/pp/v3"
 )
 
 // Alias for Map of MessageIndex -> AccessOperation -> Channel

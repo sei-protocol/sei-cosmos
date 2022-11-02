@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/k0kubun/pp"
 	"github.com/savaki/jq"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/yourbasic/graph"
@@ -253,6 +254,8 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 	if !graph.Acyclic(&dependencyDag) {
 		return nil, types.ErrCycleInDAG
 	}
+	pp.Println("Dag:")
+	pp.Println(dependencyDag)
 	return &dependencyDag, nil
 }
 

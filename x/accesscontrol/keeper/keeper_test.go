@@ -297,7 +297,7 @@ func (suite *KeeperTestSuite) TestMessageDependencies() {
 			{
 				ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
 				AccessType:         acltypes.AccessType_WRITE,
-				IdentifierTemplate: "bankPrefix",
+				IdentifierTemplate: "*",
 			},
 			*types.CommitAccessOp(),
 		},

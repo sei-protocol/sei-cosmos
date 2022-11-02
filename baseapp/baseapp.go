@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/k0kubun/pp/v3"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -692,9 +691,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 	defer func() {
 		if r := recover(); r != nil {
+			println("DEBUG: Entered Recovery!")
+			acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 			recoveryMW := newOutOfGasRecoveryMiddleware(gasWanted, ctx, app.runTxRecoveryMiddleware)
 			err, result = processRecovery(r, recoveryMW), nil
-			acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 		}
 		gInfo = sdk.GasInfo{GasWanted: gasWanted, GasUsed: ctx.GasMeter().GasConsumed()}
 	}()
@@ -777,8 +777,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
 				for op := range missingAccessOps {
-					pp.Default.SetColoringEnabled(false)
-					pp.Println(missingAccessOps)
 					ctx.Logger().Info((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))
 				}
 				errMessage := fmt.Sprintf("Invalid Concurrent Execution antehandler missing %d access operations", len(missingAccessOps))

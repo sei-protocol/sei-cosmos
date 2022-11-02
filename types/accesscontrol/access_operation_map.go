@@ -28,6 +28,7 @@ func SendAllSignalsForTx(messageIndexToAccessOpsChannelMapping MessageAccessOpsC
 			}
 		}
 	}
+	println("DEBUG: Sent Completion Signals")
 }
 
 func GetMessageAccessOps(

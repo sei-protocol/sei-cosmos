@@ -2,6 +2,8 @@ package accesscontrol
 
 import (
 	"fmt"
+
+	"github.com/k0kubun/pp"
 )
 
 // Alias for Map of MessageIndex -> AccessOperation -> Channel
@@ -29,6 +31,7 @@ func SendAllSignalsForTx(messageIndexToAccessOpsChannelMapping MessageAccessOpsC
 		}
 	}
 	println("DEBUG: Sent Completion Signals")
+	pp.Printf("DEBUG: COMPLETION SIGNALS: %s \n", messageIndexToAccessOpsChannelMapping)
 }
 
 func GetMessageAccessOps(

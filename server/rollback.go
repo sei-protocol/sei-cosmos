@@ -9,6 +9,8 @@ import (
 	tmcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 )
 
+var removeBlock bool = false
+
 // NewRollbackCmd creates a command to rollback tendermint and multistore state by one height.
 func NewRollbackCmd(defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
@@ -31,7 +33,7 @@ application.
 				return err
 			}
 			// rollback tendermint state
-			height, hash, err := tmcmd.RollbackState(ctx.Config)
+			height, hash, err := tmcmd.RollbackState(ctx.Config, removeBlock)
 			if err != nil {
 				return fmt.Errorf("failed to rollback tendermint state: %w", err)
 			}
@@ -44,6 +46,7 @@ application.
 		},
 	}
 
+	cmd.Flags().BoolVar(&removeBlock, "hard", false, "remove last block as well as state")
 	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
 	return cmd
 }

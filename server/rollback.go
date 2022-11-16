@@ -32,7 +32,13 @@ application.
 			if err != nil {
 				return err
 			}
-			app := appCreator(ctx.Logger, db, nil, ctx.Viper)
+
+			app := appCreator(
+				ctx.Logger,
+				db,
+				nil,
+				ctx.Viper,
+			)
 
 			// rollback tendermint state
 			height, hash, err := tmcmd.RollbackState(ctx.Config, removeBlock)
@@ -48,6 +54,7 @@ application.
 		},
 	}
 
+	cmd.Flags().String(flags.FlagChainID, "sei-chain", "genesis file chain-id, if left blank will use sei")
 	cmd.Flags().BoolVar(&removeBlock, "hard", false, "remove last block as well as state")
 	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
 	return cmd

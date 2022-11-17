@@ -39,8 +39,10 @@ func CheckTxFeeWithValidatorMinGasPrices(ctx sdk.Context, tx sdk.Tx) (sdk.Coins,
 			}
 		}
 	}
-
-	priority := getTxPriority(feeCoins, int64(gas))
+	priority := int64(0)
+	if gas > 0 {
+		priority = getTxPriority(feeCoins, int64(gas))
+	}
 	return feeCoins, priority, nil
 }
 

@@ -1075,6 +1075,8 @@ func TestUpdateValidatorCommission(t *testing.T) {
 		{val2, sdk.NewDecWithPrec(3, 1), true},
 		{val2, sdk.NewDecWithPrec(1, 2), true},
 		{val2, sdk.NewDecWithPrec(2, 1), false},
+		{val2, sdk.NewDecWithPrec(4, 2), true},
+		{val2, sdk.NewDecWithPrec(5, 2), false},
 	}
 
 	for i, tc := range testCases {

@@ -1308,8 +1308,8 @@ github.com/segmentio/kafka-go v0.1.0/go.mod h1:X6itGqS9L4jDletMsxZ7Dz+JFWxM6JHfP
 github.com/segmentio/kafka-go v0.2.0/go.mod h1:X6itGqS9L4jDletMsxZ7Dz+JFWxM6JHfPOCvTvk+EJo=
 github.com/sei-protocol/sei-tendermint v0.1.85 h1:rsTnez6eeeMLRCjplq6XuqQ9gfmnU4i0bJ7OUCd80IY=
 github.com/sei-protocol/sei-tendermint v0.1.85/go.mod h1:Olwbjyagrpoxj5DAUhHxMTWDVEfQ3FYdpypaJ3+6Hs8=
-github.com/sei-protocol/sei-tm-db v0.0.1 h1:iokdhdNmPdZJbH4i1eD8AtFFSa5OlmX8ggt1xVMasRA=
-github.com/sei-protocol/sei-tm-db v0.0.1/go.mod h1:W675eEUY8kD/s5VlBN0tsyhEKakdjsZH1ofxxCh/N7c=
+github.com/sei-protocol/sei-tm-db v0.0.2 h1:mNZQgAJ454Bf9fA9mHVDX6BFBcLs4ue4nfTkT01uy3Q=
+github.com/sei-protocol/sei-tm-db v0.0.2/go.mod h1:pz7p3f1ZaDZJy5MZWflijw4UH2S+pA+NLxCyPxmh5h0=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c/go.mod h1:/PevMnwAxekIXwN8qQyfc5gl2NlkB3CQlkizAbOkeBs=

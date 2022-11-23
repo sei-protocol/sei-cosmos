@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
-	sdbm "github.com/sei-protocol/sei-tm-db/backends"
 	"github.com/spf13/cast"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -176,14 +175,14 @@ func NewBaseApp(
 	archivalVersion := cast.ToInt64(appOpts.Get(FlagArchivalVersion))
 	if archivalVersion > 0 {
 		switch cast.ToString(appOpts.Get(FlagArchivalDBType)) {
-		case "arweave":
-			indexDbPath := cast.ToString(appOpts.Get(FlagArchivalArweaveIndexDBFullPath))
-			arweaveNodeUrl := cast.ToString(appOpts.Get(FlagArchivalArweaveNodeURL))
-			arweaveDb, err := sdbm.NewArweaveDB(indexDbPath, arweaveNodeUrl)
-			if err != nil {
-				panic(err)
-			}
-			cms = store.NewCommitMultiStoreWithArchival(db, arweaveDb, archivalVersion)
+		// case "arweave":
+		// 	indexDbPath := cast.ToString(appOpts.Get(FlagArchivalArweaveIndexDBFullPath))
+		// 	arweaveNodeUrl := cast.ToString(appOpts.Get(FlagArchivalArweaveNodeURL))
+		// 	arweaveDb, err := sdbm.NewArweaveDB(indexDbPath, arweaveNodeUrl)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// 	cms = store.NewCommitMultiStoreWithArchival(db, arweaveDb, archivalVersion)
 		}
 	}
 	app := &BaseApp{

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/internal/conv"
+	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
@@ -222,7 +223,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	store.dirtyItems(start, end)
 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
 
-	return newCacheMergeIterator(parent, cache, ascending)
+	return cachekv.NewCacheMergeIterator(parent, cache, ascending)
 }
 
 func findStartIndex(strL []string, startQ string) int {

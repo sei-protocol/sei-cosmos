@@ -20,6 +20,7 @@ type (
 	Queryable                 = types.Queryable
 	MultiStore                = types.MultiStore
 	CacheMultiStore           = types.CacheMultiStore
+	ConcurrentCacheMultiStore = types.ConcurrentCacheMultiStore
 	CommitMultiStore          = types.CommitMultiStore
 	MultiStorePersistentCache = types.MultiStorePersistentCache
 	KVStore                   = types.KVStore

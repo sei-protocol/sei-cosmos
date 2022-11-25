@@ -113,6 +113,10 @@ type MultiStore interface {
 	// each stored is loaded at a specific version (height).
 	CacheMultiStoreWithVersion(version int64) (CacheMultiStore, error)
 
+	// ConcurrentCacheMultiStore branches the underlying MultiStore where
+	// the operations are concurrent safe.
+	ConcurrentCacheMultiStore() ConcurrentCacheMultiStore
+
 	// Convenience for fetching substores.
 	// If the store does not exist, panics.
 	GetStore(StoreKey) Store
@@ -146,6 +150,15 @@ type MultiStore interface {
 
 // From MultiStore.CacheMultiStore()....
 type CacheMultiStore interface {
+	MultiStore
+
+	// Writes operations to underlying KVStore
+	Write()
+}
+
+
+// From MultiStore.ConcurrentCacheMultiStore()....
+type ConcurrentCacheMultiStore interface {
 	MultiStore
 
 	// Writes operations to underlying KVStore
@@ -247,6 +260,20 @@ type Iterator = dbm.Iterator
 // After calling .Write() on the CacheKVStore, all previously created
 // CacheKVStores on the object expire.
 type CacheKVStore interface {
+	KVStore
+
+	// Writes operations to underlying KVStore
+	Write()
+
+	// Returns Events Emitted from the internal event manager
+	GetEvents() []abci.Event
+}
+
+// ConcurrentCacheKVStore branches a KVStore and provides read cache functionality.
+// After calling .Write() on the ConcurrentCacheKVStore, all previously created
+// ConcurrentCacheKVStore on the object expire. ConcurrentCacheKVStore is the
+// same implementation as CacheKVStore but the resources are concurrent safe
+type ConcurrentCacheKVStore interface {
 	KVStore
 
 	// Writes operations to underlying KVStore

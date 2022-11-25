@@ -13,10 +13,12 @@ type (
 	MultiStore       = types.MultiStore
 	CacheMultiStore  = types.CacheMultiStore
 	CommitMultiStore = types.CommitMultiStore
+	ConcurrentCacheMultiStore = types.ConcurrentCacheMultiStore
 	KVStore          = types.KVStore
 	KVPair           = types.KVPair
 	Iterator         = types.Iterator
 	CacheKVStore     = types.CacheKVStore
+	ConcurrentCacheKV = types.ConcurrentCacheKVStore
 	CommitKVStore    = types.CommitKVStore
 	CacheWrapper     = types.CacheWrapper
 	CacheWrap        = types.CacheWrap

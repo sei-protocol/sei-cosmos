@@ -18,6 +18,7 @@ import (
 
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/store/cachemulti"
+	"github.com/cosmos/cosmos-sdk/store/concurrentcachemulti"
 	"github.com/cosmos/cosmos-sdk/store/dbadapter"
 	"github.com/cosmos/cosmos-sdk/store/iavl"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
@@ -512,6 +513,16 @@ func (rs *Store) CacheMultiStore() types.CacheMultiStore {
 		stores[k] = v
 	}
 	return cachemulti.NewStore(rs.db, stores, rs.keysByName, rs.traceWriter, rs.getTracingContext(), rs.listeners)
+}
+
+// ConcurrentCacheMultiStore creates ephemeral branch of the multi-store and returns a concurrent safe CacheMultiStore
+// It implements the MultiStore interface.
+func (rs *Store) ConcurrentCacheMultiStore() types.ConcurrentCacheMultiStore {
+	stores := make(map[types.StoreKey]types.CacheWrapper)
+	for k, v := range rs.stores {
+		stores[k] = v
+	}
+	return concurrentcachemulti.NewStore(rs.db, stores, rs.keysByName, rs.traceWriter, rs.getTracingContext(), rs.listeners)
 }
 
 // CacheMultiStoreWithVersion is analogous to CacheMultiStore except that it

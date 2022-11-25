@@ -1,4 +1,4 @@
-package cachemulti
+package concurrentcachemulti
 
 import (
 	"fmt"
@@ -7,8 +7,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/cosmos/cosmos-sdk/store/cachekv"
-	"github.com/cosmos/cosmos-sdk/store/concurrentcachemulti"
+	concurrentcachekv "github.com/cosmos/cosmos-sdk/store/concurrentcachekv"
 	"github.com/cosmos/cosmos-sdk/store/dbadapter"
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -21,7 +20,7 @@ import (
 // NOTE: a Store (and MultiStores in general) should never expose the
 // keys for the substores.
 type Store struct {
-	db     types.CacheKVStore
+	db     types.ConcurrentCacheKVStore
 	stores map[types.StoreKey]types.CacheWrap
 	keys   map[string]types.StoreKey
 
@@ -31,7 +30,7 @@ type Store struct {
 	listeners map[types.StoreKey][]types.WriteListener
 }
 
-var _ types.CacheMultiStore = Store{}
+var _ types.ConcurrentCacheMultiStore = Store{}
 
 // NewFromKVStore creates a new Store object from a mapping of store keys to
 // CacheWrapper objects and a KVStore as the database. Each CacheWrapper store
@@ -42,7 +41,7 @@ func NewFromKVStore(
 	listeners map[types.StoreKey][]types.WriteListener,
 ) Store {
 	cms := Store{
-		db:           cachekv.NewStore(store, nil),
+		db:           concurrentcachekv.NewStore(store, nil),
 		stores:       make(map[types.StoreKey]types.CacheWrap, len(stores)),
 		keys:         keys,
 		traceWriter:  traceWriter,
@@ -77,7 +76,7 @@ func NewStore(
 	return NewFromKVStore(dbadapter.Store{DB: db}, stores, keys, traceWriter, traceContext, listeners)
 }
 
-func newCacheMultiStoreFromCMS(cms Store) Store {
+func newConcurrentCacheMultiStoreFromCMS(cms Store) Store {
 	stores := make(map[types.StoreKey]types.CacheWrapper)
 	for k, v := range cms.stores {
 		stores[k] = v
@@ -170,16 +169,13 @@ func (cms Store) CacheWrapWithListeners(storeKey types.StoreKey, _ []types.Write
 
 // Implements MultiStore.
 func (cms Store) CacheMultiStore() types.CacheMultiStore {
-	return newCacheMultiStoreFromCMS(cms)
+	panic("cannot branch cached multi-store to a non-concurrent safe one")
 }
 
-// Implements MultiStore.
+// ConcurrentCacheMultiStore creates ephemeral branch of the multi-store and returns a concurrent safe CacheMultiStore
+// It implements the MultiStore interface.
 func (cms Store) ConcurrentCacheMultiStore() types.ConcurrentCacheMultiStore {
-	stores := make(map[types.StoreKey]types.CacheWrapper)
-	for k, v := range cms.stores {
-		stores[k] = v
-	}
-	return concurrentcachemulti.NewFromKVStore(cms.db, stores, nil, cms.traceWriter, cms.traceContext, cms.listeners)
+	return newConcurrentCacheMultiStoreFromCMS(cms)
 }
 
 // CacheMultiStoreWithVersion implements the MultiStore interface. It will panic
@@ -193,6 +189,7 @@ func (cms Store) CacheMultiStoreWithVersion(_ int64) (types.CacheMultiStore, err
 
 // GetStore returns an underlying Store by key.
 func (cms Store) GetStore(key types.StoreKey) types.Store {
+	println("GetKtore")
 	s := cms.stores[key]
 	if key == nil || s == nil {
 		panic(fmt.Sprintf("kv store with key %v has not been registered in stores", key))
@@ -202,6 +199,7 @@ func (cms Store) GetStore(key types.StoreKey) types.Store {
 
 // GetKVStore returns an underlying KVStore by key.
 func (cms Store) GetKVStore(key types.StoreKey) types.KVStore {
+	println("GetKVStore")
 	store := cms.stores[key]
 	if key == nil || store == nil {
 		panic(fmt.Sprintf("kv store with key %v has not been registered in stores", key))

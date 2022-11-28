@@ -17,6 +17,7 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_AUTH,
 		ResourceType_KV_TOKENFACTORY,
 		ResourceType_KV_DISTRIBUTION,
+		ResourceType_KV_ACCESSCONTROL,
 	}},
 	ResourceType_Mem: {ResourceType_ANY, []ResourceType{
 		ResourceType_DexMem,

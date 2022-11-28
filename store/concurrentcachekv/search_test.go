@@ -1,4 +1,4 @@
-package cachekv
+package concurrentcachekv_test
 
 import "testing"
 

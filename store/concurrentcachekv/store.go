@@ -44,7 +44,6 @@ var _ types.ConcurrentCacheKVStore = (*Store)(nil)
 
 // NewStore creates a new Store object
 func NewStore(parent types.KVStore, storeKey types.StoreKey) *Store {
-	println("NEW CONCURRENT STORE!")
 	return &Store{
 		cache: 		   &sync.Map{},
 		deleted: 	   &sync.Map{},
@@ -72,7 +71,6 @@ func (store *Store) GetStoreType() types.StoreType {
 
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
-	println("GET")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -93,7 +91,6 @@ func (store *Store) Get(key []byte) (value []byte) {
 
 // Set implements types.KVStore.
 func (store *Store) Set(key []byte, value []byte) {
-	println("Set")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -106,7 +103,6 @@ func (store *Store) Set(key []byte, value []byte) {
 
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
-	println("Has")
 	value := store.Get(key)
 	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
@@ -114,7 +110,6 @@ func (store *Store) Has(key []byte) bool {
 
 // Delete implements types.KVStore.
 func (store *Store) Delete(key []byte) {
-	println("DELETE")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "concurrentcachekv", "delete")
@@ -126,7 +121,6 @@ func (store *Store) Delete(key []byte) {
 
 // Implements Cachetypes.KVStore.
 func (store *Store) Write() {
-	println("WRITE")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "concurrentcachekv", "write")
@@ -209,7 +203,6 @@ func (store *Store) CacheWrapWithListeners(storeKey types.StoreKey, listeners []
 
 // Iterator implements types.KVStore.
 func (store *Store) Iterator(start, end []byte) types.Iterator {
-	println("ITERATOR")
 	return store.iterator(start, end, true)
 }
 
@@ -421,7 +414,6 @@ func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sort
 
 // Only entrypoint to mutate store.cache.
 func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
-	println("setCacheValue")
 	keyStr := conv.UnsafeBytesToStr(key)
 	store.cache.Store(
 		keyStr,

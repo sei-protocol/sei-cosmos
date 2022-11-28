@@ -1,4 +1,4 @@
-package cachekv_test
+package concurrentcachekv_test
 
 import "crypto/rand"
 

@@ -30,7 +30,6 @@ func newMemIterator(
 	eventManager *sdktypes.EventManager,
 	storeKey sdktypes.StoreKey,
 ) *memIterator {
-	println("newMemIterator")
 	var iter types.Iterator
 	var err error
 
@@ -55,7 +54,6 @@ func newMemIterator(
 }
 
 func (mi *memIterator) Value() []byte {
-	println("Value")
 	key := mi.Iterator.Key()
 	// We need to handle the case where deleted is modified and includes our current key
 	// We handle this by maintaining a lastKey object in the iterator.

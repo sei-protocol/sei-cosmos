@@ -154,6 +154,10 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_DISTRIBUTION_VAL_CURRENT_REWARDS:     {ResourceType_KV_DISTRIBUTION, []ResourceType{}},
 	ResourceType_KV_DISTRIBUTION_VAL_ACCUM_COMMISSION:    {ResourceType_KV_DISTRIBUTION, []ResourceType{}},
 	ResourceType_KV_DISTRIBUTION_SLASH_EVENT:             {ResourceType_KV_DISTRIBUTION, []ResourceType{}},
+	ResourceType_KV_ACCESSCONTROL: {ResourceType_KV, []ResourceType{
+		ResourceType_KV_ACCESSCONTROL_WASM_DEPENDENCY_MAPPING,
+	}},
+	ResourceType_KV_ACCESSCONTROL_WASM_DEPENDENCY_MAPPING: {ResourceType_KV_ACCESSCONTROL, []ResourceType{}},
 }
 
 // This returns a slice of all resource types that are dependent to a specific resource type

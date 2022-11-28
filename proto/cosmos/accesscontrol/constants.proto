@@ -90,4 +90,7 @@ enum ResourceType {
     KV_DEX_SETTLEMENT_ORDER_ID = 68; // child of KV_DEX
     KV_DEX_ORDER_BOOK = 69; // child of KV_DEX
     KV_DEX_QUANTITY_TICK_SIZE = 70; // child of KV_DEX
+
+    KV_ACCESSCONTROL = 71; // child of KV
+    KV_ACCESSCONTROL_WASM_DEPENDENCY_MAPPING = 72; // child of KV_ACCESSCONTROL
 }

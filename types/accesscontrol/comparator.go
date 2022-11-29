@@ -85,8 +85,6 @@ func (c *Comparator) DependencyMatch(accessOp AccessOperation, prefix []byte) bo
 	// Both Identifiers should be starting with the same prefix expected for the resource type
 	// e.g if the StoreKey and resource type is ResourceType_KV_BANK_BALANCES, then they both must start with BalancesPrefix
 	encodedPrefix := hex.EncodeToString(prefix)
-	fmt.Printf("Checking for comparator prefix: %s , %s = %t\n", c.Identifier, encodedPrefix, strings.HasPrefix(c.Identifier, encodedPrefix))
-	fmt.Printf("Checking for identifier prefix: %s , %s = %t\n ", accessOp.GetIdentifierTemplate(), encodedPrefix, strings.HasPrefix(accessOp.GetIdentifierTemplate(), encodedPrefix))
 	if !strings.HasPrefix(c.Identifier, encodedPrefix) || !strings.HasPrefix(accessOp.GetIdentifierTemplate(), encodedPrefix) {
 		return false
 	}

@@ -77,11 +77,11 @@ func (store *Store) Get(key []byte) (value []byte) {
 	types.AssertValidKey(key)
 
 	val, ok := store.cache.Load(conv.UnsafeBytesToStr(key))
-	cacheValue := val.(*cValue)
 	if !ok {
 		value = store.parent.Get(key)
 		store.setCacheValue(key, value, false, false)
 	} else {
+		cacheValue := val.(*cValue)
 		value = cacheValue.value
 	}
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)

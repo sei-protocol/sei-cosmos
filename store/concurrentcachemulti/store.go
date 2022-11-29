@@ -154,7 +154,7 @@ func (cms Store) GetEvents() []abci.Event {
 
 // Implements CacheWrapper.
 func (cms Store) CacheWrap(_ types.StoreKey) types.CacheWrap {
-	return cms.CacheMultiStore().(types.CacheWrap)
+	return cms.ConcurrentCacheMultiStore().(types.CacheWrap)
 }
 
 // CacheWrapWithTrace implements the CacheWrapper interface.

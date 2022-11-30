@@ -69,7 +69,7 @@ func (c *BoundedCache) Set(key string, val *CValue) {
 			return len >= c.limit
 		})
 		for _, key := range keysToEvict {
-			c.Delete(key)
+			c.CacheBackend.Delete(key)
 		}
 	}
 	c.CacheBackend.Set(key, val)
@@ -80,6 +80,16 @@ func (c *BoundedCache) Delete(key string) {
 	defer c.mu.Unlock()
 
 	c.CacheBackend.Delete(key)
+}
+
+func (c *BoundedCache) DeleteAll() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.CacheBackend.Range(func(key string, _ *CValue) bool {
+		c.CacheBackend.Delete(key)
+		return true
+	})
 }
 
 func (c *BoundedCache) Range(f func(string, *CValue) bool) {

@@ -178,10 +178,7 @@ func (store *Store) Write() {
 	// Clear the cache using the map clearing idiom
 	// and not allocating fresh objects.
 	// Please see https://bencher.orijtech.com/perfclinic/mapclearing/
-	store.cache.Range(func(key string, _ *types.CValue) bool {
-		store.cache.Delete(key)
-		return true
-	})
+	store.cache.DeleteAll()
 	for key := range store.deleted {
 		delete(store.deleted, key)
 	}

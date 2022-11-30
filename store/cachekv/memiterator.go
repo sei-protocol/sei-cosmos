@@ -57,9 +57,6 @@ func newMemIterator(
 }
 
 func (mi *memIterator) Value() []byte {
-	mi.mutex.Lock()
-	defer mi.mutex.Unlock()
-
 	key := mi.Iterator.Key()
 	// We need to handle the case where deleted is modified and includes our current key
 	// We handle this by maintaining a lastKey object in the iterator.
@@ -67,6 +64,9 @@ func (mi *memIterator) Value() []byte {
 	// then we are calling value on the same thing as last time.
 	// Therefore we don't check the mi.deleted to see if this key is included in there.
 	reCallingOnOldLastKey := (mi.lastKey != nil) && bytes.Equal(key, mi.lastKey)
+
+	mi.mutex.Lock()
+	defer mi.mutex.Unlock()
 	if _, ok := mi.deleted[string(key)]; ok && !reCallingOnOldLastKey {
 		return nil
 	}

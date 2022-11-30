@@ -3,7 +3,6 @@ package cachekv
 import (
 	"bytes"
 	"errors"
-	"sync"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -19,7 +18,6 @@ type cacheMergeIterator struct {
 	parent    types.Iterator
 	cache     types.Iterator
 	ascending bool
-	mutex 	  *sync.Mutex
 }
 
 var _ types.Iterator = (*cacheMergeIterator)(nil)
@@ -212,7 +210,6 @@ func (iter *cacheMergeIterator) skipUntilExistsOrInvalid() bool {
 			return iter.cache.Valid()
 		}
 		// Parent is valid.
-
 		if !iter.cache.Valid() {
 			return true
 		}

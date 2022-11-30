@@ -57,7 +57,7 @@ func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
 type Store struct {
 	mtx           sync.Mutex
 	cache         *types.BoundedCache
-	deleted       map[string]struct{}
+	deleted       *sync.Map
 	unsortedCache map[string]struct{}
 	sortedCache   *dbm.MemDB // always ascending sorted
 	parent        types.KVStore
@@ -71,7 +71,7 @@ var _ types.CacheKVStore = (*Store)(nil)
 func NewStore(parent types.KVStore, storeKey types.StoreKey, cacheSize int) *Store {
 	return &Store{
 		cache:         types.NewBoundedCache(mapCacheBackend{make(map[string]*types.CValue)}, cacheSize),
-		deleted:       make(map[string]struct{}),
+		deleted:       &sync.Map{},
 		unsortedCache: make(map[string]struct{}),
 		sortedCache:   dbm.NewMemDB(),
 		parent:        parent,
@@ -185,9 +185,10 @@ func (store *Store) Write() {
 	// and not allocating fresh objects.
 	// Please see https://bencher.orijtech.com/perfclinic/mapclearing/
 	store.cache.DeleteAll()
-	for key := range store.deleted {
-		delete(store.deleted, key)
-	}
+	store.deleted.Range(func(key, value any) bool {
+		store.deleted.Delete(key)
+		return true
+	})
 	for key := range store.unsortedCache {
 		delete(store.unsortedCache, key)
 	}
@@ -235,7 +236,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	}
 
 	store.dirtyItems(start, end)
-	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey, &store.mtx)
+	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
 
 	return NewCacheMergeIterator(parent, cache, ascending)
 }
@@ -418,9 +419,9 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 	keyStr := conv.UnsafeBytesToStr(key)
 	store.cache.Set(keyStr, types.NewCValue(value, dirty))
 	if deleted {
-		store.deleted[keyStr] = struct{}{}
+		store.deleted.Store(keyStr, struct{}{})
 	} else {
-		delete(store.deleted, keyStr)
+		store.deleted.Delete(keyStr)
 	}
 	if dirty {
 		store.unsortedCache[conv.UnsafeBytesToStr(key)] = struct{}{}
@@ -428,6 +429,6 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 }
 
 func (store *Store) isDeleted(key string) bool {
-	_, ok := store.deleted[key]
+	_, ok := store.deleted.Load(key)
 	return ok
 }

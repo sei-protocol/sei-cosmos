@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"bytes"
+	"sync"
 
 	dbm "github.com/tendermint/tm-db"
 
@@ -19,6 +20,7 @@ type memIterator struct {
 	deleted map[string]struct{}
 	eventManager  *sdktypes.EventManager
 	storeKey sdktypes.StoreKey
+	mutex *sync.Mutex
 }
 
 func newMemIterator(
@@ -28,6 +30,7 @@ func newMemIterator(
 	ascending bool,
 	eventManager *sdktypes.EventManager,
 	storeKey sdktypes.StoreKey,
+	mutex *sync.Mutex,
 ) *memIterator {
 	var iter types.Iterator
 	var err error
@@ -49,10 +52,14 @@ func newMemIterator(
 		deleted: deleted,
 		eventManager: eventManager,
 		storeKey: storeKey,
+		mutex: mutex,
 	}
 }
 
 func (mi *memIterator) Value() []byte {
+	mi.mutex.Lock()
+	defer mi.mutex.Unlock()
+
 	key := mi.Iterator.Key()
 	// We need to handle the case where deleted is modified and includes our current key
 	// We handle this by maintaining a lastKey object in the iterator.

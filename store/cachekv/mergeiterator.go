@@ -3,6 +3,7 @@ package cachekv
 import (
 	"bytes"
 	"errors"
+	"sync"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -18,6 +19,7 @@ type cacheMergeIterator struct {
 	parent    types.Iterator
 	cache     types.Iterator
 	ascending bool
+	mutex 	  *sync.Mutex
 }
 
 var _ types.Iterator = (*cacheMergeIterator)(nil)

@@ -40,8 +40,14 @@ func (b mapCacheBackend) Delete(key string) {
 }
 
 func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
-	for k, v := range b.m {
-		if !f(k, v) {
+	// this is always called within a mutex so all operations below are atomic
+	keys := []string{}
+	for k := range b.m {
+		keys = append(keys, k)
+	}
+	for _, key := range keys {
+		val, _ := b.Get(key)
+		if !f(key, val) {
 			break
 		}
 	}

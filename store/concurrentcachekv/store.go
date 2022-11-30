@@ -49,9 +49,18 @@ func (b syncMapCacheBackend) Delete(key string) {
 }
 
 func (b syncMapCacheBackend) Range(f func(string, *types.CValue) bool) {
-	b.m.Range(func(k, v any) bool {
-		return f(k.(string), v.(*types.CValue))
+	// this is always called within a mutex so all operations below are atomic
+	keys := []string{}
+	b.m.Range(func(k, _ any) bool {
+		keys = append(keys, k.(string))
+		return true
 	})
+	for _, key := range keys {
+		val, _ := b.Get(key)
+		if !f(key, val) {
+			break
+		}
+	}
 }
 
 // Store wraps an in-memory cache around an underlying types.KVStore.

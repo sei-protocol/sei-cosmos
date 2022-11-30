@@ -66,11 +66,13 @@ func (store *Store) GetEvents() []abci.Event {
 
 // GetStoreType implements Store.
 func (store *Store) GetStoreType() types.StoreType {
+	println("CCC:GetStoreType")
 	return store.parent.GetStoreType()
 }
 
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
+	println("CCC:GET")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -91,6 +93,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 
 // Set implements types.KVStore.
 func (store *Store) Set(key []byte, value []byte) {
+	println("CCC:SET")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -103,6 +106,7 @@ func (store *Store) Set(key []byte, value []byte) {
 
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
+	println("CCC:HAS")
 	value := store.Get(key)
 	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
@@ -110,6 +114,7 @@ func (store *Store) Has(key []byte) bool {
 
 // Delete implements types.KVStore.
 func (store *Store) Delete(key []byte) {
+	println("CCC:DELETE")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "concurrentcachekv", "delete")
@@ -121,6 +126,7 @@ func (store *Store) Delete(key []byte) {
 
 // Implements Cachetypes.KVStore.
 func (store *Store) Write() {
+	println("CCC:WRITE")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "concurrentcachekv", "write")
@@ -185,16 +191,19 @@ func (store *Store) Write() {
 
 // CacheWrap implements CacheWrapper.
 func (store *Store) CacheWrap(storeKey types.StoreKey) types.CacheWrap {
+	println("CCC:CW")
 	return NewStore(store, storeKey)
 }
 
 // CacheWrapWithTrace implements the CacheWrapper interface.
 func (store *Store) CacheWrapWithTrace(storeKey types.StoreKey, w io.Writer, tc types.TraceContext) types.CacheWrap {
+	println("CCC:CWT")
 	return NewStore(tracekv.NewStore(store, w, tc), storeKey)
 }
 
 // CacheWrapWithListeners implements the CacheWrapper interface.
 func (store *Store) CacheWrapWithListeners(storeKey types.StoreKey, listeners []types.WriteListener) types.CacheWrap {
+	println("CCC:CWTL")
 	return NewStore(listenkv.NewStore(store, storeKey, listeners), storeKey)
 }
 
@@ -203,15 +212,18 @@ func (store *Store) CacheWrapWithListeners(storeKey types.StoreKey, listeners []
 
 // Iterator implements types.KVStore.
 func (store *Store) Iterator(start, end []byte) types.Iterator {
+	println("CCC:ITERATOR")
 	return store.iterator(start, end, true)
 }
 
 // ReverseIterator implements types.KVStore.
 func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
+	println("CCC:REVERSE")
 	return store.iterator(start, end, false)
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
+	println("CCC:small iter")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -230,6 +242,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 }
 
 func findStartIndex(strL []string, startQ string) int {
+	println("CCC:findStartIndex")
 	// Modified binary search to find the very first element in >=startQ.
 	if len(strL) == 0 {
 		return -1
@@ -264,6 +277,7 @@ func findStartIndex(strL []string, startQ string) int {
 }
 
 func findEndIndex(strL []string, endQ string) int {
+	println("CCC:findEndIndex")
 	if len(strL) == 0 {
 		return -1
 	}
@@ -311,6 +325,7 @@ const (
 
 // Constructs a slice of dirty items, to use w/ memIterator.
 func (store *Store) dirtyItems(start, end []byte) {
+	println("CCC:dirtyItems")
 	startStr, endStr := conv.UnsafeBytesToStr(start), conv.UnsafeBytesToStr(end)
 	if startStr > endStr {
 		// Nothing to do here.
@@ -319,7 +334,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 
 	numUnsortedCache := 0
 	store.unsortedCache.Range(func(key, value any) bool {
-		numUnsortedCache += 1
+		numUnsortedCache++
 		return true
 	})
 	unsorted := make([]*kv.Pair, 0)
@@ -384,6 +399,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 }
 
 func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sortState) {
+	println("CCC:clearUnsortedCacheSubset")
 	store.unsortedCache.Range(func(key, value any) bool {
 		store.unsortedCache.Delete(key)
 		return true
@@ -414,6 +430,7 @@ func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sort
 
 // Only entrypoint to mutate store.cache.
 func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
+	println("CCC:setCacheValue")
 	keyStr := conv.UnsafeBytesToStr(key)
 	store.cache.Store(
 		keyStr,
@@ -430,6 +447,7 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 }
 
 func (store *Store) isDeleted(key string) bool {
+	println("CCC:isDeleted")
 	_, ok := store.deleted.Load(key)
 	return ok
 }

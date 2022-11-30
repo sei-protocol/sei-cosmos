@@ -208,16 +208,20 @@ func (iter *cacheMergeIterator) skipCacheDeletes(until []byte) {
 func (iter *cacheMergeIterator) skipUntilExistsOrInvalid() bool {
 	for {
 		// If parent is invalid, fast-forward cache.
+		fmt.Printf("DEBUG:cacheMergeIterator::PARENT VALID?\n")
 		if !iter.parent.Valid() {
 			iter.skipCacheDeletes(nil)
-			fmt.Printf("DEBUG:cacheMergeIterator::PARENT VALUE?\n")
+			fmt.Printf("DEBUG:cacheMergeIterator::PARENT INVALID\n")
 			return iter.cache.Valid()
 		}
 		// Parent is valid.
 
+		fmt.Printf("DEBUG:cacheMergeIterator::CACHE VALID?\n")
 		if !iter.cache.Valid() {
+			fmt.Printf("DEBUG:cacheMergeIterator::CACHE INVALID\n")
 			return true
 		}
+		fmt.Printf("DEBUG:cacheMergeIterator::CACHE+PARENT VALID\n")
 		// Parent is valid, cache is valid.
 
 		// Compare parent and cache.

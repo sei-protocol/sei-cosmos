@@ -235,7 +235,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	}
 
 	store.dirtyItems(start, end)
-	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
+	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey, &store.mtx)
 
 	return NewCacheMergeIterator(parent, cache, ascending)
 }

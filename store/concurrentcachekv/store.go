@@ -250,7 +250,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	store.dirtyItems(start, end)
 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
 
-	return cachekv.NewCacheMergeIterator(parent, cache, ascending)
+	return cachekv.NewCacheMergeIterator(parent, cache, ascending, &sync.Mutex{})
 }
 
 func findStartIndex(strL []string, startQ string) int {

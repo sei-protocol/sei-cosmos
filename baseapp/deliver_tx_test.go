@@ -1134,7 +1134,8 @@ func TestGasConsumptionBadTx(t *testing.T) {
 
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx)))
+	gasMeter := sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx))
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(gasMeter)
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	tx := newTxCounter(5, 0)
@@ -1144,6 +1145,7 @@ func TestGasConsumptionBadTx(t *testing.T) {
 
 	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
+	require.Equal(t, 5, int(gasMeter.GasConsumed()))
 
 	// require next tx to fail due to black gas limit
 	tx = newTxCounter(5, 0)
@@ -1152,6 +1154,8 @@ func TestGasConsumptionBadTx(t *testing.T) {
 
 	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
+	require.Equal(t, 10, int(gasMeter.GasConsumed()))
+
 }
 
 func TestInitChainer(t *testing.T) {

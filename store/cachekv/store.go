@@ -29,7 +29,7 @@ type cValue struct {
 type Store struct {
 	mtx           sync.Mutex
 	cache         map[string]*cValue
-	deleted       map[string]struct{}
+	deleted       *sync.Map
 	unsortedCache map[string]struct{}
 	sortedCache   *dbm.MemDB // always ascending sorted
 	parent        types.KVStore
@@ -43,7 +43,7 @@ var _ types.CacheKVStore = (*Store)(nil)
 func NewStore(parent types.KVStore, storeKey types.StoreKey) *Store {
 	return &Store{
 		cache:         make(map[string]*cValue),
-		deleted:       make(map[string]struct{}),
+		deleted:       &sync.Map{},
 		unsortedCache: make(map[string]struct{}),
 		sortedCache:   dbm.NewMemDB(),
 		parent:        parent,
@@ -158,9 +158,11 @@ func (store *Store) Write() {
 	for key := range store.cache {
 		delete(store.cache, key)
 	}
-	for key := range store.deleted {
-		delete(store.deleted, key)
-	}
+	store.deleted.Range(func(key, value any) bool {
+		store.deleted.Delete(key)
+		return true
+	})
+
 	for key := range store.unsortedCache {
 		delete(store.unsortedCache, key)
 	}
@@ -208,7 +210,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	}
 
 	store.dirtyItems(start, end)
-	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey, &store.mtx)
+	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
 
 	return NewCacheMergeIterator(parent, cache, ascending)
 }
@@ -394,9 +396,9 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 		dirty: dirty,
 	}
 	if deleted {
-		store.deleted[keyStr] = struct{}{}
+		store.deleted.Store(keyStr, struct{}{})
 	} else {
-		delete(store.deleted, keyStr)
+		store.deleted.Delete(keyStr)
 	}
 	if dirty {
 		store.unsortedCache[conv.UnsafeBytesToStr(key)] = struct{}{}
@@ -404,6 +406,6 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 }
 
 func (store *Store) isDeleted(key string) bool {
-	_, ok := store.deleted[key]
+	_, ok := store.deleted.Load(key)
 	return ok
 }

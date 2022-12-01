@@ -186,6 +186,27 @@ func BuildSelectorOps(accessOps []acltypes.AccessOperationWithSelector, senderBe
 				opWithSelector.Operation.IdentifierTemplate,
 				hex.EncodeToString(accAddr),
 			)
+		case acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS:
+			op, err := jq.Parse(opWithSelector.Selector)
+			if err != nil {
+				return []acltypes.AccessOperationWithSelector{}, err
+			}
+			data, err := op.Apply(msgBody)
+			if err != nil {
+				// if the operation is not applicable to the message, skip it
+				continue
+			}
+			bech32Addr := strings.Trim(string(data), "\"") // we need to trim the quotes around the string
+			// we expect a bech32 prefixed address, so lets convert to account address
+			accAddr, err := sdk.AccAddressFromBech32(bech32Addr)
+			if err != nil {
+				return []acltypes.AccessOperationWithSelector{}, err
+			}
+			lengthPrefixed := address.MustLengthPrefix(accAddr)
+			opWithSelector.Operation.IdentifierTemplate = fmt.Sprintf(
+				opWithSelector.Operation.IdentifierTemplate,
+				hex.EncodeToString(lengthPrefixed),
+			)
 		case acltypes.AccessOperationSelectorType_SENDER_BECH32_ADDRESS:
 			senderAccAddress, err := sdk.AccAddressFromBech32(senderBech)
 			if err != nil {

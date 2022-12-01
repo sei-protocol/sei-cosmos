@@ -754,9 +754,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}()
 
 	blockGasConsumed := false
-	// If the antehandler fails then don't consume the gas in the meter, a synchronous run will trigger
-	// and perform the same validation
-	passedAnteHandlerAccessOpsValidation := true
+	// If the concurrent access op validation fails then don't consume the gas in the meter
+	// a synchronous run will trigger and perform the same validation
+	passedConcurrentValidation := true
+
 	// consumeBlockGas makes sure block gas is consumed at most once. It must happen after
 	// tx processing, and must be execute even if tx processing fails. Hence we use trick with `defer`
 	consumeBlockGas := func() {
@@ -766,9 +767,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 				ctx.GasMeter().GasConsumedToLimit(), "block gas meter",
 			)
 		}
-		if !passedAnteHandlerAccessOpsValidation {
+		if !passedConcurrentValidation {
 			ctx.BlockGasMeter().RefundGas(
-				ctx.GasMeter().GasConsumed(), "failed antehandler concurrent check",
+				ctx.GasMeter().GasConsumed(), "failed concurrent access ops check",
 			)
 		}
 	}
@@ -837,7 +838,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			accessOps, _ := app.anteDepGenerator([]acltypes.AccessOperation{}, tx)
 			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
-				passedAnteHandlerAccessOpsValidation = false
+				passedConcurrentValidation = false
 				for op := range missingAccessOps {
 					ctx.Logger().Info((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))
 				}
@@ -860,6 +861,12 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// and we're in DeliverTx. Note, runMsgs will never return a reference to a
 	// Result if any single message fails or does not have a registered Handler.
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
+
+	_, errCode, _ := sdkerrors.ABCIInfo(err, false)
+
+	if errCode == sdkerrors.ErrInvalidConcurrencyExecution.ABCICode() {
+		passedConcurrentValidation = false
+	}
 
 	if err == nil && mode == runTxModeDeliver {
 		// When block gas exceeds, it'll panic and won't commit the cached store.

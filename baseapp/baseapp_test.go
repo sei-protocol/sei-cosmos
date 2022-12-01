@@ -198,5 +198,5 @@ func TestListSnapshots(t *testing.T) {
 		s.Hash = nil
 		s.Metadata = nil
 	}
-	assert.Equal(t, expected, resp)
+	assert.Equal(t, expected, *resp)
 }

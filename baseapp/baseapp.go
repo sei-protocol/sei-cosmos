@@ -721,13 +721,15 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 
-	if v := ctx.Context().Value(RunTxPreHookKey); v != nil {
-		callable := v.(func())
-		callable()
-	}
-	if v := ctx.Context().Value(RunTxPostHookKey); v != nil {
-		callable := v.(func())
-		defer callable()
+	if goCtx := ctx.Context(); goCtx != nil {
+		if v := goCtx.Value(RunTxPreHookKey); v != nil {
+			callable := v.(func())
+			callable()
+		}
+		if v := goCtx.Value(RunTxPostHookKey); v != nil {
+			callable := v.(func())
+			defer callable()
+		}
 	}
 
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is

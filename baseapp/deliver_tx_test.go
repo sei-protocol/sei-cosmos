@@ -58,7 +58,7 @@ func TestLoadSnapshotChunk(t *testing.T) {
 				Chunk:  tc.chunk,
 			})
 			if tc.expectEmpty {
-				assert.Equal(t, abci.ResponseLoadSnapshotChunk{}, resp)
+				assert.Equal(t, abci.ResponseLoadSnapshotChunk{}, *resp)
 				return
 			}
 			assert.NotEmpty(t, resp.Chunk)
@@ -110,7 +110,7 @@ func TestOfferSnapshot_Errors(t *testing.T) {
 		Hash:     []byte{1, 2, 3},
 		Metadata: metadata,
 	}})
-	require.Equal(t, abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ACCEPT}, resp)
+	require.Equal(t, abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ACCEPT}, *resp)
 
 	resp, _ = app.OfferSnapshot(context.Background(), &abci.RequestOfferSnapshot{Snapshot: &abci.Snapshot{
 		Height:   2,
@@ -119,7 +119,7 @@ func TestOfferSnapshot_Errors(t *testing.T) {
 		Hash:     []byte{1, 2, 3},
 		Metadata: metadata,
 	}})
-	require.Equal(t, abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ABORT}, resp)
+	require.Equal(t, abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ABORT}, *resp)
 }
 
 func TestApplySnapshotChunk(t *testing.T) {
@@ -139,7 +139,7 @@ func TestApplySnapshotChunk(t *testing.T) {
 
 	// Begin a snapshot restoration in the target
 	respOffer, _ := target.OfferSnapshot(context.Background(), &abci.RequestOfferSnapshot{Snapshot: snapshot})
-	require.Equal(t, abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ACCEPT}, respOffer)
+	require.Equal(t, abci.ResponseOfferSnapshot{Result: abci.ResponseOfferSnapshot_ACCEPT}, *respOffer)
 
 	// We should be able to pass an invalid chunk and get a verify failure, before reapplying it.
 	respApply, _ := target.ApplySnapshotChunk(context.Background(), &abci.RequestApplySnapshotChunk{
@@ -151,7 +151,7 @@ func TestApplySnapshotChunk(t *testing.T) {
 		Result:        abci.ResponseApplySnapshotChunk_RETRY,
 		RefetchChunks: []uint32{0},
 		RejectSenders: []string{"sender"},
-	}, respApply)
+	}, *respApply)
 
 	// Fetch each chunk from the source and apply it to the target
 	for index := uint32(0); index < snapshot.Chunks; index++ {
@@ -167,7 +167,7 @@ func TestApplySnapshotChunk(t *testing.T) {
 		})
 		require.Equal(t, abci.ResponseApplySnapshotChunk{
 			Result: abci.ResponseApplySnapshotChunk_ACCEPT,
-		}, respApply)
+		}, *respApply)
 	}
 
 	// The target should now have the same hash as the source
@@ -218,7 +218,9 @@ func TestWithRouter(t *testing.T) {
 
 	for blockN := 0; blockN < nBlocks; blockN++ {
 		header := tmproto.Header{Height: int64(blockN) + 1}
-		app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+		app.setDeliverState(header)
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		for i := 0; i < txPerHeight; i++ {
 			counter := int64(blockN*txPerHeight + i)
@@ -227,11 +229,12 @@ func TestWithRouter(t *testing.T) {
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
 
-			res := app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+			res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 			require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 		}
 
-		app.EndBlock(sdk.Context{}, abci.RequestEndBlock{})
+		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
+		app.SetDeliverStateToCommit()
 		app.Commit(context.Background())
 	}
 }
@@ -263,7 +266,9 @@ func TestBaseApp_EndBlock(t *testing.T) {
 	})
 	app.Seal()
 
-	res := app.EndBlock(sdk.Context{}, abci.RequestEndBlock{})
+	app.setDeliverState(tmproto.Header{})
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	res := app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
 	require.Len(t, res.GetValidatorUpdates(), 1)
 	require.Equal(t, int64(100), res.GetValidatorUpdates()[0].Power)
 	require.Equal(t, cp.Block.MaxGas, res.ConsensusParamUpdates.Block.MaxGas)
@@ -315,7 +320,9 @@ func TestQuery(t *testing.T) {
 
 	// query is still empty after a DeliverTx before we commit
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	_, resTx, err = app.Deliver(aminoTxEncoder(), tx)
 	require.NoError(t, err)
@@ -324,6 +331,7 @@ func TestQuery(t *testing.T) {
 	require.Equal(t, 0, len(res.Value))
 
 	// query returns correct value after Commit
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 	res, _ = app.Query(context.Background(), &query)
 	require.Equal(t, value, res.Value)
@@ -341,7 +349,10 @@ func TestGRPCQuery(t *testing.T) {
 
 	app.InitChain(context.Background(), &abci.RequestInitChain{})
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 
 	req := testdata.SayHelloRequest{Name: "foo"}
@@ -420,11 +431,13 @@ func TestMultiMsgDeliverTx(t *testing.T) {
 	// with all msgs the same route
 
 	header := tmproto.Header{Height: 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 	tx := newTxCounter(0, 0, 1, 2)
 	txBytes, err := codec.Marshal(tx)
 	require.NoError(t, err)
-	res := app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 
 	store := app.deliverState.ctx.KVStore(capKey1)
@@ -444,7 +457,7 @@ func TestMultiMsgDeliverTx(t *testing.T) {
 	tx.Msgs = append(tx.Msgs, msgCounter2{1})
 	txBytes, err = codec.Marshal(tx)
 	require.NoError(t, err)
-	res = app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 
 	store = app.deliverState.ctx.KVStore(capKey1)
@@ -501,7 +514,9 @@ func TestSimulateTx(t *testing.T) {
 	for blockN := 0; blockN < nBlocks; blockN++ {
 		count := int64(blockN + 1)
 		header := tmproto.Header{Height: count}
-		app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+		app.setDeliverState(header)
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		tx := newTxCounter(count, count)
 		txBytes, err := cdc.Marshal(tx)
@@ -535,7 +550,8 @@ func TestSimulateTx(t *testing.T) {
 		require.Equal(t, result.Events, simRes.Result.Events)
 		require.True(t, bytes.Equal(result.Data, simRes.Result.Data))
 
-		app.EndBlock(sdk.Context{}, abci.RequestEndBlock{})
+		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
+		app.SetDeliverStateToCommit()
 		app.Commit(context.Background())
 	}
 }
@@ -556,7 +572,9 @@ func TestRunInvalidTransaction(t *testing.T) {
 	app := setupBaseApp(t, anteOpt, routerOpt)
 
 	header := tmproto.Header{Height: 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	// transaction with no messages
 	{
@@ -636,7 +654,7 @@ func TestRunInvalidTransaction(t *testing.T) {
 		txBytes, err := newCdc.Marshal(tx)
 		require.NoError(t, err)
 
-		res := app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+		res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 		require.EqualValues(t, sdkerrors.ErrTxDecode.ABCICode(), res.Code)
 		require.EqualValues(t, sdkerrors.ErrTxDecode.Codespace(), res.Codespace)
 	}
@@ -683,7 +701,9 @@ func TestTxGasLimits(t *testing.T) {
 	app := setupBaseApp(t, anteOpt, routerOpt)
 
 	header := tmproto.Header{Height: 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	testCases := []struct {
 		tx      *txTest
@@ -797,7 +817,9 @@ func TestMaxBlockGasLimits(t *testing.T) {
 
 		// reset the block gas
 		header := tmproto.Header{Height: app.LastBlockHeight() + 1}
-		app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+		app.setDeliverState(header)
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx)))
+		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		// execute the transaction multiple times
 		for j := 0; j < tc.numDelivers; j++ {
@@ -850,7 +872,9 @@ func TestCustomRunTxPanicHandler(t *testing.T) {
 	app := setupBaseApp(t, anteOpt, routerOpt)
 
 	header := tmproto.Header{Height: 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	app.AddRunTxRecoveryHandler(func(recoveryObj interface{}) error {
 		err, ok := recoveryObj.(error)
@@ -892,7 +916,9 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	registerTestCodec(cdc)
 
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	// execute a tx that will fail ante handler execution
 	//
@@ -902,7 +928,7 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	tx.setFailOnAnte(true)
 	txBytes, err := cdc.Marshal(tx)
 	require.NoError(t, err)
-	res := app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.Empty(t, res.Events)
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
 
@@ -918,7 +944,7 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	txBytes, err = cdc.Marshal(tx)
 	require.NoError(t, err)
 
-	res = app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	// should emit ante event
 	require.NotEmpty(t, res.Events)
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
@@ -935,7 +961,7 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	txBytes, err = cdc.Marshal(tx)
 	require.NoError(t, err)
 
-	res = app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.NotEmpty(t, res.Events)
 	require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 
@@ -945,7 +971,8 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	require.Equal(t, int64(1), getIntFromStore(store, deliverKey))
 
 	// commit
-	app.EndBlock(sdk.Context{}, abci.RequestEndBlock{})
+	app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 }
 
@@ -1001,14 +1028,16 @@ func TestGasConsumptionBadTx(t *testing.T) {
 	app.InitChain(context.Background(), &abci.RequestInitChain{})
 
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx)))
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	tx := newTxCounter(5, 0)
 	tx.setFailOnAnte(true)
 	txBytes, err := cdc.Marshal(tx)
 	require.NoError(t, err)
 
-	res := app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
 
 	// require next tx to fail due to black gas limit
@@ -1016,7 +1045,7 @@ func TestGasConsumptionBadTx(t *testing.T) {
 	txBytes, err = cdc.Marshal(tx)
 	require.NoError(t, err)
 
-	res = app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
 }
 
@@ -1096,7 +1125,10 @@ func TestInitChainer(t *testing.T) {
 
 	// commit and ensure we can still query
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 
 	res, _ = app.Query(context.Background(), &query)
@@ -1133,19 +1165,22 @@ func TestBeginBlock_WithInitialHeight(t *testing.T) {
 		},
 	)
 
+	app.setDeliverState(tmproto.Header{Height: 4})
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 	require.PanicsWithError(t, "invalid height: 4; expected: 3", func() {
-		app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{
+		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{
 			Header: tmproto.Header{
 				Height: 4,
 			},
 		})
 	})
 
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{
 		Header: tmproto.Header{
 			Height: 3,
 		},
 	})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 
 	require.Equal(t, int64(3), app.LastBlockHeight())
@@ -1423,12 +1458,16 @@ func TestCheckTx(t *testing.T) {
 
 	// If a block is committed, CheckTx state should be reset.
 	header := tmproto.Header{Height: 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header, Hash: []byte("hash")})
+	app.setDeliverState(header)
+	app.checkState.ctx = app.checkState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter()).WithHeaderHash([]byte("hash"))
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header, Hash: []byte("hash")})
 
 	require.NotNil(t, app.checkState.ctx.BlockGasMeter(), "block gas meter should have been set to checkState")
 	require.NotEmpty(t, app.checkState.ctx.HeaderHash())
 
-	app.EndBlock(sdk.Context{}, abci.RequestEndBlock{})
+	app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 
 	checkStateStore = app.checkState.ctx.KVStore(capKey1)
@@ -1462,7 +1501,9 @@ func TestDeliverTx(t *testing.T) {
 
 	for blockN := 0; blockN < nBlocks; blockN++ {
 		header := tmproto.Header{Height: int64(blockN) + 1}
-		app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+		app.setDeliverState(header)
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		for i := 0; i < txPerHeight; i++ {
 			counter := int64(blockN*txPerHeight + i)
@@ -1471,7 +1512,7 @@ func TestDeliverTx(t *testing.T) {
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
 
-			res := app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+			res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 			require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 			events := res.GetEvents()
 			require.Len(t, events, 3, "should contain ante handler, message type and counter events respectively")
@@ -1479,7 +1520,8 @@ func TestDeliverTx(t *testing.T) {
 			require.Equal(t, sdk.MarkEventsToIndex(counterEvent(sdk.EventTypeMessage, counter).ToABCIEvents(), map[string]struct{}{})[0], events[2], "msg handler update counter event")
 		}
 
-		app.EndBlock(sdk.Context{}, abci.RequestEndBlock{})
+		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
+		app.SetDeliverStateToCommit()
 		app.Commit(context.Background())
 	}
 }
@@ -1611,7 +1653,10 @@ func TestLoadVersionInvalid(t *testing.T) {
 	require.Error(t, err)
 
 	header := tmproto.Header{Height: 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 
 	// create a new app with the stores mounted under the same cap key
@@ -1660,7 +1705,9 @@ func setupBaseAppWithSnapshots(t *testing.T, blocks uint, blockTxs int, options 
 	r := rand.New(rand.NewSource(3920758213583))
 	keyCounter := 0
 	for height := int64(1); height <= int64(blocks); height++ {
-		app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: tmproto.Header{Height: height}})
+		app.setDeliverState(tmproto.Header{Height: height})
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: tmproto.Header{Height: height}})
 		for txNum := 0; txNum < blockTxs; txNum++ {
 			tx := txTest{Msgs: []sdk.Msg{}}
 			for msgNum := 0; msgNum < 100; msgNum++ {
@@ -1673,10 +1720,11 @@ func setupBaseAppWithSnapshots(t *testing.T, blocks uint, blockTxs int, options 
 			}
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
-			resp := app.DeliverTx(sdk.Context{}, abci.RequestDeliverTx{Tx: txBytes})
+			resp := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
 			require.True(t, resp.IsOK(), "%v", resp.String())
 		}
-		app.EndBlock(sdk.Context{}, abci.RequestEndBlock{Height: height})
+		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{Height: height})
+		app.SetDeliverStateToCommit()
 		app.Commit(context.Background())
 
 		// Wait for snapshot to be taken, since it happens asynchronously.
@@ -1733,12 +1781,18 @@ func TestLoadVersion(t *testing.T) {
 
 	// execute a block, collect commit ID
 	header := tmproto.Header{Height: 1}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 
 	// execute a block, collect commit ID
 	header = tmproto.Header{Height: 2}
-	app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: header})
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 }
 
@@ -1819,7 +1873,10 @@ func TestSetLoader(t *testing.T) {
 			require.Nil(t, err)
 
 			// "execute" one block
-			app.BeginBlock(sdk.Context{}, abci.RequestBeginBlock{Header: tmproto.Header{Height: 2}})
+			app.setDeliverState(tmproto.Header{Height: 2})
+			app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+			app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: tmproto.Header{Height: 2}})
+			app.SetDeliverStateToCommit()
 			app.Commit(context.Background())
 
 			// check db is properly updated

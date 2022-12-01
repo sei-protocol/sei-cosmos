@@ -51,6 +51,7 @@ func TestRollback(t *testing.T) {
 	t.Skip()
 	db := dbm.NewMemDB()
 	app := SetupWithDB(false, db)
+	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 	ver0 := app.LastBlockHeight()
 	// commit 10 blocks

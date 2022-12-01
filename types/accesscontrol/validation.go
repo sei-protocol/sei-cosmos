@@ -22,7 +22,13 @@ func DefaultStoreKeyToResourceTypePrefixMap() StoreKeyToResourceTypePrefixMap {
 	}
 }
 
+type Validator interface {
+	ValidateAccessOperations(accessOps []AccessOperation, events []abci.Event) map[Comparator]bool
+	GetPrefix(storeKey string, resourceType ResourceType) ([]byte, bool)
+}
+
 type MsgValidator struct {
+	Validator
 	storeKeyToResourceTypePrefixMap StoreKeyToResourceTypePrefixMap
 }
 

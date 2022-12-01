@@ -754,6 +754,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}()
 
 	blockGasConsumed := false
+	// If the antehandler fails then don't consume the gas in the meter, a synchronous run will trigger
+	// and perform the same validation
+	passedAnteHandlerAccessOpsValidation := true
 	// consumeBlockGas makes sure block gas is consumed at most once. It must happen after
 	// tx processing, and must be execute even if tx processing fails. Hence we use trick with `defer`
 	consumeBlockGas := func() {
@@ -761,6 +764,11 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			blockGasConsumed = true
 			ctx.BlockGasMeter().ConsumeGas(
 				ctx.GasMeter().GasConsumedToLimit(), "block gas meter",
+			)
+		}
+		if !passedAnteHandlerAccessOpsValidation {
+			ctx.BlockGasMeter().RefundGas(
+				ctx.GasMeter().GasConsumed(), "failed antehandler concurrent check",
 			)
 		}
 	}
@@ -809,7 +817,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			// the instantiated gas meter in the AnteHandler, so we update the context
 			// prior to returning.
 			//
-			// This also replaces the GasMeter in the context where GasUsed was initalized 0
+			// This also replaces the GasMeter in the context where GasUsed was initialized 0
 			// and updated with gas consumed in the ante handler runs
 			// The GasMeter is a pointer and its passed to the RunMsg and tracks the consumed
 			// gas there too.
@@ -827,9 +835,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		if ctx.MsgValidator() != nil {
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps, _ := app.anteDepGenerator([]acltypes.AccessOperation{}, tx)
-
 			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
+				passedAnteHandlerAccessOpsValidation = false
 				for op := range missingAccessOps {
 					ctx.Logger().Info((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))
 				}

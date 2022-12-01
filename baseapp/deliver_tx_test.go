@@ -28,8 +28,32 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkaccesscontrol "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
+
+type MockMsgValidator struct {
+	sdkaccesscontrol.Validator
+	validateResults map[sdkaccesscontrol.Comparator]bool
+}
+
+func NewMockMsgValidator(validateResults map[sdkaccesscontrol.Comparator]bool) MockMsgValidator {
+	return MockMsgValidator{
+		validateResults: validateResults,
+	}
+}
+
+func (validator *MockMsgValidator) GetPrefix(storeKey string, resourceType sdkaccesscontrol.ResourceType) ([]byte, bool) {
+	matched := storeKey == "matched"
+	return []byte{}, matched
+}
+
+func (validator *MockMsgValidator) ValidateAccessOperations(
+	accessOps []sdkaccesscontrol.AccessOperation,
+	events []abci.Event,
+) map[sdkaccesscontrol.Comparator]bool {
+	return validator.validateResults
+}
 
 func TestLoadSnapshotChunk(t *testing.T) {
 	app, teardown := setupBaseAppWithSnapshots(t, 2, 5)
@@ -974,6 +998,87 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
 	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
+}
+
+func TestDontConsumeGasOnAccessOpValidationFail(t *testing.T) {
+	gasWanted := uint64(5)
+	anteOpt := func(bapp *BaseApp) {
+		bapp.SetAnteHandler(func(ctx sdk.Context, tx sdk.Tx, simulate bool) (newCtx sdk.Context, err error) {
+			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasWanted))
+
+			defer func() {
+				if r := recover(); r != nil {
+					switch rType := r.(type) {
+					case sdk.ErrorOutOfGas:
+						log := fmt.Sprintf("out of gas in location: %v", rType.Descriptor)
+						err = sdkerrors.Wrap(sdkerrors.ErrOutOfGas, log)
+					default:
+						panic(r)
+					}
+				}
+			}()
+
+			txTest := tx.(txTest)
+			newCtx.GasMeter().ConsumeGas(uint64(txTest.Counter), "counter-ante")
+			return
+		})
+	}
+
+	routerOpt := func(bapp *BaseApp) {
+		r := sdk.NewRoute(routeMsgCounter, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+			count := msg.(*msgCounter).Counter
+			ctx.GasMeter().ConsumeGas(uint64(count), "counter-handler")
+			return &sdk.Result{}, nil
+		})
+		bapp.Router().AddRoute(r)
+	}
+
+	cdc := codec.NewLegacyAmino()
+	registerTestCodec(cdc)
+
+	app := setupBaseApp(t, anteOpt, routerOpt)
+
+	app.InitChain(context.Background(), &abci.RequestInitChain{
+		ConsensusParams: &tmproto.ConsensusParams{
+			Block: &tmproto.BlockParams{
+				MaxGas: 9,
+			},
+		},
+	})
+
+	mockMsgValidator := &MockMsgValidator{
+		validateResults: map[sdkaccesscontrol.Comparator]bool{
+			{
+				AccessType: sdkaccesscontrol.AccessType_WRITE,
+				Identifier:  "ID",
+				StoreKey:   "KEY",
+			}: true,
+		},
+	}
+	gasMeter := sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx))
+	app.InitChain(context.Background(), &abci.RequestInitChain{})
+
+	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
+	app.setDeliverState(header)
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(gasMeter)
+	app.deliverState.ctx = app.deliverState.ctx.WithMsgValidator(mockMsgValidator)
+	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
+
+	tx := newTxCounter(5, 0)
+	txBytes, err := cdc.Marshal(tx)
+	require.NoError(t, err)
+	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
+	require.Equal(t, 0, int(gasMeter.GasConsumed()))
+
+	// require next tx to fail due to black gas limit
+	tx = newTxCounter(5, 0)
+	txBytes, err = cdc.Marshal(tx)
+	require.NoError(t, err)
+
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
+	require.Equal(t, 0, int(gasMeter.GasConsumed()))
 }
 
 func TestGasConsumptionBadTx(t *testing.T) {

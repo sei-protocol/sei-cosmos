@@ -16,6 +16,7 @@ import (
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkaccesscontrol "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
 )
 
@@ -64,7 +65,11 @@ func aminoTxEncoder() sdk.TxEncoder {
 func setupBaseApp(t *testing.T, options ...func(*BaseApp)) *BaseApp {
 	app := newBaseApp(t.Name(), options...)
 	require.Equal(t, t.Name(), app.Name())
-
+	app.SetAnteDepGenerator(
+		func(txDeps []sdkaccesscontrol.AccessOperation, tx sdk.Tx) (newTxDeps []sdkaccesscontrol.AccessOperation, err error) {
+			return []sdkaccesscontrol.AccessOperation{}, nil
+		},
+	)
 	app.MountStores(capKey1, capKey2)
 	app.SetParamStore(&paramStore{db: dbm.NewMemDB()})
 

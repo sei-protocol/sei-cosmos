@@ -3,7 +3,6 @@ package cachekv
 import (
 	"bytes"
 	"errors"
-	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -56,13 +55,11 @@ func (iter *cacheMergeIterator) Domain() (start, end []byte) {
 
 // Valid implements Iterator.
 func (iter *cacheMergeIterator) Valid() bool {
-	fmt.Printf("DEBUG:dex/contract/cache/order.go::BlockOrders::Valid\n")
 	return iter.skipUntilExistsOrInvalid()
 }
 
 // Next implements Iterator
 func (iter *cacheMergeIterator) Next() {
-	fmt.Printf("DEBUG:dex/contract/cache/order.go::BlockOrders::NEXT\n")
 	iter.skipUntilExistsOrInvalid()
 	iter.assertValid()
 
@@ -208,24 +205,17 @@ func (iter *cacheMergeIterator) skipCacheDeletes(until []byte) {
 func (iter *cacheMergeIterator) skipUntilExistsOrInvalid() bool {
 	for {
 		// If parent is invalid, fast-forward cache.
-		fmt.Printf("DEBUG:cacheMergeIterator::PARENT VALID?\n")
 		if !iter.parent.Valid() {
 			iter.skipCacheDeletes(nil)
-			fmt.Printf("DEBUG:cacheMergeIterator::PARENT INVALID\n")
 			return iter.cache.Valid()
 		}
 		// Parent is valid.
-
-		fmt.Printf("DEBUG:cacheMergeIterator::CACHE VALID?\n")
 		if !iter.cache.Valid() {
-			fmt.Printf("DEBUG:cacheMergeIterator::CACHE INVALID\n")
 			return true
 		}
-		fmt.Printf("DEBUG:cacheMergeIterator::CACHE+PARENT VALID\n")
 		// Parent is valid, cache is valid.
 
 		// Compare parent and cache.
-		fmt.Printf("DEBUG:cacheMergeIterator::PARENT vs Cache\n")
 		keyP := iter.parent.Key()
 		keyC := iter.cache.Key()
 
@@ -235,7 +225,6 @@ func (iter *cacheMergeIterator) skipUntilExistsOrInvalid() bool {
 
 		case 0: // parent == cache.
 			// Skip over if cache item is a delete.
-			fmt.Printf("DEBUG:cacheMergeIterator::paretnt == cache\n")
 			valueC := iter.cache.Value()
 			if valueC == nil {
 				iter.parent.Next()
@@ -248,7 +237,6 @@ func (iter *cacheMergeIterator) skipUntilExistsOrInvalid() bool {
 			return true // cache exists.
 		case 1: // cache < parent
 			// Skip over if cache item is a delete.
-			fmt.Printf("DEBUG:cacheMergeIterator::parent < cache\n")
 			valueC := iter.cache.Value()
 			if valueC == nil {
 				iter.skipCacheDeletes(keyP)

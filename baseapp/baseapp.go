@@ -20,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -138,12 +137,15 @@ type BaseApp struct { //nolint: maligned
 	// which informs Tendermint what to index. If empty, all events will be indexed.
 	indexEvents map[string]struct{}
 
+<<<<<<< HEAD
 	CacheSize int
 
 	// abciListeners for hooking into the ABCI message processing of the BaseApp
 	// and exposing the requests and responses to external consumers
 	abciListeners []ABCIListener
 
+=======
+>>>>>>> dc72664 (use hardcoded limit for now)
 	ChainID string
 }
 
@@ -215,6 +217,7 @@ func NewBaseApp(
 		}
 	}
 	app := &BaseApp{
+<<<<<<< HEAD
 		logger: logger,
 		name:   name,
 		appStore: appStore{
@@ -231,6 +234,19 @@ func NewBaseApp(
 		},
 		txDecoder: txDecoder,
 		CacheSize: storetypes.DefaultCacheSizeLimit,
+=======
+		logger:           logger,
+		name:             name,
+		db:               db,
+		cms:              cms,
+		storeLoader:      DefaultStoreLoader,
+		router:           NewRouter(),
+		queryRouter:      NewQueryRouter(),
+		grpcQueryRouter:  NewGRPCQueryRouter(),
+		msgServiceRouter: NewMsgServiceRouter(),
+		txDecoder:        txDecoder,
+		fauxMerkleMode:   false,
+>>>>>>> dc72664 (use hardcoded limit for now)
 	}
 
 	for _, option := range options {
@@ -470,7 +486,7 @@ func (app *BaseApp) IsSealed() bool { return app.sealed }
 // provided header, and minimum gas prices set. It is set on InitChain and reset
 // on Commit.
 func (app *BaseApp) setCheckState(header tmproto.Header) {
-	ms := app.cms.CacheMultiStore(app.CacheSize)
+	ms := app.cms.CacheMultiStore()
 	app.checkState = &state{
 		ms:  ms,
 		ctx: sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices),
@@ -482,7 +498,7 @@ func (app *BaseApp) setCheckState(header tmproto.Header) {
 // and provided header. It is set on InitChain and BeginBlock and set to nil on
 // Commit.
 func (app *BaseApp) setDeliverState(header tmproto.Header) {
-	ms := app.cms.CacheMultiStore(app.CacheSize)
+	ms := app.cms.CacheMultiStore()
 	app.deliverState = &state{
 		ms:  ms,
 		ctx: sdk.NewContext(ms, header, false, app.logger),
@@ -490,7 +506,7 @@ func (app *BaseApp) setDeliverState(header tmproto.Header) {
 }
 
 func (app *BaseApp) setPrepareProposalState(header tmproto.Header) {
-	ms := app.cms.CacheMultiStore(app.CacheSize)
+	ms := app.cms.CacheMultiStore()
 	app.prepareProposalState = &state{
 		ms:  ms,
 		ctx: sdk.NewContext(ms, header, false, app.logger),
@@ -498,7 +514,7 @@ func (app *BaseApp) setPrepareProposalState(header tmproto.Header) {
 }
 
 func (app *BaseApp) setProcessProposalState(header tmproto.Header) {
-	ms := app.cms.CacheMultiStore(app.CacheSize)
+	ms := app.cms.CacheMultiStore()
 	app.processProposalState = &state{
 		ms:  ms,
 		ctx: sdk.NewContext(ms, header, false, app.logger),
@@ -681,7 +697,7 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 	}
 
 	if mode == runTxModeSimulate {
-		ctx, _ = ctx.CacheContext(app.CacheSize)
+		ctx, _ = ctx.CacheContext()
 	}
 
 	return ctx
@@ -692,7 +708,7 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
 	ms := ctx.MultiStore()
 	// TODO: https://github.com/cosmos/cosmos-sdk/issues/2824
-	msCache := ms.CacheMultiStore(app.CacheSize)
+	msCache := ms.CacheMultiStore()
 	if msCache.TracingEnabled() {
 		msCache = msCache.SetTracingContext(
 			sdk.TraceContext(

@@ -56,23 +56,12 @@ func NewFromKVStore(
 
 	for key, store := range stores {
 		if cms.TracingEnabled() {
-<<<<<<< HEAD
 			store = tracekv.NewStore(store.(types.KVStore), cms.traceWriter, cms.traceContext)
 		}
 		if cms.ListeningEnabled(key) {
 			store = listenkv.NewStore(store.(types.KVStore), key, listeners[key])
-=======
-			cacheWrapped = store.CacheWrapWithTrace(key, cms.traceWriter, cms.traceContext)
-		} else {
-			cacheWrapped = store.CacheWrap(key)
 		}
-		if cms.ListeningEnabled(key) {
-			cms.stores[key] = cacheWrapped.CacheWrapWithListeners(key, cms.listeners[key])
-		} else {
-			cms.stores[key] = cacheWrapped
->>>>>>> dc72664 (use hardcoded limit for now)
-		}
-		cms.stores[key] = cachekv.NewStore(store.(types.KVStore), key, cacheLimit)
+		cms.stores[key] = cachekv.NewStore(store.(types.KVStore), key, types.DefaultCacheSizeLimit)
 	}
 
 	return cms
@@ -94,12 +83,7 @@ func newCacheMultiStoreFromCMS(cms Store) Store {
 		stores[k] = v
 	}
 
-<<<<<<< HEAD
-	// don't pass listeners to nested cache store.
-	return NewFromKVStore(cms.db, stores, nil, cms.traceWriter, cms.traceContext, nil, cacheLimit)
-=======
-	return NewFromKVStore(cms.db, stores, nil, cms.traceWriter, cms.traceContext, cms.listeners)
->>>>>>> dc72664 (use hardcoded limit for now)
+	return NewFromKVStore(cms.db, stores, nil, cms.traceWriter, cms.traceContext, nil)
 }
 
 // SetTracer sets the tracer for the MultiStore that the underlying

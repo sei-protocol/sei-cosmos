@@ -137,15 +137,10 @@ type BaseApp struct { //nolint: maligned
 	// which informs Tendermint what to index. If empty, all events will be indexed.
 	indexEvents map[string]struct{}
 
-<<<<<<< HEAD
-	CacheSize int
-
 	// abciListeners for hooking into the ABCI message processing of the BaseApp
 	// and exposing the requests and responses to external consumers
 	abciListeners []ABCIListener
 
-=======
->>>>>>> dc72664 (use hardcoded limit for now)
 	ChainID string
 }
 
@@ -217,7 +212,6 @@ func NewBaseApp(
 		}
 	}
 	app := &BaseApp{
-<<<<<<< HEAD
 		logger: logger,
 		name:   name,
 		appStore: appStore{
@@ -233,20 +227,6 @@ func NewBaseApp(
 			msgServiceRouter: NewMsgServiceRouter(),
 		},
 		txDecoder: txDecoder,
-		CacheSize: storetypes.DefaultCacheSizeLimit,
-=======
-		logger:           logger,
-		name:             name,
-		db:               db,
-		cms:              cms,
-		storeLoader:      DefaultStoreLoader,
-		router:           NewRouter(),
-		queryRouter:      NewQueryRouter(),
-		grpcQueryRouter:  NewGRPCQueryRouter(),
-		msgServiceRouter: NewMsgServiceRouter(),
-		txDecoder:        txDecoder,
-		fauxMerkleMode:   false,
->>>>>>> dc72664 (use hardcoded limit for now)
 	}
 
 	for _, option := range options {

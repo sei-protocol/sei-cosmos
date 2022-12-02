@@ -857,7 +857,7 @@ func TestStateListeners(t *testing.T) {
 	ms.AddListeners(testStoreKey1, []types.WriteListener{listener})
 
 	require.NoError(t, ms.LoadLatestVersion())
-	cacheMulti := ms.CacheMultiStore(types.DefaultCacheSizeLimit)
+	cacheMulti := ms.CacheMultiStore()
 
 	store1 := cacheMulti.GetKVStore(testStoreKey1)
 	store1.Set([]byte{1}, []byte{1})
@@ -869,7 +869,7 @@ func TestStateListeners(t *testing.T) {
 
 	// test nested cache store
 	listener.stateCache = []types.StoreKVPair{}
-	nested := cacheMulti.CacheMultiStore(types.DefaultCacheSizeLimit)
+	nested := cacheMulti.CacheMultiStore()
 
 	store1 = nested.GetKVStore(testStoreKey1)
 	store1.Set([]byte{1}, []byte{1})

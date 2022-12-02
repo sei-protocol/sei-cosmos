@@ -7,7 +7,7 @@ const (
 	DefaultBondDenom = "stake"
 
 	// default maximal voting power ratio
-	DefaultMaxVotingPowerRatio = "0.05"
+	DefaultMaxVotingPowerRatio = "0.1"
 
 	// default voting power enforcement threshold
 	DefaultMaxVotingPowerEnforcementThreshold uint64 = 10000000000000

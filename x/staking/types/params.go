@@ -219,7 +219,7 @@ func validateMaxVotingPowerRatio(i interface{}) error {
 	if v.IsNil() {
 		return fmt.Errorf("max voting power must be not nil")
 	}
-	if v.IsNegative() {
+	if !v.IsPositive() {
 		return fmt.Errorf("max voting power must be positive: %s", v)
 	}
 	if v.GT(sdk.OneDec()) {

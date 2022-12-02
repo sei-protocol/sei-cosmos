@@ -643,8 +643,6 @@ func (k Keeper) Delegate(
 	// validator.Tokens
 	lastTotalPower := k.GetLastTotalPower(ctx)
 	maxVotingPowerEnforcementThreshold := k.MaxVotingPowerEnforcementThreshold(ctx)
-	fmt.Println("lastTotalPower ", lastTotalPower)
-	fmt.Println("maxVotingPowerEnforcementThreshold ", maxVotingPowerEnforcementThreshold)
 	if lastTotalPower.GTE(maxVotingPowerEnforcementThreshold) {
 		newVotingPowerRatio := sdk.NewDecFromInt(validator.Tokens.Add(bondAmt)).Quo(sdk.NewDecFromInt(lastTotalPower))
 		if newVotingPowerRatio.GT(k.MaxVotingPowerRatio(ctx)) {

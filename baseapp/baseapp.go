@@ -857,7 +857,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 	}
 	// we do this since we will only be looking at result in DeliverTx
-	if len(anteEvents) > 0 {
+	if result != nil && len(anteEvents) > 0 {
 		// append the events in the order of occurrence
 		result.Events = append(anteEvents, result.Events...)
 	}

@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -227,6 +228,7 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
+	fmt.Println("BWENG:iterator")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -237,10 +239,9 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	} else {
 		parent = store.parent.ReverseIterator(start, end)
 	}
-
+	fmt.Println("BWENG:DIRTY")
 	store.dirtyItems(start, end)
 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
-
 	return NewCacheMergeIterator(parent, cache, ascending)
 }
 
@@ -328,6 +329,7 @@ const minSortSize = 1024
 
 // Constructs a slice of dirty items, to use w/ memIterator.
 func (store *Store) dirtyItems(start, end []byte) {
+	fmt.Println("BWENG:dirtyItems")
 	startStr, endStr := conv.UnsafeBytesToStr(start), conv.UnsafeBytesToStr(end)
 	if startStr > endStr {
 		// Nothing to do here.
@@ -343,7 +345,9 @@ func (store *Store) dirtyItems(start, end []byte) {
 	// Even without that, too many range checks eventually becomes more expensive
 	// than just not having the cache.
 	if n < minSortSize {
+		fmt.Println("BWENG:min sort size")
 		for key := range store.unsortedCache {
+			fmt.Println("BWENG:CACHE")
 			if dbm.IsKeyInDomain(conv.UnsafeStrToBytes(key), start, end) {
 				cacheValue, _ := store.cache.Get(key)
 				unsorted = append(unsorted, &kv.Pair{Key: []byte(key), Value: cacheValue.Value()})
@@ -356,6 +360,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 	// Otherwise it is large so perform a modified binary search to find
 	// the target ranges for the keys that we should be looking for.
 	strL := make([]string, 0, n)
+	fmt.Println("BWENG:unforted cache")
 	for key := range store.unsortedCache {
 		strL = append(strL, key)
 	}
@@ -401,9 +406,11 @@ func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {
 }
 
 func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sortState) {
+	fmt.Println("BWENG:clearUnsortedCacheSubset")
 	store.deleteKeysFromUnsortedCache(unsorted)
 
 	if sortState == stateUnsorted {
+		fmt.Println("BWENG:SLICE COMPARE")
 		sort.Slice(unsorted, func(i, j int) bool {
 			return bytes.Compare(unsorted[i].Key, unsorted[j].Key) < 0
 		})
@@ -425,6 +432,7 @@ func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sort
 }
 
 func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
+	fmt.Println("BWENG:deleteKeysFromUnsortedCache")
 	n := len(store.unsortedCache)
 	if len(unsorted) == n { // This pattern allows the Go compiler to emit the map clearing idiom for the entire map.
 		for key := range store.unsortedCache {

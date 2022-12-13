@@ -325,7 +325,7 @@ const (
 	stateAlreadySorted
 )
 
-const minSortSize = 1024
+const minSortSize = 256
 
 // Constructs a slice of dirty items, to use w/ memIterator.
 func (store *Store) dirtyItems(start, end []byte) {

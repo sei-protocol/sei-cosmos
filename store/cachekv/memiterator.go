@@ -2,7 +2,6 @@ package cachekv
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 
 	dbm "github.com/tendermint/tm-db"
@@ -31,7 +30,6 @@ func newMemIterator(
 	eventManager *sdktypes.EventManager,
 	storeKey sdktypes.StoreKey,
 ) *memIterator {
-	fmt.Println("BWENG:newMemIterator")
 	var iter types.Iterator
 	var err error
 
@@ -55,7 +53,6 @@ func newMemIterator(
 }
 
 func (mi *memIterator) Value() []byte {
-	fmt.Println("BWENG:Value")
 	key := mi.Iterator.Key()
 	// We need to handle the case where deleted is modified and includes our current key
 	// We handle this by maintaining a lastKey object in the iterator.
@@ -63,12 +60,9 @@ func (mi *memIterator) Value() []byte {
 	// then we are calling value on the same thing as last time.
 	// Therefore we don't check the mi.deleted to see if this key is included in there.
 	reCallingOnOldLastKey := (mi.lastKey != nil) && bytes.Equal(key, mi.lastKey)
-	fmt.Println("BWENG:LOAD")
 	if _, ok := mi.deleted.Load(string(key)); ok && !reCallingOnOldLastKey {
-		fmt.Println("BWENG:NOTHING")
 		return nil
 	}
-	fmt.Println("BWENG:GOT VALUE")
 	value := mi.Iterator.Value()
 	mi.eventManager.EmitResourceAccessReadEvent("iterator", mi.storeKey, key, value)
 

@@ -2,7 +2,6 @@ package cachekv
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -228,7 +227,6 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
-	fmt.Println("BWENG:iterator")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -239,7 +237,6 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	} else {
 		parent = store.parent.ReverseIterator(start, end)
 	}
-	fmt.Println("BWENG:DIRTY")
 	store.dirtyItems(start, end)
 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
 	return NewCacheMergeIterator(parent, cache, ascending)
@@ -325,13 +322,12 @@ const (
 	stateAlreadySorted
 )
 
-const minSortSize = 256
+const minSortSize = 1024
 
 // Constructs a slice of dirty items, to use w/ memIterator.
 func (store *Store) dirtyItems(start, end []byte) {
-	fmt.Println("BWENG:dirtyItems")
 	startStr, endStr := conv.UnsafeBytesToStr(start), conv.UnsafeBytesToStr(end)
-	if startStr > endStr {
+	if end != nil && startStr > endStr {
 		// Nothing to do here.
 		return
 	}
@@ -344,31 +340,21 @@ func (store *Store) dirtyItems(start, end []byte) {
 	// O(N^2) overhead.
 	// Even without that, too many range checks eventually becomes more expensive
 	// than just not having the cache.
-
-	telemetry.SetGauge(
-		float32(n),
-		"unsorted", "cache", "size",
-	)
-
+	store.emitUnsortedCacheSizeMetric()
 	if n < minSortSize {
-		fmt.Println("BWENG:min sort size")
-		fmt.Printf("BWENG:unsorted cache size=%d\n", len(store.unsortedCache))
 		for key := range store.unsortedCache {
 			if dbm.IsKeyInDomain(conv.UnsafeStrToBytes(key), start, end) {
 				cacheValue, _ := store.cache.Get(key)
 				unsorted = append(unsorted, &kv.Pair{Key: []byte(key), Value: cacheValue.Value()})
 			}
 		}
-		fmt.Printf("BWENG:clearUnsortedCacheSubset cache size=%d\n", len(store.unsortedCache))
 		store.clearUnsortedCacheSubset(unsorted, stateUnsorted)
-		fmt.Printf("BWENG:after clearUnsortedCacheSubset cache size=%d\n", len(store.unsortedCache))
 		return
 	}
 
 	// Otherwise it is large so perform a modified binary search to find
 	// the target ranges for the keys that we should be looking for.
 	strL := make([]string, 0, n)
-	fmt.Printf("BWENG:NO MIN cache size=%d\n", len(store.unsortedCache))
 	for key := range store.unsortedCache {
 		strL = append(strL, key)
 	}
@@ -387,7 +373,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 		}
 	}
 
-	kvL := make([]*kv.Pair, 0)
+	kvL := make([]*kv.Pair, 0, 1+endIndex-startIndex)
 	for i := startIndex; i <= endIndex; i++ {
 		key := strL[i]
 		cacheValue, _ := store.cache.Get(key)
@@ -396,11 +382,12 @@ func (store *Store) dirtyItems(start, end []byte) {
 
 	// kvL was already sorted so pass it in as is.
 	store.clearUnsortedCacheSubset(kvL, stateAlreadySorted)
-	n = len(store.unsortedCache)
-	telemetry.SetGauge(
-		float32(n),
-		"unsorted", "cache", "size",
-	)
+	store.emitUnsortedCacheSizeMetric()
+}
+
+func (store *Store) emitUnsortedCacheSizeMetric() {
+	n := len(store.unsortedCache)
+	telemetry.SetGauge(float32(n), "sei", "cosmos", "unsorted", "cache", "size")
 }
 
 func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {
@@ -419,11 +406,9 @@ func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {
 }
 
 func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sortState) {
-	fmt.Println("BWENG:clearUnsortedCacheSubset")
 	store.deleteKeysFromUnsortedCache(unsorted)
 
 	if sortState == stateUnsorted {
-		fmt.Println("BWENG:SLICE COMPARE")
 		sort.Slice(unsorted, func(i, j int) bool {
 			return bytes.Compare(unsorted[i].Key, unsorted[j].Key) < 0
 		})
@@ -433,24 +418,21 @@ func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sort
 		if item.Value == nil {
 			// deleted element, tracked by store.deleted
 			// setting arbitrary value
-			// TODO: Don't ignore this error.
-			store.sortedCache.Set(item.Key, []byte{})
+			if err := store.sortedCache.Set(item.Key, []byte{}); err != nil {
+				panic(err)
+			}
+
 			continue
 		}
-		err := store.sortedCache.Set(item.Key, item.Value)
-		if err != nil {
+		if err := store.sortedCache.Set(item.Key, item.Value); err != nil {
 			panic(err)
 		}
 	}
 }
 
 func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
-	fmt.Println("BWENG:deleteKeysFromUnsortedCache")
 	n := len(store.unsortedCache)
-	telemetry.SetGauge(
-		float32(n),
-		"unsorted", "cache", "size",
-	)
+	store.emitUnsortedCacheSizeMetric()
 	if len(unsorted) == n { // This pattern allows the Go compiler to emit the map clearing idiom for the entire map.
 		for key := range store.unsortedCache {
 			delete(store.unsortedCache, key)
@@ -460,11 +442,7 @@ func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
 			delete(store.unsortedCache, conv.UnsafeBytesToStr(kv.Key))
 		}
 	}
-	n = len(store.unsortedCache)
-	telemetry.SetGauge(
-		float32(n),
-		"unsorted", "cache", "size",
-	)
+	defer store.emitUnsortedCacheSizeMetric()
 }
 
 //----------------------------------------

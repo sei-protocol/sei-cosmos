@@ -966,12 +966,12 @@ func (rs *Store) RollbackToVersion(target int64) error {
 	if target <= 0 {
 		return fmt.Errorf("invalid rollback height target: %d", target)
 	}
-
 	for key, store := range rs.stores {
 		if store.GetStoreType() == types.StoreTypeIAVL {
 			// If the store is wrapped with an inter-block cache, we must first unwrap
 			// it to get the underlying IAVL store.
 			store = rs.GetCommitKVStore(key)
+			fmt.Println("Rollback to version", key, target)
 			_, err := store.(*iavl.Store).LoadVersionForOverwriting(target)
 			if err != nil {
 				return err

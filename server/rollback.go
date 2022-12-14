@@ -42,7 +42,7 @@ application.
 
 			// rollback app state
 			height, hash, err := tmcmd.RollbackState(ctx.Config, removeBlock)
-			fmt.Printf("App state rolledback back to version height=%s, removeBlock=%s\n", height, removeBlock)
+			fmt.Printf("App state rolledback back to version height=%d, removeBlock=%t\n", height, removeBlock)
 			if err != nil {
 				return fmt.Errorf("failed to rollback tendermint state: %w", err)
 			}
@@ -51,9 +51,8 @@ application.
 			if err := app.CommitMultiStore().RollbackToVersion(height); err != nil {
 				return fmt.Errorf("failed to rollback to version: %w", err)
 			}
-			fmt.Printf("Store state rolledback back to version height=%s, removeBlock=%s\n", height, removeBlock)
-
-			fmt.Printf("Rolled back state to height %d and hash %X", height, hash)
+			fmt.Printf("Store state rolledback back to version height=%d, removeBlock=%t\n", height, removeBlock)
+			fmt.Printf("Rolled back to height %d and hash %X\n", height, hash)
 			return nil
 		},
 	}

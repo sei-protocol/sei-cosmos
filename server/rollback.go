@@ -54,7 +54,7 @@ application.
 				if err := app.CommitMultiStore().RollbackToVersion(rollbackHeight); err != nil {
 					return fmt.Errorf("failed to rollback to version: %w", err)
 				}
-				// app.CommitMultiStore().CacheMultiStore().Write()
+				app.CommitMultiStore().CacheMultiStore().Write()
 				app.CommitMultiStore().Commit()
 			}
 

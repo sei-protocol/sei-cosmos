@@ -34,7 +34,7 @@ application.
 			}
 
 			app := appCreator(ctx.Logger, db, nil, ctx.Viper)
-			fmt.Printf("Last Commit Hash=%s\n", app.CommitMultiStore().LastCommitID())
+			fmt.Printf("Last Commit Height=%d\n", app.CommitMultiStore().LastCommitID().Version)
 
 			// rollback tendermint state (block store and tendermint state)
 			height, hash, err := tmcmd.RollbackState(ctx.Config, removeBlock)
@@ -47,11 +47,11 @@ application.
 			if err := app.CommitMultiStore().RollbackToVersion(height); err != nil {
 				return fmt.Errorf("failed to rollback to version: %w", err)
 			}
-			app.CommitMultiStore().CacheMultiStore().Write()
+			// app.CommitMultiStore().CacheMultiStore().Write()
 			app.CommitMultiStore().Commit()
 
 			fmt.Printf("Rolled back to height=%d, hash=%X, removeBlock=%t\n", height, hash, removeBlock)
-			fmt.Printf("Last Commit Hash=%s\n", app.CommitMultiStore().LastCommitID())
+			fmt.Printf("Last Commit Height=%d\n", app.CommitMultiStore().LastCommitID().Version)
 			err = db.Close()
 			return err
 		},

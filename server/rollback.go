@@ -10,6 +10,8 @@ import (
 )
 
 var removeBlock = false
+var appState = false
+var tendermintState = false
 
 // NewRollbackCmd creates a command to rollback tendermint and multistore state by one height.
 func NewRollbackCmd(appCreator types.AppCreator, defaultNodeHome string) *cobra.Command {
@@ -36,21 +38,27 @@ application.
 			app := appCreator(ctx.Logger, db, nil, ctx.Viper)
 			fmt.Printf("Last Commit Height=%d\n", app.CommitMultiStore().LastCommitID().Version)
 
+			rollbackHeight := app.CommitMultiStore().LastCommitID().Version - 1
 			// rollback tendermint state (block store and tendermint state)
-			height, hash, err := tmcmd.RollbackState(ctx.Config, removeBlock)
-			fmt.Printf("Tendermint state rolledback back to version height=%d, removeBlock=%t\n", height, removeBlock)
-			if err != nil {
-				return fmt.Errorf("failed to rollback tendermint state: %w", err)
+			if tendermintState {
+				height, _, err := tmcmd.RollbackState(ctx.Config, removeBlock)
+				rollbackHeight = height
+				fmt.Printf("Tendermint state rolledback back to version height=%d, removeBlock=%t\n", height, removeBlock)
+				if err != nil {
+					return fmt.Errorf("failed to rollback tendermint state: %w", err)
+				}
 			}
 
-			// rollback the multistore (app state)
-			if err := app.CommitMultiStore().RollbackToVersion(height); err != nil {
-				return fmt.Errorf("failed to rollback to version: %w", err)
+			if appState {
+				// rollback the multistore (app state)
+				if err := app.CommitMultiStore().RollbackToVersion(rollbackHeight); err != nil {
+					return fmt.Errorf("failed to rollback to version: %w", err)
+				}
+				// app.CommitMultiStore().CacheMultiStore().Write()
+				app.CommitMultiStore().Commit()
 			}
-			// app.CommitMultiStore().CacheMultiStore().Write()
-			app.CommitMultiStore().Commit()
 
-			fmt.Printf("Rolled back to height=%d, hash=%X, removeBlock=%t\n", height, hash, removeBlock)
+			fmt.Printf("Rolled back to height=%d, removeBlock=%t\n", rollbackHeight, removeBlock)
 			fmt.Printf("Last Commit Height=%d\n", app.CommitMultiStore().LastCommitID().Version)
 			err = db.Close()
 			return err
@@ -59,6 +67,8 @@ application.
 
 	cmd.Flags().String(flags.FlagChainID, "sei-chain", "genesis file chain-id, if left blank will use sei")
 	cmd.Flags().BoolVar(&removeBlock, "hard", false, "remove last block as well as state")
+	cmd.Flags().BoolVar(&appState, "app", false, "remove last block as well as state")
+	cmd.Flags().BoolVar(&tendermintState, "tendermint", false, "remove last block as well as state")
 	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
 	return cmd
 }

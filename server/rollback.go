@@ -38,7 +38,7 @@ application.
 			app := appCreator(ctx.Logger, db, nil, ctx.Viper)
 			fmt.Printf("Last Commit Height=%d\n", app.CommitMultiStore().LastCommitID().Version)
 
-			rollbackHeight := app.CommitMultiStore().LastCommitID().Version - 1
+			rollbackHeight := app.CommitMultiStore().LastCommitID().Version
 			// rollback tendermint state (block store and tendermint state)
 			if tendermintState {
 				height, _, err := tmcmd.RollbackState(ctx.Config, removeBlock)
@@ -51,7 +51,7 @@ application.
 
 			if appState {
 				// rollback the multistore (app state)
-				if err := app.CommitMultiStore().RollbackToVersion(rollbackHeight); err != nil {
+				if err := app.CommitMultiStore().RollbackToVersion(rollbackHeight - 2); err != nil {
 					return fmt.Errorf("failed to rollback to version: %w", err)
 				}
 				app.CommitMultiStore().CacheMultiStore().Write()

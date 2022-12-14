@@ -51,6 +51,7 @@ application.
 			if err := app.CommitMultiStore().RollbackToVersion(height); err != nil {
 				return fmt.Errorf("failed to rollback to version: %w", err)
 			}
+			app.CommitMultiStore().Commit()
 			fmt.Printf("Rolled back to height=%d, hash=%X, removeBlock=%t\n", height, hash, removeBlock)
 			return nil
 		},

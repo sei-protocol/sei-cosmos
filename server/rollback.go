@@ -54,7 +54,7 @@ application.
 
 			if appState {
 				// rollback the multistore (app state)
-				if err := app.CommitMultiStore().RollbackToVersion(rollbackHeight - 2); err != nil {
+				if err := app.CommitMultiStore().RollbackToVersion(rollbackHeight - 1); err != nil {
 					return fmt.Errorf("failed to rollback to version: %w", err)
 				}
 				app.CommitMultiStore().CacheMultiStore().Write()

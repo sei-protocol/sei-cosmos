@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/k0kubun/pp/v3"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	"google.golang.org/grpc/codes"
@@ -168,6 +169,7 @@ func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abc
 		res = app.endBlocker(ctx, req)
 		res.Events = sdk.MarkEventsToIndex(res.Events, app.indexEvents)
 	}
+	pp.Println(res.Events)
 
 	if cp := app.GetConsensusParams(ctx); cp != nil {
 		res.ConsensusParamUpdates = legacytm.ABCIToLegacyConsensusParams(cp)

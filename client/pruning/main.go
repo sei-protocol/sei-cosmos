@@ -28,9 +28,9 @@ func PruningCmd(appCreator servertypes.AppCreator) *cobra.Command {
 		Short: "Prune app history states by keeping the recent heights and deleting old heights",
 		Long: `Prune app history states by keeping the recent heights and deleting old heights.
 		The pruning option is provided via the '--pruning' flag or alternatively with '--pruning-keep-recent'
-		
+
 		For '--pruning' the options are as follows:
-		
+
 		default: the last 362880 states are kept
 		nothing: all historic states will be saved, nothing will be deleted (i.e. archiving node)
 		everything: 2 latest states will be kept
@@ -96,7 +96,7 @@ func PruningCmd(appCreator servertypes.AppCreator) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("successfully pruned the application root multi stores\n")
+			fmt.Printf("succ/essfully pruned the application root multi stores\n")
 			return nil
 		},
 	}
@@ -109,7 +109,7 @@ func PruningCmd(appCreator servertypes.AppCreator) *cobra.Command {
 		`Offset heights to keep on disk after 'keep-every' (ignored if pruning is not 'custom'),
 		this is not used by this command but kept for compatibility with the complete pruning options`)
 	cmd.Flags().Uint64(server.FlagPruningInterval, 10,
-		`Height interval at which pruned heights are removed from disk (ignored if pruning is not 'custom'), 
+		`Height interval at which pruned heights are removed from disk (ignored if pruning is not 'custom'),
 		this is not used by this command but kept for compatibility with the complete pruning options`)
 
 	return cmd

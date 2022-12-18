@@ -58,3 +58,7 @@ dependency-graph.png
 # test artifacts
 **/priv_validator_key.json
 **/priv_validator_state.json
+
+# protoc generated files
+*.pb.gw.go
+*.pb.go

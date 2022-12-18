@@ -33,9 +33,6 @@ func (p *MsgUpdateResourceDependencyMappingProposal) GetTitle() string { return 
 
 func (p *MsgUpdateResourceDependencyMappingProposal) GetDescription() string { return p.Description }
 
-// TODO: Add support for expedited proposal
-func (p *MsgUpdateResourceDependencyMappingProposal) GetIsExpedited() bool { return false }
-
 func (p *MsgUpdateResourceDependencyMappingProposal) ProposalRoute() string { return RouterKey }
 
 func (p *MsgUpdateResourceDependencyMappingProposal) ProposalType() string {
@@ -72,9 +69,6 @@ func NewMsgUpdateWasmDependencyMappingProposal(title, description, contractAddr 
 func (p *MsgUpdateWasmDependencyMappingProposal) GetTitle() string { return p.Title }
 
 func (p *MsgUpdateWasmDependencyMappingProposal) GetDescription() string { return p.Description }
-
-// TODO: Add support for expedited proposal
-func (p *MsgUpdateWasmDependencyMappingProposal) GetIsExpedited() bool { return false }
 
 func (p *MsgUpdateWasmDependencyMappingProposal) ProposalRoute() string { return RouterKey }
 

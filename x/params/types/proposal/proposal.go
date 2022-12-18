@@ -32,9 +32,6 @@ func (pcp *ParameterChangeProposal) GetTitle() string { return pcp.Title }
 // GetDescription returns the description of a parameter change proposal.
 func (pcp *ParameterChangeProposal) GetDescription() string { return pcp.Description }
 
-// GetIsExpedited returns whether the proposal needs to be expedited or not.
-func (pcp *ParameterChangeProposal) GetIsExpedited() bool { return pcp.IsExpedited }
-
 // ProposalRoute returns the routing key of a parameter change proposal.
 func (pcp *ParameterChangeProposal) ProposalRoute() string { return RouterKey }
 

@@ -22,7 +22,6 @@ type ContentSimulatorFn func(r *rand.Rand, ctx sdk.Context, accs []Account) Cont
 type Content interface {
 	GetTitle() string
 	GetDescription() string
-	GetIsExpedited() bool
 	ProposalRoute() string
 	ProposalType() string
 	ValidateBasic() error

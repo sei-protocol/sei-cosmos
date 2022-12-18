@@ -17,7 +17,7 @@ import (
 const DefaultStartingProposalID uint64 = 1
 
 // NewProposal creates a new Proposal instance
-func NewProposal(content Content, id uint64, submitTime, depositEndTime time.Time) (Proposal, error) {
+func NewProposal(content Content, id uint64, submitTime, depositEndTime time.Time, isExpedited bool) (Proposal, error) {
 	msg, ok := content.(proto.Message)
 	if !ok {
 		return Proposal{}, fmt.Errorf("%T does not implement proto.Message", content)
@@ -36,7 +36,7 @@ func NewProposal(content Content, id uint64, submitTime, depositEndTime time.Tim
 		TotalDeposit:     sdk.NewCoins(),
 		SubmitTime:       submitTime,
 		DepositEndTime:   depositEndTime,
-		IsExpedited:      content.GetIsExpedited(),
+		IsExpedited:      isExpedited,
 	}
 
 	return p, nil
@@ -197,9 +197,6 @@ func (tp *TextProposal) GetTitle() string { return tp.Title }
 
 // GetDescription returns the proposal description
 func (tp *TextProposal) GetDescription() string { return tp.Description }
-
-// TODO: Add support for expedite proposal
-func (tp *TextProposal) GetIsExpedited() bool { return tp.IsExpedited }
 
 // ProposalRoute returns the proposal router key
 func (tp *TextProposal) ProposalRoute() string { return RouterKey }

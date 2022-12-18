@@ -20,6 +20,7 @@ import (
 const (
 	FlagTitle        = "title"
 	FlagDescription  = "description"
+	FlagIsExpedited  = "is-expedited"
 	FlagProposalType = "type"
 	FlagDeposit      = "deposit"
 	flagVoter        = "voter"
@@ -93,13 +94,15 @@ Where proposal.json contains:
 {
   "title": "Test Proposal",
   "description": "My awesome proposal",
+  "is_expedited": false,
   "type": "Text",
   "deposit": "10test"
 }
 
 Which is equivalent to:
 
-$ %s tx gov submit-proposal --title="Test Proposal" --description="My awesome proposal" --type="Text" --deposit="10test" --from mykey
+$ %s tx gov submit-proposal --title="Test Proposal" --description="My awesome proposal" --type="Text" --deposit="10test" --is-expedited=false --from mykey
+
 `,
 				version.AppName, version.AppName,
 			),
@@ -122,7 +125,8 @@ $ %s tx gov submit-proposal --title="Test Proposal" --description="My awesome pr
 
 			content := types.ContentFromProposalType(proposal.Title, proposal.Description, proposal.Type, proposal.IsExpedited)
 
-			msg, err := types.NewMsgSubmitProposal(content, amount, clientCtx.GetFromAddress())
+			msg, err := types.NewMsgSubmitProposalWithExpedite(content, amount, clientCtx.GetFromAddress(), proposal.IsExpedited)
+
 			if err != nil {
 				return fmt.Errorf("invalid message: %w", err)
 			}

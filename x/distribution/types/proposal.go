@@ -34,9 +34,6 @@ func (csp *CommunityPoolSpendProposal) GetTitle() string { return csp.Title }
 // GetDescription returns the description of a community pool spend proposal.
 func (csp *CommunityPoolSpendProposal) GetDescription() string { return csp.Description }
 
-// TODO: Add support for expedited proposal
-func (csp *CommunityPoolSpendProposal) GetIsExpedited() bool { return false }
-
 // GetDescription returns the routing key of a community pool spend proposal.
 func (csp *CommunityPoolSpendProposal) ProposalRoute() string { return RouterKey }
 

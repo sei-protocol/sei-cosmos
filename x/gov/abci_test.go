@@ -346,7 +346,8 @@ func TestExpeditedProposalPassAndConvertToRegular(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			testProposal := TestExpeditedProposal
+			isExpedited := true
+			testProposal := types.NewTextProposal("TestTitle", "description", isExpedited)
 
 			app := simapp.Setup(false)
 			ctx := app.BaseApp.NewContext(false, tmproto.Header{})
@@ -382,7 +383,7 @@ func TestExpeditedProposalPassAndConvertToRegular(t *testing.T) {
 			depositorInitialBalance := app.BankKeeper.GetAllBalances(ctx, addrs[1])
 
 			proposalCoins := sdk.Coins{sdk.NewCoin(sdk.DefaultBondDenom, app.StakingKeeper.TokensFromConsensusPower(ctx, 5))}
-			newProposalMsg, err := types.NewMsgSubmitProposal(testProposal, proposalCoins, addrs[0])
+			newProposalMsg, err := types.NewMsgSubmitProposalWithExpedite(testProposal, proposalCoins, addrs[0], isExpedited)
 			require.NoError(t, err)
 
 			res, err := govHandler(ctx, newProposalMsg)

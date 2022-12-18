@@ -185,7 +185,7 @@ func (keeper Keeper) SetProposalID(ctx sdk.Context, proposalID uint64) {
 
 func (keeper Keeper) ActivateVotingPeriod(ctx sdk.Context, proposal types.Proposal) {
 	proposal.VotingStartTime = ctx.BlockHeader().Time
-	votingPeriod := keeper.GetVotingParams(ctx).VotingPeriod
+	votingPeriod := keeper.GetVotingParams(ctx).GetVotingPeriod(proposal.IsExpedited)
 	proposal.VotingEndTime = proposal.VotingStartTime.Add(votingPeriod)
 	proposal.Status = types.StatusVotingPeriod
 	keeper.SetProposal(ctx, proposal)

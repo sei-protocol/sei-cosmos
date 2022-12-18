@@ -32,6 +32,7 @@ type proposal struct {
 	Title       string
 	Description string
 	Type        string
+	IsExpedited bool
 	Deposit     string
 }
 
@@ -119,7 +120,7 @@ $ %s tx gov submit-proposal --title="Test Proposal" --description="My awesome pr
 				return err
 			}
 
-			content := types.ContentFromProposalType(proposal.Title, proposal.Description, proposal.Type)
+			content := types.ContentFromProposalType(proposal.Title, proposal.Description, proposal.Type, proposal.IsExpedited)
 
 			msg, err := types.NewMsgSubmitProposal(content, amount, clientCtx.GetFromAddress())
 			if err != nil {

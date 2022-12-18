@@ -16,17 +16,20 @@ import (
 
 // Simulation parameter constants
 const (
-	DepositParamsMinDeposit    = "deposit_params_min_deposit"
-	DepositParamsDepositPeriod = "deposit_params_deposit_period"
-	VotingParamsVotingPeriod   = "voting_params_voting_period"
-	TallyParamsQuorum          = "tally_params_quorum"
-	TallyParamsThreshold       = "tally_params_threshold"
-	TallyParamsVeto            = "tally_params_veto"
+	DepositParamsMinDeposit           = "deposit_params_min_deposit"
+	DepositParamsDepositPeriod        = "deposit_params_deposit_period"
+	VotingParamsVotingPeriod          = "voting_params_voting_period"
+	ExpeditedVotingParamsVotingPeriod = "expedited_voting_params_voting_period"
+	TallyParamsQuorum                 = "tally_params_quorum"
+	TallyParamsExpeditedQuorum        = "tally_params_expedited_quorum"
+	TallyParamsThreshold              = "tally_params_threshold"
+	TallyParamsExpeditedThreshold     = "tally_params_expedited_threshold"
+	TallyParamsVeto                   = "tally_params_veto"
 )
 
 // GenDepositParamsDepositPeriod randomized DepositParamsDepositPeriod
 func GenDepositParamsDepositPeriod(r *rand.Rand) time.Duration {
-	return time.Duration(simulation.RandIntBetween(r, 1, 2*60*60*24*2)) * time.Second
+	return time.Duration(simulation.RandIntBetween(r, 1, 60*60*24*2)) * time.Second
 }
 
 // GenDepositParamsMinDeposit randomized DepositParamsMinDeposit
@@ -36,7 +39,12 @@ func GenDepositParamsMinDeposit(r *rand.Rand) sdk.Coins {
 
 // GenVotingParamsVotingPeriod randomized VotingParamsVotingPeriod
 func GenVotingParamsVotingPeriod(r *rand.Rand) time.Duration {
-	return time.Duration(simulation.RandIntBetween(r, 1, 2*60*60*24*2)) * time.Second
+	return time.Duration(simulation.RandIntBetween(r, 60*60*24, 60*60*24*2)) * time.Second
+}
+
+// GenVotingParamsExpeditedVotingPeriod randomized VotingParamsExpeditedVotingPeriod
+func GenVotingParamsExpeditedVotingPeriod(r *rand.Rand) time.Duration {
+	return time.Duration(simulation.RandIntBetween(r, 1, 60*60*24)) * time.Second
 }
 
 // GenTallyParamsQuorum randomized TallyParamsQuorum
@@ -44,9 +52,19 @@ func GenTallyParamsQuorum(r *rand.Rand) sdk.Dec {
 	return sdk.NewDecWithPrec(int64(simulation.RandIntBetween(r, 334, 500)), 3)
 }
 
+// GenTallyExpeditedParamsQuorum randomized TallyParamsExpeditedQuorum
+func GenTallyExpeditedParamsQuorum(r *rand.Rand) sdk.Dec {
+	return sdk.NewDecWithPrec(int64(simulation.RandIntBetween(r, 500, 550)), 3)
+}
+
 // GenTallyParamsThreshold randomized TallyParamsThreshold
 func GenTallyParamsThreshold(r *rand.Rand) sdk.Dec {
-	return sdk.NewDecWithPrec(int64(simulation.RandIntBetween(r, 450, 550)), 3)
+	return sdk.NewDecWithPrec(int64(simulation.RandIntBetween(r, 450, 500)), 3)
+}
+
+// GenTallyParamsExpeditedThreshold randomized TallyParamsExpeditedThreshold
+func GenTallyParamsExpeditedThreshold(r *rand.Rand) sdk.Dec {
+	return sdk.NewDecWithPrec(int64(simulation.RandIntBetween(r, 500, 550)), 3)
 }
 
 // GenTallyParamsVeto randomized TallyParamsVeto
@@ -76,16 +94,34 @@ func RandomizedGenState(simState *module.SimulationState) {
 		func(r *rand.Rand) { votingPeriod = GenVotingParamsVotingPeriod(r) },
 	)
 
+	var expeditedVotingPeriod time.Duration
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, ExpeditedVotingParamsVotingPeriod, &expeditedVotingPeriod, simState.Rand,
+		func(r *rand.Rand) { expeditedVotingPeriod = GenVotingParamsExpeditedVotingPeriod(r) },
+	)
+
 	var quorum sdk.Dec
 	simState.AppParams.GetOrGenerate(
 		simState.Cdc, TallyParamsQuorum, &quorum, simState.Rand,
 		func(r *rand.Rand) { quorum = GenTallyParamsQuorum(r) },
 	)
 
+	var expeditedQuorum sdk.Dec
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, TallyParamsExpeditedQuorum, &expeditedQuorum, simState.Rand,
+		func(r *rand.Rand) { quorum = GenTallyExpeditedParamsQuorum(r) },
+	)
+
 	var threshold sdk.Dec
 	simState.AppParams.GetOrGenerate(
 		simState.Cdc, TallyParamsThreshold, &threshold, simState.Rand,
 		func(r *rand.Rand) { threshold = GenTallyParamsThreshold(r) },
+	)
+
+	var expeditedThreshold sdk.Dec
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, TallyParamsExpeditedThreshold, &expeditedThreshold, simState.Rand,
+		func(r *rand.Rand) { expeditedThreshold = GenTallyParamsExpeditedThreshold(r) },
 	)
 
 	var veto sdk.Dec
@@ -97,8 +133,8 @@ func RandomizedGenState(simState *module.SimulationState) {
 	govGenesis := types.NewGenesisState(
 		startingProposalID,
 		types.NewDepositParams(minDeposit, depositPeriod),
-		types.NewVotingParams(votingPeriod),
-		types.NewTallyParams(quorum, threshold, veto),
+		types.NewVotingParams(votingPeriod, expeditedVotingPeriod),
+		types.NewTallyParams(quorum, expeditedQuorum, threshold, expeditedThreshold, veto),
 	)
 
 	bz, err := json.MarshalIndent(&govGenesis, "", " ")

@@ -22,8 +22,8 @@ func init() {
 	govtypes.RegisterProposalTypeCodec(&ParameterChangeProposal{}, "cosmos-sdk/ParameterChangeProposal")
 }
 
-func NewParameterChangeProposal(title, description string, changes []ParamChange) *ParameterChangeProposal {
-	return &ParameterChangeProposal{title, description, changes}
+func NewParameterChangeProposal(title, description string, changes []ParamChange, isExpedited bool) *ParameterChangeProposal {
+	return &ParameterChangeProposal{title, description, changes, isExpedited}
 }
 
 // GetTitle returns the title of a parameter change proposal.
@@ -31,6 +31,9 @@ func (pcp *ParameterChangeProposal) GetTitle() string { return pcp.Title }
 
 // GetDescription returns the description of a parameter change proposal.
 func (pcp *ParameterChangeProposal) GetDescription() string { return pcp.Description }
+
+// GetIsExpedited returns whether the proposal needs to be expedited or not.
+func (pcp *ParameterChangeProposal) GetIsExpedited() bool { return pcp.IsExpedited }
 
 // ProposalRoute returns the routing key of a parameter change proposal.
 func (pcp *ParameterChangeProposal) ProposalRoute() string { return RouterKey }

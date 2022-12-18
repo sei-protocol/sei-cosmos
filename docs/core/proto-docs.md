@@ -5109,7 +5109,7 @@ Proposal defines the core field members of a governance proposal.
 | `total_deposit` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated |  |
 | `voting_start_time` | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 | `voting_end_time` | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-
+| `is_expedited` | [bool](#bool) |  |  |
 
 
 
@@ -5121,11 +5121,13 @@ Proposal defines the core field members of a governance proposal.
 TallyParams defines the params for tallying votes on governance proposals.
 
 
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `quorum` | [bytes](#bytes) |  | Minimum percentage of total stake needed to vote for a result to be considered valid. |
-| `threshold` | [bytes](#bytes) |  | Minimum proportion of Yes votes for proposal to pass. Default value: 0.5. |
-| `veto_threshold` | [bytes](#bytes) |  | Minimum value of Veto votes to Total votes ratio for proposal to be vetoed. Default value: 1/3. |
+| Field                 | Type | Label | Description                                                                                                                               |
+|-----------------------| ---- | ----- |-------------------------------------------------------------------------------------------------------------------------------------------|
+| `quorum`              | [bytes](#bytes) |  | Minimum percentage of total stake needed to vote for a result to be considered valid.                                                     |
+| `expedited_quorum`    | [bytes](#bytes) |  | Minimum percentage of total stake needed to vote for a expedited proposal result to be considered valid. Needs to be greater than quorum. |
+| `threshold`           | [bytes](#bytes) |  | Minimum proportion of Yes votes for proposal to pass. Default value: 0.5.                                                                 |
+| `expedited_threshold` | [bytes](#bytes) |  | Minimum proportion of Yes votes for expedited proposal to pass. Default value: 0.67. Needs to be greater than threshold.                  |
+| `veto_threshold`      | [bytes](#bytes) |  | Minimum value of Veto votes to Total votes ratio for proposal to be vetoed. Default value: 1/3.                                           |
 
 
 
@@ -5157,11 +5159,11 @@ TextProposal defines a standard text proposal whose changes need to be
 manually updated in case of approval.
 
 
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  |  |
-| `description` | [string](#string) |  |  |
-
+| Field          | Type              | Label | Description |
+|----------------|-------------------| ----- | ----------- |
+| `title`        | [string](#string) |  |  |
+| `description`  | [string](#string) |  |  |
+| `is_expedited` | [bool](#bool)     |  |  |
 
 
 
@@ -5192,10 +5194,10 @@ A Vote consists of a proposal ID, the voter, and the vote option.
 VotingParams defines the params for voting on governance proposals.
 
 
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `voting_period` | [google.protobuf.Duration](#google.protobuf.Duration) |  | Length of the voting period. |
-
+| Field                     | Type | Label | Description                                                                    |
+|---------------------------| ---- | ----- |--------------------------------------------------------------------------------|
+| `voting_period`           | [google.protobuf.Duration](#google.protobuf.Duration) |  | Length of the voting period.                                                   |
+| `expedited_voting_period` | [google.protobuf.Duration](#google.protobuf.Duration) |  | Length of the expedited voting period. Needs to be shorter than voting_period. |
 
 
 
@@ -5623,12 +5625,12 @@ MsgSubmitProposal defines an sdk.Msg type that supports submitting arbitrary
 proposal Content.
 
 
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `content` | [google.protobuf.Any](#google.protobuf.Any) |  |  |
+| Field             | Type                                                  | Label | Description |
+|-------------------|-------------------------------------------------------| ----- | ----------- |
+| `content`         | [google.protobuf.Any](#google.protobuf.Any)           |  |  |
 | `initial_deposit` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated |  |
-| `proposer` | [string](#string) |  |  |
-
+| `proposer`        | [string](#string)                                     |  |  |
+| `is_expedited`    | [bool](#bool)                                         |  |  |
 
 
 
@@ -5952,12 +5954,12 @@ ParameterChangeProposal.
 ParameterChangeProposal defines a proposal to change one or more parameters.
 
 
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `title` | [string](#string) |  |  |
-| `description` | [string](#string) |  |  |
-| `changes` | [ParamChange](#cosmos.params.v1beta1.ParamChange) | repeated |  |
-
+| Field          | Type                                              | Label | Description |
+|----------------|---------------------------------------------------| ----- | ----------- |
+| `title`        | [string](#string)                                 |  |  |
+| `description`  | [string](#string)                                 |  |  |
+| `changes`      | [ParamChange](#cosmos.params.v1beta1.ParamChange) | repeated |  |
+| `is_expedited` | [bool](#bool)                                     |  |  |
 
 
 

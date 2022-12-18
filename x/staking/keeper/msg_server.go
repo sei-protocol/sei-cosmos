@@ -5,6 +5,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/k0kubun/pp"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -29,6 +30,7 @@ var _ types.MsgServer = msgServer{}
 // CreateValidator defines a method for creating a new validator
 func (k msgServer) CreateValidator(goCtx context.Context, msg *types.MsgCreateValidator) (*types.MsgCreateValidatorResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+	pp.Printf("BWENG:MsgCreateValidator: %s\n", msg)
 
 	valAddr, err := sdk.ValAddressFromBech32(msg.ValidatorAddress)
 	if err != nil {
@@ -128,6 +130,8 @@ func (k msgServer) CreateValidator(goCtx context.Context, msg *types.MsgCreateVa
 
 // EditValidator defines a method for editing an existing validator
 func (k msgServer) EditValidator(goCtx context.Context, msg *types.MsgEditValidator) (*types.MsgEditValidatorResponse, error) {
+	pp.Printf("BWENG:MsgEditValidator: %s\n", msg)
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	valAddr, err := sdk.ValAddressFromBech32(msg.ValidatorAddress)
 	if err != nil {
@@ -191,6 +195,8 @@ func (k msgServer) EditValidator(goCtx context.Context, msg *types.MsgEditValida
 
 // Delegate defines a method for performing a delegation of coins from a delegator to a validator
 func (k msgServer) Delegate(goCtx context.Context, msg *types.MsgDelegate) (*types.MsgDelegateResponse, error) {
+	pp.Printf("BWENG:MsgDelegate %s\n", msg)
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	valAddr, valErr := sdk.ValAddressFromBech32(msg.ValidatorAddress)
 	if valErr != nil {
@@ -250,6 +256,8 @@ func (k msgServer) Delegate(goCtx context.Context, msg *types.MsgDelegate) (*typ
 
 // BeginRedelegate defines a method for performing a redelegation of coins from a delegator and source validator to a destination validator
 func (k msgServer) BeginRedelegate(goCtx context.Context, msg *types.MsgBeginRedelegate) (*types.MsgBeginRedelegateResponse, error) {
+	pp.Printf("BWENG:MsgBeginRedelegate %s\n", msg)
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	valSrcAddr, err := sdk.ValAddressFromBech32(msg.ValidatorSrcAddress)
 	if err != nil {
@@ -318,6 +326,8 @@ func (k msgServer) BeginRedelegate(goCtx context.Context, msg *types.MsgBeginRed
 
 // Undelegate defines a method for performing an undelegation from a delegate and a validator
 func (k msgServer) Undelegate(goCtx context.Context, msg *types.MsgUndelegate) (*types.MsgUndelegateResponse, error) {
+	pp.Printf("BWENG:MsgUndelegate %s\n", msg)
+
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	addr, err := sdk.ValAddressFromBech32(msg.ValidatorAddress)

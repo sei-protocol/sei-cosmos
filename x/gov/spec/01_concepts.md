@@ -58,7 +58,7 @@ arbitrary state changes.
 
 A proposal can be expedited, making the proposal use shorter voting duration and a higher tally quorum and tally threshold by default. 
 
-If an expedited proposal fails to meet the threshold within the scope of shorter voting duration, the expedited proposal is then converted to a regular proposal and restarts voting under regular voting conditions.
+If an expedited proposal fails to meet the threshold within the scope of shorter voting duration, the expedited proposal is then converted to a regular proposal and resume voting under regular voting conditions.
 
 ## Deposit
 

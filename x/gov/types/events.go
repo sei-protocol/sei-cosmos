@@ -16,7 +16,7 @@ const (
 	AttributeValueProposalDropped    = "proposal_dropped"             // didn't meet min deposit
 	AttributeValueProposalPassed     = "proposal_passed"              // met vote quorum
 	AttributeValueProposalRejected   = "proposal_rejected"            // didn't meet vote quorum
-	AttributeValueExpeditedConverted = "expedited_proposal_converted" // didn't meet expedited vote quorum and converted to regular proposal
+	AttributeValueExpeditedConverted = "expedited_proposal_converted" // didn't pass expedition and converted to regular proposal
 	AttributeValueProposalFailed     = "proposal_failed"              // error on proposal handler
 	AttributeKeyProposalType         = "proposal_type"
 )

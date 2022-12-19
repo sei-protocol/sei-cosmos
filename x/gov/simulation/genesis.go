@@ -109,7 +109,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 	var expeditedQuorum sdk.Dec
 	simState.AppParams.GetOrGenerate(
 		simState.Cdc, TallyParamsExpeditedQuorum, &expeditedQuorum, simState.Rand,
-		func(r *rand.Rand) { quorum = GenTallyExpeditedParamsQuorum(r) },
+		func(r *rand.Rand) { expeditedQuorum = GenTallyExpeditedParamsQuorum(r) },
 	)
 
 	var threshold sdk.Dec

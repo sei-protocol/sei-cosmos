@@ -105,6 +105,7 @@ func TestMigrate(t *testing.T) {
 			"content": {
 				"@type": "/cosmos.gov.v1beta1.TextProposal",
 				"description": "bar_text",
+				"is_expedited": false,
 				"title": "foo_text"
 			},
 			"deposit_end_time": "0001-01-01T00:00:00Z",
@@ -210,6 +211,7 @@ func TestMigrate(t *testing.T) {
 					}
 				],
 				"description": "bar_param_change",
+				"is_expedited": false,
 				"title": "foo_param_change"
 			},
 			"deposit_end_time": "0001-01-01T00:00:00Z",
@@ -230,16 +232,16 @@ func TestMigrate(t *testing.T) {
 	],
 	"starting_proposal_id": "0",
 	"tally_params": {
+		"expedited_quorum": "0",
+		"expedited_threshold": "0",
 		"quorum": "0",
 		"threshold": "0",
-		"veto_threshold": "0",
-		"expedited_threshold": "0",
-		"expedited_quorum": "0",
+		"veto_threshold": "0"
 	},
 	"votes": [],
 	"voting_params": {
-		"voting_period": "0s",
 		"expedited_voting_period": "0s",
+		"voting_period": "0s"
 	}
 }`
 

@@ -19,7 +19,7 @@ func TestParamChanges(t *testing.T) {
 		simValue    string
 		subspace    string
 	}{
-		{"gov/votingparams", "votingparams", "{\"voting_period\": \"82639000000000\"}", "gov"},
+		{"gov/votingparams", "votingparams", "{\"voting_period\": \"165281000000000\"}", "gov"},
 		{"gov/depositparams", "depositparams", "{\"max_deposit_period\": \"47332000000000\"}", "gov"},
 		{"gov/tallyparams", "tallyparams", "{\"threshold\":\"0.509000000000000000\"}", "gov"},
 	}

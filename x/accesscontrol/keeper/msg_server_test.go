@@ -18,7 +18,6 @@ func (suite *KeeperTestSuite) TestMessageRegisterWasmDependency() {
 	fromAddr := suite.addrs[1]
 
 	registerWasmDependency := acltypes.MsgRegisterWasmDependency{
-		ContractAddress:       contractAddr.String(),
 		FromAddress:           fromAddr.String(),
 		WasmDependencyMapping: acltypes.SynchronousWasmDependencyMapping(contractAddr.String()),
 	}
@@ -44,7 +43,6 @@ func (suite *KeeperTestSuite) TestMessageRegisterWasmDepFromJson() {
 	fromAddr := suite.addrs[1]
 
 	depJson := acltypes.RegisterWasmDependencyJSONFile{
-		ContractAddress:       contractAddr.String(),
 		WasmDependencyMapping: acltypes.SynchronousWasmDependencyMapping(contractAddr.String()),
 	}
 

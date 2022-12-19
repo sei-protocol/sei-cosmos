@@ -17,7 +17,6 @@ var (
 func NewMsgRegisterWasmDependencyFromJSON(fromAddr sdk.AccAddress, jsonFile RegisterWasmDependencyJSONFile) *MsgRegisterWasmDependency {
 	m := &MsgRegisterWasmDependency{
 		FromAddress:           fromAddr.String(),
-		ContractAddress:       jsonFile.ContractAddress,
 		WasmDependencyMapping: jsonFile.WasmDependencyMapping,
 	}
 	return m
@@ -26,7 +25,6 @@ func NewMsgRegisterWasmDependencyFromJSON(fromAddr sdk.AccAddress, jsonFile Regi
 func NewMsgRegisterWasmDependency(fromAddr sdk.AccAddress, contractAddr sdk.AccAddress, wasmDependencyMapping acltypes.WasmDependencyMapping) *MsgRegisterWasmDependency {
 	m := &MsgRegisterWasmDependency{
 		FromAddress:           fromAddr.String(),
-		ContractAddress:       contractAddr.String(),
 		WasmDependencyMapping: wasmDependencyMapping,
 	}
 	return m
@@ -44,8 +42,8 @@ func (m MsgRegisterWasmDependency) ValidateBasic() error {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, m.FromAddress)
 	}
 
-	if m.ContractAddress == "" {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, m.ContractAddress)
+	if m.WasmDependencyMapping.ContractAddress == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, m.WasmDependencyMapping.ContractAddress)
 	}
 
 	return nil

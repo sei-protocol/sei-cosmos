@@ -58,7 +58,9 @@ func TestMigrateJSON(t *testing.T) {
 	"tally_params": {
 		"quorum": "0",
 		"threshold": "0",
-		"veto_threshold": "0"
+		"veto_threshold": "0",
+		"expedited_threshold": "0",
+		"expedited_quorum": "0",
 	},
 	"votes": [
 		{
@@ -118,7 +120,8 @@ func TestMigrateJSON(t *testing.T) {
 		}
 	],
 	"voting_params": {
-		"voting_period": "0s"
+		"voting_period": "0s",
+		"expedited_voting_period": "0s",
 	}
 }`
 

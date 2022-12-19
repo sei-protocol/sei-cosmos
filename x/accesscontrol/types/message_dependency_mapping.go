@@ -101,9 +101,7 @@ func IsDefaultSynchronousAccessOps(accessOps []acltypes.AccessOperation) bool {
 }
 
 func DefaultMessageDependencyMapping() []acltypes.MessageDependencyMapping {
-	return []acltypes.MessageDependencyMapping{
-		SynchronousMessageDependencyMapping(""),
-	}
+	return []acltypes.MessageDependencyMapping{}
 }
 
 func DefaultWasmDependencyMappings() []acltypes.WasmDependencyMapping {

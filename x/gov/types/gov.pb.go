@@ -893,6 +893,16 @@ func (m *Proposal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.IsExpedited {
+		i--
+		if m.IsExpedited {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x50
+	}
 	n1, err1 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.VotingEndTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.VotingEndTime):])
 	if err1 != nil {
 		return 0, err1
@@ -1156,12 +1166,20 @@ func (m *VotingParams) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	n8, err8 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.VotingPeriod, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.VotingPeriod):])
+	n8, err8 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.ExpeditedVotingPeriod, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.ExpeditedVotingPeriod):])
 	if err8 != nil {
 		return 0, err8
 	}
 	i -= n8
 	i = encodeVarintGov(dAtA, i, uint64(n8))
+	i--
+	dAtA[i] = 0x12
+	n9, err9 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.VotingPeriod, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.VotingPeriod):])
+	if err9 != nil {
+		return 0, err9
+	}
+	i -= n9
+	i = encodeVarintGov(dAtA, i, uint64(n9))
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -1187,6 +1205,26 @@ func (m *TallyParams) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	{
+		size := m.ExpeditedThreshold.Size()
+		i -= size
+		if _, err := m.ExpeditedThreshold.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintGov(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x2a
+	{
+		size := m.ExpeditedQuorum.Size()
+		i -= size
+		if _, err := m.ExpeditedQuorum.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintGov(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x22
 	{
 		size := m.VetoThreshold.Size()
 		i -= size
@@ -1259,6 +1297,9 @@ func (m *TextProposal) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovGov(uint64(l))
 	}
+	if m.IsExpedited {
+		n += 2
+	}
 	return n
 }
 
@@ -1316,6 +1357,9 @@ func (m *Proposal) Size() (n int) {
 	n += 1 + l + sovGov(uint64(l))
 	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.VotingEndTime)
 	n += 1 + l + sovGov(uint64(l))
+	if m.IsExpedited {
+		n += 2
+	}
 	return n
 }
 
@@ -1386,6 +1430,8 @@ func (m *VotingParams) Size() (n int) {
 	_ = l
 	l = github_com_gogo_protobuf_types.SizeOfStdDuration(m.VotingPeriod)
 	n += 1 + l + sovGov(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdDuration(m.ExpeditedVotingPeriod)
+	n += 1 + l + sovGov(uint64(l))
 	return n
 }
 
@@ -1400,6 +1446,10 @@ func (m *TallyParams) Size() (n int) {
 	l = m.Threshold.Size()
 	n += 1 + l + sovGov(uint64(l))
 	l = m.VetoThreshold.Size()
+	n += 1 + l + sovGov(uint64(l))
+	l = m.ExpeditedQuorum.Size()
+	n += 1 + l + sovGov(uint64(l))
+	l = m.ExpeditedThreshold.Size()
 	n += 1 + l + sovGov(uint64(l))
 	return n
 }
@@ -1606,6 +1656,26 @@ func (m *TextProposal) Unmarshal(dAtA []byte) error {
 			}
 			m.Description = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsExpedited", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGov
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsExpedited = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGov(dAtA[iNdEx:])
@@ -2064,6 +2134,26 @@ func (m *Proposal) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsExpedited", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGov
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsExpedited = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGov(dAtA[iNdEx:])
@@ -2604,6 +2694,39 @@ func (m *VotingParams) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExpeditedVotingPeriod", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGov
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGov
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGov
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(&m.ExpeditedVotingPeriod, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGov(dAtA[iNdEx:])
@@ -2750,6 +2873,72 @@ func (m *TallyParams) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if err := m.VetoThreshold.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExpeditedQuorum", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGov
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthGov
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGov
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ExpeditedQuorum.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExpeditedThreshold", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGov
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthGov
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGov
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ExpeditedThreshold.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

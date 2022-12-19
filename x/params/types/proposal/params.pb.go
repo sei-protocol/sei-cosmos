@@ -246,6 +246,16 @@ func (m *ParameterChangeProposal) MarshalToSizedBuffer(dAtA []byte) (int, error)
 	_ = i
 	var l int
 	_ = l
+	if m.IsExpedited {
+		i--
+		if m.IsExpedited {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x20
+	}
 	if len(m.Changes) > 0 {
 		for iNdEx := len(m.Changes) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -351,6 +361,9 @@ func (m *ParameterChangeProposal) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovParams(uint64(l))
 		}
+	}
+	if m.IsExpedited {
+		n += 2
 	}
 	return n
 }
@@ -509,6 +522,26 @@ func (m *ParameterChangeProposal) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsExpedited", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowParams
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsExpedited = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipParams(dAtA[iNdEx:])

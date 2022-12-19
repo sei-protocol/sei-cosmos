@@ -2,6 +2,7 @@ package types
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
@@ -18,6 +19,15 @@ func NewMsgRegisterWasmDependencyFromJSON(fromAddr sdk.AccAddress, jsonFile Regi
 		FromAddress:           fromAddr.String(),
 		ContractAddress:       jsonFile.ContractAddress,
 		WasmDependencyMapping: jsonFile.WasmDependencyMapping,
+	}
+	return m
+}
+
+func NewMsgRegisterWasmDependency(fromAddr sdk.AccAddress, contractAddr sdk.AccAddress, wasmDependencyMapping acltypes.WasmDependencyMapping) *MsgRegisterWasmDependency {
+	m := &MsgRegisterWasmDependency{
+		FromAddress:           fromAddr.String(),
+		ContractAddress:       contractAddr.String(),
+		WasmDependencyMapping: wasmDependencyMapping,
 	}
 	return m
 }

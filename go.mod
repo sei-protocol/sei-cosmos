@@ -11,7 +11,6 @@ require (
 	github.com/confio/ics23/go v0.7.0
 	github.com/cosmos/btcutil v1.0.4
 	github.com/cosmos/go-bip39 v1.0.0
-	github.com/cosmos/gogoproto v1.4.3
 	github.com/cosmos/iavl v0.19.4
 	github.com/cosmos/ledger-cosmos-go v0.11.1
 	github.com/deckarep/golang-set v1.8.0
@@ -27,8 +26,6 @@ require (
 	github.com/hdevalence/ed25519consensus v0.0.0-20210204194344-59a8610d2b87
 	github.com/improbable-eng/grpc-web v0.14.1
 	github.com/jhump/protoreflect v1.12.1-0.20220417024638-438db461d753
-	github.com/k0kubun/pp v3.0.1+incompatible
-	github.com/k0kubun/pp/v3 v3.2.0
 	github.com/magiconair/properties v1.8.6
 	github.com/mattn/go-isatty v0.0.16
 	github.com/pkg/errors v0.9.1
@@ -101,12 +98,10 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
-	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/keybase/go-keychain v0.0.0-20190712205309-48d3d31d256d // indirect
 	github.com/klauspost/compress v1.15.1 // indirect
 	github.com/lib/pq v1.10.6 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
@@ -146,7 +141,7 @@ replace (
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.7.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/tendermint/tendermint => ../sei-tendermint // github.com/sei-protocol/sei-tendermint v0.1.102
+	github.com/tendermint/tendermint => github.com/sei-protocol/sei-tendermint v0.1.115
 
 	// latest grpc doesn't work with with our modified proto compiler, so we need to enforce
 	// the following version across all dependencies.

@@ -1003,6 +1003,7 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 		flushCommitInfo(batch, version, cInfo)
 	}
 	flushLatestVersion(batch, version)
+	flushPruningHeights(batch, rs.pruneHeights)
 	if err := batch.WriteSync(); err != nil {
 		panic(fmt.Errorf("error on batch write %w", err))
 	}
@@ -1129,4 +1130,15 @@ func flushLatestVersion(batch dbm.Batch, version int64) {
 	}
 
 	batch.Set([]byte(latestVersionKey), bz)
+}
+
+func flushPruningHeights(batch dbm.Batch, pruneHeights []int64) {
+	bz := make([]byte, 0)
+	for _, ph := range pruneHeights {
+		buf := make([]byte, 8)
+		binary.BigEndian.PutUint64(buf, uint64(ph))
+		bz = append(bz, buf...)
+	}
+
+	batch.Set([]byte(pruneHeightsKey), bz)
 }

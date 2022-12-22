@@ -37,6 +37,7 @@ func EndBlocker(ctx sdk.Context, keeper keeper.Keeper) {
 			"proposal", proposal.ProposalId,
 			"title", proposal.GetTitle(),
 			"min_deposit", keeper.GetDepositParams(ctx).MinDeposit.String(),
+			"min_expedited_deposit", keeper.GetDepositParams(ctx).MinExpeditedDeposit.String(),
 			"total_deposit", proposal.TotalDeposit.String(),
 		)
 

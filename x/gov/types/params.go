@@ -18,12 +18,13 @@ const (
 
 // Default governance params
 var (
-	DefaultMinDepositTokens   = sdk.NewInt(10000000)
-	DefaultQuorum             = sdk.NewDecWithPrec(334, 3)
-	DefaultExpeditedQuorum    = sdk.NewDecWithPrec(667, 3)
-	DefaultThreshold          = sdk.NewDecWithPrec(5, 1)
-	DefaultExpeditedThreshold = sdk.NewDecWithPrec(667, 3)
-	DefaultVetoThreshold      = sdk.NewDecWithPrec(334, 3)
+	DefaultMinDepositTokens          = sdk.NewInt(10000000)
+	DefaultMinExpeditedDepositTokens = sdk.NewInt(20000000)
+	DefaultQuorum                    = sdk.NewDecWithPrec(334, 3)
+	DefaultExpeditedQuorum           = sdk.NewDecWithPrec(667, 3)
+	DefaultThreshold                 = sdk.NewDecWithPrec(5, 1)
+	DefaultExpeditedThreshold        = sdk.NewDecWithPrec(667, 3)
+	DefaultVetoThreshold             = sdk.NewDecWithPrec(334, 3)
 )
 
 // Parameter store key
@@ -43,10 +44,11 @@ func ParamKeyTable() paramtypes.KeyTable {
 }
 
 // NewDepositParams creates a new DepositParams object
-func NewDepositParams(minDeposit sdk.Coins, maxDepositPeriod time.Duration) DepositParams {
+func NewDepositParams(minDeposit sdk.Coins, minExpeditedDeposit sdk.Coins, maxDepositPeriod time.Duration) DepositParams {
 	return DepositParams{
-		MinDeposit:       minDeposit,
-		MaxDepositPeriod: maxDepositPeriod,
+		MinDeposit:          minDeposit,
+		MaxDepositPeriod:    maxDepositPeriod,
+		MinExpeditedDeposit: minExpeditedDeposit,
 	}
 }
 
@@ -54,6 +56,7 @@ func NewDepositParams(minDeposit sdk.Coins, maxDepositPeriod time.Duration) Depo
 func DefaultDepositParams() DepositParams {
 	return NewDepositParams(
 		sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, DefaultMinDepositTokens)),
+		sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, DefaultMinExpeditedDepositTokens)),
 		DefaultPeriod,
 	)
 }
@@ -64,9 +67,19 @@ func (dp DepositParams) String() string {
 	return string(out)
 }
 
+// GetMinimumDeposit returns minimum deposit based on the value isExpedited
+func (dp DepositParams) GetMinimumDeposit(isExpedited bool) sdk.Coins {
+	if isExpedited {
+		return dp.MinExpeditedDeposit
+	}
+	return dp.MinDeposit
+}
+
 // Equal checks equality of DepositParams
 func (dp DepositParams) Equal(dp2 DepositParams) bool {
-	return dp.MinDeposit.IsEqual(dp2.MinDeposit) && dp.MaxDepositPeriod == dp2.MaxDepositPeriod
+	return dp.MinDeposit.IsEqual(dp2.MinDeposit) &&
+		dp.MinExpeditedDeposit.IsEqual(dp2.MinExpeditedDeposit) &&
+		dp.MaxDepositPeriod == dp2.MaxDepositPeriod
 }
 
 func validateDepositParams(i interface{}) error {
@@ -77,6 +90,12 @@ func validateDepositParams(i interface{}) error {
 
 	if !v.MinDeposit.IsValid() {
 		return fmt.Errorf("invalid minimum deposit: %s", v.MinDeposit)
+	}
+	if !v.MinExpeditedDeposit.IsValid() {
+		return fmt.Errorf("invalid minimum expedited deposit: %s", v.MinExpeditedDeposit)
+	}
+	if v.MinExpeditedDeposit.IsAllLTE(v.MinDeposit) {
+		return fmt.Errorf("minimum expedited deposit: %s should be larger than minimum deposit: %s", v.MinExpeditedDeposit, v.MinDeposit)
 	}
 	if v.MaxDepositPeriod <= 0 {
 		return fmt.Errorf("maximum deposit period must be positive: %d", v.MaxDepositPeriod)
@@ -119,7 +138,11 @@ func (tp TallyParams) GetQuorum(isExpedited bool) sdk.Dec {
 
 // Equal checks equality of TallyParams
 func (tp TallyParams) Equal(other TallyParams) bool {
-	return tp.Quorum.Equal(other.Quorum) && tp.Threshold.Equal(other.Threshold) && tp.VetoThreshold.Equal(other.VetoThreshold)
+	return tp.Quorum.Equal(other.Quorum) &&
+		tp.ExpeditedQuorum.Equal(other.ExpeditedQuorum) &&
+		tp.Threshold.Equal(other.Threshold) &&
+		tp.ExpeditedThreshold.Equal(other.ExpeditedThreshold) &&
+		tp.VetoThreshold.Equal(other.VetoThreshold)
 }
 
 // String implements stringer insterface
@@ -146,7 +169,7 @@ func validateTallyParams(i interface{}) error {
 	if v.ExpeditedQuorum.GT(sdk.OneDec()) {
 		return fmt.Errorf("expedited quorom too large: %s", v.ExpeditedQuorum)
 	}
-	if v.ExpeditedQuorum.LTE(v.Quorum) {
+	if v.ExpeditedQuorum.LT(v.Quorum) {
 		return fmt.Errorf("expedited quorum %s, must be greater than the regular quorum %s", v.ExpeditedQuorum, v.Quorum)
 	}
 	if !v.Threshold.IsPositive() {
@@ -161,7 +184,7 @@ func validateTallyParams(i interface{}) error {
 	if v.ExpeditedThreshold.GT(sdk.OneDec()) {
 		return fmt.Errorf("expedited vote threshold too large: %s", v.ExpeditedThreshold)
 	}
-	if v.ExpeditedThreshold.LTE(v.Threshold) {
+	if v.ExpeditedThreshold.LT(v.Threshold) {
 		return fmt.Errorf("expedited vote threshold %s, must be greater than the regular threshold %s", v.ExpeditedThreshold, v.Threshold)
 	}
 	if !v.VetoThreshold.IsPositive() {
@@ -220,8 +243,8 @@ func validateVotingParams(i interface{}) error {
 		return fmt.Errorf("expedited voting period must be positive: %s", v.ExpeditedVotingPeriod)
 	}
 
-	if v.ExpeditedVotingPeriod >= v.VotingPeriod {
-		return fmt.Errorf("expedited voting period %s must be strictly less that the regular voting period %s", v.ExpeditedVotingPeriod, v.VotingPeriod)
+	if v.ExpeditedVotingPeriod > v.VotingPeriod {
+		return fmt.Errorf("expedited voting period %s must less than or equal to the regular voting period %s", v.ExpeditedVotingPeriod, v.VotingPeriod)
 	}
 
 	return nil

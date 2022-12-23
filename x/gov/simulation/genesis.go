@@ -35,12 +35,12 @@ func GenDepositParamsDepositPeriod(r *rand.Rand) time.Duration {
 
 // GenDepositParamsMinDeposit randomized DepositParamsMinDeposit
 func GenDepositParamsMinDeposit(r *rand.Rand) sdk.Coins {
-	return sdk.NewCoins(sdk.NewInt64Coin(sdk.DefaultBondDenom, int64(simulation.RandIntBetween(r, 1, 1e3))))
+	return sdk.NewCoins(sdk.NewInt64Coin(sdk.DefaultBondDenom, int64(simulation.RandIntBetween(r, 1, 1e3/2))))
 }
 
 // GenDepositParamsMinExpeditedDeposit randomized DepositParamsMinExpeditedDeposit
 func GenDepositParamsMinExpeditedDeposit(r *rand.Rand) sdk.Coins {
-	return sdk.NewCoins(sdk.NewInt64Coin(sdk.DefaultBondDenom, int64(simulation.RandIntBetween(r, 2e3, 3e3))))
+	return sdk.NewCoins(sdk.NewInt64Coin(sdk.DefaultBondDenom, int64(simulation.RandIntBetween(r, 1e3/2, 1e3))))
 }
 
 // GenVotingParamsVotingPeriod randomized VotingParamsVotingPeriod
@@ -90,8 +90,8 @@ func RandomizedGenState(simState *module.SimulationState) {
 
 	var minExpeditedDeposit sdk.Coins
 	simState.AppParams.GetOrGenerate(
-		simState.Cdc, DepositParamsMinExpeditedDeposit, &minDeposit, simState.Rand,
-		func(r *rand.Rand) { minDeposit = GenDepositParamsMinExpeditedDeposit(r) },
+		simState.Cdc, DepositParamsMinExpeditedDeposit, &minExpeditedDeposit, simState.Rand,
+		func(r *rand.Rand) { minExpeditedDeposit = GenDepositParamsMinExpeditedDeposit(r) },
 	)
 
 	var depositPeriod time.Duration

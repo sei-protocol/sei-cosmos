@@ -268,56 +268,81 @@ func TestTickPassedVotingPeriod(t *testing.T) {
 }
 
 func TestProposalPassedEndblocker(t *testing.T) {
-	app := simapp.Setup(false)
-	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
-	addrs := simapp.AddTestAddrs(app, ctx, 10, valTokens)
-	params := app.StakingKeeper.GetParams(ctx)
-	params.MinCommissionRate = sdk.NewDec(0)
-	app.StakingKeeper.SetParams(ctx, params)
+	testcases := []struct {
+		name        string
+		isExpedited bool
+	}{
+		{
+			name:        "test regular text proposal",
+			isExpedited: false,
+		},
+		{
+			name:        "test expedited text proposal",
+			isExpedited: true,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, tc := range testcases {
+				t.Run(tc.name, func(t *testing.T) {
+					testProposal := TestProposal
 
-	SortAddresses(addrs)
+					depositMultiplier := getDepositMultiplier(tc.isExpedited)
 
-	handler := gov.NewHandler(app.GovKeeper)
-	stakingHandler := staking.NewHandler(app.StakingKeeper)
+					app := simapp.Setup(false)
+					ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+					addrs := simapp.AddTestAddrs(app, ctx, 10, valTokens.Mul(sdk.NewInt(depositMultiplier)))
+					params := app.StakingKeeper.GetParams(ctx)
+					params.MinCommissionRate = sdk.NewDec(0)
+					app.StakingKeeper.SetParams(ctx, params)
+					SortAddresses(addrs)
 
-	app.FinalizeBlock(context.Background(), &abci.RequestFinalizeBlock{Height: app.LastBlockHeight() + 1})
+					handler := gov.NewHandler(app.GovKeeper)
+					stakingHandler := staking.NewHandler(app.StakingKeeper)
 
-	valAddr := sdk.ValAddress(addrs[0])
+					header := tmproto.Header{Height: app.LastBlockHeight() + 1}
+					app.BeginBlock(ctx, abci.RequestBeginBlock{Header: header})
 
-	createValidators(t, stakingHandler, ctx, []sdk.ValAddress{valAddr}, []int64{10})
-	staking.EndBlocker(ctx, app.StakingKeeper)
+					valAddr := sdk.ValAddress(addrs[0])
 
-	macc := app.GovKeeper.GetGovernanceAccount(ctx)
-	require.NotNil(t, macc)
-	initialModuleAccCoins := app.BankKeeper.GetAllBalances(ctx, macc.GetAddress())
+					createValidators(t, stakingHandler, ctx, []sdk.ValAddress{valAddr}, []int64{10})
+					staking.EndBlocker(ctx, app.StakingKeeper)
 
-	proposal, err := app.GovKeeper.SubmitProposal(ctx, TestProposal)
-	require.NoError(t, err)
+					macc := app.GovKeeper.GetGovernanceAccount(ctx)
+					require.NotNil(t, macc)
+					initialModuleAccCoins := app.BankKeeper.GetAllBalances(ctx, macc.GetAddress())
 
-	proposalCoins := sdk.Coins{sdk.NewCoin(sdk.DefaultBondDenom, app.StakingKeeper.TokensFromConsensusPower(ctx, 10))}
-	newDepositMsg := types.NewMsgDeposit(addrs[0], proposal.ProposalId, proposalCoins)
+					proposal, err := app.GovKeeper.SubmitProposalWithExpedite(ctx, testProposal, tc.isExpedited)
+					require.NoError(t, err)
 
-	handleAndCheck(t, handler, ctx, newDepositMsg)
+					proposalCoins := sdk.Coins{sdk.NewCoin(sdk.DefaultBondDenom, app.StakingKeeper.TokensFromConsensusPower(ctx, 10*depositMultiplier))}
+					newDepositMsg := types.NewMsgDeposit(addrs[0], proposal.ProposalId, proposalCoins)
 
-	macc = app.GovKeeper.GetGovernanceAccount(ctx)
-	require.NotNil(t, macc)
-	moduleAccCoins := app.BankKeeper.GetAllBalances(ctx, macc.GetAddress())
+					handleAndCheck(t, handler, ctx, newDepositMsg)
 
-	deposits := initialModuleAccCoins.Add(proposal.TotalDeposit...).Add(proposalCoins...)
-	require.True(t, moduleAccCoins.IsEqual(deposits))
+					macc = app.GovKeeper.GetGovernanceAccount(ctx)
+					require.NotNil(t, macc)
+					moduleAccCoins := app.BankKeeper.GetAllBalances(ctx, macc.GetAddress())
 
-	err = app.GovKeeper.AddVote(ctx, proposal.ProposalId, addrs[0], types.NewNonSplitVoteOption(types.OptionYes))
-	require.NoError(t, err)
+					deposits := initialModuleAccCoins.Add(proposal.TotalDeposit...).Add(proposalCoins...)
+					require.True(t, moduleAccCoins.IsEqual(deposits))
 
-	newHeader := ctx.BlockHeader()
-	newHeader.Time = ctx.BlockHeader().Time.Add(app.GovKeeper.GetDepositParams(ctx).MaxDepositPeriod).Add(app.GovKeeper.GetVotingParams(ctx).VotingPeriod)
-	ctx = ctx.WithBlockHeader(newHeader)
+					err = app.GovKeeper.AddVote(ctx, proposal.ProposalId, addrs[0], types.NewNonSplitVoteOption(types.OptionYes))
+					require.NoError(t, err)
 
-	gov.EndBlocker(ctx, app.GovKeeper)
+					newHeader := ctx.BlockHeader()
+					newHeader.Time = ctx.BlockHeader().Time.Add(app.GovKeeper.GetDepositParams(ctx).MaxDepositPeriod).Add(app.GovKeeper.GetVotingParams(ctx).VotingPeriod)
+					ctx = ctx.WithBlockHeader(newHeader)
 
-	macc = app.GovKeeper.GetGovernanceAccount(ctx)
-	require.NotNil(t, macc)
-	require.True(t, app.BankKeeper.GetAllBalances(ctx, macc.GetAddress()).IsEqual(initialModuleAccCoins))
+					gov.EndBlocker(ctx, app.GovKeeper)
+
+					macc = app.GovKeeper.GetGovernanceAccount(ctx)
+					require.NotNil(t, macc)
+					require.True(t, app.BankKeeper.GetAllBalances(ctx, macc.GetAddress()).IsEqual(initialModuleAccCoins))
+				})
+			}
+		})
+	}
 }
 
 func TestExpeditedProposalPassAndConvertToRegular(t *testing.T) {
@@ -382,7 +407,7 @@ func TestExpeditedProposalPassAndConvertToRegular(t *testing.T) {
 			submitterInitialBalance := app.BankKeeper.GetAllBalances(ctx, addrs[0])
 			depositorInitialBalance := app.BankKeeper.GetAllBalances(ctx, addrs[1])
 
-			proposalCoins := sdk.Coins{sdk.NewCoin(sdk.DefaultBondDenom, app.StakingKeeper.TokensFromConsensusPower(ctx, 5))}
+			proposalCoins := sdk.Coins{sdk.NewCoin(sdk.DefaultBondDenom, app.StakingKeeper.TokensFromConsensusPower(ctx, 10))}
 			newProposalMsg, err := types.NewMsgSubmitProposalWithExpedite(testProposal, proposalCoins, addrs[0], isExpedited)
 			require.NoError(t, err)
 
@@ -578,4 +603,14 @@ func TestEndBlockerProposalHandlerFailed(t *testing.T) {
 
 	// validate that the proposal fails/has been rejected
 	gov.EndBlocker(ctx, app.GovKeeper)
+}
+
+// With expedited proposal's minimum deposit set higher than the default deposit, we must
+// initialize and deposit an amount depositMultiplier times larger
+// than the regular min deposit amount.
+func getDepositMultiplier(isExpedited bool) int64 {
+	if !isExpedited {
+		return 1
+	}
+	return types.DefaultMinExpeditedDepositTokens.Quo(types.DefaultMinDepositTokens).Int64()
 }

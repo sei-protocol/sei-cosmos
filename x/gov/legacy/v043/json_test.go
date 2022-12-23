@@ -48,81 +48,82 @@ func TestMigrateJSON(t *testing.T) {
 	// Make sure about:
 	// - Votes are all ADR-037 weighted votes with weight 1.
 	expected := `{
-	"deposit_params": {
-		"max_deposit_period": "0s",
-		"min_deposit": []
-	},
-	"deposits": [],
-	"proposals": [],
-	"starting_proposal_id": "0",
-	"tally_params": {
-		"expedited_quorum": "0",
-		"expedited_threshold": "0",
-		"quorum": "0",
-		"threshold": "0",
-		"veto_threshold": "0"
-	},
-	"votes": [
-		{
-			"option": "VOTE_OPTION_UNSPECIFIED",
-			"options": [
-				{
-					"option": "VOTE_OPTION_ABSTAIN",
-					"weight": "1.000000000000000000"
-				}
-			],
-			"proposal_id": "1",
-			"voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
-		},
-		{
-			"option": "VOTE_OPTION_UNSPECIFIED",
-			"options": [
-				{
-					"option": "VOTE_OPTION_UNSPECIFIED",
-					"weight": "1.000000000000000000"
-				}
-			],
-			"proposal_id": "2",
-			"voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
-		},
-		{
-			"option": "VOTE_OPTION_UNSPECIFIED",
-			"options": [
-				{
-					"option": "VOTE_OPTION_NO",
-					"weight": "1.000000000000000000"
-				}
-			],
-			"proposal_id": "3",
-			"voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
-		},
-		{
-			"option": "VOTE_OPTION_UNSPECIFIED",
-			"options": [
-				{
-					"option": "VOTE_OPTION_NO_WITH_VETO",
-					"weight": "1.000000000000000000"
-				}
-			],
-			"proposal_id": "4",
-			"voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
-		},
-		{
-			"option": "VOTE_OPTION_UNSPECIFIED",
-			"options": [
-				{
-					"option": "VOTE_OPTION_YES",
-					"weight": "1.000000000000000000"
-				}
-			],
-			"proposal_id": "5",
-			"voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
-		}
-	],
-	"voting_params": {
-		"expedited_voting_period": "0s",
-		"voting_period": "0s"
-	}
+  "deposit_params": {
+    "max_deposit_period": "0s",
+    "min_deposit": [],
+	"min_expedited_deposit": []
+  },
+  "deposits": [],
+  "proposals": [],
+  "starting_proposal_id": "0",
+  "tally_params": {
+    "expedited_quorum": "0",
+    "expedited_threshold": "0",
+    "quorum": "0",
+    "threshold": "0",
+    "veto_threshold": "0"
+  },
+  "votes": [
+    {
+      "option": "VOTE_OPTION_UNSPECIFIED",
+      "options": [
+        {
+          "option": "VOTE_OPTION_ABSTAIN",
+          "weight": "1.000000000000000000"
+        }
+      ],
+      "proposal_id": "1",
+      "voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
+    },
+    {
+      "option": "VOTE_OPTION_UNSPECIFIED",
+      "options": [
+        {
+          "option": "VOTE_OPTION_UNSPECIFIED",
+          "weight": "1.000000000000000000"
+        }
+      ],
+      "proposal_id": "2",
+      "voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
+    },
+    {
+      "option": "VOTE_OPTION_UNSPECIFIED",
+      "options": [
+        {
+          "option": "VOTE_OPTION_NO",
+          "weight": "1.000000000000000000"
+        }
+      ],
+      "proposal_id": "3",
+      "voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
+    },
+    {
+      "option": "VOTE_OPTION_UNSPECIFIED",
+      "options": [
+        {
+          "option": "VOTE_OPTION_NO_WITH_VETO",
+          "weight": "1.000000000000000000"
+        }
+      ],
+      "proposal_id": "4",
+      "voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
+    },
+    {
+      "option": "VOTE_OPTION_UNSPECIFIED",
+      "options": [
+        {
+          "option": "VOTE_OPTION_YES",
+          "weight": "1.000000000000000000"
+        }
+      ],
+      "proposal_id": "5",
+      "voter": "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh"
+    }
+  ],
+  "voting_params": {
+    "expedited_voting_period": "0s",
+    "voting_period": "0s"
+  }
 }`
 
 	fmt.Println(string(indentedBz))

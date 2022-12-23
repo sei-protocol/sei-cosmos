@@ -169,7 +169,7 @@ func validateTallyParams(i interface{}) error {
 	if v.ExpeditedQuorum.GT(sdk.OneDec()) {
 		return fmt.Errorf("expedited quorom too large: %s", v.ExpeditedQuorum)
 	}
-	if v.ExpeditedQuorum.LT(v.Quorum) {
+	if v.ExpeditedQuorum.LTE(v.Quorum) {
 		return fmt.Errorf("expedited quorum %s, must be greater than the regular quorum %s", v.ExpeditedQuorum, v.Quorum)
 	}
 	if !v.Threshold.IsPositive() {
@@ -184,7 +184,7 @@ func validateTallyParams(i interface{}) error {
 	if v.ExpeditedThreshold.GT(sdk.OneDec()) {
 		return fmt.Errorf("expedited vote threshold too large: %s", v.ExpeditedThreshold)
 	}
-	if v.ExpeditedThreshold.LT(v.Threshold) {
+	if v.ExpeditedThreshold.LTE(v.Threshold) {
 		return fmt.Errorf("expedited vote threshold %s, must be greater than the regular threshold %s", v.ExpeditedThreshold, v.Threshold)
 	}
 	if !v.VetoThreshold.IsPositive() {
@@ -243,8 +243,8 @@ func validateVotingParams(i interface{}) error {
 		return fmt.Errorf("expedited voting period must be positive: %s", v.ExpeditedVotingPeriod)
 	}
 
-	if v.ExpeditedVotingPeriod > v.VotingPeriod {
-		return fmt.Errorf("expedited voting period %s must less than or equal to the regular voting period %s", v.ExpeditedVotingPeriod, v.VotingPeriod)
+	if v.ExpeditedVotingPeriod >= v.VotingPeriod {
+		return fmt.Errorf("expedited voting period %s must less than the regular voting period %s", v.ExpeditedVotingPeriod, v.VotingPeriod)
 	}
 
 	return nil

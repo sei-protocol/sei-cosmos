@@ -5082,10 +5082,11 @@ proposal.
 DepositParams defines the params for deposits on governance proposals.
 
 
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| `min_deposit` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Minimum deposit for a proposal to enter voting period. |
-| `max_deposit_period` | [google.protobuf.Duration](#google.protobuf.Duration) |  | Maximum period for Atom holders to deposit on a proposal. Initial value: 2 months. |
+| Field                          | Type | Label | Description                                                                        |
+|--------------------------------| ---- | ----- |------------------------------------------------------------------------------------|
+| `min_deposit`                  | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Minimum deposit for a proposal to enter voting period.                             |
+| `max_deposit_period`           | [google.protobuf.Duration](#google.protobuf.Duration) |  | Maximum period for Atom holders to deposit on a proposal. Initial value: 2 months. |
+| `min_expedited_deposit_period` | [cosmos.base.v1beta1.Coin](#cosmos.base.v1beta1.Coin) | repeated | Minimum deposit for an expedited proposal to enter voting period.                  |
 
 
 

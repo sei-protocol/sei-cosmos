@@ -57,7 +57,7 @@ func ValidateGenesis(data *GenesisState) error {
 	}
 
 	if expeditedThreshold.LTE(threshold) {
-		return fmt.Errorf("expedited governance vote threshold %s should be greater than the regular threshold %s",
+		return fmt.Errorf("expedited governance vote threshold %s should be greater than or equal to the regular threshold %s",
 			expeditedThreshold,
 			threshold)
 	}
@@ -76,6 +76,12 @@ func ValidateGenesis(data *GenesisState) error {
 	if !data.DepositParams.MinExpeditedDeposit.IsValid() {
 		return fmt.Errorf("governance min expedited deposit amount must be a valid sdk.Coins amount, is %s",
 			data.DepositParams.MinExpeditedDeposit.String())
+	}
+
+	if data.DepositParams.MinExpeditedDeposit.IsAllLTE(data.DepositParams.MinDeposit) {
+		return fmt.Errorf("governance min expedited deposit amount %s must be greater than regular min deposit %s",
+			data.DepositParams.MinExpeditedDeposit.String(),
+			data.DepositParams.MinDeposit.String())
 	}
 
 	return nil

@@ -209,8 +209,15 @@ func (rs *Store) LoadVersionAndUpgrade(ver int64, upgrades *types.StoreUpgrades)
 
 // LoadLatestVersion implements CommitMultiStore.
 func (rs *Store) LoadLatestVersion() error {
+	if rs.lastCommitInfo != nil {
+		fmt.Printf("Preload Latest Version: %d %X\n", rs.lastCommitInfo.Version, rs.lastCommitInfo.Hash())
+	}
 	ver := GetLatestVersion(rs.db)
-	return rs.loadVersion(ver, nil)
+	err := rs.loadVersion(ver, nil)
+	if rs.lastCommitInfo != nil {
+		fmt.Printf("Loaded Latest Version: %d %X\n", rs.lastCommitInfo.Version, rs.lastCommitInfo.Hash())
+	}
+	return err
 }
 
 // LoadVersion implements CommitMultiStore.
@@ -461,6 +468,7 @@ func (rs *Store) Commit() types.CommitID {
 	}
 
 	rs.lastCommitInfo = commitStores(version, rs.stores)
+	defer rs.flushMetadata(rs.db, version, rs.lastCommitInfo)
 
 	// Determine if pruneHeight height needs to be added to the list of heights to
 	// be pruned, where pruneHeight = (commitHeight - 1) - KeepRecent.
@@ -481,7 +489,6 @@ func (rs *Store) Commit() types.CommitID {
 		rs.PruneStores(true, nil)
 	}
 
-	rs.flushMetadata(rs.db, version, rs.lastCommitInfo)
 	return types.CommitID{
 		Version: version,
 		Hash:    rs.lastCommitInfo.Hash(),
@@ -891,7 +898,6 @@ loop:
 
 func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, id types.CommitID, params storeParams) (types.CommitKVStore, error) {
 	var db dbm.DB
-
 	if params.db != nil {
 		db = dbm.NewPrefixDB(params.db, []byte("s/_/"))
 	} else if rs.shouldUseArchivalDb(id.Version) {
@@ -984,15 +990,21 @@ func (rs *Store) RollbackToVersion(target int64) error {
 			// If the store is wrapped with an inter-block cache, we must first unwrap
 			// it to get the underlying IAVL store.
 			store = rs.GetCommitKVStore(key)
-			_, err := store.(*iavl.Store).LoadVersionForOverwriting(target)
+			_, err := store.(*iavl.Store).LoadVersionForOverwriting(target - 1)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	rs.lastCommitInfo = commitStores(target, rs.stores)
-	rs.flushMetadata(rs.db, target, rs.lastCommitInfo)
 
+	if rs.lastCommitInfo != nil {
+		fmt.Printf("Before Commit Latest Version: %d %X\n", rs.lastCommitInfo.Version, rs.lastCommitInfo.Hash())
+	}
+	rs.lastCommitInfo = commitStores(target, rs.stores)
+	if rs.lastCommitInfo != nil {
+		fmt.Printf("After Commit Latest Version: %d %X\n", rs.lastCommitInfo.Version, rs.lastCommitInfo.Hash())
+	}
+	rs.flushMetadata(rs.db, target, rs.lastCommitInfo)
 	return rs.LoadLatestVersion()
 }
 

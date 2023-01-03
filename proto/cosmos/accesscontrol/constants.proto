@@ -119,4 +119,8 @@ enum ResourceType {
     KV_SLASHING = 84; // child of KV
     KV_SLASHING_VAL_SIGNING_INFO = 85; // child of KV_SLASHING
     KV_SLASHING_ADDR_PUBKEY_RELATION_KEY = 86; // child of KV_SLASHING
+
+    KV_DEX_MEM_ORDER = 87;
+    KV_DEX_MEM_CANCEL = 88;
+    KV_DEX_MEM_DEPOSIT = 89;
 }

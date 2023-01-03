@@ -19,6 +19,8 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_DISTRIBUTION,
 		ResourceType_KV_ACCESSCONTROL,
 		ResourceType_KV_AUTHZ,
+		ResourceType_KV_FEEGRANT,
+		ResourceType_KV_SLASHING,
 	}},
 	ResourceType_Mem: {ResourceType_ANY, []ResourceType{
 		ResourceType_DexMem,
@@ -177,6 +179,9 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_SLASHING:                          {ResourceType_KV, []ResourceType{ResourceType_KV_SLASHING_VAL_SIGNING_INFO}},
 	ResourceType_KV_SLASHING_VAL_SIGNING_INFO:         {ResourceType_KV_SLASHING, []ResourceType{}},
 	ResourceType_KV_SLASHING_ADDR_PUBKEY_RELATION_KEY: {ResourceType_KV_SLASHING, []ResourceType{}},
+	ResourceType_KV_DEX_MEM_ORDER:                     {ResourceType_KV_DEX, []ResourceType{}},
+	ResourceType_KV_DEX_MEM_CANCEL:                    {ResourceType_KV_DEX, []ResourceType{}},
+	ResourceType_KV_DEX_MEM_DEPOSIT:                   {ResourceType_KV_DEX, []ResourceType{}},
 }
 
 // This returns a slice of all resource types that are dependent to a specific resource type

@@ -77,6 +77,7 @@ func (c *Comparator) DependencyMatch(accessOp AccessOperation, prefix []byte) bo
 	// then they do not match. Make this the first condition check to avoid additional matching
 	// as most of the time this will be enough to determine if they're dependency matches
 	if c.AccessType != accessOp.AccessType && accessOp.AccessType != AccessType_UNKNOWN {
+		fmt.Println("accessType is wrong, ", c.AccessType, accessOp.AccessType)
 		return false
 	}
 
@@ -89,11 +90,15 @@ func (c *Comparator) DependencyMatch(accessOp AccessOperation, prefix []byte) bo
 	// e.g if the StoreKey and resource type is ResourceType_KV_BANK_BALANCES, then they both must start with BalancesPrefix
 	encodedPrefix := hex.EncodeToString(prefix)
 	if !strings.HasPrefix(c.Identifier, encodedPrefix) || !strings.HasPrefix(accessOp.GetIdentifierTemplate(), encodedPrefix) {
+		fmt.Println("prefix is wrong, ", c.Identifier, encodedPrefix)
+		fmt.Println("prefix is wrong, ", accessOp.GetIdentifierTemplate(), encodedPrefix)
+		// ctx.Logger().Info((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
 		return false
 	}
 
 	// With the same prefix, c.Identififer should be a superset of IdentifierTemplate, it not equal
 	if !strings.Contains(c.Identifier, accessOp.GetIdentifierTemplate()) {
+		fmt.Println("prefix Contains is wrong, ", c.Identifier, accessOp.GetIdentifierTemplate())
 		return false
 	}
 

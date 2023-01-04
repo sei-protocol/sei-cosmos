@@ -124,8 +124,6 @@ $ %s tx gov submit-proposal --title="Test Proposal" --description="My awesome pr
 			}
 
 			content := types.ContentFromProposalType(proposal.Title, proposal.Description, proposal.Type, proposal.IsExpedited)
-			fmt.Printf("Receieved proposal expedited=%t", proposal.IsExpedited)
-
 			msg, err := types.NewMsgSubmitProposalWithExpedite(content, amount, clientCtx.GetFromAddress(), proposal.IsExpedited)
 
 			if err != nil {

@@ -50,6 +50,9 @@ func BuildComparatorFromEvents(events []abci.Event, storeKeyToResourceTypePrefix
 		storeKey := ""
 		for _, attribute := range attributes {
 			if attribute.Key == "key" {
+				fmt.Println("attribute is ", attribute)
+				fmt.Println("key is ", attribute.Key)
+				fmt.Println("value is ", attribute.Value)
 				identifier = attribute.Value
 			}
 			if attribute.Key == "access_type" {

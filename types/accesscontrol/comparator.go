@@ -50,9 +50,6 @@ func BuildComparatorFromEvents(events []abci.Event, storeKeyToResourceTypePrefix
 		storeKey := ""
 		for _, attribute := range attributes {
 			if attribute.Key == "key" {
-				fmt.Println("attribute is ", attribute)
-				fmt.Println("key is ", attribute.Key)
-				fmt.Println("value is ", attribute.Value)
 				identifier = attribute.Value
 			}
 			if attribute.Key == "access_type" {
@@ -73,6 +70,12 @@ func BuildComparatorFromEvents(events []abci.Event, storeKeyToResourceTypePrefix
 }
 
 func (c *Comparator) DependencyMatch(accessOp AccessOperation, prefix []byte) bool {
+
+	fmt.Println("\ndependency matching: ")
+	fmt.Println("prefix: ", prefix, hex.EncodeToString(prefix))
+	fmt.Println("Identifier: ", c.Identifier)
+	fmt.Println("Identifier template: ", accessOp.IdentifierTemplate)
+
 	// If the resource prefixes are the same, then its just the access type, if they're not the same
 	// then they do not match. Make this the first condition check to avoid additional matching
 	// as most of the time this will be enough to determine if they're dependency matches

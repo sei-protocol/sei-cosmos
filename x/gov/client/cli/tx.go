@@ -30,7 +30,7 @@ const (
 )
 
 type proposal struct {
-	Title       string ` json:"title"`
+	Title       string  `json:"title"`
 	Description string  `json:"description"`
 	Type        string  `json:"type"`
 	IsExpedited bool    `json:"is_expedited,omitempty"`

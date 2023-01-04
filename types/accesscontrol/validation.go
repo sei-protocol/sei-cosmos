@@ -1,6 +1,8 @@
 package accesscontrol
 
 import (
+	"fmt"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
@@ -73,11 +75,14 @@ func (validator *MsgValidator) ValidateAccessOperations(accessOps []AccessOperat
 
 			// The resource type was not a parent type where it could match anything nor was it found in the respective store key mapping
 			if !ok {
+				fmt.Println("resource type was not a parent type", storeKey, accessOp.GetResourceType())
 				matched = false
 				continue
 			}
 
+			fmt.Println("\nchecking accessOp and prefix", accessOp, prefix)
 			if eventComparator.DependencyMatch(accessOp, prefix) {
+				fmt.Println("matched=true")
 				matched = true
 				break
 			}

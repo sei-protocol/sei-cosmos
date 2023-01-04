@@ -33,7 +33,7 @@ type proposal struct {
 	Title       string
 	Description string
 	Type        string
-	IsExpedited bool
+	IsExpedited bool `json:"is_expedited,omitempty"`
 	Deposit     string
 }
 
@@ -124,6 +124,7 @@ $ %s tx gov submit-proposal --title="Test Proposal" --description="My awesome pr
 			}
 
 			content := types.ContentFromProposalType(proposal.Title, proposal.Description, proposal.Type, proposal.IsExpedited)
+			fmt.Printf("Receieved proposal expedited=%t", proposal.IsExpedited)
 
 			msg, err := types.NewMsgSubmitProposalWithExpedite(content, amount, clientCtx.GetFromAddress(), proposal.IsExpedited)
 

@@ -360,7 +360,7 @@ func (s *decCoinTestSuite) TestParseDecCoins() {
 		{"0.0usei", sdk.DecCoins{}, false}, // remove zero coins
 		{"10.0btc,1.0atom,20.0btc", nil, true},
 		{
-			"0.004STAKE",
+			"0.004usei",
 			sdk.DecCoins{sdk.NewDecCoinFromDec("usei", sdk.NewDecWithPrec(4000000000000000, sdk.Precision))},
 			false,
 		},
@@ -377,7 +377,7 @@ func (s *decCoinTestSuite) TestParseDecCoins() {
 			},
 			false,
 		},
-		{"0.0stake,0.004stake,5.04atom", // remove zero coins
+		{"0.0stake,0.004usei,5.04atom", // remove zero coins
 			sdk.DecCoins{
 				sdk.NewDecCoinFromDec("atom", sdk.NewDecWithPrec(5040000000000000000, sdk.Precision)),
 				sdk.NewDecCoinFromDec("usei", sdk.NewDecWithPrec(4000000000000000, sdk.Precision)),

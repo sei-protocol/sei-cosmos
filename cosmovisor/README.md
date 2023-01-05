@@ -199,7 +199,7 @@ app.UpgradeKeeper.SetUpgradeHandler("test1", func(ctx sdk.Context, plan upgradet
 	if err != nil {
 		panic(err)
 	}
-	err = app.BankKeeper.AddCoins(ctx, addr, sdk.Coins{sdk.Coin{Denom: "stake", Amount: sdk.NewInt(345600000)}})
+	err = app.BankKeeper.AddCoins(ctx, addr, sdk.Coins{sdk.Coin{Denom: "usei", Amount: sdk.NewInt(345600000)}})
 	if err != nil {
 		panic(err)
 	}

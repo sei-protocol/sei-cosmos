@@ -126,7 +126,7 @@ func TestInitGenesis_PoolsBalanceMismatch(t *testing.T) {
 		UnbondingTime: 10000,
 		MaxValidators: 1,
 		MaxEntries:    10,
-		BondDenom:     "stake",
+		BondDenom:     "usei",
 	}
 
 	// test

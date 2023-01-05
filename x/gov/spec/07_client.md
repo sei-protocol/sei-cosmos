@@ -446,7 +446,7 @@ Example Output:
     "depositEndTime": "2021-09-18T19:40:08.712440474Z",
     "totalDeposit": [
       {
-        "denom": "stake",
+        "denom": "usei",
         "amount": "10000000"
       }
     ],
@@ -491,7 +491,7 @@ Example Output:
       "depositEndTime": "2021-09-18T19:40:08.712440474Z",
       "totalDeposit": [
         {
-          "denom": "stake",
+          "denom": "usei",
           "amount": "10000000"
         }
       ],
@@ -658,7 +658,7 @@ Example Output:
     "depositor": "cosmos1..",
     "amount": [
       {
-        "denom": "stake",
+        "denom": "usei",
         "amount": "10000000"
       }
     ]
@@ -693,7 +693,7 @@ Example Output:
       "depositor": "cosmos1..",
       "amount": [
         {
-          "denom": "stake",
+          "denom": "usei",
           "amount": "10000000"
         }
       ]
@@ -775,7 +775,7 @@ Example Output:
     "deposit_end_time": "2021-09-18T19:40:08.712440474Z",
     "total_deposit": [
       {
-        "denom": "stake",
+        "denom": "usei",
         "amount": "10000000"
       }
     ],
@@ -822,7 +822,7 @@ Example Output:
       "deposit_end_time": "2021-09-18T19:40:08.712440474Z",
       "total_deposit": [
         {
-          "denom": "stake",
+          "denom": "usei",
           "amount": "10000000"
         }
       ],
@@ -987,7 +987,7 @@ Example Output:
     "depositor": "cosmos1..",
     "amount": [
       {
-        "denom": "stake",
+        "denom": "usei",
         "amount": "10000000"
       }
     ]
@@ -1019,7 +1019,7 @@ Example Output:
       "depositor": "cosmos1..",
       "amount": [
         {
-          "denom": "stake",
+          "denom": "usei",
           "amount": "10000000"
         }
       ]

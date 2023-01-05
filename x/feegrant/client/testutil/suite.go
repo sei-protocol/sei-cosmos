@@ -63,7 +63,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.createGrant(granter, grantee)
 
 	grant, err := feegrant.NewGrant(granter, grantee, &feegrant.BasicAllowance{
-		SpendLimit: sdk.NewCoins(sdk.NewCoin("stake", sdk.NewInt(100))),
+		SpendLimit: sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(100))),
 	})
 	s.Require().NoError(err)
 
@@ -83,7 +83,7 @@ func (s *IntegrationTestSuite) createGrant(granter, grantee sdk.Address) {
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 	}
 
-	fee := sdk.NewCoin("stake", sdk.NewInt(100))
+	fee := sdk.NewCoin("usei", sdk.NewInt(100))
 
 	args := append(
 		[]string{
@@ -725,7 +725,7 @@ func (s *IntegrationTestSuite) TestTxWithFeeGrant() {
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 	}
 
-	fee := sdk.NewCoin("stake", sdk.NewInt(100))
+	fee := sdk.NewCoin("usei", sdk.NewInt(100))
 
 	args := append(
 		[]string{
@@ -773,7 +773,7 @@ func (s *IntegrationTestSuite) TestFilteredFeeAllowance() {
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 	}
-	spendLimit := sdk.NewCoin("stake", sdk.NewInt(1000))
+	spendLimit := sdk.NewCoin("usei", sdk.NewInt(1000))
 
 	allowMsgs := strings.Join([]string{sdk.MsgTypeURL(&govtypes.MsgSubmitProposal{}), sdk.MsgTypeURL(&govtypes.MsgVoteWeighted{})}, ",")
 

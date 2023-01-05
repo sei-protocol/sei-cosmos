@@ -699,7 +699,7 @@ func (s *IntegrationTestSuite) TestExecDelegateAuthorization() {
 	s.Require().NoError(err)
 
 	tokens := sdk.NewCoins(
-		sdk.NewCoin("stake", sdk.NewInt(50)),
+		sdk.NewCoin("usei", sdk.NewInt(50)),
 	)
 
 	delegateTx := fmt.Sprintf(`{"body":{"messages":[{"@type":"/cosmos.staking.v1beta1.MsgDelegate","delegator_address":"%s","validator_address":"%s","amount":{"denom":"%s","amount":"%s"}}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}`, val.Address.String(), val.ValAddress.String(),
@@ -789,7 +789,7 @@ func (s *IntegrationTestSuite) TestExecDelegateAuthorization() {
 	)
 	s.Require().NoError(err)
 	tokens = sdk.NewCoins(
-		sdk.NewCoin("stake", sdk.NewInt(50)),
+		sdk.NewCoin("usei", sdk.NewInt(50)),
 	)
 
 	delegateTx = fmt.Sprintf(`{"body":{"messages":[{"@type":"/cosmos.staking.v1beta1.MsgDelegate","delegator_address":"%s","validator_address":"%s","amount":{"denom":"%s","amount":"%s"}}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}`, val.Address.String(), val.ValAddress.String(),
@@ -917,7 +917,7 @@ func (s *IntegrationTestSuite) TestExecUndelegateAuthorization() {
 	s.Require().NoError(err)
 
 	tokens := sdk.NewCoins(
-		sdk.NewCoin("stake", sdk.NewInt(50)),
+		sdk.NewCoin("usei", sdk.NewInt(50)),
 	)
 
 	undelegateTx := fmt.Sprintf(`{"body":{"messages":[{"@type":"/cosmos.staking.v1beta1.MsgUndelegate","delegator_address":"%s","validator_address":"%s","amount":{"denom":"%s","amount":"%s"}}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}`, val.Address.String(), val.ValAddress.String(),
@@ -1010,7 +1010,7 @@ func (s *IntegrationTestSuite) TestExecUndelegateAuthorization() {
 	)
 	s.Require().NoError(err)
 	tokens = sdk.NewCoins(
-		sdk.NewCoin("stake", sdk.NewInt(50)),
+		sdk.NewCoin("usei", sdk.NewInt(50)),
 	)
 
 	undelegateTx = fmt.Sprintf(`{"body":{"messages":[{"@type":"/cosmos.staking.v1beta1.MsgUndelegate","delegator_address":"%s","validator_address":"%s","amount":{"denom":"%s","amount":"%s"}}],"memo":"","timeout_height":"0","extension_options":[],"non_critical_extension_options":[]},"auth_info":{"signer_infos":[],"fee":{"amount":[],"gas_limit":"200000","payer":"","granter":""}},"signatures":[]}`, val.Address.String(), val.ValAddress.String(),

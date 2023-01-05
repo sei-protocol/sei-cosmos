@@ -60,7 +60,7 @@ func (s *coinTestSuite) TestIsEqualCoin() {
 	}{
 		{sdk.NewInt64Coin(testDenom1, 1), sdk.NewInt64Coin(testDenom1, 1), true, false},
 		{sdk.NewInt64Coin(testDenom1, 1), sdk.NewInt64Coin(testDenom2, 1), false, true},
-		{sdk.NewInt64Coin("stake", 1), sdk.NewInt64Coin("stake", 10), false, false},
+		{sdk.NewInt64Coin("usei", 1), sdk.NewInt64Coin("usei", 10), false, false},
 	}
 
 	for tcIndex, tc := range cases {

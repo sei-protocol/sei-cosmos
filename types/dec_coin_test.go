@@ -352,12 +352,12 @@ func (s *decCoinTestSuite) TestParseDecCoins() {
 		expectedErr    bool
 	}{
 		{"", nil, false},
-		{"4stake", sdk.DecCoins{sdk.NewDecCoinFromDec("usei", sdk.NewDecFromInt(sdk.NewInt(4)))}, false},
-		{"5.5atom,4stake", sdk.DecCoins{
+		{"4usei", sdk.DecCoins{sdk.NewDecCoinFromDec("usei", sdk.NewDecFromInt(sdk.NewInt(4)))}, false},
+		{"5.5atom,4usei", sdk.DecCoins{
 			sdk.NewDecCoinFromDec("atom", sdk.NewDecWithPrec(5500000000000000000, sdk.Precision)),
 			sdk.NewDecCoinFromDec("usei", sdk.NewDec(4)),
 		}, false},
-		{"0.0stake", sdk.DecCoins{}, false}, // remove zero coins
+		{"0.0usei", sdk.DecCoins{}, false}, // remove zero coins
 		{"10.0btc,1.0atom,20.0btc", nil, true},
 		{
 			"0.004STAKE",
@@ -365,12 +365,12 @@ func (s *decCoinTestSuite) TestParseDecCoins() {
 			false,
 		},
 		{
-			"0.004stake",
+			"0.004usei",
 			sdk.DecCoins{sdk.NewDecCoinFromDec("usei", sdk.NewDecWithPrec(4000000000000000, sdk.Precision))},
 			false,
 		},
 		{
-			"5.04atom,0.004stake",
+			"5.04atom,0.004usei",
 			sdk.DecCoins{
 				sdk.NewDecCoinFromDec("atom", sdk.NewDecWithPrec(5040000000000000000, sdk.Precision)),
 				sdk.NewDecCoinFromDec("usei", sdk.NewDecWithPrec(4000000000000000, sdk.Precision)),
@@ -408,7 +408,7 @@ func (s *decCoinTestSuite) TestDecCoinsString() {
 				sdk.NewDecCoinFromDec("atom", sdk.NewDecWithPrec(5040000000000000000, sdk.Precision)),
 				sdk.NewDecCoinFromDec("usei", sdk.NewDecWithPrec(4000000000000000, sdk.Precision)),
 			},
-			"5.040000000000000000atom,0.004000000000000000stake",
+			"5.040000000000000000atom,0.004000000000000000usei",
 		},
 	}
 
@@ -425,12 +425,12 @@ func (s *decCoinTestSuite) TestDecCoinsIntersect() {
 		expectedResult string
 	}{
 		{"", "", ""},
-		{"1.0stake", "", ""},
-		{"1.0stake", "1.0stake", "1.0stake"},
-		{"", "1.0stake", ""},
-		{"1.0stake", "", ""},
-		{"2.0stake,1.0trope", "1.9stake", "1.9stake"},
-		{"2.0stake,1.0trope", "2.1stake", "2.0stake"},
+		{"1.0usei", "", ""},
+		{"1.0usei", "1.0usei", "1.0usei"},
+		{"", "1.0usei", ""},
+		{"1.0usei", "", ""},
+		{"2.0stake,1.0trope", "1.9usei", "1.9usei"},
+		{"2.0stake,1.0trope", "2.1usei", "2.0usei"},
 		{"2.0stake,1.0trope", "0.9trope", "0.9trope"},
 		{"2.0stake,1.0trope", "1.9stake,0.9trope", "1.9stake,0.9trope"},
 		{"2.0stake,1.0trope", "1.9stake,0.9trope,20.0other", "1.9stake,0.9trope"},

@@ -153,7 +153,7 @@ func (s *IntegrationTestSuite) TestCLITxGrantAuthorization() {
 			[]string{
 				grantee.String(),
 				"delegate",
-				fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+				fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 				fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -170,7 +170,7 @@ func (s *IntegrationTestSuite) TestCLITxGrantAuthorization() {
 			[]string{
 				grantee.String(),
 				"delegate",
-				fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+				fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 				fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -186,7 +186,7 @@ func (s *IntegrationTestSuite) TestCLITxGrantAuthorization() {
 			[]string{
 				grantee.String(),
 				"delegate",
-				fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+				fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 				fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -202,7 +202,7 @@ func (s *IntegrationTestSuite) TestCLITxGrantAuthorization() {
 			[]string{
 				grantee.String(),
 				"unbond",
-				fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+				fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 				fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -218,7 +218,7 @@ func (s *IntegrationTestSuite) TestCLITxGrantAuthorization() {
 			[]string{
 				grantee.String(),
 				"redelegate",
-				fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+				fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 				fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -687,7 +687,7 @@ func (s *IntegrationTestSuite) TestExecDelegateAuthorization() {
 		[]string{
 			grantee.String(),
 			"delegate",
-			fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+			fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 			fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 			fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 			fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -856,7 +856,7 @@ func (s *IntegrationTestSuite) TestExecDelegateAuthorization() {
 		[]string{
 			grantee.String(),
 			"delegate",
-			fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+			fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 			fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 			fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 			fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -891,7 +891,7 @@ func (s *IntegrationTestSuite) TestExecUndelegateAuthorization() {
 		[]string{
 			grantee.String(),
 			"unbond",
-			fmt.Sprintf("--%s=100stake", cli.FlagSpendLimit),
+			fmt.Sprintf("--%s=100usei", cli.FlagSpendLimit),
 			fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 			fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 			fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -907,7 +907,7 @@ func (s *IntegrationTestSuite) TestExecUndelegateAuthorization() {
 		val,
 		[]string{
 			val.ValAddress.String(),
-			"100stake",
+			"100usei",
 			fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 			fmt.Sprintf("--%s=%s", flags.FlagFrom, val.Address.String()),
 			fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),

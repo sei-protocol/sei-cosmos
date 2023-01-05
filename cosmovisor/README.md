@@ -143,7 +143,7 @@ Initialize the node and overwrite any previous genesis file (never do this in a 
 Set the minimum gas price to `0stake` in `~/.simapp/config/app.toml`:
 
 ```
-minimum-gas-prices = "0stake"
+minimum-gas-prices = "0usei"
 ```
 
 Create a new key for the validator, then add a genesis account and transaction:

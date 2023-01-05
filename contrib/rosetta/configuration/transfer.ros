@@ -98,7 +98,7 @@ transfer(3){
       }
     ];
     transfer.preprocess_metadata = {
-        "gas_price": "1stake",
+        "gas_price": "1usei",
         "gas_limit": 250000
     };
   }

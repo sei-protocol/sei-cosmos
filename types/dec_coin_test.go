@@ -377,7 +377,7 @@ func (s *decCoinTestSuite) TestParseDecCoins() {
 			},
 			false,
 		},
-		{"0.0stake,0.004usei,5.04atom", // remove zero coins
+		{"0.0usei,0.004usei,5.04atom", // remove zero coins
 			sdk.DecCoins{
 				sdk.NewDecCoinFromDec("atom", sdk.NewDecWithPrec(5040000000000000000, sdk.Precision)),
 				sdk.NewDecCoinFromDec("usei", sdk.NewDecWithPrec(4000000000000000, sdk.Precision)),
@@ -429,12 +429,12 @@ func (s *decCoinTestSuite) TestDecCoinsIntersect() {
 		{"1.0usei", "1.0usei", "1.0usei"},
 		{"", "1.0usei", ""},
 		{"1.0usei", "", ""},
-		{"2.0stake,1.0trope", "1.9usei", "1.9usei"},
-		{"2.0stake,1.0trope", "2.1usei", "2.0usei"},
-		{"2.0stake,1.0trope", "0.9trope", "0.9trope"},
-		{"2.0stake,1.0trope", "1.9stake,0.9trope", "1.9stake,0.9trope"},
-		{"2.0stake,1.0trope", "1.9stake,0.9trope,20.0other", "1.9stake,0.9trope"},
-		{"2.0stake,1.0trope", "1.0other", ""},
+		{"2.0usei,1.0trope", "1.9usei", "1.9usei"},
+		{"2.0usei,1.0trope", "2.1usei", "2.0usei"},
+		{"2.0usei,1.0trope", "0.9trope", "0.9trope"},
+		{"2.0usei,1.0trope", "1.9usei,0.9trope", "1.9usei,0.9trope"},
+		{"2.0usei,1.0trope", "1.9usei,0.9trope,20.0other", "1.9usei,0.9trope"},
+		{"2.0usei,1.0trope", "1.0other", ""},
 	}
 
 	for i, tc := range testCases {

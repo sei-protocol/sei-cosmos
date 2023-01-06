@@ -137,7 +137,7 @@ func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.Ac
 	dependencyMapping := acltypes.WasmDependencyMapping{}
 	k.cdc.MustUnmarshal(b, &dependencyMapping)
 	if dependencyMapping.Enabled && applySelector {
-		selectedAccessOps, err := BuildSelectorOps(dependencyMapping.AccessOps, senderBech, msgBody)
+		selectedAccessOps, err := k.BuildSelectorOps(ctx, contractAddress, dependencyMapping.AccessOps, senderBech, msgBody)
 		if err != nil {
 			return acltypes.WasmDependencyMapping{}, err
 		}
@@ -146,7 +146,7 @@ func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.Ac
 	return dependencyMapping, nil
 }
 
-func BuildSelectorOps(accessOps []acltypes.AccessOperationWithSelector, senderBech string, msgBody []byte) ([]acltypes.AccessOperationWithSelector, error) {
+func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, accessOps []acltypes.AccessOperationWithSelector, senderBech string, msgBody []byte) ([]acltypes.AccessOperationWithSelector, error) {
 	selectedAccessOps := []acltypes.AccessOperationWithSelector{}
 	for _, opWithSelector := range accessOps {
 		switch opWithSelector.SelectorType {
@@ -250,6 +250,26 @@ func BuildSelectorOps(accessOps []acltypes.AccessOperationWithSelector, senderBe
 				opWithSelector.Operation.IdentifierTemplate,
 				hexStr,
 			)
+		case acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE:
+			// We use this to import the dependencies from another contract address
+			interContractAddress, err := sdk.AccAddressFromBech32(opWithSelector.Selector)
+			if err != nil {
+				return []acltypes.AccessOperationWithSelector{}, err
+			}
+			// TODO: add a circular dependency check here to ignore if we've already seen this contract/identifier in our reference chain
+			// for now, we will just pass in the same message body, this needs to be changed later though
+			// TODO: build new msgbody for the new contract execute / query msg in later milestone tasks
+			wasmDeps, err := k.GetWasmDependencyMapping(ctx, interContractAddress, contractAddr.String(), msgBody, true)
+
+			if err != nil || !wasmDeps.Enabled {
+				// if we have an error fetching the dependency mapping or the mapping is disabled, we want to use the synchronous mappings instead
+				selectedAccessOps = append(selectedAccessOps, types.SynchronousAccessOpsWithSelector()...)
+			} else {
+				// if we did get deps properly and they are enabled, now we want to add them to our access operations
+				selectedAccessOps = append(selectedAccessOps, wasmDeps.AccessOps...)
+			}
+			// we want to continue here to skip adding the original OpWithSelector (since that just represents instruction to fetch dependent contract)
+			continue
 		}
 		selectedAccessOps = append(selectedAccessOps, opWithSelector)
 	}

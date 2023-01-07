@@ -22,6 +22,7 @@ var (
 // The migration includes: Setting the expedited proposals params in the paramstore.
 func MigrateStore(ctx sdk.Context, paramstore types.ParamSubspace) error {
 	migrateParamsStore(ctx, paramstore)
+	println("Finished expedited gov parameter migration")
 	return nil
 }
 

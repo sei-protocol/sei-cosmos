@@ -1,4 +1,4 @@
-package v4
+package v3
 
 import (
 	"time"
@@ -21,6 +21,7 @@ var (
 // MigrateStore performs in-place store migrations for consensus version 4 in the gov module.
 // The migration includes: Setting the expedited proposals params in the paramstore.
 func MigrateStore(ctx sdk.Context, paramstore types.ParamSubspace) error {
+	println("Migrate Store for paramstore now!!!")
 	migrateParamsStore(ctx, paramstore)
 	return nil
 }
@@ -31,17 +32,19 @@ func migrateParamsStore(ctx sdk.Context, paramstore types.ParamSubspace) {
 		votingParams  types.VotingParams
 		tallyParams   types.TallyParams
 	)
-
+	println("Setting deposit params")
 	// Set depositParams
 	paramstore.Get(ctx, types.ParamStoreKeyDepositParams, &depositParams)
 	depositParams.MinExpeditedDeposit = MinExpeditedDeposit
 	paramstore.Set(ctx, types.ParamStoreKeyDepositParams, depositParams)
 
+	println("Setting voting params")
 	// Set votingParams
 	paramstore.Get(ctx, types.ParamStoreKeyVotingParams, &votingParams)
 	votingParams.ExpeditedVotingPeriod = ExpeditedVotingPeriod
 	paramstore.Set(ctx, types.ParamStoreKeyVotingParams, votingParams)
 
+	println("Setting tally params")
 	// Set tallyParams
 	paramstore.Get(ctx, types.ParamStoreKeyTallyParams, &tallyParams)
 	tallyParams.ExpeditedQuorum = ExpeditedQuorum

@@ -104,6 +104,11 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 
 	store := s.kvStore(ctx)
 	bz := store.Get(key)
+	if bz == nil {
+		fmt.Printf("Didn't find anything in the store for key: %s", string(key))
+	} else {
+		println(string(bz))
+	}
 
 	if err := s.legacyAmino.UnmarshalJSON(bz, ptr); err != nil {
 		panic(err)

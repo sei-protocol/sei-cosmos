@@ -1,8 +1,6 @@
 package v3
 
 import (
-	"time"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/gov/types"
 )
@@ -12,10 +10,10 @@ import (
 // a two-thirds quorum of all voting power participation
 // a two-thirds majority of all staked voting power voting YES.
 var (
-	MinExpeditedDeposit   = sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(5000*1000000)))
-	ExpeditedVotingPeriod = time.Duration(time.Hour * 24)
-	ExpeditedQuorum       = sdk.NewDec(2).Quo(sdk.NewDec(3))
-	ExpeditedThreshold    = sdk.NewDec(2).Quo(sdk.NewDec(3))
+	MinExpeditedDeposit   = sdk.NewCoins(sdk.NewCoin("usei", types.DefaultMinExpeditedDepositTokens))
+	ExpeditedVotingPeriod = types.DefaultExpeditedPeriod
+	ExpeditedQuorum       = types.DefaultExpeditedQuorum
+	ExpeditedThreshold    = types.DefaultExpeditedThreshold
 )
 
 // MigrateStore performs in-place store migrations for consensus version 4 in the gov module.

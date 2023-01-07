@@ -442,6 +442,7 @@ type VersionMap map[string]uint64
 //
 // Please also refer to docs/core/upgrade.md for more information.
 func (m Manager) RunMigrations(ctx sdk.Context, cfg Configurator, fromVM VersionMap) (VersionMap, error) {
+	println("Running migrations now")
 	c, ok := cfg.(configurator)
 	if !ok {
 		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidType, "expected %T, got %T", configurator{}, cfg)
@@ -456,6 +457,7 @@ func (m Manager) RunMigrations(ctx sdk.Context, cfg Configurator, fromVM Version
 		module := m.Modules[moduleName]
 		fromVersion, exists := fromVM[moduleName]
 		toVersion := module.ConsensusVersion()
+		fmt.Printf("Module name %s, from version %d to version %d \n", moduleName, fromVersion, toVersion)
 
 		// Only run migrations when the module exists in the fromVM.
 		// Run InitGenesis otherwise.
@@ -471,6 +473,7 @@ func (m Manager) RunMigrations(ctx sdk.Context, cfg Configurator, fromVM Version
 				return nil, err
 			}
 		} else {
+			println("Doesn't exist any module migrations, init genesis")
 			cfgtor, ok := cfg.(configurator)
 			if !ok {
 				// Currently, the only implementator of Configurator (the interface)

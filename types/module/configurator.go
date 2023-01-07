@@ -106,7 +106,7 @@ func (c configurator) runModuleMigrations(ctx sdk.Context, moduleName string, fr
 			return sdkerrors.Wrapf(sdkerrors.ErrNotFound, "no migration found for module %s from version %d to version %d", moduleName, i, i+1)
 		}
 		ctx.Logger().Info(fmt.Sprintf("migrating module %s from version %d to version %d", moduleName, i, i+1))
-
+		fmt.Printf("Migrating module %s, from version %d to version %d \n", moduleName, i, i+1)
 		err := migrateFn(ctx)
 		if err != nil {
 			return err

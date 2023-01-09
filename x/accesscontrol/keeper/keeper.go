@@ -148,6 +148,7 @@ func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.Ac
 
 func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, accessOps []acltypes.AccessOperationWithSelector, senderBech string, msgBody []byte) ([]acltypes.AccessOperationWithSelector, error) {
 	selectedAccessOps := []acltypes.AccessOperationWithSelector{}
+accessOpLoop:
 	for _, opWithSelector := range accessOps {
 		switch opWithSelector.SelectorType {
 		case acltypes.AccessOperationSelectorType_JQ:
@@ -263,7 +264,8 @@ func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, a
 
 			if err != nil || !wasmDeps.Enabled {
 				// if we have an error fetching the dependency mapping or the mapping is disabled, we want to use the synchronous mappings instead
-				selectedAccessOps = append(selectedAccessOps, types.SynchronousAccessOpsWithSelector()...)
+				selectedAccessOps = types.SynchronousAccessOpsWithSelector()
+				break accessOpLoop
 			} else {
 				// if we did get deps properly and they are enabled, now we want to add them to our access operations
 				selectedAccessOps = append(selectedAccessOps, wasmDeps.AccessOps...)
@@ -273,6 +275,7 @@ func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, a
 		}
 		selectedAccessOps = append(selectedAccessOps, opWithSelector)
 	}
+	// TODO: add logic to deduplicate access operations that are the same
 	return selectedAccessOps, nil
 }
 

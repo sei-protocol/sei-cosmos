@@ -643,6 +643,162 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 	require.Equal(t, expectedAccessOps, mapping.AccessOps)
 }
 
+func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 4, sdk.NewInt(30000000))
+	wasmContractAddress := wasmContractAddresses[0]
+	interContractAddress := wasmContractAddresses[1]
+	inter2ContractAddress := wasmContractAddresses[2]
+	otherAddr := wasmContractAddresses[3]
+
+	// create a dummy mapping of a bank balance write for the sender address (eg. performing some action like depositing funds)
+	// also performs a bank write to an address specified by the JSON body (following same schema as contract A for now)
+	interContractMapping := acltypes.WasmDependencyMapping{
+		Enabled: true,
+		AccessOps: []acltypes.AccessOperationWithSelector{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
+			},
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+				Selector:     ".send.address",
+			},
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_ANY,
+					AccessType:         acltypes.AccessType_UNKNOWN,
+					IdentifierTemplate: "*",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
+				Selector:     inter2ContractAddress.String(),
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: interContractAddress.String(),
+	}
+	// set the dependency mapping
+	err := app.AccessControlKeeper.SetWasmDependencyMapping(ctx, interContractMapping)
+	require.NoError(t, err)
+
+	// create a dummy mapping of a bank balance write for the sender address (eg. performing some action like depositing funds)
+	// also performs a bank write to an address specified by the JSON body (following same schema as contract A for now)
+	inter2ContractMapping := acltypes.WasmDependencyMapping{
+		Enabled: true,
+		AccessOps: []acltypes.AccessOperationWithSelector{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_ORACLE_EXCHANGE_RATE,
+					AccessType:         acltypes.AccessType_READ,
+					IdentifierTemplate: "*",
+				},
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: inter2ContractAddress.String(),
+	}
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, inter2ContractMapping)
+	require.NoError(t, err)
+
+	// this mapping creates a reference to the inter-contract dependency
+	wasmMapping := acltypes.WasmDependencyMapping{
+		Enabled: true,
+		AccessOps: []acltypes.AccessOperationWithSelector{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_ANY,
+					AccessType:         acltypes.AccessType_UNKNOWN,
+					IdentifierTemplate: "*",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
+				Selector:     interContractAddress.String(),
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: wasmContractAddress.String(),
+	}
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.NoError(t, err)
+
+	// test getting the dependency mapping
+	mapping, err := app.AccessControlKeeper.GetWasmDependencyMapping(ctx, wasmContractAddress, "", []byte{}, false)
+	require.NoError(t, err)
+	require.Equal(t, wasmMapping, mapping)
+
+	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
+	require.NoError(t, err)
+	mapping, err = app.AccessControlKeeper.GetWasmDependencyMapping(
+		ctx,
+		wasmContractAddress,
+		otherAddr.String(),
+		[]byte(fmt.Sprintf("{\"send\":{\"address\":\"%s\",\"amount\":10}}", otherAddr.String())),
+		true,
+	)
+	require.NoError(t, err)
+	require.Len(t, mapping.AccessOps, 6)
+	expectedAccessOps := []acltypes.AccessOperationWithSelector{
+		{
+			Operation: &acltypes.AccessOperation{
+				ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: fmt.Sprintf("02%s", hex.EncodeToString(address.MustLengthPrefix(wasmContractAddress))),
+			},
+			SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
+		},
+		{
+			Operation: &acltypes.AccessOperation{
+				ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: fmt.Sprintf("02%s", hex.EncodeToString(address.MustLengthPrefix(otherAddr))),
+			},
+			SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+			Selector:     ".send.address",
+		},
+		{
+			Operation: &acltypes.AccessOperation{
+				ResourceType:       acltypes.ResourceType_KV_ORACLE_EXCHANGE_RATE,
+				AccessType:         acltypes.AccessType_READ,
+				IdentifierTemplate: "*",
+			},
+		},
+		{
+			Operation:    types.CommitAccessOp(),
+			SelectorType: acltypes.AccessOperationSelectorType_NONE,
+		},
+		{
+			Operation:    types.CommitAccessOp(),
+			SelectorType: acltypes.AccessOperationSelectorType_NONE,
+		},
+		{
+			Operation:    types.CommitAccessOp(),
+			SelectorType: acltypes.AccessOperationSelectorType_NONE,
+		},
+	}
+	require.Equal(t, expectedAccessOps, mapping.AccessOps)
+}
+
 func TestWasmDependencyMappingWithContractReferenceDisabled(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
@@ -715,17 +871,9 @@ func TestWasmDependencyMappingWithContractReferenceDisabled(t *testing.T) {
 		true,
 	)
 	require.NoError(t, err)
-	// we should have 3 access ops, the first two from the "synchronous mapping" and the commit from wasm contract
-	// having two commits is fine
-	require.Len(t, mapping.AccessOps, 3)
-	expectedAccessOps := append(
-		types.SynchronousAccessOpsWithSelector(),
-		acltypes.AccessOperationWithSelector{
-			Operation:    types.CommitAccessOp(),
-			SelectorType: acltypes.AccessOperationSelectorType_NONE,
-		},
-	)
-	require.Equal(t, expectedAccessOps, mapping.AccessOps)
+	// we should have synchronous access ops as returned from building selectors
+	require.Len(t, mapping.AccessOps, 2)
+	require.Equal(t, types.SynchronousAccessOpsWithSelector(), mapping.AccessOps)
 }
 
 func TestWasmDependencyMappingWithContractReferenceDNE(t *testing.T) {

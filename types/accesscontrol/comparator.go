@@ -44,6 +44,7 @@ func BuildComparatorFromEvents(events []abci.Event, storeKeyToResourceTypePrefix
 			continue
 		}
 		attributes := event.GetAttributes()
+		fmt.Println("event is", event)
 
 		identifier := ""
 		accessType := AccessType_UNKNOWN

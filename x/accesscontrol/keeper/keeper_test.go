@@ -610,9 +610,10 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 		true,
 	)
 	require.NoError(t, err)
-	// we should have 4 access ops, the first three from the inter-contract and the commit from wasm contract
+	// we should have 3 access ops, the first two from the inter-contract (because we discard the JQ one due to empty JSON body)
+	// and the commit from wasm contract
 	// having two commits is fine
-	require.Len(t, mapping.AccessOps, 4)
+	require.Len(t, mapping.AccessOps, 3)
 	expectedAccessOps := []acltypes.AccessOperationWithSelector{
 		{
 			Operation: &acltypes.AccessOperation{
@@ -621,15 +622,6 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 				IdentifierTemplate: fmt.Sprintf("02%s", hex.EncodeToString(address.MustLengthPrefix(wasmContractAddress))),
 			},
 			SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
-		},
-		{
-			Operation: &acltypes.AccessOperation{
-				ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
-				AccessType:         acltypes.AccessType_WRITE,
-				IdentifierTemplate: fmt.Sprintf("02%s", hex.EncodeToString(address.MustLengthPrefix(thirdAddr))),
-			},
-			SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
-			Selector:     ".send.address",
 		},
 		{
 			Operation:    types.CommitAccessOp(),
@@ -665,15 +657,6 @@ func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t 
 					IdentifierTemplate: "02%s",
 				},
 				SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
-			},
-			{
-				Operation: &acltypes.AccessOperation{
-					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
-					AccessType:         acltypes.AccessType_WRITE,
-					IdentifierTemplate: "02%s",
-				},
-				SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
-				Selector:     ".send.address",
 			},
 			{
 				Operation: &acltypes.AccessOperation{
@@ -757,7 +740,7 @@ func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t 
 		true,
 	)
 	require.NoError(t, err)
-	require.Len(t, mapping.AccessOps, 6)
+	require.Len(t, mapping.AccessOps, 5)
 	expectedAccessOps := []acltypes.AccessOperationWithSelector{
 		{
 			Operation: &acltypes.AccessOperation{
@@ -766,15 +749,6 @@ func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t 
 				IdentifierTemplate: fmt.Sprintf("02%s", hex.EncodeToString(address.MustLengthPrefix(wasmContractAddress))),
 			},
 			SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
-		},
-		{
-			Operation: &acltypes.AccessOperation{
-				ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
-				AccessType:         acltypes.AccessType_WRITE,
-				IdentifierTemplate: fmt.Sprintf("02%s", hex.EncodeToString(address.MustLengthPrefix(otherAddr))),
-			},
-			SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
-			Selector:     ".send.address",
 		},
 		{
 			Operation: &acltypes.AccessOperation{

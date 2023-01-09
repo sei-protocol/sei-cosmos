@@ -260,7 +260,8 @@ accessOpLoop:
 			// TODO: add a circular dependency check here to ignore if we've already seen this contract/identifier in our reference chain
 			// for now, we will just pass in the same message body, this needs to be changed later though
 			// TODO: build new msgbody for the new contract execute / query msg in later milestone tasks
-			wasmDeps, err := k.GetWasmDependencyMapping(ctx, interContractAddress, contractAddr.String(), msgBody, true)
+			emptyJSON := []byte("{}")
+			wasmDeps, err := k.GetWasmDependencyMapping(ctx, interContractAddress, contractAddr.String(), emptyJSON, true)
 
 			if err != nil || !wasmDeps.Enabled {
 				// if we have an error fetching the dependency mapping or the mapping is disabled, we want to use the synchronous mappings instead

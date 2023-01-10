@@ -28,7 +28,7 @@ func (suite *KeeperTestSuite) TestMessageRegisterWasmDependency() {
 
 	deps, err := app.AccessControlKeeper.GetRawWasmDependencyMapping(ctx, contractAddr)
 	req.NoError(err)
-	req.Equal(acltypes.SynchronousWasmDependencyMapping(contractAddr.String()), deps)
+	req.Equal(acltypes.SynchronousWasmDependencyMapping(contractAddr.String()), *deps)
 }
 
 func (suite *KeeperTestSuite) TestMessageRegisterWasmDepFromJson() {

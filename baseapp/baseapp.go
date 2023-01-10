@@ -947,6 +947,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		accessOps := ctx.TxMsgAccessOps()[i]
 
 		fmt.Println("\nall stored access events: ", storeAccessOpEvents)
+		fmt.Println("current block height", ctx.BlockHeight())
 
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 		if len(missingAccessOps) != 0 {

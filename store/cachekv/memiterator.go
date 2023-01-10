@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 
 	dbm "github.com/tendermint/tm-db"
@@ -65,6 +66,7 @@ func (mi *memIterator) Value() []byte {
 	}
 	value := mi.Iterator.Value()
 	mi.eventManager.EmitResourceAccessReadEvent("iterator", mi.storeKey, key, value)
+	fmt.Println("emitting resource access in iterator value: ",  mi.storeKey, key, value)
 
 	mi.lastKey = key
 	return value

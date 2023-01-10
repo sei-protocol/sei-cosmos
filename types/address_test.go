@@ -272,6 +272,14 @@ func (s *addressTestSuite) TestConfiguredPrefix() {
 	}
 }
 
+func (s *addressTestSuite) TestX() {
+	addr := "cosmos14pt0q5cwf38zt08uu0n6yrstf3rndzr5057jys"
+
+	address, err := types.AccAddressFromBech32(addr)
+	fmt.Println("address: ", address)
+	s.Require().NotNil(err)
+}
+
 func (s *addressTestSuite) TestAddressInterface() {
 	pubBz := make([]byte, ed25519.PubKeySize)
 	pub := &ed25519.PubKey{Key: pubBz}

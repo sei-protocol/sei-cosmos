@@ -945,6 +945,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		}
 		storeAccessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[i]
+
+		fmt.Println("\nall stored access events: ", storeAccessOpEvents)
+
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {

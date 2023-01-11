@@ -206,7 +206,7 @@ func TestWasmDependencyMappingWithJQSelector(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wasmMapping, *mapping)
 	// test getting a dependency mapping with selector
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		"",
@@ -262,7 +262,7 @@ func TestWasmDependencyMappingWithJQBech32Selector(t *testing.T) {
 	require.Equal(t, wasmMapping, *mapping)
 	// test getting a dependency mapping with selector
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		"",
@@ -317,7 +317,7 @@ func TestWasmDependencyMappingWithJQLengthPrefixedAddressSelector(t *testing.T) 
 	require.Equal(t, wasmMapping, *mapping)
 	// test getting a dependency mapping with selector
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		"",
@@ -362,7 +362,7 @@ func TestWasmDependencyMappingWithSenderBech32Selector(t *testing.T) {
 	require.Equal(t, wasmMapping, *mapping)
 	// test getting a dependency mapping with selector
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		wasmBech32,
@@ -407,7 +407,7 @@ func TestWasmDependencyMappingWithSenderLengthPrefixedSelector(t *testing.T) {
 	require.Equal(t, wasmMapping, *mapping)
 	// test getting a dependency mapping with selector
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		wasmBech32,
@@ -462,7 +462,7 @@ func TestWasmDependencyMappingWithConditionalSelector(t *testing.T) {
 	require.Equal(t, wasmMapping, *mapping)
 	// test getting a dependency mapping with selector
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		wasmBech32,
@@ -509,7 +509,7 @@ func TestWasmDependencyMappingWithConstantSelector(t *testing.T) {
 	require.Equal(t, wasmMapping, *mapping)
 	// test getting a dependency mapping with selector
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		wasmBech32,
@@ -601,7 +601,7 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 
 	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		thirdAddr.String(),
@@ -720,7 +720,7 @@ func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t 
 
 	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		otherAddr.String(),
@@ -848,7 +848,7 @@ func TestWasmDependencyMappingWithContractReferenceSelectorCircularDependency(t 
 
 	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		otherAddr.String(),
@@ -915,7 +915,7 @@ func TestWasmDependencyMappingWithContractReferenceDisabled(t *testing.T) {
 
 	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		wasmContractAddresses[2].String(),
@@ -968,7 +968,7 @@ func TestWasmDependencyMappingWithContractReferenceDNE(t *testing.T) {
 
 	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
 	require.NoError(t, err)
-	deps, err := app.AccessControlKeeper.GetWasmDependencyMapping(
+	deps, err := app.AccessControlKeeper.GetWasmDependencyAccessOps(
 		ctx,
 		wasmContractAddress,
 		wasmContractAddresses[2].String(),

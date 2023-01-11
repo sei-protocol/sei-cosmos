@@ -139,7 +139,7 @@ func (k Keeper) GetRawWasmDependencyMapping(ctx sdk.Context, contractAddress sdk
 	return &dependencyMapping, nil
 }
 
-func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.AccAddress, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) ([]acltypes.AccessOperation, error) {
+func (k Keeper) GetWasmDependencyAccessOps(ctx sdk.Context, contractAddress sdk.AccAddress, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) ([]acltypes.AccessOperation, error) {
 	uniqueIdentifier := contractAddress.String()
 	if _, ok := circularDepLookup[uniqueIdentifier]; ok {
 		// we've already seen this contract, we should simply return synchronous access Ops
@@ -298,7 +298,7 @@ accessOpLoop:
 			// for now, we will just pass in the same message body, this needs to be changed later though
 			// TODO: build new msgbody for the new contract execute / query msg in later milestone tasks
 			emptyJSON := []byte("{}")
-			wasmDeps, err := k.GetWasmDependencyMapping(ctx, interContractAddress, contractAddr.String(), emptyJSON, circularDepLookup)
+			wasmDeps, err := k.GetWasmDependencyAccessOps(ctx, interContractAddress, contractAddr.String(), emptyJSON, circularDepLookup)
 
 			if err != nil {
 				// if we have an error fetching the dependency mapping or the mapping is disabled, we want to use the synchronous mappings instead

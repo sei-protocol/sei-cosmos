@@ -45,12 +45,17 @@ func (waos *AccessOperationSet) Size() int {
 
 func (waos *AccessOperationSet) ToSlice() []acltypes.AccessOperation {
 	res := []acltypes.AccessOperation{}
+	hasCommitOp := false
 	for op := range waos.ops {
 		if op != *CommitAccessOp() {
 			res = append(res, op)
+		} else {
+			hasCommitOp = true
 		}
 	}
-	res = append(res, *CommitAccessOp())
+	if hasCommitOp {
+		res = append(res, *CommitAccessOp())
+	}
 	return res
 }
 

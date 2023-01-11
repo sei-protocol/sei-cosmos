@@ -32,10 +32,9 @@ message MessageDependencyMapping {
 }
 
 message WasmDependencyMapping {
-    bool enabled = 1;
-    repeated WasmAccessOperation base_access_ops = 2;
-    repeated WasmAccessOperations query_access_ops = 3;
-    repeated WasmAccessOperations execute_access_ops = 4;
-    string reset_reason = 5;
-    string contract_address = 6;
+    repeated WasmAccessOperation base_access_ops = 1;
+    repeated WasmAccessOperations query_access_ops = 2;
+    repeated WasmAccessOperations execute_access_ops = 3;
+    string reset_reason = 4;
+    string contract_address = 5;
 }

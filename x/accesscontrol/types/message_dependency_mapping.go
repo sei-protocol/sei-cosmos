@@ -82,9 +82,12 @@ func SynchronousWasmAccessOps() []*acltypes.WasmAccessOperation {
 	}
 }
 
+func SynchronousAccessOpsSet() *AccessOperationSet {
+	return NewAccessOperationSet(SynchronousAccessOps())
+}
+
 func SynchronousWasmDependencyMapping(contractAddress string) acltypes.WasmDependencyMapping {
 	return acltypes.WasmDependencyMapping{
-		Enabled:         true,
 		BaseAccessOps:   SynchronousWasmAccessOps(),
 		ContractAddress: contractAddress,
 	}
@@ -120,22 +123,6 @@ func DefaultMessageDependencyMapping() []acltypes.MessageDependencyMapping {
 
 func DefaultWasmDependencyMappings() []acltypes.WasmDependencyMapping {
 	return []acltypes.WasmDependencyMapping{}
-}
-
-func MergeWasmAccessOps(accessOps1 []*acltypes.WasmAccessOperation, accessOps2 []*acltypes.WasmAccessOperation) []*acltypes.WasmAccessOperation {
-	if accessOps1 == nil || len(accessOps1) == 0 {
-		return accessOps2
-	}
-	if accessOps2 == nil || len(accessOps2) == 0 {
-		return accessOps1
-	}
-	if IsCommitOp(accessOps1[len(accessOps1)-1].Operation) && IsCommitOp(accessOps2[len(accessOps2)-1].Operation) {
-		return MergeWasmAccessOps(accessOps1[:len(accessOps1)-1], accessOps2)
-	}
-	if IsDefaultSynchronousWasmAccessOps(accessOps1) || IsDefaultSynchronousWasmAccessOps(accessOps2) {
-		return SynchronousWasmAccessOps()
-	}
-	return append(accessOps1, accessOps2...)
 }
 
 // Base access operation list must end with access type commit

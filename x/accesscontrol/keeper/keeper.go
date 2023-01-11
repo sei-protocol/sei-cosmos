@@ -139,11 +139,11 @@ func (k Keeper) GetRawWasmDependencyMapping(ctx sdk.Context, contractAddress sdk
 	return &dependencyMapping, nil
 }
 
-func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.AccAddress, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) ([]*acltypes.WasmAccessOperation, error) {
+func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.AccAddress, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) (*types.AccessOperationSet, error) {
 	uniqueIdentifier := contractAddress.String()
 	if _, ok := circularDepLookup[uniqueIdentifier]; ok {
 		// we've already seen this contract, we should simply return synchronous access Ops
-		return types.SynchronousWasmAccessOps(), nil
+		return types.SynchronousAccessOpsSet(), nil
 	}
 	// add to our lookup so we know we've seen this identifier
 	circularDepLookup[uniqueIdentifier] = struct{}{}
@@ -151,26 +151,21 @@ func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.Ac
 	dependencyMapping, err := k.GetRawWasmDependencyMapping(ctx, contractAddress)
 	if err != nil {
 		if err == sdkerrors.ErrKeyNotFound {
-			return types.SynchronousWasmAccessOps(), nil
+			return types.SynchronousAccessOpsSet(), nil
 		}
 		return nil, err
 	}
 
-	if dependencyMapping.Enabled {
-		// TODO: extend base access op with message-specific ops once message type identifier is passed in
-		selectedAccessOps, err := k.BuildSelectorOps(ctx, contractAddress, dependencyMapping.BaseAccessOps, senderBech, msgBody, circularDepLookup)
-		if err != nil {
-			return nil, err
-		}
-		return selectedAccessOps, nil
+	// TODO: extend base access op with message-specific ops once message type identifier is passed in
+	selectedAccessOps, err := k.BuildSelectorOps(ctx, contractAddress, dependencyMapping.BaseAccessOps, senderBech, msgBody, circularDepLookup)
+	if err != nil {
+		return nil, err
 	}
-
-	// use synchronous if dependency mapping is disabled
-	return types.SynchronousWasmAccessOps(), nil
+	return selectedAccessOps, nil
 }
 
-func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, accessOps []*acltypes.WasmAccessOperation, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) ([]*acltypes.WasmAccessOperation, error) {
-	selectedAccessOps := []*acltypes.WasmAccessOperation{}
+func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, accessOps []*acltypes.WasmAccessOperation, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) (*types.AccessOperationSet, error) {
+	selectedAccessOps := types.NewEmptyAccessOperationSet()
 	// when we build selector ops here, we want to generate "*" if the proper fields aren't present
 	// if size of circular dep map > 1 then it means we're in a contract reference
 	// as a result, if the selector doesn't match properly, we need to conservatively assume "*" for the identifier
@@ -307,16 +302,16 @@ accessOpLoop:
 
 			if err != nil {
 				// if we have an error fetching the dependency mapping or the mapping is disabled, we want to use the synchronous mappings instead
-				selectedAccessOps = types.SynchronousWasmAccessOps()
+				selectedAccessOps = types.SynchronousAccessOpsSet()
 				break accessOpLoop
 			} else {
 				// if we did get deps properly and they are enabled, now we want to add them to our access operations
-				selectedAccessOps = types.MergeWasmAccessOps(selectedAccessOps, wasmDeps)
+				selectedAccessOps.Merge(wasmDeps)
 			}
 			// we want to continue here to skip adding the original OpWithSelector (since that just represents instruction to fetch dependent contract)
 			continue
 		}
-		selectedAccessOps = types.MergeWasmAccessOps(selectedAccessOps, []*acltypes.WasmAccessOperation{opWithSelector})
+		selectedAccessOps.Add(*opWithSelector.Operation)
 	}
 	// TODO: add logic to deduplicate access operations that are the same
 	return selectedAccessOps, nil

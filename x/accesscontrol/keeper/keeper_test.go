@@ -584,6 +584,16 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 				SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
 				Selector:     interContractAddress.String(),
 			},
+			// this one should be appropriately discarded because we are not processing a contract reference
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+				Selector:     ".field.doesnt.exist",
+			},
 			{
 				Operation:    types.CommitAccessOp(),
 				SelectorType: acltypes.AccessOperationSelectorType_NONE,
@@ -621,8 +631,13 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 			SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
 		},
 		{
-			Operation:    types.CommitAccessOp(),
-			SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			Operation: &acltypes.AccessOperation{
+				ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "*",
+			},
+			SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+			Selector:     ".send.address",
 		},
 	}
 	require.Equal(t, expectedAccessOps, deps)

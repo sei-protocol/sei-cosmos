@@ -784,15 +784,6 @@ func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t 
 	wasmMapping := acltypes.WasmDependencyMapping{
 		BaseAccessOps: []*acltypes.WasmAccessOperation{
 			{
-				Operation: &acltypes.AccessOperation{
-					ResourceType:       acltypes.ResourceType_ANY,
-					AccessType:         acltypes.AccessType_UNKNOWN,
-					IdentifierTemplate: "*",
-				},
-				SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
-				Selector:     interContractAddress.String(),
-			},
-			{
 				Operation:    types.CommitAccessOp(),
 				SelectorType: acltypes.AccessOperationSelectorType_NONE,
 			},
@@ -1077,15 +1068,6 @@ func TestWasmDependencyMappingWithContractReferencePartitioned(t *testing.T) {
 	// this mapping creates a reference to the inter-contract dependency
 	wasmMapping := acltypes.WasmDependencyMapping{
 		BaseAccessOps: []*acltypes.WasmAccessOperation{
-			{
-				Operation: &acltypes.AccessOperation{
-					ResourceType:       acltypes.ResourceType_ANY,
-					AccessType:         acltypes.AccessType_UNKNOWN,
-					IdentifierTemplate: "*",
-				},
-				SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
-				Selector:     interContractAddress.String(),
-			},
 			{
 				Operation:    types.CommitAccessOp(),
 				SelectorType: acltypes.AccessOperationSelectorType_NONE,

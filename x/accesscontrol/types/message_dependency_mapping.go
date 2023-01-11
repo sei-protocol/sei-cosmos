@@ -14,6 +14,7 @@ var (
 	ErrNonLeafResourceTypeWithIdentifier = fmt.Errorf("IdentifierTemplate must be '*' for non leaf resource types")
 	ErrDuplicateWasmMethodName           = fmt.Errorf("a method name is defined multiple times in specific access operation list")
 	ErrQueryRefNonQueryMessageType       = fmt.Errorf("query contract references can only have query message types")
+	ErrSelectorDeprecated                = fmt.Errorf("this selector type is deprecated")
 )
 
 type MessageKey string
@@ -139,6 +140,26 @@ func ValidateWasmDependencyMapping(mapping acltypes.WasmDependencyMapping) error
 			return ErrDuplicateWasmMethodName
 		}
 		seenMessageNames[ops.MessageName] = struct{}{}
+	}
+
+	for _, accessOp := range mapping.BaseAccessOps {
+		if accessOp.SelectorType == acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE {
+			return ErrSelectorDeprecated
+		}
+	}
+	for _, accessOps := range mapping.ExecuteAccessOps {
+		for _, accessOp := range accessOps.WasmOperations {
+			if accessOp.SelectorType == acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE {
+				return ErrSelectorDeprecated
+			}
+		}
+	}
+	for _, accessOps := range mapping.QueryAccessOps {
+		for _, accessOp := range accessOps.WasmOperations {
+			if accessOp.SelectorType == acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE {
+				return ErrSelectorDeprecated
+			}
+		}
 	}
 
 	for _, contractRef := range mapping.BaseContractReferences {

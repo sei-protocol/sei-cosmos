@@ -137,3 +137,61 @@ func TestWasmDependencyQueryContractReferenceIncorrectMessageType(t *testing.T) 
 	}
 	require.Error(t, types.ValidateWasmDependencyMapping(wasmDependencyMapping))
 }
+
+func TestWasmDependencyDeprecatedSelectors(t *testing.T) {
+	wasmDependencyMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+	}
+	require.Error(t, types.ValidateWasmDependencyMapping(wasmDependencyMapping))
+
+	wasmDependencyMapping = acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ExecuteAccessOps: []*acltypes.WasmAccessOperations{
+			{
+				MessageName: "message_name",
+				WasmOperations: []*acltypes.WasmAccessOperation{
+					{
+						Operation:    types.CommitAccessOp(),
+						SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
+					},
+				},
+			},
+		},
+	}
+	require.Error(t, types.ValidateWasmDependencyMapping(wasmDependencyMapping))
+
+	wasmDependencyMapping = acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		QueryAccessOps: []*acltypes.WasmAccessOperations{
+			{
+				MessageName: "message_name",
+				WasmOperations: []*acltypes.WasmAccessOperation{
+					{
+						Operation:    types.CommitAccessOp(),
+						SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
+					},
+				},
+			},
+		},
+	}
+	require.Error(t, types.ValidateWasmDependencyMapping(wasmDependencyMapping))
+}

@@ -139,11 +139,11 @@ func (k Keeper) GetRawWasmDependencyMapping(ctx sdk.Context, contractAddress sdk
 	return &dependencyMapping, nil
 }
 
-func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.AccAddress, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) (*types.AccessOperationSet, error) {
+func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.AccAddress, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) ([]acltypes.AccessOperation, error) {
 	uniqueIdentifier := contractAddress.String()
 	if _, ok := circularDepLookup[uniqueIdentifier]; ok {
 		// we've already seen this contract, we should simply return synchronous access Ops
-		return types.SynchronousAccessOpsSet(), nil
+		return types.SynchronousAccessOps(), nil
 	}
 	// add to our lookup so we know we've seen this identifier
 	circularDepLookup[uniqueIdentifier] = struct{}{}
@@ -151,7 +151,7 @@ func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.Ac
 	dependencyMapping, err := k.GetRawWasmDependencyMapping(ctx, contractAddress)
 	if err != nil {
 		if err == sdkerrors.ErrKeyNotFound {
-			return types.SynchronousAccessOpsSet(), nil
+			return types.SynchronousAccessOps(), nil
 		}
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (k Keeper) GetWasmDependencyMapping(ctx sdk.Context, contractAddress sdk.Ac
 	return selectedAccessOps, nil
 }
 
-func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, accessOps []*acltypes.WasmAccessOperation, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) (*types.AccessOperationSet, error) {
+func (k Keeper) BuildSelectorOps(ctx sdk.Context, contractAddr sdk.AccAddress, accessOps []*acltypes.WasmAccessOperation, senderBech string, msgBody []byte, circularDepLookup ContractReferenceLookupMap) ([]acltypes.AccessOperation, error) {
 	selectedAccessOps := types.NewEmptyAccessOperationSet()
 	// when we build selector ops here, we want to generate "*" if the proper fields aren't present
 	// if size of circular dep map > 1 then it means we're in a contract reference
@@ -306,7 +306,7 @@ accessOpLoop:
 				break accessOpLoop
 			} else {
 				// if we did get deps properly and they are enabled, now we want to add them to our access operations
-				selectedAccessOps.Merge(wasmDeps)
+				selectedAccessOps.AddMultiple(wasmDeps)
 			}
 			// we want to continue here to skip adding the original OpWithSelector (since that just represents instruction to fetch dependent contract)
 			continue
@@ -314,7 +314,7 @@ accessOpLoop:
 		selectedAccessOps.Add(*opWithSelector.Operation)
 	}
 	// TODO: add logic to deduplicate access operations that are the same
-	return selectedAccessOps, nil
+	return selectedAccessOps.ToSlice(), nil
 }
 
 func (k Keeper) SetWasmDependencyMapping(

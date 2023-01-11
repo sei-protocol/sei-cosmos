@@ -214,8 +214,8 @@ func TestWasmDependencyMappingWithJQSelector(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.True(t, deps.HasIdentifier(fmt.Sprintf("%s/%s", wasmContractAddress.String(), hex.EncodeToString([]byte("bob")))))
-	require.True(t, deps.HasIdentifier(fmt.Sprintf("%s/%s", wasmContractAddress.String(), hex.EncodeToString([]byte("10")))))
+	require.True(t, types.NewAccessOperationSet(deps).HasIdentifier(fmt.Sprintf("%s/%s", wasmContractAddress.String(), hex.EncodeToString([]byte("bob")))))
+	require.True(t, types.NewAccessOperationSet(deps).HasIdentifier(fmt.Sprintf("%s/%s", wasmContractAddress.String(), hex.EncodeToString([]byte("10")))))
 }
 
 func TestWasmDependencyMappingWithJQBech32Selector(t *testing.T) {
@@ -270,7 +270,7 @@ func TestWasmDependencyMappingWithJQBech32Selector(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.True(t, deps.HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(wasmContractAddress))))
+	require.True(t, types.NewAccessOperationSet(deps).HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(wasmContractAddress))))
 }
 
 func TestWasmDependencyMappingWithJQLengthPrefixedAddressSelector(t *testing.T) {
@@ -325,7 +325,7 @@ func TestWasmDependencyMappingWithJQLengthPrefixedAddressSelector(t *testing.T) 
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.True(t, deps.HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(address.MustLengthPrefix(wasmContractAddress)))))
+	require.True(t, types.NewAccessOperationSet(deps).HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(address.MustLengthPrefix(wasmContractAddress)))))
 }
 
 func TestWasmDependencyMappingWithSenderBech32Selector(t *testing.T) {
@@ -370,7 +370,7 @@ func TestWasmDependencyMappingWithSenderBech32Selector(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.True(t, deps.HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(wasmContractAddress))))
+	require.True(t, types.NewAccessOperationSet(deps).HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(wasmContractAddress))))
 }
 
 func TestWasmDependencyMappingWithSenderLengthPrefixedSelector(t *testing.T) {
@@ -415,7 +415,7 @@ func TestWasmDependencyMappingWithSenderLengthPrefixedSelector(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.True(t, deps.HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(address.MustLengthPrefix(wasmContractAddress)))))
+	require.True(t, types.NewAccessOperationSet(deps).HasIdentifier(fmt.Sprintf("someprefix%s", hex.EncodeToString(address.MustLengthPrefix(wasmContractAddress)))))
 }
 
 func TestWasmDependencyMappingWithConditionalSelector(t *testing.T) {
@@ -470,8 +470,8 @@ func TestWasmDependencyMappingWithConditionalSelector(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.Equal(t, 2, deps.Size())
-	require.True(t, deps.HasResourceType(acltypes.ResourceType_KV_WASM))
+	require.Equal(t, 2, types.NewAccessOperationSet(deps).Size())
+	require.True(t, types.NewAccessOperationSet(deps).HasResourceType(acltypes.ResourceType_KV_WASM))
 }
 
 func TestWasmDependencyMappingWithConstantSelector(t *testing.T) {
@@ -517,7 +517,7 @@ func TestWasmDependencyMappingWithConstantSelector(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.True(t, deps.HasIdentifier(fmt.Sprintf("prefix%s", hex.EncodeToString([]byte("constantValue")))))
+	require.True(t, types.NewAccessOperationSet(deps).HasIdentifier(fmt.Sprintf("prefix%s", hex.EncodeToString([]byte("constantValue")))))
 }
 
 func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
@@ -609,7 +609,7 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.Equal(t, deps.Size(), 3)
+	require.Equal(t, types.NewAccessOperationSet(deps).Size(), 3)
 	expectedAccessOps := []acltypes.AccessOperation{
 		{
 			ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
@@ -623,7 +623,7 @@ func TestWasmDependencyMappingWithContractReferenceSelector(t *testing.T) {
 		},
 		*types.CommitAccessOp(),
 	}
-	require.Equal(t, types.NewAccessOperationSet(expectedAccessOps), deps)
+	require.Equal(t, types.NewAccessOperationSet(expectedAccessOps), types.NewAccessOperationSet(deps))
 }
 
 func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t *testing.T) {
@@ -728,7 +728,7 @@ func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t 
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.Equal(t, deps.Size(), 3)
+	require.Equal(t, types.NewAccessOperationSet(deps).Size(), 3)
 	expectedAccessOps := []acltypes.AccessOperation{
 		{
 			ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
@@ -742,7 +742,7 @@ func TestWasmDependencyMappingWithContractReferenceSelectorMultipleReferences(t 
 		},
 		*types.CommitAccessOp(),
 	}
-	require.Equal(t, types.NewAccessOperationSet(expectedAccessOps), deps)
+	require.Equal(t, types.NewAccessOperationSet(expectedAccessOps), types.NewAccessOperationSet(deps))
 }
 
 func TestWasmDependencyMappingWithContractReferenceSelectorCircularDependency(t *testing.T) {
@@ -856,7 +856,7 @@ func TestWasmDependencyMappingWithContractReferenceSelectorCircularDependency(t 
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.Equal(t, deps.Size(), 4)
+	require.Equal(t, types.NewAccessOperationSet(deps).Size(), 4)
 	expectedAccessOps := []acltypes.AccessOperation{
 		{
 			ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
@@ -872,7 +872,7 @@ func TestWasmDependencyMappingWithContractReferenceSelectorCircularDependency(t 
 		{AccessType: acltypes.AccessType_UNKNOWN, ResourceType: acltypes.ResourceType_ANY, IdentifierTemplate: "*"},
 		*types.CommitAccessOp(),
 	}
-	require.Equal(t, types.NewAccessOperationSet(expectedAccessOps), deps)
+	require.Equal(t, types.NewAccessOperationSet(expectedAccessOps), types.NewAccessOperationSet(deps))
 }
 
 func TestWasmDependencyMappingWithContractReferenceDisabled(t *testing.T) {
@@ -924,8 +924,8 @@ func TestWasmDependencyMappingWithContractReferenceDisabled(t *testing.T) {
 	)
 	require.NoError(t, err)
 	// we should have synchronous access ops as returned from building selectors
-	require.Equal(t, deps.Size(), 2)
-	require.Equal(t, types.SynchronousAccessOpsSet(), deps)
+	require.Equal(t, types.NewAccessOperationSet(deps).Size(), 2)
+	require.Equal(t, types.SynchronousAccessOpsSet(), types.NewAccessOperationSet(deps))
 }
 
 func TestWasmDependencyMappingWithContractReferenceDNE(t *testing.T) {
@@ -976,8 +976,8 @@ func TestWasmDependencyMappingWithContractReferenceDNE(t *testing.T) {
 		make(aclkeeper.ContractReferenceLookupMap),
 	)
 	require.NoError(t, err)
-	require.Equal(t, deps.Size(), 2)
-	require.Equal(t, types.SynchronousAccessOpsSet(), deps)
+	require.Equal(t, types.NewAccessOperationSet(deps).Size(), 2)
+	require.Equal(t, types.SynchronousAccessOpsSet(), types.NewAccessOperationSet(deps))
 }
 
 func (suite *KeeperTestSuite) TestMessageDependencies() {

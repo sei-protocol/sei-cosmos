@@ -43,6 +43,17 @@ func (waos *AccessOperationSet) Size() int {
 	return len(waos.ops)
 }
 
+func (waos *AccessOperationSet) ToSlice() []acltypes.AccessOperation {
+	res := []acltypes.AccessOperation{}
+	for op := range waos.ops {
+		if op != *CommitAccessOp() {
+			res = append(res, op)
+		}
+	}
+	res = append(res, *CommitAccessOp())
+	return res
+}
+
 // TEST ONLY
 func (waos *AccessOperationSet) HasIdentifier(identifier string) bool {
 	for op := range waos.ops {

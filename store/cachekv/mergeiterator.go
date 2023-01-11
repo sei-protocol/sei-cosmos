@@ -128,11 +128,13 @@ func (iter *cacheMergeIterator) Value() []byte {
 
 	// If parent is invalid, get the cache value.
 	if !iter.parent.Valid() {
+		fmt.Printf("cacheMergeIterator parent not valid %T", iter.cache)
 		return iter.cache.Value()
 	}
 
 	// If cache is invalid, get the parent value.
 	if !iter.cache.Valid() {
+		fmt.Printf("cacheMergeIterator cache not valid %T", iter.parent)
 		return iter.parent.Value()
 	}
 

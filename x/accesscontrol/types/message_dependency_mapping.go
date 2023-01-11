@@ -12,7 +12,8 @@ var (
 	ErrNoCommitAccessOp                  = fmt.Errorf("MessageDependencyMapping doesn't terminate with AccessType_COMMIT")
 	ErrEmptyIdentifierString             = fmt.Errorf("IdentifierTemplate cannot be an empty string")
 	ErrNonLeafResourceTypeWithIdentifier = fmt.Errorf("IdentifierTemplate must be '*' for non leaf resource types")
-	ErrDuplicateWasmMethodName           = fmt.Errorf("A method name is defined multiple times in specific access operation list")
+	ErrDuplicateWasmMethodName           = fmt.Errorf("a method name is defined multiple times in specific access operation list")
+	ErrQueryRefNonQueryMessageType       = fmt.Errorf("query contract references can only have query message types")
 )
 
 type MessageKey string
@@ -138,6 +139,33 @@ func ValidateWasmDependencyMapping(mapping acltypes.WasmDependencyMapping) error
 			return ErrDuplicateWasmMethodName
 		}
 		seenMessageNames[ops.MessageName] = struct{}{}
+	}
+
+	for _, contractRef := range mapping.BaseContractReferences {
+		_, err := sdk.AccAddressFromBech32(contractRef.ContractAddress)
+		if err != nil {
+			return err
+		}
+	}
+	for _, msgContractRef := range mapping.ExecuteContractReferences {
+		for _, contractRef := range msgContractRef.ContractReferences {
+			_, err := sdk.AccAddressFromBech32(contractRef.ContractAddress)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	for _, msgContractRef := range mapping.QueryContractReferences {
+		for _, contractRef := range msgContractRef.ContractReferences {
+			_, err := sdk.AccAddressFromBech32(contractRef.ContractAddress)
+			if err != nil {
+				return err
+			}
+			// query contract references CANNOT have execute contract message types
+			if contractRef.MessageType != acltypes.WasmMessageSubtype_QUERY {
+				return ErrQueryRefNonQueryMessageType
+			}
+		}
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package gaskv
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -161,6 +162,7 @@ func (gi *gasIterator) Key() (key []byte) {
 // Value implements the Iterator interface. It returns the current value and it
 // does not incur any gas cost.
 func (gi *gasIterator) Value() (value []byte) {
+	fmt.Printf("gasIterator parent %T\n", gi.parent)
 	value = gi.parent.Value()
 	return value
 }

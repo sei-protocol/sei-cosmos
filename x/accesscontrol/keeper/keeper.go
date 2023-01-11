@@ -180,9 +180,9 @@ func (k Keeper) GetWasmDependencyAccessOps(ctx sdk.Context, contractAddress sdk.
 	contractRefs := dependencyMapping.BaseContractReferences
 	// add the specific execute or query contract references based on message type + name
 	specificContractRefs := []*acltypes.WasmContractReferences{}
-	if msgInfo.MessageType == acltypes.WasmMessageSubtype_EXECUTE && dependencyMapping.ExecuteAccessOps != nil {
+	if msgInfo.MessageType == acltypes.WasmMessageSubtype_EXECUTE && len(dependencyMapping.ExecuteContractReferences) != 0 {
 		specificContractRefs = dependencyMapping.ExecuteContractReferences
-	} else if msgInfo.MessageType == acltypes.WasmMessageSubtype_QUERY && dependencyMapping.QueryAccessOps != nil {
+	} else if msgInfo.MessageType == acltypes.WasmMessageSubtype_QUERY && len(dependencyMapping.QueryContractReferences) != 0 {
 		specificContractRefs = dependencyMapping.QueryContractReferences
 	}
 	for _, specificContractRef := range specificContractRefs {
@@ -211,7 +211,7 @@ func (k Keeper) ImportContractReferences(ctx sdk.Context, contractAddr sdk.AccAd
 			return nil, err
 		}
 		// TODO: build new msgbody for the new contract execute / query msg in later milestone tasks based on the translation pattern
-		emptyJSON := []byte("{\"\":{}}")
+		emptyJSON := []byte(fmt.Sprintf("{\"%s\":{}}", contractReference.MessageName))
 		var msgInfo *types.WasmMessageInfo
 		if contractReference.MessageType == acltypes.WasmMessageSubtype_EXECUTE {
 			msgInfo, err = types.NewExecuteMessageInfo(emptyJSON)

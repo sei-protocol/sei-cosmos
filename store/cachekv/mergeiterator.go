@@ -3,6 +3,7 @@ package cachekv
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -139,6 +140,7 @@ func (iter *cacheMergeIterator) Value() []byte {
 	keyP, keyC := iter.parent.Key(), iter.cache.Key()
 
 	cmp := iter.compare(keyP, keyC)
+	fmt.Println("cacheMergeIterator cmp ", cmp)
 	switch cmp {
 	case -1: // parent < cache
 		return iter.parent.Value()

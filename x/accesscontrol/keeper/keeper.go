@@ -172,7 +172,6 @@ func (k Keeper) GetWasmDependencyAccessOps(ctx sdk.Context, contractAddress sdk.
 
 	selectedAccessOps, err := k.BuildSelectorOps(ctx, contractAddress, accessOps, senderBech, msgInfo, circularDepLookup)
 	if err != nil {
-		// TODO: should we reset wasm dependency mapping here?
 		return nil, err
 	}
 
@@ -188,11 +187,11 @@ func (k Keeper) GetWasmDependencyAccessOps(ctx sdk.Context, contractAddress sdk.
 	for _, specificContractRef := range specificContractRefs {
 		if specificContractRef.MessageName == msgInfo.MessageName {
 			contractRefs = append(contractRefs, specificContractRef.ContractReferences...)
+			break
 		}
 	}
 	importedAccessOps, err := k.ImportContractReferences(ctx, contractAddress, contractRefs, senderBech, msgInfo, circularDepLookup)
 	if err != nil {
-		// TODO: should we reset wasm dependency mapping here?
 		return nil, err
 	}
 	// combine the access ops to get the definitive list of access ops for the contract

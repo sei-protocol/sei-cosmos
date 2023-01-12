@@ -134,14 +134,38 @@ func ValidateWasmDependencyMapping(mapping acltypes.WasmDependencyMapping) error
 	if lastAccessOp.Operation.AccessType != acltypes.AccessType_COMMIT {
 		return ErrNoCommitAccessOp
 	}
+
+	// ensure uniqueness for partitioned message names across access ops and contract references
 	seenMessageNames := map[string]struct{}{}
-	for _, ops := range append(mapping.ExecuteAccessOps, mapping.QueryAccessOps...) {
+	for _, ops := range mapping.ExecuteAccessOps {
+		if _, ok := seenMessageNames[ops.MessageName]; ok {
+			return ErrDuplicateWasmMethodName
+		}
+		seenMessageNames[ops.MessageName] = struct{}{}
+	}
+	seenMessageNames = map[string]struct{}{}
+	for _, ops := range mapping.QueryAccessOps {
+		if _, ok := seenMessageNames[ops.MessageName]; ok {
+			return ErrDuplicateWasmMethodName
+		}
+		seenMessageNames[ops.MessageName] = struct{}{}
+	}
+	seenMessageNames = map[string]struct{}{}
+	for _, ops := range mapping.ExecuteContractReferences {
+		if _, ok := seenMessageNames[ops.MessageName]; ok {
+			return ErrDuplicateWasmMethodName
+		}
+		seenMessageNames[ops.MessageName] = struct{}{}
+	}
+	seenMessageNames = map[string]struct{}{}
+	for _, ops := range mapping.QueryContractReferences {
 		if _, ok := seenMessageNames[ops.MessageName]; ok {
 			return ErrDuplicateWasmMethodName
 		}
 		seenMessageNames[ops.MessageName] = struct{}{}
 	}
 
+	// ensure deprecation for CONTRACT_REFERENCE access operation selector due to new contract references
 	for _, accessOp := range mapping.BaseAccessOps {
 		if accessOp.SelectorType == acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE {
 			return ErrSelectorDeprecated
@@ -162,6 +186,7 @@ func ValidateWasmDependencyMapping(mapping acltypes.WasmDependencyMapping) error
 		}
 	}
 
+	// verify contract address valid for contract references
 	for _, contractRef := range mapping.BaseContractReferences {
 		_, err := sdk.AccAddressFromBech32(contractRef.ContractAddress)
 		if err != nil {

@@ -40,14 +40,14 @@ func newMessageInfo(fullBody []byte, messageType acltypes.WasmMessageSubtype) (*
 func extractMessage(fullBody []byte) (string, []byte, error) {
 	var deserialized map[string]json.RawMessage
 	if err := json.Unmarshal(fullBody, &deserialized); err != nil {
-		return "", nil, err
+		return "", fullBody, err
 	}
 	topLevelKeys := []string{}
 	for k := range deserialized {
 		topLevelKeys = append(topLevelKeys, k)
 	}
 	if len(topLevelKeys) != 1 {
-		return "", nil, fmt.Errorf("expected exactly one top-level key but found %s", topLevelKeys)
+		return "", fullBody, fmt.Errorf("expected exactly one top-level key but found %s", topLevelKeys)
 	}
 	return topLevelKeys[0], deserialized[topLevelKeys[0]], nil
 }

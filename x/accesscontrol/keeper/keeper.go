@@ -158,14 +158,15 @@ func (k Keeper) GetWasmDependencyAccessOps(ctx sdk.Context, contractAddress sdk.
 
 	accessOps := dependencyMapping.BaseAccessOps
 	specificAccessOpsMapping := []*acltypes.WasmAccessOperations{}
-	if msgInfo.MessageType == acltypes.WasmMessageSubtype_EXECUTE && dependencyMapping.ExecuteAccessOps != nil {
+	if msgInfo.MessageType == acltypes.WasmMessageSubtype_EXECUTE && len(dependencyMapping.ExecuteAccessOps) > 0 {
 		specificAccessOpsMapping = dependencyMapping.ExecuteAccessOps
-	} else if msgInfo.MessageType == acltypes.WasmMessageSubtype_QUERY && dependencyMapping.QueryAccessOps != nil {
+	} else if msgInfo.MessageType == acltypes.WasmMessageSubtype_QUERY && len(dependencyMapping.QueryAccessOps) > 0 {
 		specificAccessOpsMapping = dependencyMapping.QueryAccessOps
 	}
 	for _, specificAccessOps := range specificAccessOpsMapping {
 		if specificAccessOps.MessageName == msgInfo.MessageName {
 			accessOps = append(accessOps, specificAccessOps.WasmOperations...)
+			break
 		}
 	}
 

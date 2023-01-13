@@ -26,6 +26,23 @@ func TestExtractMessage(t *testing.T) {
 	require.NotNil(t, err)
 }
 
+func TestWasmJsonNullTemplate(t *testing.T) {
+	info, err := NewExecuteMessageInfo([]byte("{\"send\":{\"from\":\"bobAddress\",\"amount\":10}}"))
+	require.NoError(t, err)
+	translator := NewWasmMessageTranslator("senderAddress", "contractAddress", info)
+
+	// lets test a simple case where we want to make a new message to perform a "swap"
+	jsonTranslationTemplate := []byte("null")
+
+	expectedJson := []byte("{}")
+	outputJson, err := translator.TranslateMessageBody(jsonTranslationTemplate)
+	require.NoError(t, err)
+	require.Equal(t, expectedJson, outputJson)
+
+	_, err = translator.TranslateMessageBody([]byte{})
+	require.Error(t, err)
+}
+
 func TestWasmJsonTranslator(t *testing.T) {
 	info, err := NewExecuteMessageInfo([]byte("{\"send\":{\"from\":\"bobAddress\",\"amount\":10,\"something_else\":null}}"))
 	require.NoError(t, err)

@@ -216,7 +216,6 @@ func (k Keeper) ImportContractReferences(ctx sdk.Context, contractAddr sdk.AccAd
 		if err != nil {
 			return nil, err
 		}
-		// TODO: build new msgbody for the new contract execute / query msg in later milestone tasks based on the translation pattern
 		newJson, err := jsonTranslator.TranslateMessageBody(contractReference.JsonTranslationTemplate)
 		if err != nil {
 			// if there's a problem translating, log it and then pass in empty json

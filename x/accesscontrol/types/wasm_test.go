@@ -27,14 +27,14 @@ func TestExtractMessage(t *testing.T) {
 }
 
 func TestWasmJsonTranslator(t *testing.T) {
-	info, err := NewExecuteMessageInfo([]byte("{\"send\":{\"from\":\"bobAddress\",\"amount\":10}}"))
+	info, err := NewExecuteMessageInfo([]byte("{\"send\":{\"from\":\"bobAddress\",\"amount\":10,\"something_else\":null}}"))
 	require.NoError(t, err)
 	translator := NewWasmMessageTranslator("senderAddress", "contractAddress", info)
 
 	// lets test a simple case where we want to make a new message to perform a "swap"
-	jsonTranslationTemplate := []byte("{\"swap\":{\"a\":\"_sender\",\"b\":\"_contract_address\",\"c\":\".send.from\",\"d\":\".doesnt.match\",\"e\":\"*2gibberish\",\"f\":\"__.swap.from\",\"g\":true,\"h\":\".send.amount\"}}")
+	jsonTranslationTemplate := []byte("{\"swap\":{\"a\":\"_sender\",\"b\":\"_contract_address\",\"c\":\".send.from\",\"d\":\".doesnt.match\",\"e\":\"*2gibberish\",\"f\":\"__.swap.from\",\"g\":true,\"h\":\".send.amount\",\"i\":null,\"j\":\".send.something_else\"}}")
 
-	expectedJson := []byte("{\"swap\":{\"a\":\"senderAddress\",\"b\":\"contractAddress\",\"c\":\"bobAddress\",\"f\":\".swap.from\",\"g\":true,\"h\":10}}")
+	expectedJson := []byte("{\"swap\":{\"a\":\"senderAddress\",\"b\":\"contractAddress\",\"c\":\"bobAddress\",\"f\":\".swap.from\",\"g\":true,\"h\":10,\"i\":null,\"j\":null}}")
 	outputJson, err := translator.TranslateMessageBody(jsonTranslationTemplate)
 	require.NoError(t, err)
 	require.Equal(t, expectedJson, outputJson)

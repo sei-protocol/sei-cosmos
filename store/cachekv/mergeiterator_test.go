@@ -12,7 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/dbadapter"
 )
 
-func TestEmitEventMangerInParentIterator(t *testing.T) {
+func TestEmitEventMangerInIterator(t *testing.T) {
 	// initiate mock kvstore
 	mem := dbadapter.Store{DB: dbm.NewMemDB()}
 	kvstore := cachekv.NewStore(mem, types.NewKVStoreKey("CacheKvTest"), types.DefaultCacheSizeLimit)
@@ -36,6 +36,19 @@ func TestEmitEventMangerInParentIterator(t *testing.T) {
 	iter.Value()
 
 	// assert the resource access is still emitted correctly when the cache store is unavailable
+	require.Equal(t, "access_type", eventManager.Events()[0].Attributes[0].Key)
+	require.Equal(t, "read", eventManager.Events()[0].Attributes[0].Value)
+	require.Equal(t, "store_key", eventManager.Events()[0].Attributes[1].Key)
+	require.Equal(t, "CacheKvTest", eventManager.Events()[0].Attributes[1].Value)
+
+	// assert event emission when cache is available
+	cache = kvstore.Iterator(keys[1], keys[2])
+	iter = cachekv.NewCacheMergeIterator(parent, cache, true, eventManager, types.NewKVStoreKey("CacheKvTest"))
+	
+	// get the next value
+	iter.Value()
+
+	// assert the resource access is still emitted correctly when the cache store is available
 	require.Equal(t, "access_type", eventManager.Events()[0].Attributes[0].Key)
 	require.Equal(t, "read", eventManager.Events()[0].Attributes[0].Value)
 	require.Equal(t, "store_key", eventManager.Events()[0].Attributes[1].Key)

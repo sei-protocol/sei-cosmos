@@ -81,6 +81,7 @@ func Paginate(
 		var nextKey []byte
 
 		for ; iterator.Valid(); iterator.Next() {
+			fmt.Printf("key is %x\n", iterator.Key())
 
 			if count == limit {
 				nextKey = iterator.Key()
@@ -111,6 +112,7 @@ func Paginate(
 	var nextKey []byte
 
 	for ; iterator.Valid(); iterator.Next() {
+		fmt.Printf("going over iteration key is %x\n", iterator.Key())
 		count++
 
 		if count <= offset {

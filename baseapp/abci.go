@@ -316,7 +316,7 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 	retainHeight := app.GetBlockRetentionHeight(header.Height)
 
 	app.WriteStateToCommitAndGetWorkingHash()
-	app.cms.Commit()
+	commiId := app.cms.Commit()
 
 	// Reset the Check state to the latest committed.
 	//
@@ -353,6 +353,7 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 	}
 
 	return &abci.ResponseCommit{
+		Data:         commiId.Hash,
 		RetainHeight: retainHeight,
 	}, nil
 }

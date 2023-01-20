@@ -154,6 +154,8 @@ func (k Keeper) GetWasmDependencyAccessOps(ctx sdk.Context, contractAddress sdk.
 	// add to our lookup so we know we've seen this identifier
 	circularDepLookup[uniqueIdentifier] = struct{}{}
 
+	withinContractReference := len(circularDepLookup) > 1
+
 	dependencyMapping, err := k.GetRawWasmDependencyMapping(ctx, contractAddress)
 	if err != nil {
 		if err == sdkerrors.ErrKeyNotFound {
@@ -203,6 +205,10 @@ func (k Keeper) GetWasmDependencyAccessOps(ctx sdk.Context, contractAddress sdk.
 	// combine the access ops to get the definitive list of access ops for the contract
 	selectedAccessOps.Merge(importedAccessOps)
 
+	if !withinContractReference {
+		fmt.Println("Generated Deps: ", selectedAccessOps.ToSlice())
+	}
+
 	return selectedAccessOps.ToSlice(), nil
 }
 
@@ -216,7 +222,7 @@ func (k Keeper) ImportContractReferences(ctx sdk.Context, contractAddr sdk.AccAd
 		if err != nil {
 			return nil, err
 		}
-		newJson, err := jsonTranslator.TranslateMessageBody(contractReference.JsonTranslationTemplate)
+		newJson, err := jsonTranslator.TranslateMessageBody([]byte(contractReference.JsonTranslationTemplate))
 		if err != nil {
 			// if there's a problem translating, log it and then pass in empty json
 			ctx.Logger().Error("Error translating JSON body", err)

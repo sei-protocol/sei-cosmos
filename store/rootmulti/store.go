@@ -809,6 +809,8 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 
 // Restore implements snapshottypes.Snapshotter.
 // returns next snapshot item and error.
+var totalCount = 0
+
 func (rs *Store) Restore(
 	height uint64, format uint32, protoReader protoio.Reader,
 ) (snapshottypes.SnapshotItem, error) {
@@ -821,11 +823,13 @@ loop:
 	for {
 		snapshotItem = snapshottypes.SnapshotItem{}
 		err := protoReader.ReadMsg(&snapshotItem)
+
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
 		}
+		totalCount++
 
 		switch item := snapshotItem.Item.(type) {
 		case *snapshottypes.SnapshotItem_Store:
@@ -854,12 +858,14 @@ loop:
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrapf(sdkerrors.ErrLogic, "node height %v cannot exceed %v",
 					item.IAVL.Height, math.MaxInt8)
 			}
+
 			node := &iavltree.ExportNode{
 				Key:     item.IAVL.Key,
 				Value:   item.IAVL.Value,
 				Height:  int8(item.IAVL.Height),
 				Version: item.IAVL.Version,
 			}
+			fmt.Printf("[Cosmos] Total %d. Restoring node item %d with item key size %d, val size, height %d\n", totalCount, len(node.Key), len(node.Value), node.Height)
 			// Protobuf does not differentiate between []byte{} as nil, but fortunately IAVL does
 			// not allow nil keys nor nil values for leaf nodes, so we can always set them to empty.
 			if node.Key == nil {

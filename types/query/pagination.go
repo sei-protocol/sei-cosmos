@@ -102,6 +102,8 @@ func Paginate(
 
 
 	if len(key) != 0 {
+		fmt.Printf("given key is %x\n", key)
+
 		iterator := getIterator(prefixStore, key, reverse)
 		defer iterator.Close()
 
@@ -126,6 +128,7 @@ func Paginate(
 			count++
 		}
 
+		fmt.Printf("returning key %x\n", nextKey)
 		return &PageResponse{
 			NextKey: nextKey,
 		}, nil

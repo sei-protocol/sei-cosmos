@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -24,6 +25,8 @@ func (ak AccountKeeper) Accounts(c context.Context, req *types.QueryAccountsRequ
 	ctx := sdk.UnwrapSDKContext(c)
 	store := ctx.KVStore(ak.key)
 	accountsStore := prefix.NewStore(store, types.AddressStoreKeyPrefix)
+
+	fmt.Printf("request key is %x\n", req.Pagination.Key)
 
 	var accounts []*codectypes.Any
 	pageRes, err := query.Paginate(accountsStore, req.Pagination, func(key, value []byte) error {

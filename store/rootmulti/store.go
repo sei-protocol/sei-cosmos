@@ -865,7 +865,7 @@ loop:
 				Height:  int8(item.IAVL.Height),
 				Version: item.IAVL.Version,
 			}
-			fmt.Printf("[Cosmos] Total %d. Restoring node item %d with item key size %d, val size, height %d\n", totalCount, len(node.Key), len(node.Value), node.Height)
+			fmt.Printf("[Cosmos] Total %d. Restoring node item with item key size %d, val size %d, version %d\n", totalCount, len(node.Key), len(node.Value), node.Version)
 			// Protobuf does not differentiate between []byte{} as nil, but fortunately IAVL does
 			// not allow nil keys nor nil values for leaf nodes, so we can always set them to empty.
 			if node.Key == nil {

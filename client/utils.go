@@ -1,6 +1,8 @@
 package client
 
 import (
+	"fmt"
+
 	"github.com/spf13/pflag"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 
@@ -62,6 +64,17 @@ func ReadPageRequest(flagSet *pflag.FlagSet) (*query.PageRequest, error) {
 		offset = (page - 1) * limit
 	}
 
+	re := &query.PageRequest{
+		Key:        []byte(pageKey),
+		Offset:     offset,
+		Limit:      limit,
+		CountTotal: countTotal,
+		Reverse:    reverse,
+	}
+
+	fmt.Printf("key before %s\n", pageKey)
+	fmt.Printf("key after %s\n", string(re.Key))
+	fmt.Printf("key after %x\n", re.Key)
 	return &query.PageRequest{
 		Key:        []byte(pageKey),
 		Offset:     offset,

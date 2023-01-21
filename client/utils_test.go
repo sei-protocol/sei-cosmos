@@ -1,12 +1,30 @@
 package client_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/client"
 )
+
+
+func TestPagi(t *testing.T) {
+
+	
+	fmt.Printf("key 1 %x\n", []byte("kgKvbOklsmrmslrf/wsnBRR+GV8"))
+	fmt.Printf("key 2 %x\n", "kgKvbOklsmrmslrf/wsnBRR+GV8")
+	fmt.Printf("key 2 %x\n", "kgKvbOklsmrmslrf/wsnBRR+GV8")
+
+	var d []byte
+    if err := json.Unmarshal([]byte("kgKvbOklsmrmslrf/wsnBRR+GV8"), &d); err != nil {
+        panic(err)
+    }
+
+	require.Equal(t, true, false)
+}
 
 func TestPaginate(t *testing.T) {
 	testCases := []struct {

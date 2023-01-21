@@ -1,6 +1,7 @@
 package query
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 
@@ -72,6 +73,15 @@ func Paginate(
 		// count total results when the limit is zero/not supplied
 		countTotal = true
 	}
+
+
+	testKey, _ := hex.DecodeString("5911b844d7bc224654fe0dcd16babd2d253f2fdf")
+	iterator := getIterator(prefixStore, testKey, reverse)
+	fmt.Printf("test key is %x\n", iterator.Key())
+	iterator.Next()
+	fmt.Printf("test key 2 is %x\n", iterator.Key())
+
+
 
 	if len(key) != 0 {
 		iterator := getIterator(prefixStore, key, reverse)

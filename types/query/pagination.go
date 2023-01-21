@@ -81,6 +81,24 @@ func Paginate(
 	it.Next()
 	fmt.Printf("test key 2 is %x\n", it.Key())
 
+	testKey, _ = hex.DecodeString("65949d74303c4ddbb15007eb9070c74f4b492313")
+	it = getIterator(prefixStore, testKey, reverse)
+	fmt.Printf("test key is %x\n", it.Key())
+	it.Next()
+	fmt.Printf("test key 2 is %x\n", it.Key())
+
+	testKey, _ = hex.DecodeString("6ca21a2ff80329c6df6ae95914e51118d79fedce")
+	it = getIterator(prefixStore, testKey, reverse)
+	fmt.Printf("test key is %x\n", it.Key())
+	it.Next()
+	fmt.Printf("test key 2 is %x\n", it.Key())
+
+	testKey, _ = hex.DecodeString("7b5fe22b5446f7c62ea27b8bd71cef94e03f3df2")
+	it = getIterator(prefixStore, testKey, reverse)
+	fmt.Printf("test key is %x\n", it.Key())
+	it.Next()
+	fmt.Printf("test key 2 is %x\n", it.Key())
+	
 
 
 	if len(key) != 0 {

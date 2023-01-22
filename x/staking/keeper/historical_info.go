@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 )
@@ -28,6 +29,7 @@ func (k Keeper) SetHistoricalInfo(ctx sdk.Context, height int64, hi *types.Histo
 
 // DeleteHistoricalInfo deletes the historical info at a given height
 func (k Keeper) DeleteHistoricalInfo(ctx sdk.Context, height int64) {
+	defer telemetry.IncrCounter(1, "deleted", "historical", "info")
 	store := ctx.KVStore(k.storeKey)
 	key := types.GetHistoricalInfoKey(height)
 
@@ -80,6 +82,7 @@ func (k Keeper) TrackHistoricalInfo(ctx sdk.Context) {
 		if found {
 			k.DeleteHistoricalInfo(ctx, i)
 		} else {
+			defer telemetry.IncrCounter(1, "not", "found", "historical", "info")
 			break
 		}
 	}

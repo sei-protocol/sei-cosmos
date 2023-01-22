@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/spf13/pflag"
@@ -64,8 +65,10 @@ func ReadPageRequest(flagSet *pflag.FlagSet) (*query.PageRequest, error) {
 		offset = (page - 1) * limit
 	}
 
+	data, _ := hex.DecodeString(pageKey)
+
 	re := &query.PageRequest{
-		Key:        []byte(pageKey),
+		Key:        data,
 		Offset:     offset,
 		Limit:      limit,
 		CountTotal: countTotal,
@@ -76,7 +79,7 @@ func ReadPageRequest(flagSet *pflag.FlagSet) (*query.PageRequest, error) {
 	fmt.Printf("key after %s\n", string(re.Key))
 	fmt.Printf("key after %x\n", re.Key)
 	return &query.PageRequest{
-		Key:        []byte(pageKey),
+		Key:        data,
 		Offset:     offset,
 		Limit:      limit,
 		CountTotal: countTotal,

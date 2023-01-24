@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -102,6 +103,7 @@ func (ckv *CommitKVStoreCache) CacheWrap(storeKey types.StoreKey) types.CacheWra
 // If the value doesn't exist in the write-through cache, the query is delegated
 // to the underlying CommitKVStore.
 func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
+	defer ckv.emitCacheSizeMetric()
 	types.AssertValidKey(key)
 
 	keyStr := string(key)
@@ -121,6 +123,7 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 // Set inserts a key/value pair into both the write-through cache and the
 // underlying CommitKVStore.
 func (ckv *CommitKVStoreCache) Set(key, value []byte) {
+	defer ckv.emitCacheSizeMetric()
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 
@@ -131,6 +134,12 @@ func (ckv *CommitKVStoreCache) Set(key, value []byte) {
 // Delete removes a key/value pair from both the write-through cache and the
 // underlying CommitKVStore.
 func (ckv *CommitKVStoreCache) Delete(key []byte) {
+	defer ckv.emitCacheSizeMetric()
 	ckv.cache.Remove(string(key))
 	ckv.CommitKVStore.Delete(key)
+}
+
+func (ckv *CommitKVStoreCache) emitCacheSizeMetric() {
+	telemetry.SetGauge(float32(ckv.cache.Len()), "cache", "size")
+	fmt.Printf("CACHE SIZE: %d", ckv.cache.Len())
 }

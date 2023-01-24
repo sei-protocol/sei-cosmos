@@ -142,4 +142,5 @@ func (ckv *CommitKVStoreCache) Delete(key []byte) {
 
 func (ckv *CommitKVStoreCache) emitCacheSizeMetric() {
 	telemetry.SetGauge(float32(ckv.cache.Len()), "cache", "size")
+	fmt.Printf("CACHE_SIZE: %d", ckv.cache.Len())
 }

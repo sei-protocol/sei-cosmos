@@ -729,9 +729,10 @@ func parsePath(path string) (storeName string, subpath string, err error) {
 // identical across nodes such that chunks from different sources fit together. If the output for a
 // given format changes (at the byte level), the snapshot format must be bumped - see
 // TestMultistoreSnapshot_Checksum test.
-var totalExportedItems = 0
 
 func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
+	var totalExportedItems = 0
+	var itemCount = map[string]int{}
 	if height == 0 {
 		return sdkerrors.Wrap(sdkerrors.ErrLogic, "cannot snapshot height 0")
 	}
@@ -803,8 +804,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 					},
 				},
 			})
-			fmt.Printf("[COSMOS-DEBUG] Exported node with key %X at height %d with version %d\n", node.Key, node.Height, node.Version)
+			fmt.Printf("[COSMOS-DEBUG] Exported node with key %s at height %d with version %d\n", node.Key, node.Height, node.Version)
 			totalExportedItems++
+			itemCount[store.name]++
 			if err != nil {
 				fmt.Printf("[COSMOS-DEBUG] Failed to export item due to %s\n", err.Error())
 				return err
@@ -812,8 +814,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		}
 		exporter.Close()
 	}
+	for key, value := range itemCount {
+		fmt.Printf("[COSMOS-DEBUG] Store %s has total of %d items\n", key, value)
+	}
 	fmt.Printf("[COSMOS-DEBUG] Completed exporting all %d items to snapshot at height %d\n", totalExportedItems, height)
-	totalExportedItems = 0
 
 	return nil
 }

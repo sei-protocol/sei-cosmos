@@ -769,6 +769,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		fmt.Printf("[COSMOS-DEBUG] Exporting items to IAVL store: %s\n", store.name)
 		exporter, err := store.Export(int64(height))
 		if err != nil {
+			fmt.Printf("[COSMOS-DEBUG] Failed to create a new exporter due to %s\n", err.Error())
 			return err
 		}
 		defer exporter.Close()
@@ -780,6 +781,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			},
 		})
 		if err != nil {
+			fmt.Printf("[COSMOS-DEBUG] Failed to write a store item due to %s\n", err.Error())
 			return err
 		}
 
@@ -788,6 +790,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			if err == iavltree.ExportDone {
 				break
 			} else if err != nil {
+				fmt.Printf("[COSMOS-DEBUG] Failed to get next node due to %s\n", err.Error())
 				return err
 			}
 			err = protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
@@ -800,9 +803,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 					},
 				},
 			})
-			fmt.Printf("[COSMOS-DEBUG] Exported node with key %X, value %X at height %d with version %d\n", node.Key, node.Value, node.Height, node.Version)
+			fmt.Printf("[COSMOS-DEBUG] Exported node with key %X at height %d with version %d\n", node.Key, node.Height, node.Version)
 			totalExportedItems++
 			if err != nil {
+				fmt.Printf("[COSMOS-DEBUG] Failed to export item due to %s\n", err.Error())
 				return err
 			}
 		}

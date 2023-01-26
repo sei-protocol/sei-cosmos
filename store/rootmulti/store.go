@@ -805,7 +805,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 				},
 			})
 			if store.name == "epoch" {
-				fmt.Printf("[COSMOS-DEBUG] Exported node with key %s and value %s at height %d with version %d\n", node.Key, string(node.Value), node.Height, node.Version)
+				fmt.Printf("[COSMOS-DEBUG] Exported node with key %s and value %X at height %d with version %d\n", node.Key, node.Value, node.Height, node.Version)
 			}
 			totalExportedItems++
 			itemCount[store.name]++
@@ -891,7 +891,7 @@ loop:
 			}
 			err := importer.Add(node)
 			if storeName == "epoch" {
-				fmt.Printf("[COSMOS-DEBUG] Imported node with key %s and value %s at height %d with version %d\n", node.Key, string(node.Value), node.Height, node.Version)
+				fmt.Printf("[COSMOS-DEBUG] Imported node with key %s and value %X at height %d with version %d\n", node.Key, node.Value, node.Height, node.Version)
 			}
 			itemCount[storeName]++
 			totalCount++

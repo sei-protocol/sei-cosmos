@@ -804,7 +804,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 					},
 				},
 			})
-			fmt.Printf("[COSMOS-DEBUG] Exported node with key %s at height %d with version %d\n", node.Key, node.Height, node.Version)
+			//fmt.Printf("[COSMOS-DEBUG] Exported node with key %s at height %d with version %d\n", node.Key, node.Height, node.Version)
 			totalExportedItems++
 			itemCount[store.name]++
 			if err != nil {
@@ -815,9 +815,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		exporter.Close()
 	}
 	for key, value := range itemCount {
-		fmt.Printf("[COSMOS-DEBUG] Store %s has total of %d items\n", key, value)
+		fmt.Printf("[COSMOS-DEBUG] Export completed! Store %s has total of %d items at height %d\n", key, value, height)
 	}
-	fmt.Printf("[COSMOS-DEBUG] Completed exporting all %d items to snapshot at height %d\n", totalExportedItems, height)
+	fmt.Printf("[COSMOS-DEBUG] Export completed! Exported total of %d items to snapshot at height %d\n", totalExportedItems, height)
 
 	return nil
 }
@@ -832,6 +832,9 @@ func (rs *Store) Restore(
 	// SnapshotNodeItem (i.e. ExportNode) until we reach the next SnapshotStoreItem or EOF.
 	var importer *iavltree.Importer
 	var snapshotItem snapshottypes.SnapshotItem
+	var itemCount = map[string]int{}
+	var totalCount = 0
+	var storeName = ""
 loop:
 	for {
 		snapshotItem = snapshottypes.SnapshotItem{}
@@ -852,6 +855,7 @@ loop:
 				importer.Close()
 			}
 			store, ok := rs.GetStoreByName(item.Store.Name).(*iavl.Store)
+			storeName = item.Store.Name
 			if !ok || store == nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrapf(sdkerrors.ErrLogic, "cannot import into non-IAVL store %q", item.Store.Name)
 			}
@@ -884,6 +888,8 @@ loop:
 				node.Value = []byte{}
 			}
 			err := importer.Add(node)
+			itemCount[storeName]++
+			totalCount++
 			if err != nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "IAVL node import failed")
 			}
@@ -892,6 +898,11 @@ loop:
 			break loop
 		}
 	}
+
+	for key, value := range itemCount {
+		fmt.Printf("[COSMOS-DEBUG] Restored store:%s, with total of: %d items, at height: %d\n", key, value, height)
+	}
+	fmt.Printf("[COSMOS-DEBUG] Restored total of  %d items at height %d\n", totalCount, height)
 
 	if importer != nil {
 		err := importer.Commit()

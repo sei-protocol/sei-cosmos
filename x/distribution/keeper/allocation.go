@@ -89,7 +89,16 @@ func (k Keeper) AllocateTokens(
 	//
 	// Ref: https://github.com/cosmos/cosmos-sdk/pull/3099#discussion_r246276376
 	for _, vote := range bondedVotes {
+		fmt.Printf("[COSMOS-DEBUG] Getting validator from stakingKeeper.ValidatorByConsAddr\n")
+		if vote.Validator.Address == nil {
+			fmt.Printf("[COSMOS-DEBUG] Address is nil\n")
+		} else {
+			fmt.Printf("[COSMOS-DEBUG] Vote is %s, validator Address is %X\n", vote.String(), vote.Validator.Address)
+		}
 		validator := k.stakingKeeper.ValidatorByConsAddr(ctx, vote.Validator.Address)
+		if validator == nil {
+			fmt.Printf("[COSMOS-DEBUG] Validator is nil after getting from stakingKeeper.ValidatorByConsAddr\n")
+		}
 
 		// TODO: Consider micro-slashing for missing votes.
 		//
@@ -116,10 +125,9 @@ func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val stakingtypes.Vali
 	if val == nil {
 		fmt.Printf("[COSMOS-DEBUG] ValidatorI is nil\n")
 	}
-	
+
 	commission := tokens.MulDec(val.GetCommission())
 	shared := tokens.Sub(commission)
-	fmt.Printf("[COSMOS-DEBUG] We are safe now for shared\n")
 
 	// update current commission
 	ctx.EventManager().EmitEvent(

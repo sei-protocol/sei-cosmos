@@ -62,6 +62,9 @@ func (k Keeper) AllocateTokens(
 				sdk.NewAttribute(types.AttributeKeyValidator, proposerValidator.GetOperator().String()),
 			),
 		)
+		if proposerReward == nil {
+			fmt.Printf("[COSMOS-DEBUG] validator is not nil, but reward is nil\n")
+		}
 
 		k.AllocateTokensToValidator(ctx, proposerValidator, proposerReward)
 		remaining = remaining.Sub(proposerReward)
@@ -123,11 +126,13 @@ func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val stakingtypes.Vali
 	// split tokens between validator and delegators according to commission
 	if tokens == nil {
 		fmt.Printf("[COSMOS-DEBUG] token is nil\n")
+		panic("Token is nil")
 	} else {
 		fmt.Printf("[COSMOS-DEBUG] token is %s\n", tokens.String())
 	}
 	if val == nil {
 		fmt.Printf("[COSMOS-DEBUG] ValidatorI is nil\n")
+		panic("ValidatorI is nil")
 	}
 
 	commission := tokens.MulDec(val.GetCommission())

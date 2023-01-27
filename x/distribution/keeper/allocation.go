@@ -110,10 +110,16 @@ func (k Keeper) AllocateTokens(
 // splitting according to commission.
 func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val stakingtypes.ValidatorI, tokens sdk.DecCoins) {
 	// split tokens between validator and delegators according to commission
-	fmt.Printf("[COSMOS-DEBUG] token is %s, validator is %s\n", tokens, val)
+	if tokens == nil {
+		fmt.Printf("[COSMOS-DEBUG] token is nil\n")
+	}
+	if val == nil {
+		fmt.Printf("[COSMOS-DEBUG] ValidatorI is nil\n")
+	}
+	
 	commission := tokens.MulDec(val.GetCommission())
 	shared := tokens.Sub(commission)
-	fmt.Printf("[COSMOS-DEBUG] We are safe now for shared %s\n", shared)
+	fmt.Printf("[COSMOS-DEBUG] We are safe now for shared\n")
 
 	// update current commission
 	ctx.EventManager().EmitEvent(

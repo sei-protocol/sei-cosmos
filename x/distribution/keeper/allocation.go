@@ -99,6 +99,8 @@ func (k Keeper) AllocateTokens(
 		if validator == nil {
 			fmt.Printf("[COSMOS-DEBUG] Validator is nil after getting from stakingKeeper.ValidatorByConsAddr\n")
 			continue
+		} else {
+			fmt.Printf("[COSMOS-DEBUG] Validator is not nil after getting from stakingKeeper.ValidatorByConsAddr\n")
 		}
 
 		// TODO: Consider micro-slashing for missing votes.
@@ -122,6 +124,8 @@ func (k Keeper) AllocateTokensToValidator(ctx sdk.Context, val stakingtypes.Vali
 	// split tokens between validator and delegators according to commission
 	if tokens == nil {
 		fmt.Printf("[COSMOS-DEBUG] token is nil\n")
+	} else {
+		fmt.Printf("[COSMOS-DEBUG] token is %s\n", tokens.String())
 	}
 	if val == nil {
 		fmt.Printf("[COSMOS-DEBUG] ValidatorI is nil\n")

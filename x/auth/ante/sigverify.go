@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"sync"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
@@ -318,7 +319,8 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 // a reliable way unless sequence numbers are managed and tracked manually by a
 // client. It is recommended to instead use multiple messages in a tx.
 type IncrementSequenceDecorator struct {
-	ak AccountKeeper
+	ak  AccountKeeper
+	mtx sync.Mutex
 }
 
 func NewIncrementSequenceDecorator(ak AccountKeeper) IncrementSequenceDecorator {
@@ -353,6 +355,7 @@ func (isd IncrementSequenceDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 	}
 
 	// increment sequence of all signers
+	isd.mtx.Lock()
 	for _, addr := range sigTx.GetSigners() {
 		acc := isd.ak.GetAccount(ctx, addr)
 		if err := acc.SetSequence(acc.GetSequence() + 1); err != nil {
@@ -361,6 +364,7 @@ func (isd IncrementSequenceDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 
 		isd.ak.SetAccount(ctx, acc)
 	}
+	isd.mtx.Unlock()
 
 	return next(ctx, tx, simulate)
 }

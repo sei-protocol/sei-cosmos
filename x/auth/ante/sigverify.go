@@ -271,7 +271,7 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 		if sig.Sequence != acc.GetSequence() {
 			return ctx, sdkerrors.Wrapf(
 				sdkerrors.ErrWrongSequence,
-				"account sequence mismatch, expected %d, got %d", acc.GetSequence(), sig.Sequence,
+				"account sequence mismatch on line 274, expected %d, got %d", acc.GetSequence(), sig.Sequence,
 			)
 		}
 

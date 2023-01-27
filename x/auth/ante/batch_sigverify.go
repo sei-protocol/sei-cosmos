@@ -134,7 +134,7 @@ func (v *SR25519BatchVerifier) VerifyTxs(ctx sdk.Context, txs []sdk.Tx) {
 			if sig.Sequence != seqNum {
 				v.errors[i] = sdkerrors.Wrapf(
 					sdkerrors.ErrWrongSequence,
-					"account sequence mismatch, expected %d, got %d", acc.GetSequence(), sig.Sequence,
+					"account sequence mismatch on line 137, expected %d, got %d", acc.GetSequence(), sig.Sequence,
 				)
 				continue
 			}

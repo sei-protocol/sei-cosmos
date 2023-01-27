@@ -98,6 +98,7 @@ func (k Keeper) AllocateTokens(
 		validator := k.stakingKeeper.ValidatorByConsAddr(ctx, vote.Validator.Address)
 		if validator == nil {
 			fmt.Printf("[COSMOS-DEBUG] Validator is nil after getting from stakingKeeper.ValidatorByConsAddr\n")
+			continue
 		}
 
 		// TODO: Consider micro-slashing for missing votes.

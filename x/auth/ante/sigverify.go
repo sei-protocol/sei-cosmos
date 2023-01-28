@@ -358,11 +358,14 @@ func (isd IncrementSequenceDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 	isd.mtx.Lock()
 	for _, addr := range sigTx.GetSigners() {
 		acc := isd.ak.GetAccount(ctx, addr)
-		fmt.Printf("[COSMOS-DEBUG] Incrementing accoutn sequence %d by 1 for account %d\n", acc.GetSequence(), acc)
+		fmt.Printf("[COSMOS-DEBUG] Incrementing accoutn sequence %d by 1 for account number %d, addr %s\n", acc.GetSequence(), acc.GetAccountNumber(), acc.GetAddress())
 		if err := acc.SetSequence(acc.GetSequence() + 1); err != nil {
 			panic(err)
 		}
 		isd.ak.SetAccount(ctx, acc)
+		acc = isd.ak.GetAccount(ctx, addr)
+		fmt.Printf("[COSMOS-DEBUG] Accoutn sequence is %d after set in keeper for account number %d, addr %s\n", acc.GetSequence(), acc.GetAccountNumber(), acc.GetAddress())
+
 	}
 	isd.mtx.Unlock()
 

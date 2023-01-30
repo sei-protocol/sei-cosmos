@@ -451,7 +451,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		// start from initialVersion.
 		version = rs.initialVersion
 
-	} else {
+	} else if bumpVersion {
 		// This case can means two things:
 		// - either there was already a previous commit in the store, in which
 		// case we increment the version from there,
@@ -459,6 +459,8 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		// in which case we start at version 1.
 		previousHeight = rs.lastCommitInfo.GetVersion()
 		version = previousHeight + 1
+	} else {
+		version = rs.lastCommitInfo.GetVersion()
 	}
 
 	rs.lastCommitInfo = commitStores(version, rs.stores, bumpVersion)

@@ -127,6 +127,11 @@ func TestHashStableWithEmptyCommit(t *testing.T) {
 	cID = ms.Commit(true)
 	require.Equal(t, int64(2), cID.Version)
 	require.Equal(t, hash, cID.Hash)
+
+	// make an empty commit, it should not update version, and not affect hash
+	cID = ms.Commit(false)
+	require.Equal(t, int64(2), cID.Version)
+	require.Equal(t, hash, cID.Hash)
 }
 
 func TestMultistoreCommitLoad(t *testing.T) {

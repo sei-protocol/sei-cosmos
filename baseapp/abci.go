@@ -566,7 +566,9 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 	switch {
 	case err == nil:
 		if done {
-			app.interBlockCache.Reset()
+			if app.interBlockCache != nil {
+				app.interBlockCache.Reset()
+			}
 		}
 		return &abci.ResponseApplySnapshotChunk{Result: abci.ResponseApplySnapshotChunk_ACCEPT}, nil
 

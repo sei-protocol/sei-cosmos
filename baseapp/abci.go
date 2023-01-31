@@ -566,7 +566,7 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 	switch {
 	case err == nil:
 		if done {
-			app.shouldResetInterBlockCache = true
+			app.interBlockCache.Reset()
 		}
 		return &abci.ResponseApplySnapshotChunk{Result: abci.ResponseApplySnapshotChunk_ACCEPT}, nil
 
@@ -942,11 +942,6 @@ func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepar
 
 func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "process_proposal")
-
-	if app.shouldResetInterBlockCache {
-		app.resetInterBlockCache()
-		app.shouldResetInterBlockCache = false
-	}
 
 	header := tmproto.Header{ChainID: app.ChainID, Height: req.Height, Time: req.Time, ProposerAddress: req.ProposerAddress}
 	if app.processProposalState == nil {

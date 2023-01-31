@@ -93,7 +93,8 @@ func (cmgr *CommitKVStoreCacheManager) Reset() {
 	// Clear the map.
 	// Please note that we are purposefully using the map clearing idiom.
 	// See https://github.com/cosmos/cosmos-sdk/issues/6681.
-	for key := range cmgr.caches {
+	for key, ckv := range cmgr.caches {
+		ckv.(*CommitKVStoreCache).Reset()
 		delete(cmgr.caches, key)
 	}
 }
@@ -147,4 +148,11 @@ func (ckv *CommitKVStoreCache) Delete(key []byte) {
 
 	ckv.cache.Remove(string(key))
 	ckv.CommitKVStore.Delete(key)
+}
+
+func (ckv *CommitKVStoreCache) Reset() {
+	ckv.mtx.Lock()
+	defer ckv.mtx.Unlock()
+
+	ckv.cache.Purge()
 }

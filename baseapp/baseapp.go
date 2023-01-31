@@ -430,6 +430,16 @@ func (app *BaseApp) setInterBlockCache(cache sdk.MultiStorePersistentCache) {
 	app.interBlockCache = cache
 }
 
+func (app *BaseApp) resetInterBlockCache() {
+	if app.interBlockCache == nil {
+		// interblock cache is disabled
+		return
+	}
+	newCache := store.NewCommitKVStoreCacheManager()
+	app.setInterBlockCache(newCache)
+	app.cms.SetInterBlockCache(app.interBlockCache)
+}
+
 func (app *BaseApp) setTrace(trace bool) {
 	app.trace = trace
 }

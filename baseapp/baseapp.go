@@ -141,6 +141,10 @@ type BaseApp struct { //nolint: maligned
 	// and exposing the requests and responses to external consumers
 	abciListeners []ABCIListener
 
+	// set to true after state sync completes. The first block proposal will cause
+	// the cache to be reset if this flag is true, and set it back to false.
+	shouldResetInterBlockCache bool
+
 	ChainID string
 }
 

@@ -141,10 +141,6 @@ type BaseApp struct { //nolint: maligned
 	// and exposing the requests and responses to external consumers
 	abciListeners []ABCIListener
 
-	// set to true after state sync completes. The first block proposal will cause
-	// the cache to be reset if this flag is true, and set it back to false.
-	shouldResetInterBlockCache bool
-
 	ChainID string
 }
 
@@ -432,16 +428,6 @@ func (app *BaseApp) setMinRetainBlocks(minRetainBlocks uint64) {
 
 func (app *BaseApp) setInterBlockCache(cache sdk.MultiStorePersistentCache) {
 	app.interBlockCache = cache
-}
-
-func (app *BaseApp) resetInterBlockCache() {
-	if app.interBlockCache == nil {
-		// interblock cache is disabled
-		return
-	}
-	newCache := store.NewCommitKVStoreCacheManager()
-	app.setInterBlockCache(newCache)
-	app.cms.SetInterBlockCache(app.interBlockCache)
 }
 
 func (app *BaseApp) setTrace(trace bool) {

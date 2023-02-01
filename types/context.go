@@ -49,6 +49,8 @@ type Context struct {
 	messageIndex int // Used to track current message being processed
 
 	contextMemCache *ContextMemCache
+
+	txID string
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -80,6 +82,7 @@ func (c Context) TxMsgAccessOps() map[int][]acltypes.AccessOperation { return c.
 func (c Context) MessageIndex() int                                  { return c.messageIndex }
 func (c Context) MsgValidator() *acltypes.MsgValidator               { return c.msgValidator }
 func (c Context) ContextMemCache() *ContextMemCache                  { return c.contextMemCache }
+func (c Context) TxID() string                                       { return c.txID }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
@@ -115,7 +118,7 @@ func NewContext(ms MultiStore, header tmproto.Header, isCheckTx bool, logger log
 		chainID:         header.ChainID,
 		checkTx:         isCheckTx,
 		logger:          logger,
-		gasMeter:        stypes.NewInfiniteGasMeter(),
+		gasMeter:        stypes.NewInfiniteGasMeter(logger, "NewContext"),
 		minGasPrice:     DecCoins{},
 		eventManager:    NewEventManager(),
 		contextMemCache: NewContextMemCache(),
@@ -282,6 +285,11 @@ func (c Context) WithContextMemCache(contextMemCache *ContextMemCache) Context {
 	return c
 }
 
+func (c Context) WithTxID(txID string) Context {
+	c.txID = txID
+	return c
+}
+
 // TODO: remove???
 func (c Context) IsZero() bool {
 	return c.ms == nil
@@ -289,9 +297,12 @@ func (c Context) IsZero() bool {
 
 // WithValue is deprecated, provided for backwards compatibility
 // Please use
-//     ctx = ctx.WithContext(context.WithValue(ctx.Context(), key, false))
+//
+//	ctx = ctx.WithContext(context.WithValue(ctx.Context(), key, false))
+//
 // instead of
-//     ctx = ctx.WithValue(key, false)
+//
+//	ctx = ctx.WithValue(key, false)
 func (c Context) WithValue(key, value interface{}) Context {
 	c.ctx = context.WithValue(c.ctx, key, value)
 	return c
@@ -299,9 +310,12 @@ func (c Context) WithValue(key, value interface{}) Context {
 
 // Value is deprecated, provided for backwards compatibility
 // Please use
-//     ctx.Context().Value(key)
+//
+//	ctx.Context().Value(key)
+//
 // instead of
-//     ctx.Value(key)
+//
+//	ctx.Value(key)
 func (c Context) Value(key interface{}) interface{} {
 	return c.ctx.Value(key)
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/types/kv"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 type (
@@ -181,8 +182,8 @@ type (
 	GasConfig = types.GasConfig
 )
 
-func NewGasMeter(limit Gas) GasMeter {
-	return types.NewGasMeter(limit)
+func NewGasMeter(limit Gas, logger log.Logger, meterID string) GasMeter {
+	return types.NewGasMeter(limit, logger, meterID)
 }
 
 type (
@@ -190,6 +191,6 @@ type (
 	ErrorGasOverflow = types.ErrorGasOverflow
 )
 
-func NewInfiniteGasMeter() GasMeter {
-	return types.NewInfiniteGasMeter()
+func NewInfiniteGasMeter(logger log.Logger, meterID string) GasMeter {
+	return types.NewInfiniteGasMeter(logger, meterID)
 }

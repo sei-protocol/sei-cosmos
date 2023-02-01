@@ -9,7 +9,7 @@ import (
 
 func TestInfiniteGasMeter(t *testing.T) {
 	t.Parallel()
-	meter := NewInfiniteGasMeter()
+	meter := NewInfiniteGasMeter(&NoOpLogger{}, "test")
 	require.Equal(t, uint64(0), meter.Limit())
 	require.Equal(t, uint64(0), meter.GasConsumed())
 	require.Equal(t, uint64(0), meter.GasConsumedToLimit())
@@ -40,7 +40,7 @@ func TestGasMeter(t *testing.T) {
 	}
 
 	for tcnum, tc := range cases {
-		meter := NewGasMeter(tc.limit)
+		meter := NewGasMeter(tc.limit, &NoOpLogger{}, "test")
 		used := uint64(0)
 
 		for unum, usage := range tc.usage {
@@ -65,7 +65,7 @@ func TestGasMeter(t *testing.T) {
 		require.Equal(t, meter.GasConsumed(), meter.Limit(), "Gas consumption not match limit+1")
 		require.Panics(t, func() { meter.RefundGas(meter.GasConsumed()+1, "refund greater than consumed") })
 
-		meter2 := NewGasMeter(math.MaxUint64)
+		meter2 := NewGasMeter(math.MaxUint64, &NoOpLogger{}, "test")
 		meter2.ConsumeGas(Gas(math.MaxUint64/2), "consume half max uint64")
 		require.Panics(t, func() { meter2.ConsumeGas(Gas(math.MaxUint64/2)+2, "panic") })
 	}
@@ -88,7 +88,7 @@ func TestMultiplierGasMeter(t *testing.T) {
 	}
 
 	for tcnum, tc := range cases {
-		meter := NewMultiplierGasMeter(tc.limit, tc.multiplierNumerator, tc.multiplierDenominator)
+		meter := NewMultiplierGasMeter(tc.limit, tc.multiplierNumerator, tc.multiplierDenominator, &NoOpLogger{}, "test")
 		used := uint64(0)
 
 		for unum, usage := range tc.usage {

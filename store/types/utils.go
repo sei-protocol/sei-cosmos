@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/cosmos/cosmos-sdk/types/kv"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // Iterator over all the keys with a certain prefix in ascending order
@@ -95,3 +96,10 @@ func PrefixEndBytes(prefix []byte) []byte {
 func InclusiveEndBytes(inclusiveBytes []byte) []byte {
 	return append(inclusiveBytes, byte(0x00))
 }
+
+type NoOpLogger struct{}
+
+func (l *NoOpLogger) Info(msg string, keyVals ...interface{})  {}
+func (l *NoOpLogger) Error(msg string, keyVals ...interface{}) {}
+func (l *NoOpLogger) Debug(msg string, keyVals ...interface{}) {}
+func (l *NoOpLogger) With(keyVals ...interface{}) log.Logger   { return l }

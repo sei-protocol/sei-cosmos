@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"sync"
+
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // Gas consumption descriptors.
@@ -54,14 +56,18 @@ type basicGasMeter struct {
 	limit    Gas
 	consumed Gas
 	lock     *sync.Mutex
+	logger   log.Logger
+	meterID  string
 }
 
 // NewGasMeter returns a reference to a new basicGasMeter.
-func NewGasMeter(limit Gas) GasMeter {
+func NewGasMeter(limit Gas, logger log.Logger, meterID string) GasMeter {
 	return &basicGasMeter{
 		limit:    limit,
 		consumed: 0,
 		lock:     &sync.Mutex{},
+		logger:   logger,
+		meterID:  "basicGasMeter-" + meterID,
 	}
 }
 
@@ -112,6 +118,8 @@ func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	if g.consumed > g.limit {
 		panic(ErrorOutOfGas{descriptor})
 	}
+
+	g.logger.Debug(fmt.Sprintf("%s consumed %d for %s", g.meterID, amount, descriptor))
 }
 
 // RefundGas will deduct the given amount from the gas consumed. If the amount is greater than the
@@ -129,6 +137,8 @@ func (g *basicGasMeter) RefundGas(amount Gas, descriptor string) {
 	}
 
 	g.consumed -= amount
+
+	g.logger.Debug(fmt.Sprintf("%s refunded %d for %s", g.meterID, amount, descriptor))
 }
 
 func (g *basicGasMeter) IsPastLimit() bool {
@@ -146,7 +156,7 @@ func (g *basicGasMeter) IsOutOfGas() bool {
 }
 
 func (g *basicGasMeter) String() string {
-	return fmt.Sprintf("BasicGasMeter:\n  limit: %d\n  consumed: %d", g.limit, g.consumed)
+	return fmt.Sprintf("%s:\n  limit: %d\n  consumed: %d", g.meterID, g.limit, g.consumed)
 }
 
 type multiplierGasMeter struct {
@@ -155,12 +165,14 @@ type multiplierGasMeter struct {
 	multiplierDenominator uint64
 }
 
-func NewMultiplierGasMeter(limit Gas, multiplierNumerator uint64, multiplierDenominator uint64) GasMeter {
+func NewMultiplierGasMeter(limit Gas, multiplierNumerator uint64, multiplierDenominator uint64, logger log.Logger, meterID string) GasMeter {
 	return &multiplierGasMeter{
 		basicGasMeter: basicGasMeter{
 			limit:    limit,
 			consumed: 0,
 			lock:     &sync.Mutex{},
+			logger:   logger,
+			meterID:  "adjustedGasMeter-" + meterID,
 		},
 		multiplierNumerator:   multiplierNumerator,
 		multiplierDenominator: multiplierDenominator,
@@ -182,13 +194,17 @@ func (g *multiplierGasMeter) RefundGas(amount Gas, descriptor string) {
 type infiniteGasMeter struct {
 	consumed Gas
 	lock     *sync.Mutex
+	logger   log.Logger
+	meterID  string
 }
 
 // NewInfiniteGasMeter returns a reference to a new infiniteGasMeter.
-func NewInfiniteGasMeter() GasMeter {
+func NewInfiniteGasMeter(logger log.Logger, meterID string) GasMeter {
 	return &infiniteGasMeter{
 		consumed: 0,
 		lock:     &sync.Mutex{},
+		logger:   logger,
+		meterID:  "infiniteGasMeter-" + meterID,
 	}
 }
 
@@ -223,6 +239,8 @@ func (g *infiniteGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	if overflow {
 		panic(ErrorGasOverflow{descriptor})
 	}
+
+	g.logger.Debug(fmt.Sprintf("%s consumed %d for %s", g.meterID, amount, descriptor))
 }
 
 // RefundGas will deduct the given amount from the gas consumed. If the amount is greater than the
@@ -240,6 +258,8 @@ func (g *infiniteGasMeter) RefundGas(amount Gas, descriptor string) {
 	}
 
 	g.consumed -= amount
+
+	g.logger.Debug(fmt.Sprintf("%s refunded %d for %s", g.meterID, amount, descriptor))
 }
 
 func (g *infiniteGasMeter) IsPastLimit() bool {

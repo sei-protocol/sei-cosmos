@@ -219,7 +219,7 @@ func TestWithRouter(t *testing.T) {
 	for blockN := 0; blockN < nBlocks; blockN++ {
 		header := tmproto.Header{Height: int64(blockN) + 1}
 		app.setDeliverState(header)
-		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		for i := 0; i < txPerHeight; i++ {
@@ -267,7 +267,7 @@ func TestBaseApp_EndBlock(t *testing.T) {
 	app.Seal()
 
 	app.setDeliverState(tmproto.Header{})
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	res := app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
 	require.Len(t, res.GetValidatorUpdates(), 1)
 	require.Equal(t, int64(100), res.GetValidatorUpdates()[0].Power)
@@ -321,7 +321,7 @@ func TestQuery(t *testing.T) {
 	// query is still empty after a DeliverTx before we commit
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	_, resTx, err = app.Deliver(aminoTxEncoder(), tx)
@@ -350,7 +350,7 @@ func TestGRPCQuery(t *testing.T) {
 	app.InitChain(context.Background(), &abci.RequestInitChain{})
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
@@ -432,7 +432,7 @@ func TestMultiMsgDeliverTx(t *testing.T) {
 
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 	tx := newTxCounter(0, 0, 1, 2)
 	txBytes, err := codec.Marshal(tx)
@@ -489,7 +489,7 @@ func TestSimulateTx(t *testing.T) {
 
 	anteOpt := func(bapp *BaseApp) {
 		bapp.SetAnteHandler(func(ctx sdk.Context, tx sdk.Tx, simulate bool) (newCtx sdk.Context, err error) {
-			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasConsumed))
+			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasConsumed, &NoOpLogger{}, "test"))
 			return
 		})
 	}
@@ -515,7 +515,7 @@ func TestSimulateTx(t *testing.T) {
 		count := int64(blockN + 1)
 		header := tmproto.Header{Height: count}
 		app.setDeliverState(header)
-		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		tx := newTxCounter(count, count)
@@ -573,7 +573,7 @@ func TestRunInvalidTransaction(t *testing.T) {
 
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	// transaction with no messages
@@ -665,7 +665,7 @@ func TestTxGasLimits(t *testing.T) {
 	gasGranted := uint64(10)
 	anteOpt := func(bapp *BaseApp) {
 		bapp.SetAnteHandler(func(ctx sdk.Context, tx sdk.Tx, simulate bool) (newCtx sdk.Context, err error) {
-			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasGranted))
+			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasGranted, &NoOpLogger{}, "test"))
 
 			// AnteHandlers must have their own defer/recover in order for the BaseApp
 			// to know how much gas was used! This is because the GasMeter is created in
@@ -702,7 +702,7 @@ func TestTxGasLimits(t *testing.T) {
 
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	testCases := []struct {
@@ -755,7 +755,7 @@ func TestMaxBlockGasLimits(t *testing.T) {
 	gasGranted := uint64(10)
 	anteOpt := func(bapp *BaseApp) {
 		bapp.SetAnteHandler(func(ctx sdk.Context, tx sdk.Tx, simulate bool) (newCtx sdk.Context, err error) {
-			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasGranted))
+			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasGranted, &NoOpLogger{}, "test"))
 
 			defer func() {
 				if r := recover(); r != nil {
@@ -818,7 +818,7 @@ func TestMaxBlockGasLimits(t *testing.T) {
 		// reset the block gas
 		header := tmproto.Header{Height: app.LastBlockHeight() + 1}
 		app.setDeliverState(header)
-		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx)))
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx), &NoOpLogger{}, "test"))
 		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		// execute the transaction multiple times
@@ -873,7 +873,7 @@ func TestCustomRunTxPanicHandler(t *testing.T) {
 
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	app.AddRunTxRecoveryHandler(func(recoveryObj interface{}) error {
@@ -917,7 +917,7 @@ func TestBaseAppAnteHandler(t *testing.T) {
 
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	// execute a tx that will fail ante handler execution
@@ -980,7 +980,7 @@ func TestGasConsumptionBadTx(t *testing.T) {
 	gasWanted := uint64(5)
 	anteOpt := func(bapp *BaseApp) {
 		bapp.SetAnteHandler(func(ctx sdk.Context, tx sdk.Tx, simulate bool) (newCtx sdk.Context, err error) {
-			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasWanted))
+			newCtx = ctx.WithGasMeter(sdk.NewGasMeter(gasWanted, &NoOpLogger{}, "test"))
 
 			defer func() {
 				if r := recover(); r != nil {
@@ -1029,7 +1029,7 @@ func TestGasConsumptionBadTx(t *testing.T) {
 
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx)))
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewGasMeter(app.getMaximumBlockGas(app.deliverState.ctx), &NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 	tx := newTxCounter(5, 0)
@@ -1126,7 +1126,7 @@ func TestInitChainer(t *testing.T) {
 	// commit and ensure we can still query
 	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
@@ -1166,7 +1166,7 @@ func TestBeginBlock_WithInitialHeight(t *testing.T) {
 	)
 
 	app.setDeliverState(tmproto.Header{Height: 4})
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	require.PanicsWithError(t, "invalid height: 4; expected: 3", func() {
 		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{
 			Header: tmproto.Header{
@@ -1459,8 +1459,8 @@ func TestCheckTx(t *testing.T) {
 	// If a block is committed, CheckTx state should be reset.
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.checkState.ctx = app.checkState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter()).WithHeaderHash([]byte("hash"))
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.checkState.ctx = app.checkState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test")).WithHeaderHash([]byte("hash"))
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header, Hash: []byte("hash")})
 
 	require.NotNil(t, app.checkState.ctx.BlockGasMeter(), "block gas meter should have been set to checkState")
@@ -1502,7 +1502,7 @@ func TestDeliverTx(t *testing.T) {
 	for blockN := 0; blockN < nBlocks; blockN++ {
 		header := tmproto.Header{Height: int64(blockN) + 1}
 		app.setDeliverState(header)
-		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		for i := 0; i < txPerHeight; i++ {
@@ -1654,7 +1654,7 @@ func TestLoadVersionInvalid(t *testing.T) {
 
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
@@ -1706,7 +1706,7 @@ func setupBaseAppWithSnapshots(t *testing.T, blocks uint, blockTxs int, options 
 	keyCounter := 0
 	for height := int64(1); height <= int64(blocks); height++ {
 		app.setDeliverState(tmproto.Header{Height: height})
-		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: tmproto.Header{Height: height}})
 		for txNum := 0; txNum < blockTxs; txNum++ {
 			tx := txTest{Msgs: []sdk.Msg{}}
@@ -1782,7 +1782,7 @@ func TestLoadVersion(t *testing.T) {
 	// execute a block, collect commit ID
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
@@ -1790,7 +1790,7 @@ func TestLoadVersion(t *testing.T) {
 	// execute a block, collect commit ID
 	header = tmproto.Header{Height: 2}
 	app.setDeliverState(header)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
@@ -1874,7 +1874,7 @@ func TestSetLoader(t *testing.T) {
 
 			// "execute" one block
 			app.setDeliverState(tmproto.Header{Height: 2})
-			app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+			app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(&NoOpLogger{}, "test"))
 			app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: tmproto.Header{Height: 2}})
 			app.SetDeliverStateToCommit()
 			app.Commit(context.Background())

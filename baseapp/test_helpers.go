@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 func (app *BaseApp) Check(txEncoder sdk.TxEncoder, tx sdk.Tx) (sdk.GasInfo, *sdk.Result, error) {
@@ -55,3 +56,10 @@ func (app *BaseApp) NewUncachedContext(isCheckTx bool, header tmproto.Header) sd
 func (app *BaseApp) GetContextForDeliverTx(txBytes []byte) sdk.Context {
 	return app.getContextForTx(runTxModeDeliver, txBytes)
 }
+
+type NoOpLogger struct{}
+
+func (l *NoOpLogger) Info(msg string, keyVals ...interface{})  {}
+func (l *NoOpLogger) Error(msg string, keyVals ...interface{}) {}
+func (l *NoOpLogger) Debug(msg string, keyVals ...interface{}) {}
+func (l *NoOpLogger) With(keyVals ...interface{}) log.Logger   { return l }

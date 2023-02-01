@@ -67,9 +67,9 @@ func (app *BaseApp) InitChain(ctx context.Context, req *abci.RequestInitChain) (
 	}
 
 	// add block gas meter for any genesis transactions (allow infinite gas)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-	app.prepareProposalState.ctx = app.prepareProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-	app.processProposalState.ctx = app.processProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(app.deliverState.ctx.Logger(), "initDeliver"))
+	app.prepareProposalState.ctx = app.prepareProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(app.prepareProposalState.ctx.Logger(), "initPrepare"))
+	app.processProposalState.ctx = app.processProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter(app.processProposalState.ctx.Logger(), "initProcess"))
 
 	resp := app.initChainer(app.deliverState.ctx, *req)
 	app.initChainer(app.prepareProposalState.ctx, *req)
@@ -958,9 +958,9 @@ func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProces
 	// add block gas meter
 	var gasMeter sdk.GasMeter
 	if maxGas := app.getMaximumBlockGas(app.processProposalState.ctx); maxGas > 0 {
-		gasMeter = sdk.NewGasMeter(maxGas)
+		gasMeter = sdk.NewGasMeter(maxGas, app.processProposalState.ctx.Logger(), "ProcessProposal-Block")
 	} else {
-		gasMeter = sdk.NewInfiniteGasMeter()
+		gasMeter = sdk.NewInfiniteGasMeter(app.processProposalState.ctx.Logger(), "ProcessProposal-Block")
 	}
 
 	// NOTE: header hash is not set in NewContext, so we manually set it here
@@ -1014,9 +1014,9 @@ func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalize
 	// add block gas meter
 	var gasMeter sdk.GasMeter
 	if maxGas := app.getMaximumBlockGas(app.deliverState.ctx); maxGas > 0 {
-		gasMeter = sdk.NewGasMeter(maxGas)
+		gasMeter = sdk.NewGasMeter(maxGas, app.deliverState.ctx.Logger(), "FinalizeBlock-Block")
 	} else {
-		gasMeter = sdk.NewInfiniteGasMeter()
+		gasMeter = sdk.NewInfiniteGasMeter(app.deliverState.ctx.Logger(), "FinalizeBlock-Block")
 	}
 
 	// NOTE: header hash is not set in NewContext, so we manually set it here

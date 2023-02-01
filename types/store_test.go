@@ -3,12 +3,14 @@ package types_test
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/suite"
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/tests/mocks"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -61,7 +63,11 @@ func (s *storeTestSuite) TestNewTransientStoreKeys() {
 }
 
 func (s *storeTestSuite) TestNewInfiniteGasMeter() {
-	gm := sdk.NewInfiniteGasMeter()
+	ctrl := gomock.NewController(s.T())
+	s.T().Cleanup(ctrl.Finish)
+
+	logger := mocks.NewMockLogger(ctrl)
+	gm := sdk.NewInfiniteGasMeter(logger, "test")
 	s.Require().NotNil(gm)
 	_, ok := gm.(types.GasMeter)
 	s.Require().True(ok)

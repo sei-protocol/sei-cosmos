@@ -470,7 +470,7 @@ func (app *BaseApp) setCheckState(header tmproto.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.checkState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices),
+		ctx: sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices).WithLogPrefix("CheckTx-"),
 	}
 }
 
@@ -482,7 +482,7 @@ func (app *BaseApp) setDeliverState(header tmproto.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.deliverState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger),
+		ctx: sdk.NewContext(ms, header, false, app.logger).WithLogPrefix("DeliverTx-"),
 	}
 }
 
@@ -490,7 +490,7 @@ func (app *BaseApp) setPrepareProposalState(header tmproto.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.prepareProposalState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger),
+		ctx: sdk.NewContext(ms, header, false, app.logger).WithLogPrefix("PrepareProposal-"),
 	}
 }
 
@@ -498,7 +498,7 @@ func (app *BaseApp) setProcessProposalState(header tmproto.Header) {
 	ms := app.cms.CacheMultiStore()
 	app.processProposalState = &state{
 		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger),
+		ctx: sdk.NewContext(ms, header, false, app.logger).WithLogPrefix("ProcessProposal-"),
 	}
 }
 

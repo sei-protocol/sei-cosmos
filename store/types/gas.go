@@ -50,6 +50,7 @@ type GasMeter interface {
 	IsPastLimit() bool
 	IsOutOfGas() bool
 	String() string
+	UpdateID(string)
 }
 
 type basicGasMeter struct {
@@ -166,6 +167,10 @@ func (g *basicGasMeter) IsOutOfGas() bool {
 
 func (g *basicGasMeter) String() string {
 	return fmt.Sprintf("%s:\n  limit: %d\n  consumed: %d", g.meterID, g.limit, g.consumed)
+}
+
+func (g *basicGasMeter) UpdateID(newMeterID string) {
+	g.meterID = newMeterID
 }
 
 type multiplierGasMeter struct {
@@ -292,6 +297,10 @@ func (g *infiniteGasMeter) String() string {
 	defer g.lock.Unlock()
 
 	return fmt.Sprintf("InfiniteGasMeter:\n  consumed: %d", g.consumed)
+}
+
+func (g *infiniteGasMeter) UpdateID(newMeterID string) {
+	g.meterID = newMeterID
 }
 
 // GasConfig defines gas cost for each operation on KVStores

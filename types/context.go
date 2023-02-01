@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -50,7 +51,8 @@ type Context struct {
 
 	contextMemCache *ContextMemCache
 
-	txID string
+	logPrefix string
+	txID      string
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -83,6 +85,7 @@ func (c Context) MessageIndex() int                                  { return c.
 func (c Context) MsgValidator() *acltypes.MsgValidator               { return c.msgValidator }
 func (c Context) ContextMemCache() *ContextMemCache                  { return c.contextMemCache }
 func (c Context) TxID() string                                       { return c.txID }
+func (c Context) LogPrefix() string                                  { return c.logPrefix }
 
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
@@ -207,6 +210,7 @@ func (c Context) WithVoteInfos(voteInfo []abci.VoteInfo) Context {
 // WithGasMeter returns a Context with an updated transaction GasMeter.
 func (c Context) WithGasMeter(meter GasMeter) Context {
 	c.gasMeter = meter
+	c.updateGasMeterID()
 	return c
 }
 
@@ -287,7 +291,20 @@ func (c Context) WithContextMemCache(contextMemCache *ContextMemCache) Context {
 
 func (c Context) WithTxID(txID string) Context {
 	c.txID = txID
+	c.updateGasMeterID()
 	return c
+}
+
+func (c Context) WithLogPrefix(logPrefix string) Context {
+	c.logPrefix = logPrefix
+	c.updateGasMeterID()
+	return c
+}
+
+func (c *Context) updateGasMeterID() {
+	if c.gasMeter != nil {
+		c.gasMeter.UpdateID(fmt.Sprintf("%s-%s", c.logPrefix, c.txID))
+	}
 }
 
 // TODO: remove???

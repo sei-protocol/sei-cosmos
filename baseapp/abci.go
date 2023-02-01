@@ -67,9 +67,9 @@ func (app *BaseApp) InitChain(ctx context.Context, req *abci.RequestInitChain) (
 	}
 
 	// add block gas meter for any genesis transactions (allow infinite gas)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeterWithLogger(app.deliverState.ctx.Logger(), "initDeliver"))
-	app.prepareProposalState.ctx = app.prepareProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeterWithLogger(app.prepareProposalState.ctx.Logger(), "initPrepare"))
-	app.processProposalState.ctx = app.processProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeterWithLogger(app.processProposalState.ctx.Logger(), "initProcess"))
+	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeterWithLogger(app.deliverState.ctx.Logger(), "initDeliver-block"))
+	app.prepareProposalState.ctx = app.prepareProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeterWithLogger(app.prepareProposalState.ctx.Logger(), "initPrepare-block"))
+	app.processProposalState.ctx = app.processProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeterWithLogger(app.processProposalState.ctx.Logger(), "initProcess-block"))
 
 	resp := app.initChainer(app.deliverState.ctx, *req)
 	app.initChainer(app.prepareProposalState.ctx, *req)
@@ -139,6 +139,8 @@ func (app *BaseApp) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) (res
 		panic(err)
 	}
 
+	ctx = ctx.WithTxID("BeginBlock")
+
 	if app.beginBlocker != nil {
 		res = app.beginBlocker(ctx, req)
 		res.Events = sdk.MarkEventsToIndex(res.Events, app.indexEvents)
@@ -163,6 +165,8 @@ func (app *BaseApp) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) (res
 func (app *BaseApp) MidBlock(ctx sdk.Context, height int64) (events []abci.Event) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "mid_block")
 
+	ctx = ctx.WithTxID("MidBlock")
+
 	if app.midBlocker != nil {
 		midBlockEvents := app.midBlocker(ctx, height)
 		events = sdk.MarkEventsToIndex(midBlockEvents, app.indexEvents)
@@ -181,6 +185,8 @@ func (app *BaseApp) MidBlock(ctx sdk.Context, height int64) (events []abci.Event
 // EndBlock implements the ABCI interface.
 func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "end_block")
+
+	ctx = ctx.WithTxID("EndBlock")
 
 	if app.endBlocker != nil {
 		res = app.endBlocker(ctx, req)

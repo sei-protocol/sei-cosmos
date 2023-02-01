@@ -6,7 +6,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/telemetry"
 
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -91,11 +90,10 @@ func (cmgr *CommitKVStoreCacheManager) Unwrap(key types.StoreKey) types.CommitKV
 
 // Reset resets in the internal caches.
 func (cmgr *CommitKVStoreCacheManager) Reset() {
-	// Clear the map.
-	// Please note that we are purposefully using the map clearing idiom.
-	// See https://github.com/cosmos/cosmos-sdk/issues/6681.
-	for key := range cmgr.caches {
-		delete(cmgr.caches, key)
+	for _, ckv := range cmgr.caches {
+		// not deleting CommitKVStoreCache themselves from the manager to prevent
+		// Unwrap returning nil
+		ckv.(*CommitKVStoreCache).Reset()
 	}
 }
 
@@ -150,7 +148,9 @@ func (ckv *CommitKVStoreCache) Delete(key []byte) {
 	ckv.CommitKVStore.Delete(key)
 }
 
-func (ckv *CommitKVStoreCache) emitCacheSizeMetric() {
-	telemetry.SetGauge(float32(ckv.cache.Len()), "cache", "size")
-	fmt.Printf("CACHE_SIZE: %d", ckv.cache.Len())
+func (ckv *CommitKVStoreCache) Reset() {
+	ckv.mtx.Lock()
+	defer ckv.mtx.Unlock()
+
+	ckv.cache.Purge()
 }

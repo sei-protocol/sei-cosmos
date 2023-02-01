@@ -89,8 +89,8 @@ func (s *contextTestSuite) TestContextWithCustom() {
 	txbytes := []byte("txbytes")
 	logger := mocks.NewMockLogger(ctrl)
 	voteinfos := []abci.VoteInfo{{}}
-	meter := types.NewGasMeter(10000, logger, "test")
-	blockGasMeter := types.NewGasMeter(20000, logger, "test")
+	meter := types.NewGasMeterWithLogger(10000, logger, "test")
+	blockGasMeter := types.NewGasMeterWithLogger(20000, logger, "test")
 	minGasPrices := types.DecCoins{types.NewInt64DecCoin("feetoken", 1)}
 	headerHash := []byte("headerHash")
 

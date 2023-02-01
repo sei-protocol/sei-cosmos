@@ -67,7 +67,7 @@ func (s *storeTestSuite) TestNewInfiniteGasMeter() {
 	s.T().Cleanup(ctrl.Finish)
 
 	logger := mocks.NewMockLogger(ctrl)
-	gm := sdk.NewInfiniteGasMeter(logger, "test")
+	gm := sdk.NewInfiniteGasMeterWithLogger(logger, "test")
 	s.Require().NotNil(gm)
 	_, ok := gm.(types.GasMeter)
 	s.Require().True(ok)

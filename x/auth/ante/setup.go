@@ -79,8 +79,8 @@ func SetGasMeter(simulate bool, ctx sdk.Context, gasLimit uint64, _ sdk.Tx) sdk.
 	// In various cases such as simulation and during the genesis block, we do not
 	// meter any gas utilization.
 	if simulate || ctx.BlockHeight() == 0 {
-		return ctx.WithGasMeter(sdk.NewInfiniteGasMeter(ctx.Logger(), ctx.TxID()))
+		return ctx.WithGasMeter(sdk.NewInfiniteGasMeterWithLogger(ctx.Logger(), ctx.TxID()))
 	}
 
-	return ctx.WithGasMeter(sdk.NewGasMeter(gasLimit, ctx.Logger(), ctx.TxID()))
+	return ctx.WithGasMeter(sdk.NewGasMeterWithLogger(gasLimit, ctx.Logger(), ctx.TxID()))
 }

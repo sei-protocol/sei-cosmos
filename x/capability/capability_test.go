@@ -61,7 +61,7 @@ func (suite *CapabilityTestSuite) TestInitializeMemStore() {
 	suite.Require().False(newKeeper.IsInitialized(ctx), "memstore initialized flag set before BeginBlock")
 
 	// Mock app beginblock and ensure that no gas has been consumed and memstore is initialized
-	ctx = suite.app.BaseApp.NewContext(false, tmproto.Header{}).WithBlockGasMeter(sdk.NewGasMeter(50, suite.app.Logger(), "test"))
+	ctx = suite.app.BaseApp.NewContext(false, tmproto.Header{}).WithBlockGasMeter(sdk.NewGasMeterWithLogger(50, suite.app.Logger(), "test"))
 	prevGas := ctx.BlockGasMeter().GasConsumed()
 	restartedModule := capability.NewAppModule(suite.cdc, *newKeeper)
 	restartedModule.BeginBlock(ctx, abci.RequestBeginBlock{})

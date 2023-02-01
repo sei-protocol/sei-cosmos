@@ -61,7 +61,16 @@ type basicGasMeter struct {
 }
 
 // NewGasMeter returns a reference to a new basicGasMeter.
-func NewGasMeter(limit Gas, logger log.Logger, meterID string) GasMeter {
+func NewGasMeter(limit Gas) GasMeter {
+	return &basicGasMeter{
+		limit:    limit,
+		consumed: 0,
+		lock:     &sync.Mutex{},
+		logger:   &NoOpLogger{},
+	}
+}
+
+func NewGasMeterWithLogger(limit Gas, logger log.Logger, meterID string) GasMeter {
 	return &basicGasMeter{
 		limit:    limit,
 		consumed: 0,
@@ -199,7 +208,15 @@ type infiniteGasMeter struct {
 }
 
 // NewInfiniteGasMeter returns a reference to a new infiniteGasMeter.
-func NewInfiniteGasMeter(logger log.Logger, meterID string) GasMeter {
+func NewInfiniteGasMeter() GasMeter {
+	return &infiniteGasMeter{
+		consumed: 0,
+		lock:     &sync.Mutex{},
+		logger:   &NoOpLogger{},
+	}
+}
+
+func NewInfiniteGasMeterWithLogger(logger log.Logger, meterID string) GasMeter {
 	return &infiniteGasMeter{
 		consumed: 0,
 		lock:     &sync.Mutex{},

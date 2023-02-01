@@ -96,11 +96,11 @@ func (suite *AnteTestSuite) TestConsumeSignatureVerificationGas() {
 		gasConsumed uint64
 		shouldErr   bool
 	}{
-		{"PubKeyEd25519", args{sdk.NewInfiniteGasMeter(&storetypes.NoOpLogger{}, "test"), nil, ed25519.GenPrivKey().PubKey(), params}, p.SigVerifyCostED25519, true},
-		{"PubKeySecp256k1", args{sdk.NewInfiniteGasMeter(&storetypes.NoOpLogger{}, "test"), nil, secp256k1.GenPrivKey().PubKey(), params}, p.SigVerifyCostSecp256k1, false},
-		{"PubKeySecp256r1", args{sdk.NewInfiniteGasMeter(&storetypes.NoOpLogger{}, "test"), nil, skR1.PubKey(), params}, p.SigVerifyCostSecp256r1(), false},
-		{"Multisig", args{sdk.NewInfiniteGasMeter(&storetypes.NoOpLogger{}, "test"), multisignature1, multisigKey1, params}, expectedCost1, false},
-		{"unknown key", args{sdk.NewInfiniteGasMeter(&storetypes.NoOpLogger{}, "test"), nil, nil, params}, 0, true},
+		{"PubKeyEd25519", args{sdk.NewInfiniteGasMeterWithLogger(&storetypes.NoOpLogger{}, "test"), nil, ed25519.GenPrivKey().PubKey(), params}, p.SigVerifyCostED25519, true},
+		{"PubKeySecp256k1", args{sdk.NewInfiniteGasMeterWithLogger(&storetypes.NoOpLogger{}, "test"), nil, secp256k1.GenPrivKey().PubKey(), params}, p.SigVerifyCostSecp256k1, false},
+		{"PubKeySecp256r1", args{sdk.NewInfiniteGasMeterWithLogger(&storetypes.NoOpLogger{}, "test"), nil, skR1.PubKey(), params}, p.SigVerifyCostSecp256r1(), false},
+		{"Multisig", args{sdk.NewInfiniteGasMeterWithLogger(&storetypes.NoOpLogger{}, "test"), multisignature1, multisigKey1, params}, expectedCost1, false},
+		{"unknown key", args{sdk.NewInfiniteGasMeterWithLogger(&storetypes.NoOpLogger{}, "test"), nil, nil, params}, 0, true},
 	}
 	for _, tt := range tests {
 		sigV2 := signing.SignatureV2{

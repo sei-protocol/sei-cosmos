@@ -118,7 +118,7 @@ func NewContext(ms MultiStore, header tmproto.Header, isCheckTx bool, logger log
 		chainID:         header.ChainID,
 		checkTx:         isCheckTx,
 		logger:          logger,
-		gasMeter:        stypes.NewInfiniteGasMeter(logger, "NewContext"),
+		gasMeter:        stypes.NewInfiniteGasMeterWithLogger(logger, "NewContext"),
 		minGasPrice:     DecCoins{},
 		eventManager:    NewEventManager(),
 		contextMemCache: NewContextMemCache(),

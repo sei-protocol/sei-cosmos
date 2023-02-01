@@ -182,8 +182,12 @@ type (
 	GasConfig = types.GasConfig
 )
 
-func NewGasMeter(limit Gas, logger log.Logger, meterID string) GasMeter {
-	return types.NewGasMeter(limit, logger, meterID)
+func NewGasMeter(limit Gas) GasMeter {
+	return types.NewGasMeter(limit)
+}
+
+func NewGasMeterWithLogger(limit Gas, logger log.Logger, meterID string) GasMeter {
+	return types.NewGasMeterWithLogger(limit, logger, meterID)
 }
 
 type (
@@ -191,6 +195,10 @@ type (
 	ErrorGasOverflow = types.ErrorGasOverflow
 )
 
-func NewInfiniteGasMeter(logger log.Logger, meterID string) GasMeter {
-	return types.NewInfiniteGasMeter(logger, meterID)
+func NewInfiniteGasMeter() GasMeter {
+	return types.NewInfiniteGasMeter()
+}
+
+func NewInfiniteGasMeterWithLogger(logger log.Logger, meterID string) GasMeter {
+	return types.NewInfiniteGasMeterWithLogger(logger, meterID)
 }

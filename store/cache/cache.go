@@ -16,7 +16,7 @@ var (
 
 	// DefaultCommitKVStoreCacheSize defines the persistent ARC cache size for a
 	// CommitKVStoreCache.
-	DefaultCommitKVStoreCacheSize uint = 10000
+	DefaultCommitKVStoreCacheSize uint = 100000
 )
 
 type (
@@ -28,7 +28,7 @@ type (
 	// CommitKVStore and below is completely irrelevant to this layer.
 	CommitKVStoreCache struct {
 		types.CommitKVStore
-		cache       *lru.TwoQueueCache
+		cache       *lru.ARCCache
 		cacheKVSize int
 
 		// the same CommitKVStoreCache may be accessed concurrently by multiple
@@ -48,7 +48,7 @@ type (
 )
 
 func NewCommitKVStoreCache(store types.CommitKVStore, size uint, cacheKVSize int) *CommitKVStoreCache {
-	cache, err := lru.New2Q(int(size))
+	cache, err := lru.NewARC(int(size))
 	if err != nil {
 		panic(fmt.Errorf("failed to create KVStore cache: %s", err))
 	}

@@ -355,13 +355,18 @@ func TrapSignal(cleanupFunc func()) {
 func WaitForQuitSignals(restartCh chan struct{}) ErrorCode {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	for {
-		select {
-		case sig := <-sigs:
-			return ErrorCode{Code: int(sig.(syscall.Signal)) + 128}
-		case <-restartCh:
-			return ErrorCode{Code: 1}
+	if restartCh != nil {
+		for {
+			select {
+			case sig := <-sigs:
+				return ErrorCode{Code: int(sig.(syscall.Signal)) + 128}
+			case <-restartCh:
+				return ErrorCode{Code: 1}
+			}
 		}
+	} else {
+		sig := <-sigs
+		return ErrorCode{Code: int(sig.(syscall.Signal)) + 128}
 	}
 }
 

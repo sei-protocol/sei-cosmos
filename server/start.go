@@ -222,8 +222,12 @@ func startStandAlone(ctx *Context, appCreator types.AppCreator) error {
 		svr.Wait()
 	}()
 
+	var restartCh chan struct{}
+	if ctx.Config.P2P.SelfKillNoPeers {
+		restartCh = make(chan struct{})
+	}
 	// Wait for SIGINT or SIGTERM signal
-	return WaitForQuitSignals(make(chan struct{}))
+	return WaitForQuitSignals(restartCh)
 }
 
 func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.AppCreator, tracerProviderOptions []trace.TracerProviderOption) error {
@@ -277,9 +281,12 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 
 	var (
 		tmNode    service.Service
+		restartCh chan struct{}
 		gRPCOnly  = ctx.Viper.GetBool(flagGRPCOnly)
-		restartCh = make(chan struct{})
 	)
+	if ctx.Config.P2P.SelfKillNoPeers {
+		restartCh = make(chan struct{})
+	}
 
 	if gRPCOnly {
 		ctx.Logger.Info("starting node in gRPC only mode; Tendermint is disabled")
@@ -363,7 +370,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 	// we do not need to start Rosetta or handle any Tendermint related processes.
 	if gRPCOnly {
 		// wait for signal capture and gracefully return
-		return WaitForQuitSignals(make(chan struct{}))
+		return WaitForQuitSignals(restartCh)
 	}
 
 	var rosettaSrv crgserver.Server

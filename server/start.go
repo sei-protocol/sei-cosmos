@@ -223,7 +223,7 @@ func startStandAlone(ctx *Context, appCreator types.AppCreator) error {
 	}()
 
 	// Wait for SIGINT or SIGTERM signal
-	return WaitForQuitSignals()
+	return WaitForQuitSignals(make(chan struct{}))
 }
 
 func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.AppCreator, tracerProviderOptions []trace.TracerProviderOption) error {
@@ -276,8 +276,9 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 	app := appCreator(ctx.Logger, db, traceWriter, ctx.Viper)
 
 	var (
-		tmNode   service.Service
-		gRPCOnly = ctx.Viper.GetBool(flagGRPCOnly)
+		tmNode    service.Service
+		gRPCOnly  = ctx.Viper.GetBool(flagGRPCOnly)
+		restartCh = make(chan struct{})
 	)
 
 	if gRPCOnly {
@@ -289,6 +290,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 			goCtx,
 			ctx.Config,
 			ctx.Logger,
+			restartCh,
 			abciclient.NewLocalClient(ctx.Logger, app),
 			nil,
 			tracerProviderOptions,
@@ -361,7 +363,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 	// we do not need to start Rosetta or handle any Tendermint related processes.
 	if gRPCOnly {
 		// wait for signal capture and gracefully return
-		return WaitForQuitSignals()
+		return WaitForQuitSignals(make(chan struct{}))
 	}
 
 	var rosettaSrv crgserver.Server
@@ -431,5 +433,5 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 	}()
 
 	// wait for signal capture and gracefully return
-	return WaitForQuitSignals()
+	return WaitForQuitSignals(restartCh)
 }

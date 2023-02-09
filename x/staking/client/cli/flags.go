@@ -31,6 +31,7 @@ const (
 	FlagGenesisFormat = "genesis-format"
 	FlagNodeID        = "node-id"
 	FlagIP            = "ip"
+	FlagPort          = "port"
 )
 
 // common flagsets to add to various functions

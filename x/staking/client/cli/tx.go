@@ -77,6 +77,7 @@ func NewCreateValidatorCmd() *cobra.Command {
 	cmd.Flags().AddFlagSet(FlagSetMinSelfDelegation())
 
 	cmd.Flags().String(FlagIP, "", fmt.Sprintf("The node's public IP. It takes effect only when used in combination with --%s", flags.FlagGenerateOnly))
+	cmd.Flags().String(FlagPort, "", fmt.Sprintf("The node's public port. It takes effect only when used in combination with --%s", flags.FlagGenerateOnly))
 	cmd.Flags().String(FlagNodeID, "", "The node's ID")
 	flags.AddTxFlagsToCmd(cmd)
 
@@ -339,10 +340,11 @@ func newBuildCreateValidatorMsg(clientCtx client.Context, txf tx.Factory, fs *fl
 	genOnly, _ := fs.GetBool(flags.FlagGenerateOnly)
 	if genOnly {
 		ip, _ := fs.GetString(FlagIP)
+		port, _ := fs.GetString(FlagPort)
 		nodeID, _ := fs.GetString(FlagNodeID)
 
 		if nodeID != "" && ip != "" {
-			txf = txf.WithMemo(fmt.Sprintf("%s@%s:26656", nodeID, ip))
+			txf = txf.WithMemo(fmt.Sprintf("%s@%s:%s", nodeID, ip, port))
 		}
 	}
 
@@ -354,6 +356,7 @@ func newBuildCreateValidatorMsg(clientCtx client.Context, txf tx.Factory, fs *fl
 func CreateValidatorMsgFlagSet(ipDefault string) (fs *flag.FlagSet, defaultsDesc string) {
 	fsCreateValidator := flag.NewFlagSet("", flag.ContinueOnError)
 	fsCreateValidator.String(FlagIP, ipDefault, "The node's public IP")
+	fsCreateValidator.String(FlagPort, "26656", "The node's public IP port")
 	fsCreateValidator.String(FlagNodeID, "", "The node's NodeID")
 	fsCreateValidator.String(FlagMoniker, "", "The validator's (optional) moniker")
 	fsCreateValidator.String(FlagWebsite, "", "The validator's (optional) website")
@@ -393,6 +396,7 @@ type TxCreateValidatorConfig struct {
 	PubKey cryptotypes.PubKey
 
 	IP              string
+	Port            string
 	Website         string
 	SecurityContact string
 	Details         string
@@ -411,6 +415,16 @@ func PrepareConfigForTxCreateValidator(flagSet *flag.FlagSet, moniker, nodeID, c
 			"the tx's memo field will be unset")
 	}
 	c.IP = ip
+
+	port, err := flagSet.GetString(FlagPort)
+	if err != nil {
+		return c, err
+	}
+	if port == "" {
+		_, _ = fmt.Fprintf(os.Stderr, "couldn't retrieve an external IP; "+
+			"the tx's memo field will be unset")
+	}
+	c.Port = port
 
 	website, err := flagSet.GetString(FlagWebsite)
 	if err != nil {
@@ -537,10 +551,11 @@ func BuildCreateValidatorMsg(clientCtx client.Context, config TxCreateValidatorC
 	}
 	if generateOnly {
 		ip := config.IP
+		port := config.Port
 		nodeID := config.NodeID
 
 		if nodeID != "" && ip != "" {
-			txBldr = txBldr.WithMemo(fmt.Sprintf("%s@%s:26656", nodeID, ip))
+			txBldr = txBldr.WithMemo(fmt.Sprintf("%s@%s:%s", nodeID, ip, port))
 		}
 	}
 

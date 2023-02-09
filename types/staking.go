@@ -13,7 +13,7 @@ const (
 	// Maximum amount of staking power we allow per validator
 	// before the max voting power ratio is enforced
 	// Treshold for number of token staked = DefaultPowerReduction * DefaultMaxVotingPowerEnforcementThreshold
-	DefaultMaxVotingPowerEnforcementThreshold uint64 = 100
+	DefaultMaxVotingPowerEnforcementThreshold uint64 = 10000
 
 	// Delay, in blocks, between when validator updates are returned to the
 	// consensus-engine and when they are applied. For example, if

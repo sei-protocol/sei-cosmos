@@ -420,10 +420,6 @@ func PrepareConfigForTxCreateValidator(flagSet *flag.FlagSet, moniker, nodeID, c
 	if err != nil {
 		return c, err
 	}
-	if port == "" {
-		_, _ = fmt.Fprintf(os.Stderr, "couldn't retrieve an external IP; "+
-			"the tx's memo field will be unset")
-	}
 	c.Port = port
 
 	website, err := flagSet.GetString(FlagWebsite)

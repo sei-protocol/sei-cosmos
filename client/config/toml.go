@@ -35,7 +35,6 @@ broadcast-mode = "{{ .BroadcastMode }}"
 func SetClientConfig(key string, value string, configPath string, config *ClientConfig) error {
 	switch key {
 	case flags.FlagChainID:
-		println(value)
 		config.SetChainID(value)
 	case flags.FlagKeyringBackend:
 		config.SetKeyringBackend(value)

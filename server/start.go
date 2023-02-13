@@ -10,7 +10,6 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	abciclient "github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/server"
@@ -291,8 +290,6 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 			"This defaults to 0 in the current version, but will error in the next version " +
 			"(SDK v0.45). Please explicitly put the desired minimum-gas-prices in your app.toml.")
 	}
-	println("Calling")
-	println(cast.ToString(clientCtx.Viper.Get(flags.FlagChainID)))
 	app := appCreator(ctx.Logger, db, traceWriter, ctx.Viper)
 
 	var (

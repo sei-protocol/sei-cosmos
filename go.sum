@@ -689,8 +689,8 @@ github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg
 github.com/segmentio/fasthash v1.0.3/go.mod h1:waKX8l2N8yckOgmSsXJi7x1ZfdKZ4x7KRMzBtS3oedY=
 github.com/sei-protocol/sei-iavl v0.0.2-tonytest-2 h1:3sDyMncvId18EfCap9+sU3xjKq9gqTvcGQP7Bq6vmec=
 github.com/sei-protocol/sei-iavl v0.0.2-tonytest-2/go.mod h1:7PfkEVT5dcoQE+s/9KWdoXJ8VVVP1QpYYPLdxlkSXFk=
-github.com/sei-protocol/sei-tendermint v0.1.171-tonytest-4 h1:yhkCxlGO4RU4YHM3eJNTulDzdB/HRtpq+JqOuMiDrLA=
-github.com/sei-protocol/sei-tendermint v0.1.171-tonytest-4/go.mod h1:+BtDvAwTkE64BlxzpH9ZP7S6vUYT9wRXiZa/WW8/o4g=
+github.com/sei-protocol/sei-tendermint v0.1.171-tonytest-8 h1:m5vYtnVxKZLaH9SlNj5aRs8Gsu+h3ULi8FfZSPpwlA0=
+github.com/sei-protocol/sei-tendermint v0.1.171-tonytest-8/go.mod h1:+BtDvAwTkE64BlxzpH9ZP7S6vUYT9wRXiZa/WW8/o4g=
 github.com/sei-protocol/sei-tm-db v0.0.5 h1:3WONKdSXEqdZZeLuWYfK5hP37TJpfaUa13vAyAlvaQY=
 github.com/sei-protocol/sei-tm-db v0.0.5/go.mod h1:Cpa6rGyczgthq7/0pI31jys2Fw0Nfrc+/jKdP1prVqY=
 github.com/shirou/gopsutil v2.20.5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=

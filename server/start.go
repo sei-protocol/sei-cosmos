@@ -128,7 +128,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			serverCtx := GetServerContextFromCmd(cmd)
 
-			if _, err := cmd.Flags().GetBool(FlagProfile);  err == nil {
+			if enableProfile, _ := cmd.Flags().GetBool(FlagProfile); enableProfile {
 				go func() {
 					serverCtx.Logger.Info("Listening for profiling at http://localhost:6060/debug/pprof/")
 					err := http.ListenAndServe(":6060", nil)

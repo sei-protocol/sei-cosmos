@@ -115,12 +115,13 @@ func (store *Store) GetStoreType() types.StoreType {
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
 	keyName := store.storeKey.Name()
+	goroutineId := goId()
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d get() trying to acquire lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d get() trying to acquire lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	store.mtx.Lock()
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d get() successfully acquired lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d get() successfully acquired lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	defer store.mtx.Unlock()
 
@@ -135,7 +136,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 	}
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d get() released lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d get() released lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	return value
 }
@@ -143,12 +144,13 @@ func (store *Store) Get(key []byte) (value []byte) {
 // Set implements types.KVStore.
 func (store *Store) Set(key []byte, value []byte) {
 	keyName := store.storeKey.Name()
+	goroutineId := goId()
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d set() trying to acquire lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d set() trying to acquire lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	store.mtx.Lock()
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d set() successfully acquired lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d set() successfully acquired lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	defer store.mtx.Unlock()
 
@@ -158,7 +160,7 @@ func (store *Store) Set(key []byte, value []byte) {
 	store.setCacheValue(key, value, false, true)
 	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d set() released lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d set() released lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 }
 
@@ -265,12 +267,13 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	keyName := store.storeKey.Name()
+	goroutineId := goId()
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d iterator() trying to acquire lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d iterator() trying to acquire lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	store.mtx.Lock()
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d iterator() successfully acquired lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d iterator() successfully acquired lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	defer store.mtx.Unlock()
 
@@ -293,7 +296,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	store.dirtyItems(start, end)
 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
 	if keyName != "params" {
-		fmt.Printf("[CacheKV-Debug] goroutine %d iterator() released lock for %p store %s\n", goId(), &store.mtx, store.storeKey.Name())
+		fmt.Printf("[CacheKV-Debug] goroutine %d iterator() released lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 	}
 	return NewCacheMergeIterator(parent, cache, ascending, store.eventManager, store.storeKey)
 

@@ -157,9 +157,9 @@ func (store *Store) Delete(key []byte) {
 
 // Implements Cachetypes.KVStore.
 func (store *Store) Write() {
-	fmt.Printf("[CacheKV-Debug] CacheKV write() on line 160 trying to acquire lock for store %s\n", store.storeKey.Name())
+	fmt.Printf("[CacheKV-Debug] CacheKV write() on line 160 trying to acquire lock for store %v\n", store.storeKey.Name())
 	store.mtx.Lock()
-	fmt.Printf("[CacheKV-Debug] CacheKV write() on line 162 succesfully acquired lock for store %s\n", store.storeKey.Name())
+	fmt.Printf("[CacheKV-Debug] CacheKV write() on line 162 succesfully acquired lock for store %v\n", store.storeKey.Name())
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
 
@@ -207,7 +207,7 @@ func (store *Store) Write() {
 		delete(store.unsortedCache, key)
 	}
 	store.sortedCache = dbm.NewMemDB()
-	fmt.Printf("[CacheKV-Debug] CacheKV write() on line 210 released lock for store %s\n", store.storeKey.Name())
+	fmt.Printf("[CacheKV-Debug] CacheKV write() on line 210 released lock for store %v\n", store.storeKey.Name())
 }
 
 // CacheWrap implements CacheWrapper.

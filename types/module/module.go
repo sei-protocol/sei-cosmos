@@ -540,6 +540,7 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 		if !ok {
 			continue
 		}
+		fmt.Printf("[Cosmos-Debug] Ending block for module %s\n", moduleName)
 		moduleValUpdates := module.EndBlock(ctx, req)
 
 		// use these validator updates if provided, the module manager assumes

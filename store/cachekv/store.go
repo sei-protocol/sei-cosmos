@@ -100,14 +100,25 @@ func (store *Store) GetStoreType() types.StoreType {
 
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
-	fmt.Printf("[CacheKV-Debug] CacheKV get() on line 102 trying to acquire lock for store %s\n", store.storeKey.Name())
-	store.mtx.Lock()
-	fmt.Printf("[CacheKV-Debug] CacheKV get() on line 105 successfully acquired lock for store %s\n", store.storeKey.Name())
+	keyName := store.storeKey.Name()
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] get() trying to acquire lock for %p store %s\n", &store, store.storeKey.Name())
+	}
+	succeed := store.mtx.TryLock()
+	if !succeed {
+		panic(fmt.Sprintf("%p Store mtx lock in get() is already being acquire by another goroutine", &store))
+	}
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] get() successfully acquired lock for %p store %s\n", &store, store.storeKey.Name())
+	}
 	defer store.mtx.Unlock()
 
 	types.AssertValidKey(key)
 
 	cacheValue, ok := store.cache.Get(conv.UnsafeBytesToStr(key))
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] get() for %p store's parent store is  %p\n", &store, &store.parent)
+	}
 	if !ok {
 		value = store.parent.Get(key)
 		store.setCacheValue(key, value, false, false)
@@ -115,15 +126,25 @@ func (store *Store) Get(key []byte) (value []byte) {
 		value = cacheValue.Value()
 	}
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
-	fmt.Printf("[CacheKV-Debug] CacheKV get() on line 118 released lock for store %s\n", store.storeKey.Name())
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] get() released lock for %p store %s\n", &store, store.storeKey.Name())
+	}
 	return value
 }
 
 // Set implements types.KVStore.
 func (store *Store) Set(key []byte, value []byte) {
-	fmt.Printf("[CacheKV-Debug] CacheKV set() on line 124 trying to acquire lock for store %s\n", store.storeKey.Name())
-	store.mtx.Lock()
-	fmt.Printf("[CacheKV-Debug] CacheKV get() on line 126 successfuly acquired lock for store %s\n", store.storeKey.Name())
+	keyName := store.storeKey.Name()
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] set() trying to acquire lock for %p store %s\n", &store, store.storeKey.Name())
+	}
+	succeed := store.mtx.TryLock()
+	if !succeed {
+		panic(fmt.Sprintf("%p Store mtx lock in set() is already being acquire by another goroutine", &store))
+	}
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] set() successfully acquired lock for %p store %s\n", &store, store.storeKey.Name())
+	}
 	defer store.mtx.Unlock()
 
 	types.AssertValidKey(key)
@@ -131,7 +152,9 @@ func (store *Store) Set(key []byte, value []byte) {
 
 	store.setCacheValue(key, value, false, true)
 	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
-	fmt.Printf("[CacheKV-Debug] CacheKV get() on line 134 released lock for store %s\n", store.storeKey.Name())
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] set() released lock for %p store %s\n", &store, store.storeKey.Name())
+	}
 }
 
 // Has implements types.KVStore.
@@ -143,16 +166,16 @@ func (store *Store) Has(key []byte) bool {
 
 // Delete implements types.KVStore.
 func (store *Store) Delete(key []byte) {
-	fmt.Printf("[CacheKV-Debug] CacheKV delete() on line 146 trying to acquire lock for store %s\n", store.storeKey.Name())
+	fmt.Printf("[CacheKV-Debug] delete() on line 146 trying to acquire lock for store %s\n", store.storeKey.Name())
 	store.mtx.Lock()
-	fmt.Printf("[CacheKV-Debug] CacheKV delete() on line 148 successfully acquired lock for store %s\n", store.storeKey.Name())
+	fmt.Printf("[CacheKV-Debug] delete() on line 148 successfully acquired lock for store %s\n", store.storeKey.Name())
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
 
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
 	store.eventManager.EmitResourceAccessReadEvent("delete", store.storeKey, key, []byte{})
-	fmt.Printf("[CacheKV-Debug] CacheKV delete() on line 155 released lock for store %s\n", store.storeKey.Name())
+	fmt.Printf("[CacheKV-Debug] delete() on line 155 released lock for store %s\n", store.storeKey.Name())
 }
 
 // Implements Cachetypes.KVStore.
@@ -236,13 +259,24 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
-	fmt.Printf("[CacheKV-Debug] CacheKV iterator() on line 242 trying to acquire lock for store %s\n", store.storeKey.Name())
-	store.mtx.Lock()
-	fmt.Printf("[CacheKV-Debug] CacheKV iterator() on line 244 successfully acquired lock for store %s\n", store.storeKey.Name())
+	keyName := store.storeKey.Name()
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] iterator() trying to acquire lock for %p store %s\n", &store, store.storeKey.Name())
+	}
+	succeed := store.mtx.TryLock()
+	if !succeed {
+		panic(fmt.Sprintf("%p Store mtx lock in iterator() is already being acquire by another goroutine", &store))
+	}
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] iterator() successfully acquired lock for %p store %s\n", &store, store.storeKey.Name())
+	}
 	defer store.mtx.Unlock()
 
 	var parent, cache types.Iterator
 
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] iterator() for %p store's parent store is  %p\n", &store, &store.parent)
+	}
 	if ascending {
 		parent = store.parent.Iterator(start, end)
 	} else {
@@ -259,8 +293,11 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	}()
 	store.dirtyItems(start, end)
 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
-	fmt.Printf("[CacheKV-Debug] CacheKV iterator() on line 256 released lock for store %s\n", store.storeKey.Name())
+	if keyName != "params" {
+		fmt.Printf("[CacheKV-Debug] iterator() released lock for %p store %s\n", &store, store.storeKey.Name())
+	}
 	return NewCacheMergeIterator(parent, cache, ascending, store.eventManager, store.storeKey)
+
 }
 
 func findStartIndex(strL []string, startQ string) int {

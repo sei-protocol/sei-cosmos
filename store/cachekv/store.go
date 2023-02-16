@@ -127,7 +127,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 			if keyName != "params" {
 				fmt.Printf("[CacheKV-Debug] goroutine %d get() failed acquired lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 
@@ -161,7 +161,7 @@ func (store *Store) Set(key []byte, value []byte) {
 			if keyName != "params" {
 				fmt.Printf("[CacheKV-Debug] goroutine %d set() failed to acquired lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 
@@ -290,7 +290,7 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 			if keyName != "params" {
 				fmt.Printf("[CacheKV-Debug] goroutine %d iterator() failed to acquired lock for %p store %s\n", goroutineId, &store.mtx, store.storeKey.Name())
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 	//if keyName != "params" {

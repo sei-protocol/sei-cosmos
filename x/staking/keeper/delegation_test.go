@@ -136,7 +136,7 @@ func TestSetDelegation(t *testing.T) {
 	require.Equal(t, 0, len(resBonds))
 }
 func TestDelegation(t *testing.T) {
-	_, app, ctx := createTestInput()	
+	_, app, ctx := createTestInput()
 
 	addrDels := simapp.AddTestAddrsIncremental(app, ctx, 3, app.StakingKeeper.TokensFromConsensusPower(ctx, 5100000000000))
 	valAddrs := simapp.ConvertAddrsToValAddrs(addrDels)
@@ -176,6 +176,52 @@ func TestDelegation(t *testing.T) {
 	_, err := app.StakingKeeper.Delegate(ctx, addrDels[1], app.StakingKeeper.TokensFromConsensusPower(ctx, 1), types.Unbonded, validators[0], true)
 	require.Equal(t, types.ErrExceedMaxVotingPowerRatio, err)
 }
+
+func TestCannotDelegatePastLimit(t *testing.T) {
+	_, app, ctx := createTestInput()
+
+	addrDels := simapp.AddTestAddrsIncremental(app, ctx, 3, app.StakingKeeper.TokensFromConsensusPower(ctx, 5100000000000))
+	valAddrs := simapp.ConvertAddrsToValAddrs(addrDels)
+
+	//construct the validators
+	amts := []sdk.Int{sdk.NewInt(0), sdk.NewInt(0), sdk.NewInt(0)}
+	var validators [3]types.Validator
+	for i, amt := range amts {
+		validators[i] = teststaking.NewValidator(t, valAddrs[i], PKs[i])
+		validators[i], _ = validators[i].AddTokensFromDel(amt)
+	}
+
+	validators[0] = keeper.TestingUpdateValidator(app.StakingKeeper, ctx, validators[0], true)
+	validators[1] = keeper.TestingUpdateValidator(app.StakingKeeper, ctx, validators[1], true)
+	validators[2] = keeper.TestingUpdateValidator(app.StakingKeeper, ctx, validators[2], true)
+
+	app.StakingKeeper.SetValidator(ctx, validators[0])
+	app.StakingKeeper.SetValidator(ctx, validators[1])
+	app.StakingKeeper.SetValidator(ctx, validators[2])
+	app.StakingKeeper.SetValidatorByConsAddr(ctx, validators[0])
+	app.StakingKeeper.SetValidatorByConsAddr(ctx, validators[1])
+	app.StakingKeeper.SetValidatorByConsAddr(ctx, validators[2])
+	app.StakingKeeper.SetNewValidatorByPowerIndex(ctx, validators[0])
+	app.StakingKeeper.SetNewValidatorByPowerIndex(ctx, validators[1])
+	app.StakingKeeper.SetNewValidatorByPowerIndex(ctx, validators[2])
+
+	_, _ = app.StakingKeeper.Delegate(ctx, addrDels[0], app.StakingKeeper.TokensFromConsensusPower(ctx, 3500000000000), types.Unbonded, validators[0], true)
+	_, _ = app.StakingKeeper.Delegate(ctx, addrDels[1], app.StakingKeeper.TokensFromConsensusPower(ctx, 3000000000000), types.Unbonded, validators[1], true)
+	_, _ = app.StakingKeeper.Delegate(ctx, addrDels[2], app.StakingKeeper.TokensFromConsensusPower(ctx, 3000000000000), types.Unbonded, validators[2], true)
+	_ = staking.EndBlocker(ctx, app.StakingKeeper)
+
+	allBonds := app.StakingKeeper.GetAllDelegations(ctx)
+	require.Equal(t, 3, len(allBonds))
+
+	// Can't delegate if it will exceed the limit
+	_, err := app.StakingKeeper.Delegate(ctx, addrDels[1], app.StakingKeeper.TokensFromConsensusPower(ctx, 600000000000), types.Unbonded, validators[0], true)
+	require.Equal(t, types.ErrExceedMaxVotingPowerRatio, err)
+
+	// able to delegate if it will not exceed the limit
+	_, err = app.StakingKeeper.Delegate(ctx, addrDels[1], app.StakingKeeper.TokensFromConsensusPower(ctx, 500000000000), types.Unbonded, validators[0], true)
+	require.Nil(t, err)
+}
+
 
 // tests Get/Set/Remove UnbondingDelegation
 func TestUnbondingDelegation(t *testing.T) {

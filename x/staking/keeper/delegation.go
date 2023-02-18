@@ -653,9 +653,8 @@ func (k Keeper) Delegate(
 		// Validator's new total power cannot exceed the max power ratio that's allowed
 		newVotingPowerRatio := validatorNewTotalPower.ToDec().Quo(newTotalPower.ToDec())
 		maxVotingPowerRatio := k.MaxVotingPowerRatio(ctx)
-		k.Logger(ctx).Debug("new total power ratio exceeds the max allowed ratio: %f > %f\n", newVotingPowerRatio, maxVotingPowerRatio)
 		if newVotingPowerRatio.GT(maxVotingPowerRatio) {
-			k.Logger(ctx).Error("validator's voting power ratio exceeds the max allowed ratio: %s > %s\n", newVotingPowerRatio, maxVotingPowerRatio)
+			k.Logger(ctx).Error("validator's voting power ratio exceeds the max allowed ratio: %s > %s\n", newVotingPowerRatio.TruncateInt().ToDec().String(), maxVotingPowerRatio.TruncateInt().ToDec().String())
 			return sdk.ZeroDec(), types.ErrExceedMaxVotingPowerRatio
 		}
 	}

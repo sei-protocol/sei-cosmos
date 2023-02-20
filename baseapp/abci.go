@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"syscall"
@@ -308,6 +309,15 @@ func (app *BaseApp) SetDeliverStateToCommit() {
 // height.
 func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
+	if !app.abciMtx.TryLock() {
+		fmt.Println("Existing call:")
+		fmt.Println(string(app.currentAbciCall))
+		fmt.Println("Current call:")
+		fmt.Println(string(debug.Stack()))
+		panic("ABCI calls are supposed to be mutually exclusive, but concurrent calls are found!")
+	}
+	defer app.abciMtx.Unlock()
+	app.currentAbciCall = debug.Stack()
 
 	if app.stateToCommit == nil {
 		panic("no state to commit")
@@ -944,6 +954,15 @@ func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepar
 
 func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "process_proposal")
+	if !app.abciMtx.TryLock() {
+		fmt.Println("Existing call:")
+		fmt.Println(string(app.currentAbciCall))
+		fmt.Println("Current call:")
+		fmt.Println(string(debug.Stack()))
+		panic("ABCI calls are supposed to be mutually exclusive, but concurrent calls are found!")
+	}
+	defer app.abciMtx.Unlock()
+	app.currentAbciCall = debug.Stack()
 
 	header := tmproto.Header{ChainID: app.ChainID, Height: req.Height, Time: req.Time, ProposerAddress: req.ProposerAddress}
 	if app.processProposalState == nil {
@@ -990,6 +1009,15 @@ func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProces
 
 func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "finalize_block")
+	if !app.abciMtx.TryLock() {
+		fmt.Println("Existing call:")
+		fmt.Println(string(app.currentAbciCall))
+		fmt.Println("Current call:")
+		fmt.Println(string(debug.Stack()))
+		panic("ABCI calls are supposed to be mutually exclusive, but concurrent calls are found!")
+	}
+	defer app.abciMtx.Unlock()
+	app.currentAbciCall = debug.Stack()
 
 	if app.cms.TracingEnabled() {
 		app.cms.SetTracingContext(sdk.TraceContext(

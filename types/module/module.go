@@ -286,7 +286,6 @@ func (m *Manager) SetOrderBeginBlockers(moduleNames ...string) {
 
 // SetOrderMidBlockers sets the order of set mid-blocker calls
 func (m *Manager) SetOrderMidBlockers(moduleNames ...string) {
-	// m.assertNoForgottenModules("SetOrderMidBlockers", moduleNames)
 	m.OrderMidBlockers = moduleNames
 }
 

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sync"
 
@@ -134,6 +135,7 @@ func (ckv *CommitKVStoreCache) Set(key, value []byte) {
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 
+	fmt.Printf("Adding key to cache and store (hexstr): %s, %v\n", hex.EncodeToString(key), value)
 	ckv.cache.Add(string(key), value)
 	ckv.CommitKVStore.Set(key, value)
 }
@@ -144,6 +146,7 @@ func (ckv *CommitKVStoreCache) Delete(key []byte) {
 	ckv.mtx.Lock()
 	defer ckv.mtx.Unlock()
 
+	fmt.Printf("Deleting key from cache and store (hexstr): %s\n", hex.EncodeToString(key))
 	ckv.cache.Remove(string(key))
 	ckv.CommitKVStore.Delete(key)
 }

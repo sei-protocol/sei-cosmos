@@ -1,6 +1,7 @@
 package iavl
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -211,6 +212,7 @@ func (st *Store) Set(key, value []byte) {
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	st.tree.Set(key, value)
+	fmt.Printf("IAVL Store SET key: %s \n", hex.EncodeToString(key))
 }
 
 // Implements types.KVStore.
@@ -220,6 +222,7 @@ func (st *Store) Get(key []byte) []byte {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("IAVL Store GET key: %s \n", hex.EncodeToString(key))
 	return value
 }
 
@@ -230,6 +233,7 @@ func (st *Store) Has(key []byte) (exists bool) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("IAVL Store HAS key: %s \n", hex.EncodeToString(key))
 	return has
 }
 
@@ -237,6 +241,7 @@ func (st *Store) Has(key []byte) (exists bool) {
 func (st *Store) Delete(key []byte) {
 	defer telemetry.MeasureSince(time.Now(), "store", "iavl", "delete")
 	st.tree.Remove(key)
+	fmt.Printf("IAVL Store DEL key: %s \n", hex.EncodeToString(key))
 }
 
 // DeleteVersions deletes a series of versions from the MutableTree. An error

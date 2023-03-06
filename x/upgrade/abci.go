@@ -25,6 +25,9 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 
 	plan, found := k.GetUpgradePlan(ctx)
 
+	fmt.Println("here in the x/upgrade beginBlocker!!!!")
+	fmt.Println("plan is ", plan)
+
 	if !k.DowngradeVerified() {
 		k.SetDowngradeVerified(true)
 		lastAppliedPlan, _ := k.GetLastCompletedUpgrade(ctx)

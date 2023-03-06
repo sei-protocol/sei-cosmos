@@ -469,6 +469,8 @@ func (app *SimApp) ProcessProposalHandler(ctx sdk.Context, req *abci.RequestProc
 }
 
 func (app *SimApp) FinalizeBlocker(ctx sdk.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
+	fmt.Println("in cosmos finalizeBlocker!!!")
+	
 	events := []abci.Event{}
 	beginBlockResp := app.BeginBlock(ctx, abci.RequestBeginBlock{
 		Hash: req.Hash,

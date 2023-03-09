@@ -223,7 +223,9 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	}
 
 	sdkCtx := app.getContextForTx(mode, req.Tx)
-	gInfo, result, _, priority, err := app.runTx(sdkCtx, mode, req.Tx)
+	cachedContext, cache := sdkCtx.CacheContext()
+	gInfo, result, _, priority, err := app.runTx(cachedContext, mode, req.Tx)
+
 	if err != nil {
 		res := sdkerrors.ResponseCheckTx(err, gInfo.GasWanted, gInfo.GasUsed, app.trace)
 		return &res, err
@@ -989,7 +991,6 @@ func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProces
 
 func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "finalize_block")
-
 	if app.cms.TracingEnabled() {
 		app.cms.SetTracingContext(sdk.TraceContext(
 			map[string]interface{}{"blockHeight": req.Height},
@@ -1032,6 +1033,10 @@ func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalize
 			WithBlockGasMeter(gasMeter).
 			WithHeaderHash(req.Hash)
 	}
+
+	// Reset the CacheKv eventManagers for all the underlying KvStores after finalizeBlocker
+	defer app.deliverState.ctx.MultiStore().ResetEvents()
+	defer app.checkState.ctx.MultiStore().ResetEvents()
 
 	if app.finalizeBlocker != nil {
 		res, err := app.finalizeBlocker(app.deliverState.ctx, req)

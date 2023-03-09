@@ -820,7 +820,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			return gInfo, nil, nil, 0, err
 		}
 
-		// Dont need to validate for checkTx
+		// Dont need to validate in checkTx mode
 		if ctx.MsgValidator() != nil && mode == runTxModeDeliver {
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps, _ := app.anteDepGenerator([]acltypes.AccessOperation{}, tx)

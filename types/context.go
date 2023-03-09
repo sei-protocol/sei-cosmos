@@ -26,7 +26,7 @@ and standard additions here would be better just to add to the Context struct
 */
 type Context struct {
 	ctx           context.Context
-	mtx           sync.RWMutex
+	mtx           *sync.RWMutex
 	ms            MultiStore
 	header        tmproto.Header
 	headerHash    tmbytes.HexBytes
@@ -220,7 +220,7 @@ func NewContext(ms MultiStore, header tmproto.Header, isCheckTx bool, logger log
 	header.Time = header.Time.UTC()
 	return Context{
 		ctx:             context.Background(),
-		mtx:             sync.RWMutex{},
+		mtx:             &sync.RWMutex{},
 		ms:              ms,
 		header:          header,
 		chainID:         header.ChainID,
@@ -295,8 +295,6 @@ func (c Context) WithProposer(addr ConsAddress) Context {
 
 // WithBlockHeight returns a Context with an updated block height.
 func (c Context) WithBlockHeight(height int64) Context {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
 	newHeader := c.BlockHeader()
 	newHeader.Height = height
 	return c.WithBlockHeader(newHeader)

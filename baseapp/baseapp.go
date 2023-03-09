@@ -784,6 +784,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			anteCtx sdk.Context
 			msCache sdk.CacheMultiStore
 		)
+		defer msCache.ResetEvents()
 
 		// Branch context before AnteHandler call in case it aborts.
 		// This is required for both CheckTx and DeliverTx.
@@ -819,7 +820,8 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			return gInfo, nil, nil, 0, err
 		}
 
-		if ctx.MsgValidator() != nil {
+		// Dont need to validate for checkTx
+		if ctx.MsgValidator() != nil && mode == runTxModeDeliver {
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps, _ := app.anteDepGenerator([]acltypes.AccessOperation{}, tx)
 
@@ -896,6 +898,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		msgCtx, msgMsCache := app.cacheTxContext(ctx, []byte{})
 		msgCtx = msgCtx.WithMessageIndex(i)
+		defer msgMsCache.ResetEvents()
 
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
 			// ADR 031 request type routing

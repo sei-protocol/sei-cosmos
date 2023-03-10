@@ -276,8 +276,6 @@ func (c Context) WithHeaderHash(hash []byte) Context {
 
 // WithBlockTime returns a Context with an updated tendermint block header time in UTC time
 func (c Context) WithBlockTime(newTime time.Time) Context {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
 	newHeader := c.BlockHeader()
 	// https://github.com/gogo/protobuf/issues/519
 	newHeader.Time = newTime.UTC()
@@ -286,8 +284,6 @@ func (c Context) WithBlockTime(newTime time.Time) Context {
 
 // WithProposer returns a Context with an updated proposer consensus address.
 func (c Context) WithProposer(addr ConsAddress) Context {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
 	newHeader := c.BlockHeader()
 	newHeader.ProposerAddress = addr.Bytes()
 	return c.WithBlockHeader(newHeader)
@@ -441,8 +437,6 @@ func (c Context) WithContextMemCache(contextMemCache *ContextMemCache) Context {
 
 // TODO: remove???
 func (c Context) IsZero() bool {
-	c.mtx.RLock()
-	defer c.mtx.RUnlock()
 	return c.ms == nil
 }
 

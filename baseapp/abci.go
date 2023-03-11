@@ -676,10 +676,11 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 	}
 
 	app.abciMtx.RLock()
-	defer app.abciMtx.RUnlock()
+	checkStateCtx := app.checkState.ctx
+	app.abciMtx.RUnlock()
 	// branch the commit-multistore for safety
 	ctx := sdk.NewContext(
-		cacheMS, app.checkState.ctx.BlockHeader(), true, app.logger,
+		cacheMS, checkStateCtx.BlockHeader(), true, app.logger,
 	).WithMinGasPrices(app.minGasPrices).WithBlockHeight(height)
 
 	return ctx, nil

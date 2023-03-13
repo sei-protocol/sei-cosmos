@@ -14,7 +14,7 @@ func (app *BaseApp) Check(txEncoder sdk.TxEncoder, tx sdk.Tx) (sdk.GasInfo, *sdk
 	if err != nil {
 		return sdk.GasInfo{}, nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "%s", err)
 	}
-	ctx := app.checkState.ctx.WithTxBytes(bz).WithVoteInfos(app.voteInfos).WithConsensusParams(app.GetConsensusParams(app.checkState.ctx))
+	ctx := app.getCheckState().ctx.WithTxBytes(bz).WithVoteInfos(app.voteInfos).WithConsensusParams(app.GetConsensusParams(app.getCheckState().ctx))
 	gasInfo, result, _, _, err := app.runTx(ctx, runTxModeCheck, bz)
 	if len(ctx.MultiStore().GetEvents()) > 0 {
 		panic("Expected checkTx events to be empty")
@@ -23,7 +23,7 @@ func (app *BaseApp) Check(txEncoder sdk.TxEncoder, tx sdk.Tx) (sdk.GasInfo, *sdk
 }
 
 func (app *BaseApp) Simulate(txBytes []byte) (sdk.GasInfo, *sdk.Result, error) {
-	ctx := app.checkState.ctx.WithTxBytes(txBytes).WithVoteInfos(app.voteInfos).WithConsensusParams(app.GetConsensusParams(app.checkState.ctx))
+	ctx := app.getCheckState().ctx.WithTxBytes(txBytes).WithVoteInfos(app.voteInfos).WithConsensusParams(app.GetConsensusParams(app.getCheckState().ctx))
 	ctx, _ = ctx.CacheContext()
 	gasInfo, result, _, _, err := app.runTx(ctx, runTxModeSimulate, txBytes)
 	if len(ctx.MultiStore().GetEvents()) > 0 {
@@ -46,7 +46,7 @@ func (app *BaseApp) Deliver(txEncoder sdk.TxEncoder, tx sdk.Tx) (sdk.GasInfo, *s
 // Context with current {check, deliver}State of the app used by tests.
 func (app *BaseApp) NewContext(isCheckTx bool, header tmproto.Header) sdk.Context {
 	if isCheckTx {
-		return sdk.NewContext(app.checkState.ms, header, true, app.logger).
+		return sdk.NewContext(app.getCheckState().ms, header, true, app.logger).
 			WithMinGasPrices(app.minGasPrices)
 	}
 

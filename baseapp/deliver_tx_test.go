@@ -1108,7 +1108,7 @@ func TestInitChainer(t *testing.T) {
 	chainID := app.deliverState.ctx.ChainID()
 	require.Equal(t, "test-chain-id", chainID, "ChainID in deliverState not set correctly in InitChain")
 
-	chainID = app.checkState.ctx.ChainID()
+	chainID = app.getCheckState().ctx.ChainID()
 	require.Equal(t, "test-chain-id", chainID, "ChainID in checkState not set correctly in InitChain")
 
 	app.Commit(context.Background())
@@ -1456,7 +1456,7 @@ func TestCheckTx(t *testing.T) {
 		require.True(t, r.IsOK(), fmt.Sprintf("%v", r))
 	}
 
-	checkStateStore := app.checkState.ctx.KVStore(capKey1)
+	checkStateStore := app.getCheckState().ctx.KVStore(capKey1)
 	storedCounter := getIntFromStore(checkStateStore, counterKey)
 
 	// Ensure AnteHandler ran
@@ -1465,12 +1465,12 @@ func TestCheckTx(t *testing.T) {
 	// If a block is committed, CheckTx state should be reset.
 	header := tmproto.Header{Height: 1}
 	app.setDeliverState(header)
-	app.checkState.ctx = app.checkState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter()).WithHeaderHash([]byte("hash"))
+	app.getCheckState().ctx = app.getCheckState().ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter()).WithHeaderHash([]byte("hash"))
 	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 	app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header, Hash: []byte("hash")})
 
-	require.NotNil(t, app.checkState.ctx.BlockGasMeter(), "block gas meter should have been set to checkState")
-	require.NotEmpty(t, app.checkState.ctx.HeaderHash())
+	require.NotNil(t, app.getCheckState().ctx.BlockGasMeter(), "block gas meter should have been set to checkState")
+	require.NotEmpty(t, app.getCheckState().ctx.HeaderHash())
 
 	app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
 	require.Empty(t, app.deliverState.ctx.MultiStore().GetEvents())
@@ -1478,7 +1478,7 @@ func TestCheckTx(t *testing.T) {
 	app.SetDeliverStateToCommit()
 	app.Commit(context.Background())
 
-	checkStateStore = app.checkState.ctx.KVStore(capKey1)
+	checkStateStore = app.getCheckState().ctx.KVStore(capKey1)
 	storedBytes := checkStateStore.Get(counterKey)
 	require.Nil(t, storedBytes)
 }

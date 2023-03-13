@@ -96,6 +96,8 @@ type BaseApp struct { //nolint: maligned
 	processProposalState *state
 	stateToCommit        *state
 
+	stateMtx *sync.Mutex
+
 	// paramStore is used to query for ABCI consensus parameters from an
 	// application parameter store.
 	paramStore ParamStore
@@ -229,6 +231,7 @@ func NewBaseApp(
 			msgServiceRouter: NewMsgServiceRouter(),
 		},
 		txDecoder: txDecoder,
+		stateMtx:  &sync.Mutex{},
 	}
 
 	for _, option := range options {
@@ -468,12 +471,22 @@ func (app *BaseApp) IsSealed() bool { return app.sealed }
 // provided header, and minimum gas prices set. It is set on InitChain and reset
 // on Commit.
 func (app *BaseApp) setCheckState(header tmproto.Header) {
+	// QueryContext depends on the checkState, lock to prevent improper reads
+	app.stateMtx.Lock()
+	defer app.stateMtx.Unlock()
+
 	ms := app.cms.CacheMultiStore()
 	app.checkState = &state{
 		ms:  ms,
 		ctx: sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices),
 		mtx: &sync.RWMutex{},
 	}
+}
+
+func (app *BaseApp) getCheckState() *state {
+	app.stateMtx.Lock()
+	defer app.stateMtx.Unlock()
+	return app.checkState
 }
 
 // setDeliverState sets the BaseApp's deliverState with a branched multi-store

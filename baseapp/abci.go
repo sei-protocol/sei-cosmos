@@ -680,7 +680,7 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 
 	// branch the commit-multistore for safety
 	ctx := sdk.NewContext(
-		cacheMS, app.checkState.ctx.BlockHeader(), true, app.logger,
+		cacheMS, app.getCheckState().ctx.BlockHeader(), true, app.logger,
 	).WithMinGasPrices(app.minGasPrices).WithBlockHeight(height)
 
 	return ctx, nil
@@ -1030,8 +1030,10 @@ func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalize
 
 	// we also set block gas meter to checkState in case the application needs to
 	// verify gas consumption during (Re)CheckTx
-	if app.checkState != nil {
-		app.checkState.SetContext(app.checkState.ctx.WithBlockGasMeter(gasMeter).WithHeaderHash(req.Hash))
+	checkState := app.getCheckState()
+	if checkState != nil {
+		contextWithGasMeter := checkState.ctx.WithBlockGasMeter(gasMeter).WithHeaderHash(req.Hash)
+		app.getCheckState().SetContext(contextWithGasMeter)
 	}
 
 	if app.finalizeBlocker != nil {

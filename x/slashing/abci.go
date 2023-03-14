@@ -79,5 +79,12 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 	}
 	endTime := time.Now().UnixMicro()
 	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slashing BeginBlocker took: %d, read part: %d, write part: %d", endTime-startTime, endReadTime-startTime, endTime-endReadTime))
-
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Read part TotalGetPubKeyLatency: %d, TotalGetSignInfoLatency: %d, TotalSignedBlockWindowLatency: %d, TotalBlockBitArrayLatency: %d, TotalMinSignedPerWindowLatency: %d, TotalValidatorByConsAddrLatency: %d",
+		keeper.TotalGetPubKeyLatency.Load(), keeper.TotalGetSignInfoLatency.Load(), keeper.TotalSignedBlockWindowLatency.Load(), keeper.TotalBlockBitArrayLatency.Load(), keeper.TotalMinSignedPerWindowLatency.Load(), keeper.TotalValidatorByConsAddrLatency.Load()))
+	keeper.TotalGetPubKeyLatency.Store(0)
+	keeper.TotalGetSignInfoLatency.Store(0)
+	keeper.TotalSignedBlockWindowLatency.Store(0)
+	keeper.TotalBlockBitArrayLatency.Store(0)
+	keeper.TotalMinSignedPerWindowLatency.Store(0)
+	keeper.TotalValidatorByConsAddrLatency.Store(0)
 }

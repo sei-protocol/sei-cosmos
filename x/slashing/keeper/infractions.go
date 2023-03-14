@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"fmt"
+	"sync/atomic"
+	"time"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -133,6 +135,13 @@ func (k Keeper) HandleValidatorSignature(ctx sdk.Context, addr cryptotypes.Addre
 	k.SetValidatorSigningInfo(ctx, consAddr, signInfo)
 }
 
+var TotalGetPubKeyLatency = atomic.Int64{}
+var TotalGetSignInfoLatency = atomic.Int64{}
+var TotalSignedBlockWindowLatency = atomic.Int64{}
+var TotalBlockBitArrayLatency = atomic.Int64{}
+var TotalMinSignedPerWindowLatency = atomic.Int64{}
+var TotalValidatorByConsAddrLatency = atomic.Int64{}
+
 // This performs similar logic to the above HandleValidatorSignature, but only performs READs such that it can be performed in parallel for all validators.
 // Instead of updating appropriate validator bit arrays / signing infos, this will return the pending values to be written in a consistent order
 func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptotypes.Address, power int64, signed bool) (consAddr sdk.ConsAddress, index int64, previous bool, missed bool, signInfo types.ValidatorSigningInfo, shouldSlash bool, slashInfo SlashInfo) {
@@ -140,26 +149,38 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 	height := ctx.BlockHeight()
 
 	// fetch the validator public key
+	startTime := time.Now().UnixMicro()
 	consAddr = sdk.ConsAddress(addr)
 	if _, err := k.GetPubkey(ctx, addr); err != nil {
 		panic(fmt.Sprintf("Validator consensus-address %s not found", consAddr))
 	}
+	endTime := time.Now().UnixMicro()
+	TotalGetPubKeyLatency.Add(endTime - startTime)
 
 	// fetch signing info
+	startTime = time.Now().UnixMicro()
 	signInfo, found := k.GetValidatorSigningInfo(ctx, consAddr)
 	if !found {
 		panic(fmt.Sprintf("Expected signing info for validator %s but not found", consAddr))
 	}
+	endTime = time.Now().UnixMicro()
+	TotalGetSignInfoLatency.Add(endTime - startTime)
 
 	// this is a relative index, so it counts blocks the validator *should* have signed
 	// will use the 0-value default signing info if not present, except for start height
+	startTime = time.Now().UnixMicro()
 	index = signInfo.IndexOffset % k.SignedBlocksWindow(ctx)
+	endTime = time.Now().UnixMicro()
+	TotalSignedBlockWindowLatency.Add(endTime - startTime)
 	signInfo.IndexOffset++
 
 	// Update signed block bit array & counter
 	// This counter just tracks the sum of the bit array
 	// That way we avoid needing to read/write the whole array each time
+	startTime = time.Now().UnixMicro()
 	previous = k.GetValidatorMissedBlockBitArray(ctx, consAddr, index)
+	endTime = time.Now().UnixMicro()
+	TotalBlockBitArrayLatency.Add(endTime - startTime)
 	missed = !signed
 	switch {
 	case !previous && missed:
@@ -171,8 +192,10 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 	default:
 		// Array value at this index has not changed, no need to update counter
 	}
-
+	startTime = time.Now().UnixMicro()
 	minSignedPerWindow := k.MinSignedPerWindow(ctx)
+	endTime = time.Now().UnixMicro()
+	TotalMinSignedPerWindowLatency.Add(endTime - startTime)
 
 	if missed {
 		ctx.EventManager().EmitEvent(
@@ -193,12 +216,20 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 		)
 	}
 
+	startTime = time.Now().UnixMicro()
 	minHeight := signInfo.StartHeight + k.SignedBlocksWindow(ctx)
 	maxMissed := k.SignedBlocksWindow(ctx) - minSignedPerWindow
+	endTime = time.Now().UnixMicro()
+	TotalSignedBlockWindowLatency.Add(endTime - startTime)
+
 	shouldSlash = false
 	// if we are past the minimum height and the validator has missed too many blocks, punish them
 	if height > minHeight && signInfo.MissedBlocksCounter > maxMissed {
+		startTime = time.Now().UnixMicro()
 		validator := k.sk.ValidatorByConsAddr(ctx, consAddr)
+		endTime = time.Now().UnixMicro()
+		TotalValidatorByConsAddrLatency.Add(endTime - startTime)
+
 		if validator != nil && !validator.IsJailed() {
 			// Downtime confirmed: slash and jail the validator
 			// We need to retrieve the stake distribution which signed the block, so we subtract ValidatorUpdateDelay from the evidence height,

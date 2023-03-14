@@ -107,16 +107,19 @@ func (store *Store) GetStoreType() types.StoreType {
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
 	store.mtx.RLock()
-	defer store.mtx.RUnlock()
 
 	types.AssertValidKey(key)
 
 	cacheValue, ok := store.cache.Get(conv.UnsafeBytesToStr(key))
 	if !ok {
+		store.mtx.RUnlock()
+		store.mtx.Lock()
 		value = store.parent.Get(key)
 		store.setCacheValue(key, value, false, false)
+		store.mtx.Unlock()
 	} else {
 		value = cacheValue.Value()
+		store.mtx.RUnlock()
 	}
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 
@@ -234,8 +237,8 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	store.mtx.RLock()
+	defer store.mtx.RUnlock()
 
 	var parent, cache types.Iterator
 

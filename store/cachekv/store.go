@@ -239,8 +239,8 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
-	store.mtx.RLock()
-	defer store.mtx.RUnlock()
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
 
 	var parent, cache types.Iterator
 

@@ -675,9 +675,7 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	// app.abciMtx.RLock()
-	checkStateCtx := app.checkState.ctx
-	// app.abciMtx.RUnlock()
+	checkStateCtx := app.checkState.Context()
 	// branch the commit-multistore for safety
 	ctx := sdk.NewContext(
 		cacheMS, checkStateCtx.BlockHeader(), true, app.logger,

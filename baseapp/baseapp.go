@@ -144,7 +144,7 @@ type BaseApp struct { //nolint: maligned
 
 	ChainID string
 
-	abciMtx sync.RWMutex
+	votesInfoLock sync.RWMutex
 }
 
 type appStore struct {
@@ -470,14 +470,18 @@ func (app *BaseApp) IsSealed() bool { return app.sealed }
 // provided header, and minimum gas prices set. It is set on InitChain and reset
 // on Commit.
 func (app *BaseApp) setCheckState(header tmproto.Header) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
 	ms := app.cms.CacheMultiStore()
-	app.checkState = &state{
-		ms:  ms,
-		ctx: sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices),
-		mtx: &sync.RWMutex{},
+	ctx := sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices)
+	if app.checkState == nil {
+		app.checkState = &state{
+			ms:  ms,
+			ctx: ctx,
+			mtx: &sync.RWMutex{},
+		}
+		return
 	}
+	app.checkState.SetMultiStore(ms)
+	app.checkState.SetContext(ctx)
 }
 
 // setDeliverState sets the BaseApp's deliverState with a branched multi-store
@@ -485,42 +489,51 @@ func (app *BaseApp) setCheckState(header tmproto.Header) {
 // and provided header. It is set on InitChain and BeginBlock and set to nil on
 // Commit.
 func (app *BaseApp) setDeliverState(header tmproto.Header) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
 	ms := app.cms.CacheMultiStore()
-	app.deliverState = &state{
-		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger),
-		mtx: &sync.RWMutex{},
+	ctx := sdk.NewContext(ms, header, false, app.logger)
+	if app.deliverState == nil {
+		app.deliverState = &state{
+			ms:  ms,
+			ctx: ctx,
+			mtx: &sync.RWMutex{},
+		}
+		return
 	}
+	app.deliverState.SetMultiStore(ms)
+	app.deliverState.SetContext(ctx)
 }
 
 func (app *BaseApp) setPrepareProposalState(header tmproto.Header) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
 	ms := app.cms.CacheMultiStore()
-	app.prepareProposalState = &state{
-		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger),
-		mtx: &sync.RWMutex{},
+	ctx := sdk.NewContext(ms, header, false, app.logger)
+	if app.prepareProposalState == nil {
+		app.prepareProposalState = &state{
+			ms:  ms,
+			ctx: ctx,
+			mtx: &sync.RWMutex{},
+		}
+		return
 	}
+	app.prepareProposalState.SetMultiStore(ms)
+	app.prepareProposalState.SetContext(ctx)
 }
 
 func (app *BaseApp) setProcessProposalState(header tmproto.Header) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
 	ms := app.cms.CacheMultiStore()
-	app.processProposalState = &state{
-		ms:  ms,
-		ctx: sdk.NewContext(ms, header, false, app.logger),
-		mtx: &sync.RWMutex{},
+	ctx := sdk.NewContext(ms, header, false, app.logger)
+	if app.processProposalState == nil {
+		app.processProposalState = &state{
+			ms:  ms,
+			ctx: ctx,
+			mtx: &sync.RWMutex{},
+		}
+		return
 	}
+	app.processProposalState.SetMultiStore(ms)
+	app.processProposalState.SetContext(ctx)
 }
 
 func (app *BaseApp) resetStatesExceptCheckState() {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
-
 	app.prepareProposalState = nil
 	app.processProposalState = nil
 	app.deliverState = nil
@@ -528,63 +541,43 @@ func (app *BaseApp) resetStatesExceptCheckState() {
 }
 
 func (app *BaseApp) setPrepareProposalHeader(header tmproto.Header) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
-	app.prepareProposalState.ctx = app.prepareProposalState.ctx.
-		WithBlockHeader(header)
+	app.prepareProposalState.SetContext(app.prepareProposalState.Context().WithBlockHeader(header))
 }
 
 func (app *BaseApp) setProcessProposalHeader(header tmproto.Header) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
-	app.processProposalState.ctx = app.processProposalState.ctx.
-		WithBlockHeader(header)
+	app.processProposalState.SetContext(app.processProposalState.Context().WithBlockHeader(header))
 }
 
 func (app *BaseApp) setDeliverStateHeader(header tmproto.Header) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
-	app.deliverState.ctx = app.deliverState.ctx.
-		WithBlockHeader(header).
-		WithBlockHeight(header.Height)
+	app.deliverState.SetContext(app.deliverState.Context().WithBlockHeader(header).WithBlockHeight(header.Height))
 }
 
 func (app *BaseApp) preparePrepareProposalState() {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
-
-	if app.prepareProposalState.ms.TracingEnabled() {
-		app.prepareProposalState.ms = app.prepareProposalState.ms.SetTracingContext(nil).(sdk.CacheMultiStore)
+	if app.prepareProposalState.MultiStore().TracingEnabled() {
+		app.prepareProposalState.SetMultiStore(app.prepareProposalState.MultiStore().SetTracingContext(nil).(sdk.CacheMultiStore))
 	}
 }
 
 func (app *BaseApp) prepareProcessProposalState(gasMeter sdk.GasMeter, headerHash []byte) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
-
-	app.processProposalState.ctx = app.processProposalState.ctx.
-		WithBlockGasMeter(gasMeter).
+	app.processProposalState.SetContext(app.processProposalState.Context().WithBlockGasMeter(gasMeter).
 		WithHeaderHash(headerHash).
-		WithConsensusParams(app.GetConsensusParams(app.processProposalState.ctx))
+		WithConsensusParams(app.GetConsensusParams(app.processProposalState.Context())))
 
-	if app.processProposalState.ms.TracingEnabled() {
-		app.processProposalState.ms = app.processProposalState.ms.SetTracingContext(nil).(sdk.CacheMultiStore)
+	if app.processProposalState.MultiStore().TracingEnabled() {
+		app.processProposalState.SetMultiStore(app.processProposalState.MultiStore().SetTracingContext(nil).(sdk.CacheMultiStore))
 	}
 }
 
 func (app *BaseApp) prepareDeliverState(gasMeter sdk.GasMeter, headerHash []byte) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
-
-	app.deliverState.ctx = app.deliverState.ctx.
+	app.deliverState.SetContext(app.deliverState.Context().
 		WithBlockGasMeter(gasMeter).
 		WithHeaderHash(headerHash).
-		WithConsensusParams(app.GetConsensusParams(app.deliverState.ctx))
+		WithConsensusParams(app.GetConsensusParams(app.deliverState.Context())))
 }
 
 func (app *BaseApp) setVotesInfo(votes []abci.VoteInfo) {
-	app.abciMtx.Lock()
-	defer app.abciMtx.Unlock()
+	app.votesInfoLock.Lock()
+	defer app.votesInfoLock.Unlock()
 
 	app.voteInfos = votes
 }
@@ -745,8 +738,6 @@ func validateBasicTxMsgs(msgs []sdk.Msg) error {
 // Returns the applications's deliverState if app is in runTxModeDeliver,
 // otherwise it returns the application's checkstate.
 func (app *BaseApp) getState(mode runTxMode) *state {
-	app.abciMtx.RLock()
-	defer app.abciMtx.RUnlock()
 	if mode == runTxModeDeliver {
 		return app.deliverState
 	}
@@ -756,9 +747,9 @@ func (app *BaseApp) getState(mode runTxMode) *state {
 
 // retrieve the context for the tx w/ txBytes and other memoized values.
 func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context {
-	app.abciMtx.RLock()
-	defer app.abciMtx.RUnlock()
-	ctx := app.getState(mode).ctx.
+	app.votesInfoLock.RLock()
+	defer app.votesInfoLock.RUnlock()
+	ctx := app.getState(mode).Context().
 		WithTxBytes(txBytes).
 		WithVoteInfos(app.voteInfos)
 

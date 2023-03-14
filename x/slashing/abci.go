@@ -1,6 +1,7 @@
 package slashing
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -25,8 +26,8 @@ type SlashingWriteInfo struct {
 // on every begin block
 func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
-
-	var wg sync.WaitGroup
+	startTime := time.Now().UnixMicro()
+	var wg = sync.WaitGroup{}
 	// Iterate over all the validators which *should* have signed this block
 	// store whether or not they have actually signed it and slash/unbond any
 	// which have missed too many blocks in a row (downtime slashing)
@@ -53,6 +54,8 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 	}
 	wg.Wait()
 
+	endReadTime := time.Now().UnixMicro()
+
 	for _, writeInfo := range slashingWriteInfo {
 		if writeInfo == nil {
 			panic("Expected slashing write info to be non-nil")
@@ -74,4 +77,7 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 		}
 		k.SetValidatorSigningInfo(ctx, writeInfo.ConsAddr, writeInfo.SigningInfo)
 	}
+	endTime := time.Now().UnixMicro()
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slashing BeginBlocker took: %d, read part: %d, write part: %d", endTime-startTime, endReadTime-startTime, endTime-endReadTime))
+
 }

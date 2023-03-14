@@ -56,7 +56,7 @@ func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
 type Store struct {
-	mtx           sync.Mutex
+	mtx           sync.RWMutex
 	cache         *types.BoundedCache
 	deleted       *sync.Map
 	unsortedCache map[string]struct{}
@@ -106,8 +106,8 @@ func (store *Store) GetStoreType() types.StoreType {
 
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	store.mtx.RLock()
+	defer store.mtx.RUnlock()
 
 	types.AssertValidKey(key)
 

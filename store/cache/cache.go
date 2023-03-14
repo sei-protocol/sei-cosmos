@@ -33,7 +33,7 @@ type (
 
 		// the same CommitKVStoreCache may be accessed concurrently by multiple
 		// goroutines due to transaction parallelization
-		mtx sync.Mutex
+		mtx sync.RWMutex
 	}
 
 	// CommitKVStoreCacheManager maintains a mapping from a StoreKey to a
@@ -106,8 +106,7 @@ func (ckv *CommitKVStoreCache) CacheWrap(storeKey types.StoreKey) types.CacheWra
 // If the value doesn't exist in the write-through cache, the query is delegated
 // to the underlying CommitKVStore.
 func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
-	ckv.mtx.Lock()
-	defer ckv.mtx.Unlock()
+	ckv.mtx.RLock()
 
 	types.AssertValidKey(key)
 
@@ -115,13 +114,16 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 	value, ok := ckv.cache.Get(keyStr)
 	if ok {
 		// cache hit
+		ckv.mtx.RUnlock()
 		return value
 	}
 
+	ckv.mtx.Lock()
 	// cache miss; write to cache
 	value = ckv.CommitKVStore.Get(key)
 	ckv.cache.Add(keyStr, value)
 
+	ckv.mtx.Unlock()
 	return value
 }
 

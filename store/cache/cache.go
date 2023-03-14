@@ -112,9 +112,9 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 
 	keyStr := string(key)
 	value, ok := ckv.cache.Get(keyStr)
+	ckv.mtx.RUnlock()
 	if ok {
 		// cache hit
-		ckv.mtx.RUnlock()
 		return value
 	}
 

@@ -57,8 +57,8 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 	}
 	wg.Wait()
 	endWaitGroupTime := time.Now().UnixMicro()
-	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] BeginBlocker WaitGroup total latency: %d, per goroutine latency: %v", endWaitGroupTime-startTime, latencyInfo))
-	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] HandleValidatorSignatureConcurrent TotalGetPubkey latency: %d, TotalGetValidatorSigningInfo latency: %d, TotalSignedBlocksWindow latency: %d, TotalGetValidatorMissedBlockBitArray latency: %d, TotalMinSignedPerWindow latency: %d, TotalCheckPunish latency: %d",
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slahsing WaitGroup total latency: %d, per goroutine latency: %v", endWaitGroupTime-startTime, latencyInfo))
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slashing Breakdown TotalGetPubkey latency: %d, TotalGetValidatorSigningInfo latency: %d, TotalSignedBlocksWindow latency: %d, TotalGetValidatorMissedBlockBitArray latency: %d, TotalMinSignedPerWindow latency: %d, TotalCheckPunish latency: %d",
 		keeper.TotalGetPubkey.Load(), keeper.TotalGetValidatorSigningInfo.Load(), keeper.TotalSignedBlocksWindow.Load(), keeper.TotalGetValidatorMissedBlockBitArray.Load(), keeper.TotalMinSignedPerWindow.Load(), keeper.TotalCheckPunish.Load()))
 
 	keeper.TotalGetPubkey.Store(0)
@@ -91,5 +91,5 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 	}
 
 	endTime := time.Now().UnixMicro()
-	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] BeginBlocker total latency: %d, WaitGroup latency: %d, SlashWriteInfo latency: %d", endTime-startTime, endWaitGroupTime-startTime, endTime-endWaitGroupTime))
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slashing total latency: %d", endTime-startTime))
 }

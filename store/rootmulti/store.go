@@ -67,8 +67,6 @@ type Store struct {
 	interBlockCache types.MultiStorePersistentCache
 
 	listeners map[types.StoreKey][]types.WriteListener
-
-	storeMtx *sync.RWMutex
 }
 
 var (
@@ -105,7 +103,6 @@ func NewStore(db dbm.DB, logger log.Logger) *Store {
 		keysByName:          make(map[string]types.StoreKey),
 		pruneHeights:        make([]int64, 0),
 		listeners:           make(map[types.StoreKey][]types.WriteListener),
-		storeMtx: 			 &sync.RWMutex{},
 	}
 }
 

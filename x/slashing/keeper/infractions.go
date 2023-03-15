@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"fmt"
+	"sync/atomic"
+	"time"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -133,6 +135,13 @@ func (k Keeper) HandleValidatorSignature(ctx sdk.Context, addr cryptotypes.Addre
 	k.SetValidatorSigningInfo(ctx, consAddr, signInfo)
 }
 
+var TotalGetPubkey = atomic.Int64{}
+var TotalGetValidatorSigningInfo = atomic.Int64{}
+var TotalSignedBlocksWindow = atomic.Int64{}
+var TotalGetValidatorMissedBlockBitArray = atomic.Int64{}
+var TotalMinSignedPerWindow = atomic.Int64{}
+var TotalCheckPunish = atomic.Int64{}
+
 // This performs similar logic to the above HandleValidatorSignature, but only performs READs such that it can be performed in parallel for all validators.
 // Instead of updating appropriate validator bit arrays / signing infos, this will return the pending values to be written in a consistent order
 func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptotypes.Address, power int64, signed bool) (consAddr sdk.ConsAddress, index int64, previous bool, missed bool, signInfo types.ValidatorSigningInfo, shouldSlash bool, slashInfo SlashInfo) {
@@ -141,25 +150,35 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 
 	// fetch the validator public key
 	consAddr = sdk.ConsAddress(addr)
+	startTime := time.Now().UnixMicro()
 	if _, err := k.GetPubkey(ctx, addr); err != nil {
 		panic(fmt.Sprintf("Validator consensus-address %s not found", consAddr))
 	}
+	TotalGetPubkey.Add(time.Now().UnixMicro() - startTime)
 
 	// fetch signing info
+	startTime = time.Now().UnixMicro()
 	signInfo, found := k.GetValidatorSigningInfo(ctx, consAddr)
 	if !found {
 		panic(fmt.Sprintf("Expected signing info for validator %s but not found", consAddr))
 	}
+	TotalGetValidatorSigningInfo.Add(time.Now().UnixMicro() - startTime)
 
 	// this is a relative index, so it counts blocks the validator *should* have signed
 	// will use the 0-value default signing info if not present, except for start height
+	startTime = time.Now().UnixMicro()
 	index = signInfo.IndexOffset % k.SignedBlocksWindow(ctx)
+	TotalSignedBlocksWindow.Add(time.Now().UnixMicro() - startTime)
+
 	signInfo.IndexOffset++
 
 	// Update signed block bit array & counter
 	// This counter just tracks the sum of the bit array
 	// That way we avoid needing to read/write the whole array each time
+	startTime = time.Now().UnixMicro()
 	previous = k.GetValidatorMissedBlockBitArray(ctx, consAddr, index)
+	TotalGetValidatorMissedBlockBitArray.Add(time.Now().UnixMicro() - startTime)
+
 	missed = !signed
 	switch {
 	case !previous && missed:
@@ -172,7 +191,9 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 		// Array value at this index has not changed, no need to update counter
 	}
 
+	startTime = time.Now().UnixMicro()
 	minSignedPerWindow := k.MinSignedPerWindow(ctx)
+	TotalMinSignedPerWindow.Add(time.Now().UnixMicro() - startTime)
 
 	if missed {
 		ctx.EventManager().EmitEvent(
@@ -192,11 +213,15 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 			"threshold", minSignedPerWindow,
 		)
 	}
-
+	startTime = time.Now().UnixMicro()
 	minHeight := signInfo.StartHeight + k.SignedBlocksWindow(ctx)
 	maxMissed := k.SignedBlocksWindow(ctx) - minSignedPerWindow
+	TotalSignedBlocksWindow.Add(time.Now().UnixMicro() - startTime)
+
 	shouldSlash = false
 	// if we are past the minimum height and the validator has missed too many blocks, punish them
+
+	startTime = time.Now().UnixMicro()
 	if height > minHeight && signInfo.MissedBlocksCounter > maxMissed {
 		validator := k.sk.ValidatorByConsAddr(ctx, consAddr)
 		if validator != nil && !validator.IsJailed() {
@@ -224,6 +249,7 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 			)
 		}
 	}
+	TotalCheckPunish.Add(time.Now().UnixMicro() - startTime)
 	return
 }
 

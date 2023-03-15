@@ -1,6 +1,7 @@
 package slashing
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -25,7 +26,7 @@ type SlashingWriteInfo struct {
 // on every begin block
 func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
-
+	startTime := time.Now().UnixMicro()
 	var wg sync.WaitGroup
 	// Iterate over all the validators which *should* have signed this block
 	// store whether or not they have actually signed it and slash/unbond any
@@ -33,11 +34,13 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 
 	// this allows us to preserve the original ordering for writing purposes
 	slashingWriteInfo := make([]*SlashingWriteInfo, len(req.LastCommitInfo.GetVotes()))
+	latencyInfo := make([]int64, len(req.LastCommitInfo.GetVotes()))
 
 	for i, voteInfo := range req.LastCommitInfo.GetVotes() {
 		wg.Add(1)
 		go func(valIndex int, vInfo abci.VoteInfo) {
 			defer wg.Done()
+			startTime = time.Now().UnixMicro()
 			consAddr, index, previous, missed, signInfo, shouldSlash, slashInfo := k.HandleValidatorSignatureConcurrent(ctx, vInfo.Validator.Address, vInfo.Validator.Power, vInfo.SignedLastBlock)
 			slashingWriteInfo[valIndex] = &SlashingWriteInfo{
 				ConsAddr:    consAddr,
@@ -48,10 +51,22 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 				ShouldSlash: shouldSlash,
 				SlashInfo:   slashInfo,
 			}
+			latencyInfo[valIndex] = time.Now().UnixMicro() - startTime
 			// TODO: panic handling?
 		}(i, voteInfo)
 	}
 	wg.Wait()
+	endWaitGroupTime := time.Now().UnixMicro()
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] BeginBlocker WaitGroup total latency: %d, per goroutine latency: %v", endWaitGroupTime-startTime, latencyInfo))
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] HandleValidatorSignatureConcurrent TotalGetPubkey latency: %d, TotalGetValidatorSigningInfo latency: %d, TotalSignedBlocksWindow latency: %d, TotalGetValidatorMissedBlockBitArray latency: %d, TotalMinSignedPerWindow latency: %d, TotalCheckPunish latency: %d",
+		keeper.TotalGetPubkey.Load(), keeper.TotalGetValidatorSigningInfo.Load(), keeper.TotalSignedBlocksWindow.Load(), keeper.TotalGetValidatorMissedBlockBitArray.Load(), keeper.TotalMinSignedPerWindow.Load(), keeper.TotalCheckPunish.Load()))
+
+	keeper.TotalGetPubkey.Store(0)
+	keeper.TotalGetValidatorSigningInfo.Store(0)
+	keeper.TotalSignedBlocksWindow.Store(0)
+	keeper.TotalGetValidatorMissedBlockBitArray.Store(0)
+	keeper.TotalMinSignedPerWindow.Store(0)
+	keeper.TotalCheckPunish.Store(0)
 
 	for _, writeInfo := range slashingWriteInfo {
 		if writeInfo == nil {
@@ -74,4 +89,7 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 		}
 		k.SetValidatorSigningInfo(ctx, writeInfo.ConsAddr, writeInfo.SigningInfo)
 	}
+
+	endTime := time.Now().UnixMicro()
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] BeginBlocker total latency: %d, WaitGroup latency: %d, SlashWriteInfo latency: %d", endTime-startTime, endWaitGroupTime-startTime, endTime-endWaitGroupTime))
 }

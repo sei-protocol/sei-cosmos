@@ -40,7 +40,7 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 		wg.Add(1)
 		go func(valIndex int, vInfo abci.VoteInfo) {
 			defer wg.Done()
-			startTime = time.Now().UnixMicro()
+			goroutineStartTime := time.Now().UnixMicro()
 			consAddr, index, previous, missed, signInfo, shouldSlash, slashInfo := k.HandleValidatorSignatureConcurrent(ctx, vInfo.Validator.Address, vInfo.Validator.Power, vInfo.SignedLastBlock)
 			slashingWriteInfo[valIndex] = &SlashingWriteInfo{
 				ConsAddr:    consAddr,
@@ -51,7 +51,7 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 				ShouldSlash: shouldSlash,
 				SlashInfo:   slashInfo,
 			}
-			latencyInfo[valIndex] = time.Now().UnixMicro() - startTime
+			latencyInfo[valIndex] = time.Now().UnixMicro() - goroutineStartTime
 			// TODO: panic handling?
 		}(i, voteInfo)
 	}

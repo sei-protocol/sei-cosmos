@@ -48,7 +48,6 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 				ShouldSlash: shouldSlash,
 				SlashInfo:   slashInfo,
 			}
-			// TODO: panic handling?
 		}(i, voteInfo)
 	}
 	wg.Wait()

@@ -3,8 +3,6 @@ package keeper
 import (
 	"time"
 
-	gogotypes "github.com/gogo/protobuf/types"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/slashing/types"
 )
@@ -54,51 +52,42 @@ func (k Keeper) IterateValidatorSigningInfos(ctx sdk.Context,
 	}
 }
 
+// GetValidatorMissedBlockArray gets the missed blocks array
+func (k Keeper) GetValidatorMissedBlocks(ctx sdk.Context, address sdk.ConsAddress) (missedInfo types.ValidatorMissedBlockArray, found bool) {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.ValidatorMissedBlockBitArrayKey(address))
+	if bz == nil {
+		found = false
+		return
+	}
+	k.cdc.MustUnmarshal(bz, &missedInfo)
+	found = true
+	return
+}
+
+// SetValidatorMissedBlockArray sets the missed blocks array
+func (k Keeper) SetValidatorMissedBlocks(ctx sdk.Context, address sdk.ConsAddress, missedInfo types.ValidatorMissedBlockArray) {
+	store := ctx.KVStore(k.storeKey)
+	bz := k.cdc.MustMarshal(&missedInfo)
+	store.Set(types.ValidatorMissedBlockBitArrayKey(address), bz)
+}
+
 // GetValidatorMissedBlockBitArray gets the bit for the missed blocks array
 func (k Keeper) GetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress, index int64) bool {
 	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(types.ValidatorMissedBlockBitArrayKey(address, index))
-	var missed gogotypes.BoolValue
+	bz := store.Get(types.ValidatorMissedBlockBitArrayKey(address))
+	var missedInfo types.ValidatorMissedBlockArray
 	if bz == nil {
 		// lazy: treat empty key as not missed
 		return false
 	}
-	k.cdc.MustUnmarshal(bz, &missed)
-
-	return missed.Value
-}
-
-// IterateValidatorMissedBlockBitArray iterates over the signed blocks window
-// and performs a callback function
-func (k Keeper) IterateValidatorMissedBlockBitArray(ctx sdk.Context,
-	address sdk.ConsAddress, handler func(index int64, missed bool) (stop bool)) {
-
-	store := ctx.KVStore(k.storeKey)
-	index := int64(0)
-	// Array may be sparse
-	for ; index < k.SignedBlocksWindow(ctx); index++ {
-		var missed gogotypes.BoolValue
-		bz := store.Get(types.ValidatorMissedBlockBitArrayKey(address, index))
-		if bz == nil {
-			continue
-		}
-
-		k.cdc.MustUnmarshal(bz, &missed)
-		if handler(index, missed.Value) {
-			break
-		}
-	}
-}
-
-// GetValidatorMissedBlocks returns array of missed blocks for given validator Cons address
-func (k Keeper) GetValidatorMissedBlocks(ctx sdk.Context, address sdk.ConsAddress) []types.MissedBlock {
-	missedBlocks := []types.MissedBlock{}
-	k.IterateValidatorMissedBlockBitArray(ctx, address, func(index int64, missed bool) (stop bool) {
-		missedBlocks = append(missedBlocks, types.NewMissedBlock(index, missed))
+	k.cdc.MustUnmarshal(bz, &missedInfo)
+	if int64(len(missedInfo.MissedBlocks)-1) < index {
+		// the array isn't large enough to include that index yet, assume its false
 		return false
-	})
-
-	return missedBlocks
+	}
+	missedIndex := missedInfo.MissedBlocks[index]
+	return missedIndex
 }
 
 // JailUntil attempts to set a validator's JailedUntil attribute in its signing
@@ -143,16 +132,35 @@ func (k Keeper) IsTombstoned(ctx sdk.Context, consAddr sdk.ConsAddress) bool {
 // missed a block in the current window
 func (k Keeper) SetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress, index int64, missed bool) {
 	store := ctx.KVStore(k.storeKey)
-	bz := k.cdc.MustMarshal(&gogotypes.BoolValue{Value: missed})
-	store.Set(types.ValidatorMissedBlockBitArrayKey(address, index), bz)
+	// get signed blocks window
+	window := k.SignedBlocksWindow(ctx)
+	// get info
+	missedInfo, found := k.GetValidatorMissedBlocks(ctx, address)
+	if !found {
+		missedInfo = types.ValidatorMissedBlockArray{
+			Address: address.String(),
+		}
+	}
+	switch {
+	case int64(len(missedInfo.MissedBlocks)) < window:
+		// missed block array too short, lets expand it
+		newArray := make([]bool, window)
+		copy(newArray, missedInfo.MissedBlocks)
+		missedInfo.MissedBlocks = newArray
+	case int64(len(missedInfo.MissedBlocks)) > window:
+		// missed block array too long, we need to trim
+		// TODO: fix this
+		missedInfo.MissedBlocks = missedInfo.MissedBlocks[0:window]
+	}
+
+	missedInfo.MissedBlocks[index] = missed
+
+	bz := k.cdc.MustMarshal(&missedInfo)
+	store.Set(types.ValidatorMissedBlockBitArrayKey(address), bz)
 }
 
 // clearValidatorMissedBlockBitArray deletes every instance of ValidatorMissedBlockBitArray in the store
 func (k Keeper) ClearValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress) {
 	store := ctx.KVStore(k.storeKey)
-	iter := sdk.KVStorePrefixIterator(store, types.ValidatorMissedBlockBitArrayPrefixKey(address))
-	defer iter.Close()
-	for ; iter.Valid(); iter.Next() {
-		store.Delete(iter.Key())
-	}
+	store.Delete(types.ValidatorMissedBlockBitArrayKey(address))
 }

@@ -32,6 +32,13 @@ message ValidatorSigningInfo {
   int64 missed_blocks_counter = 6 [(gogoproto.moretags) = "yaml:\"missed_blocks_counter\""];
 }
 
+// Stores a sliding window of the last `signed_blocks_window` blocks indicating whether the validator missed the block
+message ValidatorMissedBlockArray {
+  string address = 1;
+  // Array of length signing signed blocks window that contains whether the validator missed the block at that index
+  repeated bool missed_blocks = 2 [(gogoproto.moretags) = "yaml:\"missed_blocks\""];
+}
+
 // Params represents the parameters used for by the slashing module.
 message Params {
   int64 signed_blocks_window  = 1 [(gogoproto.moretags) = "yaml:\"signed_blocks_window\""];

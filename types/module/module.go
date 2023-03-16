@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -497,12 +498,18 @@ func (m Manager) RunMigrations(ctx sdk.Context, cfg Configurator, fromVM Version
 func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 
+	startTime := time.Now().UnixMicro()
 	for _, moduleName := range m.OrderBeginBlockers {
+		moduleStartTime := time.Now().UnixMicro()
 		module, ok := m.Modules[moduleName].(BeginBlockAppModule)
 		if ok {
 			module.BeginBlock(ctx, req)
 		}
+		moduleEndTime := time.Now().UnixMicro()
+		ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] BeginBlock module %s latency is:%d", moduleName, moduleEndTime-moduleStartTime))
 	}
+	endTime := time.Now().UnixMicro()
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] BeginBlock total latency is:%d", endTime-startTime))
 
 	return abci.ResponseBeginBlock{
 		Events: ctx.EventManager().ABCIEvents(),
@@ -533,7 +540,9 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	validatorUpdates := []abci.ValidatorUpdate{}
 
+	startTime := time.Now().UnixMicro()
 	for _, moduleName := range m.OrderEndBlockers {
+		moduleStartTime := time.Now().UnixMicro()
 		module, ok := m.Modules[moduleName].(EndBlockAppModule)
 		if !ok {
 			continue
@@ -549,7 +558,11 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 
 			validatorUpdates = moduleValUpdates
 		}
+		moduleEndTime := time.Now().UnixMicro()
+		ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] EndBlock module %s latency is:%d", moduleName, moduleEndTime-moduleStartTime))
 	}
+	endTime := time.Now().UnixMicro()
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] EndBlock total latency is:%d", endTime-startTime))
 
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,

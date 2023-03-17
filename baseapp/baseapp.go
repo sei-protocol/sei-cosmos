@@ -944,6 +944,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		consumeBlockGas()
 
 		msCache.Write()
+		app.logger.Info("runMsgs", "num_messages", len(msgs), "height", ctx.BlockHeader().Height)
 
 		// Store metrics for number of messages and transactions.
 		ctx.ContextMemCache().IncrMessageCount(uint64(len(msgs)))

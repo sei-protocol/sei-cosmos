@@ -944,10 +944,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		consumeBlockGas()
 
 		msCache.Write()
-		app.logger.Info("runMsgs", "num_messages", len(msgs), "height", ctx.BlockHeader().Height)
-
 		// Store metrics for number of messages and transactions.
-		ctx.ContextMemCache().IncrMessageCount(uint64(len(msgs)))
 		ctx.ContextMemCache().IncrTransactionCount(1)
 	}
 	// we do this since we will only be looking at result in DeliverTx
@@ -982,6 +979,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if mode == runTxModeCheck || mode == runTxModeReCheck {
 			break
 		}
+
+		ctx.ContextMemCache().IncrMessageCount(1)
+		app.logger.Info("runMsgs", "message", 1, "height", ctx.BlockHeader().Height)
 
 		var (
 			msgResult    *sdk.Result

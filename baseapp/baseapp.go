@@ -981,7 +981,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		}
 
 		ctx.ContextMemCache().IncrMessageCount(1)
-		app.logger.Info("runMsgs", "message", 1, "height", ctx.BlockHeader().Height)
 
 		var (
 			msgResult    *sdk.Result

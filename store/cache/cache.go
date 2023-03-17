@@ -112,6 +112,7 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 	types.AssertValidKey(key)
 
 	keyStr := string(key)
+	fmt.Println("[Cosmos-Debug] Get CommitKVStoreCache")
 	value, ok := ckv.cache.Get(keyStr)
 	if ok {
 		// cache hit

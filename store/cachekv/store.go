@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -106,6 +107,7 @@ func (store *Store) GetStoreType() types.StoreType {
 
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
+	fmt.Printf("[Cosmos-Debug] CacheKV Get")
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 

@@ -138,23 +138,11 @@ func (k Keeper) SetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.Con
 	missedInfo, found := k.GetValidatorMissedBlocks(ctx, address)
 	if !found {
 		missedInfo = types.ValidatorMissedBlockArray{
-			Address: address.String(),
+			Address:      address.String(),
+			MissedBlocks: make([]bool, window),
 		}
 	}
-	switch {
-	case int64(len(missedInfo.MissedBlocks)) < window:
-		// missed block array too short, lets expand it
-		newArray := make([]bool, window)
-		copy(newArray, missedInfo.MissedBlocks)
-		missedInfo.MissedBlocks = newArray
-	case int64(len(missedInfo.MissedBlocks)) > window:
-		// missed block array too long, we need to trim
-		// TODO: fix this
-		missedInfo.MissedBlocks = missedInfo.MissedBlocks[0:window]
-	}
-
 	missedInfo.MissedBlocks[index] = missed
-
 	bz := k.cdc.MustMarshal(&missedInfo)
 	store.Set(types.ValidatorMissedBlockBitArrayKey(address), bz)
 }

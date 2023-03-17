@@ -139,6 +139,10 @@ func TestHandleAlreadyJailed(t *testing.T) {
 
 	staking.EndBlocker(ctx, app.StakingKeeper)
 
+	params := app.SlashingKeeper.GetParams(ctx)
+	params.SignedBlocksWindow = 1000
+	app.SlashingKeeper.SetParams(ctx, params)
+
 	// 1000 first blocks OK
 	height := int64(0)
 	for ; height < app.SlashingKeeper.SignedBlocksWindow(ctx); height++ {

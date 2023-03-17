@@ -80,6 +80,7 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 	maxMissed := k.SignedBlocksWindow(ctx) - minSignedPerWindow
 	shouldSlash = false
 	// if we are past the minimum height and the validator has missed too many blocks, punish them
+	// TODO: this may be problematic if the signed blocks window was just reduced -> then missed blocks counter might be too high due to historical misses
 	if height > minHeight && signInfo.MissedBlocksCounter > maxMissed {
 		validator := k.sk.ValidatorByConsAddr(ctx, consAddr)
 		if validator != nil && !validator.IsJailed() {

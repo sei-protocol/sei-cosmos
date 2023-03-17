@@ -200,10 +200,7 @@ func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abc
 		}
 	}
 
-	telemetry.IncrCounter(float32(ctx.ContextMemCache().GetMetricCounter(sdk.TX_COUNT)), "sei", "block_tx_count")
-	telemetry.IncrCounter(float32(ctx.ContextMemCache().GetMetricCounter(sdk.MESSAGE_COUNT)), "sei", "block_message_count")
-	telemetry.IncrCounter(float32(ctx.ContextMemCache().GetMetricCounter(sdk.ORDER_COUNT)), "sei", "block_order_count")
-
+	ctx.ContextMemCache().EmitMetrics()
 	ctx.ContextMemCache().Clear()
 
 	return res

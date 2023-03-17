@@ -18,6 +18,7 @@ func (k Keeper) GetValidatorSigningInfo(ctx sdk.Context, address sdk.ConsAddress
 	TotalGetLatency.Add(time.Now().UnixMicro() - startTime)
 	if bz == nil {
 		found = false
+		TotalLatency.Add(time.Now().UnixMicro() - startTime)
 		return
 	}
 	k.cdc.MustUnmarshal(bz, &info)
@@ -67,6 +68,7 @@ func (k Keeper) GetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.Con
 	var missed gogotypes.BoolValue
 	if bz == nil {
 		// lazy: treat empty key as not missed
+		TotalLatency.Add(time.Now().UnixMicro() - startTime)
 		return false
 	}
 	k.cdc.MustUnmarshal(bz, &missed)

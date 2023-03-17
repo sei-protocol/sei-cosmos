@@ -9,7 +9,10 @@ import (
 
 // SignedBlocksWindow - sliding window for downtime slashing
 func (k Keeper) SignedBlocksWindow(ctx sdk.Context) (res int64) {
+	startTime := time.Now().UnixMicro()
 	k.paramspace.Get(ctx, types.KeySignedBlocksWindow, &res)
+	TotalGetLatency.Add(time.Now().UnixMicro() - startTime)
+	TotalLatency.Add(time.Now().UnixMicro() - startTime)
 	return
 }
 

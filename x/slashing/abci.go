@@ -54,7 +54,7 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 		}(i, voteInfo)
 	}
 	wg.Wait()
-	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slashing breakdown total get latency: %d, total latency: %d", keeper.TotalGetLatency.Load(), keeper.TotalLatency.Load()))
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slashing breakdown of %d votes, total get latency: %d, total latency: %d", len(req.LastCommitInfo.GetVotes()), keeper.TotalGetLatency.Load(), keeper.TotalLatency.Load()))
 
 	for _, writeInfo := range slashingWriteInfo {
 		if writeInfo == nil {

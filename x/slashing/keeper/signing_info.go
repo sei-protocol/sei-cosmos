@@ -72,23 +72,23 @@ func (k Keeper) SetValidatorMissedBlocks(ctx sdk.Context, address sdk.ConsAddres
 	store.Set(types.ValidatorMissedBlockBitArrayKey(address), bz)
 }
 
-// GetValidatorMissedBlockBitArray gets the bit for the missed blocks array
-func (k Keeper) GetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress, index int64) bool {
-	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(types.ValidatorMissedBlockBitArrayKey(address))
-	var missedInfo types.ValidatorMissedBlockArray
-	if bz == nil {
-		// lazy: treat empty key as not missed
-		return false
-	}
-	k.cdc.MustUnmarshal(bz, &missedInfo)
-	if int64(len(missedInfo.MissedBlocks)-1) < index {
-		// the array isn't large enough to include that index yet, assume its false
-		return false
-	}
-	missedIndex := missedInfo.MissedBlocks[index]
-	return missedIndex
-}
+// // GetValidatorMissedBlockBitArray gets the bit for the missed blocks array
+// func (k Keeper) GetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress, index int64) bool {
+// 	store := ctx.KVStore(k.storeKey)
+// 	bz := store.Get(types.ValidatorMissedBlockBitArrayKey(address))
+// 	var missedInfo types.ValidatorMissedBlockArray
+// 	if bz == nil {
+// 		// lazy: treat empty key as not missed
+// 		return false
+// 	}
+// 	k.cdc.MustUnmarshal(bz, &missedInfo)
+// 	if int64(len(missedInfo.MissedBlocks)-1) < index {
+// 		// the array isn't large enough to include that index yet, assume its false
+// 		return false
+// 	}
+// 	missedIndex := missedInfo.MissedBlocks[index]
+// 	return missedIndex
+// }
 
 // JailUntil attempts to set a validator's JailedUntil attribute in its signing
 // info. It will panic if the signing info does not exist for the validator.
@@ -128,24 +128,24 @@ func (k Keeper) IsTombstoned(ctx sdk.Context, consAddr sdk.ConsAddress) bool {
 	return signInfo.Tombstoned
 }
 
-// SetValidatorMissedBlockBitArray sets the bit that checks if the validator has
-// missed a block in the current window
-func (k Keeper) SetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress, index int64, missed bool) {
-	store := ctx.KVStore(k.storeKey)
-	// get signed blocks window
-	window := k.SignedBlocksWindow(ctx)
-	// get info
-	missedInfo, found := k.GetValidatorMissedBlocks(ctx, address)
-	if !found {
-		missedInfo = types.ValidatorMissedBlockArray{
-			Address:      address.String(),
-			MissedBlocks: make([]bool, window),
-		}
-	}
-	missedInfo.MissedBlocks[index] = missed
-	bz := k.cdc.MustMarshal(&missedInfo)
-	store.Set(types.ValidatorMissedBlockBitArrayKey(address), bz)
-}
+// // SetValidatorMissedBlockBitArray sets the bit that checks if the validator has
+// // missed a block in the current window
+// func (k Keeper) SetValidatorMissedBlock(ctx sdk.Context, address sdk.ConsAddress, height int64) {
+// 	store := ctx.KVStore(k.storeKey)
+// 	// get signed blocks window
+// 	window := k.SignedBlocksWindow(ctx)
+// 	// get info
+// 	missedInfo, found := k.GetValidatorMissedBlocks(ctx, address)
+// 	if !found {
+// 		missedInfo = types.ValidatorMissedBlockArray{
+// 			Address:      address.String(),
+// 			MissedBlocks: make([]bool, window),
+// 		}
+// 	}
+// 	missedInfo.MissedBlocks[index] = missed
+// 	bz := k.cdc.MustMarshal(&missedInfo)
+// 	store.Set(types.ValidatorMissedBlockBitArrayKey(address), bz)
+// }
 
 // clearValidatorMissedBlockBitArray deletes every instance of ValidatorMissedBlockBitArray in the store
 func (k Keeper) ClearValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress) {

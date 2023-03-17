@@ -50,13 +50,45 @@ func TestMigrate2to3(t *testing.T) {
 
 	consAddr := sdk.GetConsAddress(val)
 	consAddr2 := sdk.GetConsAddress(val2)
+	store := ctx.KVStore(app.SlashingKeeper.GetStoreKey())
+
+	signInfo := types.ValidatorSigningInfo{
+		Address:             consAddr.String(),
+		StartHeight:         21,
+		MissedBlocksCounter: 2,
+	}
+	signInfo2 := types.ValidatorSigningInfo{
+		Address:             consAddr2.String(),
+		StartHeight:         22,
+		MissedBlocksCounter: 3,
+	}
+	oldSignInfo := types.ValidatorSigningInfoLegacyV43{
+		Address:             signInfo.Address,
+		StartHeight:         signInfo.StartHeight,
+		IndexOffset:         5,
+		JailedUntil:         signInfo.JailedUntil,
+		Tombstoned:          signInfo.Tombstoned,
+		MissedBlocksCounter: signInfo.MissedBlocksCounter,
+	}
+	bz := app.AppCodec().MustMarshal(&oldSignInfo)
+	store.Set(types.ValidatorSigningInfoKey(consAddr), bz)
+
+	oldSignInfo2 := types.ValidatorSigningInfoLegacyV43{
+		Address:             signInfo2.Address,
+		StartHeight:         signInfo2.StartHeight,
+		IndexOffset:         5,
+		JailedUntil:         signInfo2.JailedUntil,
+		Tombstoned:          signInfo2.Tombstoned,
+		MissedBlocksCounter: signInfo2.MissedBlocksCounter,
+	}
+	bz2 := app.AppCodec().MustMarshal(&oldSignInfo2)
+	store.Set(types.ValidatorSigningInfoKey(consAddr2), bz2)
 
 	_, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
 	require.False(t, found)
 	_, found2 := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr2)
 	require.False(t, found2)
 
-	store := ctx.KVStore(app.SlashingKeeper.GetStoreKey())
 	for i := 0; i < 5; i++ {
 		keyPrefix := types.ValidatorMissedBlockBitArrayKey(consAddr)
 		index := make([]byte, 8)
@@ -79,25 +111,17 @@ func TestMigrate2to3(t *testing.T) {
 
 	missedArray, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
 	require.True(t, found)
-	require.Equal(t, app.SlashingKeeper.SignedBlocksWindow(ctx), int64(len(missedArray.MissedBlocks)))
+	require.Equal(t, []int64{21, 22, 23, 24, 25}, missedArray.MissedHeights)
 
-	for i, val := range missedArray.MissedBlocks {
-		if i < 5 {
-			require.True(t, val)
-		} else {
-			require.False(t, val)
-		}
-	}
+	s, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, signInfo, s)
 
 	missedArray2, found2 := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr2)
 	require.True(t, found2)
-	require.Equal(t, app.SlashingKeeper.SignedBlocksWindow(ctx), int64(len(missedArray2.MissedBlocks)))
+	require.Equal(t, []int64{23, 24, 25, 26, 27}, missedArray2.MissedHeights)
 
-	for i, val := range missedArray2.MissedBlocks {
-		if i > 0 && i < 6 {
-			require.True(t, val)
-		} else {
-			require.False(t, val)
-		}
-	}
+	s2, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr2)
+	require.True(t, found)
+	require.Equal(t, signInfo2, s2)
 }

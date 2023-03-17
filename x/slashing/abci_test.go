@@ -71,7 +71,6 @@ func TestBeginBlocker(t *testing.T) {
 		info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, sdk.ConsAddress(pks[i].Address()))
 		require.True(t, found)
 		require.Equal(t, ctx.BlockHeight(), info.StartHeight)
-		require.Equal(t, int64(1), info.IndexOffset)
 		require.Equal(t, time.Unix(0, 0).UTC(), info.JailedUntil)
 		require.Equal(t, int64(0), info.MissedBlocksCounter)
 	}
@@ -138,7 +137,6 @@ func TestResizeTrimValidatorMissedBlocksArray(t *testing.T) {
 	newInfo := types.NewValidatorSigningInfo(
 		consAddr,
 		int64(4),
-		int64(17), // will get bumped to 18 in beginblock
 		time.Unix(2, 0),
 		false,
 		int64(3),
@@ -146,8 +144,8 @@ func TestResizeTrimValidatorMissedBlocksArray(t *testing.T) {
 	app.SlashingKeeper.SetValidatorSigningInfo(ctx, consAddr, newInfo)
 
 	tooLargeArray := types.ValidatorMissedBlockArray{
-		Address:      consAddr.String(),
-		MissedBlocks: []bool{false, false, false, false, false, true, false, true, false, true},
+		Address:       consAddr.String(),
+		MissedHeights: []int64{9, 11, 13},
 	}
 	app.SlashingKeeper.SetValidatorMissedBlocks(ctx, consAddr, tooLargeArray)
 
@@ -155,12 +153,13 @@ func TestResizeTrimValidatorMissedBlocksArray(t *testing.T) {
 	params.SignedBlocksWindow = 8
 	app.SlashingKeeper.SetParams(ctx, params)
 
+	ctx = ctx.WithBlockHeight(18)
 	slashing.BeginBlocker(ctx, testslashing.CreateBeginBlockReq(val.Address(), 200, true), app.SlashingKeeper)
 
 	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
 	require.True(t, found)
-	require.Equal(t, 8, len(missedInfo.MissedBlocks))
-	require.Equal(t, []bool{false, true, false, false, false, false, false, true}, missedInfo.MissedBlocks)
+	require.Equal(t, 2, len(missedInfo.MissedHeights))
+	require.Equal(t, []int64{11, 13}, missedInfo.MissedHeights)
 
 	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
 	require.True(t, found)
@@ -193,7 +192,6 @@ func TestResizeTrimWraparoundValidatorMissedBlocksArray(t *testing.T) {
 	newInfo := types.NewValidatorSigningInfo(
 		consAddr,
 		int64(4),
-		int64(32), // will get bumped to 33 in beginblock
 		time.Unix(2, 0),
 		false,
 		int64(2),
@@ -201,17 +199,18 @@ func TestResizeTrimWraparoundValidatorMissedBlocksArray(t *testing.T) {
 	app.SlashingKeeper.SetValidatorSigningInfo(ctx, consAddr, newInfo)
 
 	tooLargeArray := types.ValidatorMissedBlockArray{
-		Address:      consAddr.String(),
-		MissedBlocks: []bool{false, false, false, false, false, true, false, true, false, false},
+		Address:       consAddr.String(),
+		MissedHeights: []int64{25, 27},
 	}
 	app.SlashingKeeper.SetValidatorMissedBlocks(ctx, consAddr, tooLargeArray)
 
+	ctx = ctx.WithBlockHeight(33)
 	slashing.BeginBlocker(ctx, testslashing.CreateBeginBlockReq(val.Address(), 200, true), app.SlashingKeeper)
 
 	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
 	require.True(t, found)
-	require.Equal(t, 8, len(missedInfo.MissedBlocks))
-	require.Equal(t, []bool{false, false, false, true, false, false, false, false}, missedInfo.MissedBlocks)
+	require.Equal(t, 1, len(missedInfo.MissedHeights))
+	require.Equal(t, []int64{27}, missedInfo.MissedHeights)
 
 	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
 	require.True(t, found)
@@ -244,7 +243,6 @@ func TestResizeExpandValidatorMissedBlocksArray(t *testing.T) {
 	newInfo := types.NewValidatorSigningInfo(
 		consAddr,
 		int64(4),
-		int64(38), // bumped to 39 the next block
 		time.Unix(2, 0),
 		false,
 		int64(1),
@@ -252,17 +250,18 @@ func TestResizeExpandValidatorMissedBlocksArray(t *testing.T) {
 	app.SlashingKeeper.SetValidatorSigningInfo(ctx, consAddr, newInfo)
 
 	tooLargeArray := types.ValidatorMissedBlockArray{
-		Address:      consAddr.String(),
-		MissedBlocks: []bool{false, true, false, false},
+		Address:       consAddr.String(),
+		MissedHeights: []int64{37},
 	}
 	app.SlashingKeeper.SetValidatorMissedBlocks(ctx, consAddr, tooLargeArray)
 
+	ctx = ctx.WithBlockHeight(39)
 	slashing.BeginBlocker(ctx, testslashing.CreateBeginBlockReq(val.Address(), 200, true), app.SlashingKeeper)
 
 	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
 	require.True(t, found)
-	require.Equal(t, 8, len(missedInfo.MissedBlocks))
-	require.Equal(t, []bool{false, false, false, false, false, true, false, false}, missedInfo.MissedBlocks)
+	require.Equal(t, 1, len(missedInfo.MissedHeights))
+	require.Equal(t, []int64{37}, missedInfo.MissedHeights)
 
 	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
 	require.True(t, found)

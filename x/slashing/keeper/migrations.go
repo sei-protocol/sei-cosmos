@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v043 "github.com/cosmos/cosmos-sdk/x/slashing/legacy/v043"
@@ -30,10 +31,27 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	store := ctx.KVStore(m.keeper.storeKey)
 	valMissedMap := make(map[string]types.ValidatorMissedBlockArray)
+
+	// TODO: migrate the signing info first
+	signInfoIter := sdk.KVStorePrefixIterator(store, types.ValidatorSigningInfoKeyPrefix)
+	defer signInfoIter.Close()
+	for ; signInfoIter.Valid(); signInfoIter.Next() {
+		var oldInfo types.ValidatorSigningInfoLegacyV43
+		m.keeper.cdc.MustUnmarshal(signInfoIter.Value(), &oldInfo)
+
+		newInfo := types.ValidatorSigningInfo{
+			Address:             oldInfo.Address,
+			StartHeight:         oldInfo.StartHeight,
+			JailedUntil:         oldInfo.JailedUntil,
+			Tombstoned:          oldInfo.Tombstoned,
+			MissedBlocksCounter: oldInfo.MissedBlocksCounter,
+		}
+
+		bz := m.keeper.cdc.MustMarshal(&newInfo)
+		store.Set(signInfoIter.Key(), bz)
+	}
+
 	iter := sdk.KVStorePrefixIterator(store, types.ValidatorMissedBlockBitArrayKeyPrefix)
-
-	signingWindow := m.keeper.SignedBlocksWindow(ctx)
-
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		// need to use the key to extract validator cons addr
@@ -45,16 +63,23 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 		consAddr := sdk.ConsAddress(consAddrBytes)
 		index := int64(binary.LittleEndian.Uint64(indexBytes))
 
+		signInfo, found := m.keeper.GetValidatorSigningInfo(ctx, consAddr)
+		if !found {
+			return fmt.Errorf("signing info not found")
+		}
 		arr, ok := valMissedMap[consAddr.String()]
 		if !ok {
 			arr = types.ValidatorMissedBlockArray{
-				Address:      consAddr.String(),
-				MissedBlocks: make([]bool, signingWindow),
+				Address:       consAddr.String(),
+				MissedHeights: make([]int64, 0),
 			}
 		}
 		var missed gogotypes.BoolValue
 		m.keeper.cdc.MustUnmarshal(iter.Value(), &missed)
-		arr.MissedBlocks[index] = missed.Value
+		if missed.Value {
+			arr.MissedHeights = append(arr.MissedHeights, index+signInfo.StartHeight)
+		}
+
 		valMissedMap[consAddr.String()] = arr
 		store.Delete(iter.Key())
 	}

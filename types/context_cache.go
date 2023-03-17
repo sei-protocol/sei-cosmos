@@ -2,9 +2,14 @@ package types
 
 import (
 	"sync"
-	"sync/atomic"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+)
+
+const (
+	MESSAGE_COUNT = "message_count"
+	TX_COUNT = "tx_count"
+	ORDER_COUNT = "order_count"
 )
 
 type ContextMemCache struct {
@@ -12,9 +17,8 @@ type ContextMemCache struct {
 	deferredSends       *DeferredBankOperationMapping
 	deferredWithdrawals *DeferredBankOperationMapping
 
-	msTxMutx 			*sync.RWMutex
-	messageCount 	 	uint64
-	transactionCount 	uint64
+	metricsLock 		*sync.RWMutex
+	metricsCounterMapping *map[string]uint64
 }
 
 func NewContextMemCache() *ContextMemCache {
@@ -22,9 +26,8 @@ func NewContextMemCache() *ContextMemCache {
 		deferredBankOpsLock: &sync.Mutex{},
 		deferredSends:       NewDeferredBankOperationMap(),
 		deferredWithdrawals: NewDeferredBankOperationMap(),
-		msTxMutx: 			 &sync.RWMutex{},
-		messageCount: 		 0,
-		transactionCount: 	 0,
+		metricsLock: &sync.RWMutex{},
+		metricsCounterMapping: &map[string]uint64{},
 	}
 }
 
@@ -36,20 +39,23 @@ func (c *ContextMemCache) GetDeferredWithdrawals() *DeferredBankOperationMapping
 	return c.deferredWithdrawals
 }
 
-func (c *ContextMemCache) GetMessageCount() uint64 {
-	return c.messageCount
+func (c *ContextMemCache) GetMetricCounter(metric_counter_name string) uint64 {
+	c.metricsLock.RLock()
+	defer c.metricsLock.RUnlock()
+
+	value, ok := (*c.metricsCounterMapping)[metric_counter_name]
+	if !ok {
+		return 0
+	}
+	return value
 }
 
-func (c *ContextMemCache) GetTransactionCount() uint64 {
-	return c.transactionCount
-}
+func (c *ContextMemCache) IncrMetricCounter(count uint64, metric_name string)  {
+	c.metricsLock.Lock()
+	defer c.metricsLock.Unlock()
 
-func (c *ContextMemCache) IncrMessageCount(count uint64)  {
-	atomic.AddUint64(&c.messageCount, count)
-}
-
-func (c *ContextMemCache) IncrTransactionCount(count uint64)  {
-	atomic.AddUint64(&c.transactionCount, count)
+	newCounter := (*c.metricsCounterMapping)[metric_name] + count
+	(*c.metricsCounterMapping)[metric_name] = newCounter
 }
 
 func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins) error {
@@ -115,6 +121,7 @@ func (c *ContextMemCache) Clear() {
 	c.deferredSends = NewDeferredBankOperationMap()
 	c.deferredWithdrawals = NewDeferredBankOperationMap()
 
-	atomic.StoreUint64(&c.messageCount, 0)
-	atomic.StoreUint64(&c.transactionCount, 0)
+	c.metricsLock.Lock()
+	defer c.metricsLock.Unlock()
+	c.metricsCounterMapping = &map[string]uint64{}
 }

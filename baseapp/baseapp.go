@@ -793,6 +793,9 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // returned if the tx does not run out of gas and if all the messages are valid
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
+	// Store metrics for number of messages and transactions.
+	defer ctx.ContextMemCache().IncrMetricCounter(1, sdk.TX_COUNT)
+
 	// Reset events after each checkTx or simulateTx or recheckTx
 	// DeliverTx is garbage collected after FinalizeBlocker
 	if mode != runTxModeDeliver {
@@ -866,6 +869,8 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}
 
 	msgs := tx.GetMsgs()
+	ctx.ContextMemCache().IncrMetricCounter(uint64(len(msgs)), sdk.MESSAGE_COUNT)
+
 	if err := validateBasicTxMsgs(msgs); err != nil {
 		return sdk.GasInfo{}, nil, nil, 0, err
 	}
@@ -944,8 +949,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		consumeBlockGas()
 
 		msCache.Write()
-		// Store metrics for number of messages and transactions.
-		ctx.ContextMemCache().IncrTransactionCount(1)
 	}
 	// we do this since we will only be looking at result in DeliverTx
 	if result != nil && len(anteEvents) > 0 {
@@ -979,8 +982,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if mode == runTxModeCheck || mode == runTxModeReCheck {
 			break
 		}
-
-		ctx.ContextMemCache().IncrMessageCount(1)
 
 		var (
 			msgResult    *sdk.Result

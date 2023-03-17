@@ -36,10 +36,6 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 
 	window := k.SignedBlocksWindow(ctx)
 
-	// Update signed block bit array & counter
-	// This counter just tracks the sum of the bit array
-	// That way we avoid needing to read/write the whole array each time
-	// previous = k.GetValidatorMissedBlockBitArray(ctx, consAddr, index)
 	missedInfo, found = k.GetValidatorMissedBlocks(ctx, consAddr)
 	if !found {
 		missedInfo = types.ValidatorMissedBlockArray{
@@ -57,10 +53,11 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 			break
 		}
 	}
+	// update Missed Heights by excluding heights outside of the window
 	missedInfo.MissedHeights = missedInfo.MissedHeights[numberEvicted:]
 	missed := !signed
 	if missed {
-		missedInfo.MissedHeights = append(missedInfo.MissedHeights, height-1) // TODO: make sure not off by 1
+		missedInfo.MissedHeights = append(missedInfo.MissedHeights, height-1)
 	}
 	signInfo.MissedBlocksCounter = int64(len(missedInfo.MissedHeights))
 

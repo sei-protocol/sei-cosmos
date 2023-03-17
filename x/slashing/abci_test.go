@@ -244,7 +244,7 @@ func TestResizeExpandValidatorMissedBlocksArray(t *testing.T) {
 	newInfo := types.NewValidatorSigningInfo(
 		consAddr,
 		int64(4),
-		int64(3),
+		int64(38), // bumped to 39 the next block
 		time.Unix(2, 0),
 		false,
 		int64(1),
@@ -262,7 +262,7 @@ func TestResizeExpandValidatorMissedBlocksArray(t *testing.T) {
 	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
 	require.True(t, found)
 	require.Equal(t, 8, len(missedInfo.MissedBlocks))
-	require.Equal(t, []bool{false, true, false, false, false, false, false, false}, missedInfo.MissedBlocks)
+	require.Equal(t, []bool{false, false, false, false, false, true, false, false}, missedInfo.MissedBlocks)
 
 	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
 	require.True(t, found)

@@ -65,9 +65,17 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 			switch {
 			case missedBlockLen < window:
 				// missed block array too short, lets expand it
-				newArray := make([]bool, window)
-				copy(newArray, missedInfo.MissedBlocks)
-				missedInfo.MissedBlocks = newArray
+				indexOffset := writeInfo.SigningInfo.IndexOffset % window
+				relativeIndexOffset := writeInfo.SigningInfo.IndexOffset % missedBlockLen
+				newMissedBlocks := make([]bool, window)
+				indexOffsetCounter := indexOffset + window
+				// traverse backwards through the old array (smaller), and copy it to the relevant index offsets based on the new window and updated relative index offset with the new window size
+				for i := relativeIndexOffset + missedBlockLen; i > relativeIndexOffset; i-- {
+					missedBlockIdx := i % missedBlockLen
+					newMissedBlocks[indexOffsetCounter%window] = missedInfo.MissedBlocks[missedBlockIdx]
+					indexOffsetCounter--
+				}
+				missedInfo.MissedBlocks = newMissedBlocks
 				k.SetValidatorMissedBlocks(ctx, writeInfo.ConsAddr, missedInfo)
 			case missedBlockLen > window:
 				// missed block array too long, we need to trim

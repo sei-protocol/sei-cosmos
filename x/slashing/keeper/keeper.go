@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -53,13 +54,17 @@ func (k Keeper) AddPubkey(ctx sdk.Context, pubkey cryptotypes.PubKey) error {
 
 // GetPubkey returns the pubkey from the adddress-pubkey relation
 func (k Keeper) GetPubkey(ctx sdk.Context, a cryptotypes.Address) (cryptotypes.PubKey, error) {
+	startTime := time.Now().UnixMicro()
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.AddrPubkeyRelationKey(a))
+	TotalGetLatency.Add(time.Now().UnixMicro() - startTime)
 	if bz == nil {
 		return nil, fmt.Errorf("address %s not found", sdk.ConsAddress(a))
 	}
 	var pk cryptotypes.PubKey
-	return pk, k.cdc.UnmarshalInterface(bz, &pk)
+	result := k.cdc.UnmarshalInterface(bz, &pk)
+	TotalLatency.Add(time.Now().UnixMicro() - startTime)
+	return pk, result
 }
 
 // Slash attempts to slash a validator. The slash is delegated to the staking

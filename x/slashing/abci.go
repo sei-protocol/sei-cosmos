@@ -1,6 +1,7 @@
 package slashing
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,7 +34,8 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 
 	// this allows us to preserve the original ordering for writing purposes
 	slashingWriteInfo := make([]*SlashingWriteInfo, len(req.LastCommitInfo.GetVotes()))
-
+	keeper.TotalGetLatency.Store(0)
+	keeper.TotalLatency.Store(0)
 	for i, voteInfo := range req.LastCommitInfo.GetVotes() {
 		wg.Add(1)
 		go func(valIndex int, vInfo abci.VoteInfo) {
@@ -52,6 +54,7 @@ func BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock, k keeper.Keeper) 
 		}(i, voteInfo)
 	}
 	wg.Wait()
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] Slashing breakdown total get latency: %d, total latency: %d", keeper.TotalGetLatency.Load(), keeper.TotalLatency.Load()))
 
 	for _, writeInfo := range slashingWriteInfo {
 		if writeInfo == nil {

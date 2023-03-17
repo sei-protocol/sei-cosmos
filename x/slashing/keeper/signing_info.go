@@ -12,14 +12,17 @@ import (
 // GetValidatorSigningInfo retruns the ValidatorSigningInfo for a specific validator
 // ConsAddress
 func (k Keeper) GetValidatorSigningInfo(ctx sdk.Context, address sdk.ConsAddress) (info types.ValidatorSigningInfo, found bool) {
+	startTime := time.Now().UnixMicro()
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.ValidatorSigningInfoKey(address))
+	TotalGetLatency.Add(time.Now().UnixMicro() - startTime)
 	if bz == nil {
 		found = false
 		return
 	}
 	k.cdc.MustUnmarshal(bz, &info)
 	found = true
+	TotalLatency.Add(time.Now().UnixMicro() - startTime)
 	return
 }
 
@@ -56,15 +59,18 @@ func (k Keeper) IterateValidatorSigningInfos(ctx sdk.Context,
 
 // GetValidatorMissedBlockBitArray gets the bit for the missed blocks array
 func (k Keeper) GetValidatorMissedBlockBitArray(ctx sdk.Context, address sdk.ConsAddress, index int64) bool {
+	startTime := time.Now().UnixMicro()
 	store := ctx.KVStore(k.storeKey)
 	bz := store.Get(types.ValidatorMissedBlockBitArrayKey(address, index))
+	TotalGetLatency.Add(time.Now().UnixMicro() - startTime)
+
 	var missed gogotypes.BoolValue
 	if bz == nil {
 		// lazy: treat empty key as not missed
 		return false
 	}
 	k.cdc.MustUnmarshal(bz, &missed)
-
+	TotalLatency.Add(time.Now().UnixMicro() - startTime)
 	return missed.Value
 }
 

@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -132,6 +133,9 @@ func (k Keeper) HandleValidatorSignature(ctx sdk.Context, addr cryptotypes.Addre
 	// Set the updated signing info
 	k.SetValidatorSigningInfo(ctx, consAddr, signInfo)
 }
+
+var TotalGetLatency = atomic.Int64{}
+var TotalLatency = atomic.Int64{}
 
 // This performs similar logic to the above HandleValidatorSignature, but only performs READs such that it can be performed in parallel for all validators.
 // Instead of updating appropriate validator bit arrays / signing infos, this will return the pending values to be written in a consistent order

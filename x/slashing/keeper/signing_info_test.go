@@ -34,19 +34,6 @@ func TestGetSetValidatorSigningInfo(t *testing.T) {
 	require.Equal(t, info.MissedBlocksCounter, int64(10))
 }
 
-// TODO: re-enable?
-// func TestGetSetValidatorMissedBlockBitArray(t *testing.T) {
-// 	app := simapp.Setup(false)
-// 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
-// 	addrDels := simapp.AddTestAddrsIncremental(app, ctx, 1, app.StakingKeeper.TokensFromConsensusPower(ctx, 200))
-
-// 	missed := app.SlashingKeeper.GetValidatorMissedBlockBitArray(ctx, sdk.ConsAddress(addrDels[0]), 0)
-// 	require.False(t, missed) // treat empty key as not missed
-// 	app.SlashingKeeper.SetValidatorMissedBlockBitArray(ctx, sdk.ConsAddress(addrDels[0]), 0, true)
-// 	missed = app.SlashingKeeper.GetValidatorMissedBlockBitArray(ctx, sdk.ConsAddress(addrDels[0]), 0)
-// 	require.True(t, missed) // now should be missed
-// }
-
 func TestTombstoned(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})

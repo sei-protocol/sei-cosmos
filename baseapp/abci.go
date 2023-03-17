@@ -200,9 +200,6 @@ func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abc
 		}
 	}
 
-	ctx.ContextMemCache().EmitMetrics()
-	ctx.ContextMemCache().Clear()
-
 	return res
 }
 

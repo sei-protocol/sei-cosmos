@@ -3,7 +3,6 @@ package types
 import (
 	"sync"
 
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
@@ -48,12 +47,10 @@ func (c *ContextMemCache) IncrMetricCounter(count uint64, metric_name string)  {
 	(*c.metricsCounterMapping)[metric_name] = newCounter
 }
 
-func (c *ContextMemCache) EmitMetrics()  {
+func (c *ContextMemCache) GetMetricCounters() *map[string]uint64{
 	c.metricsLock.RLock()
 	defer c.metricsLock.RUnlock()
-	for metricName, value := range *c.metricsCounterMapping {
-		telemetry.IncrCounter(float32(value), "sei", "block", metricName)
-	}
+	return c.metricsCounterMapping
 }
 
 func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins) error {

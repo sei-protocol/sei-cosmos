@@ -2,6 +2,7 @@ package types
 
 import (
 	"sync"
+	"sync/atomic"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
@@ -10,6 +11,10 @@ type ContextMemCache struct {
 	deferredBankOpsLock *sync.Mutex
 	deferredSends       *DeferredBankOperationMapping
 	deferredWithdrawals *DeferredBankOperationMapping
+
+	msTxMutx 			*sync.RWMutex
+	messageCount 	 	uint64
+	transactionCount 	uint64
 }
 
 func NewContextMemCache() *ContextMemCache {
@@ -17,6 +22,9 @@ func NewContextMemCache() *ContextMemCache {
 		deferredBankOpsLock: &sync.Mutex{},
 		deferredSends:       NewDeferredBankOperationMap(),
 		deferredWithdrawals: NewDeferredBankOperationMap(),
+		msTxMutx: 			 &sync.RWMutex{},
+		messageCount: 		 0,
+		transactionCount: 	 0,
 	}
 }
 
@@ -26,6 +34,22 @@ func (c *ContextMemCache) GetDeferredSends() *DeferredBankOperationMapping {
 
 func (c *ContextMemCache) GetDeferredWithdrawals() *DeferredBankOperationMapping {
 	return c.deferredWithdrawals
+}
+
+func (c *ContextMemCache) GetMessageCount() uint64 {
+	return c.messageCount
+}
+
+func (c *ContextMemCache) GetTransactionCount() uint64 {
+	return c.transactionCount
+}
+
+func (c *ContextMemCache) IncrMessageCount(count uint64)  {
+	atomic.AddUint64(&c.messageCount, count)
+}
+
+func (c *ContextMemCache) IncrTransactionCount(count uint64)  {
+	atomic.AddUint64(&c.transactionCount, count)
 }
 
 func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins) error {
@@ -90,4 +114,7 @@ func (c *ContextMemCache) Clear() {
 	defer c.deferredBankOpsLock.Unlock()
 	c.deferredSends = NewDeferredBankOperationMap()
 	c.deferredWithdrawals = NewDeferredBankOperationMap()
+
+	atomic.StoreUint64(&c.messageCount, 0)
+	atomic.StoreUint64(&c.transactionCount, 0)
 }

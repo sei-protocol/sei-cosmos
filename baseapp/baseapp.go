@@ -945,6 +945,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 		msCache.Write()
 
+		// Store metrics for number of messages and transactions.
+		ctx.ContextMemCache().IncrMessageCount(uint64(len(msgs)))
+		ctx.ContextMemCache().IncrTransactionCount(1)
 	}
 	// we do this since we will only be looking at result in DeliverTx
 	if result != nil && len(anteEvents) > 0 {

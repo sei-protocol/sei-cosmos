@@ -118,5 +118,5 @@ func (c *ContextMemCache) Clear() {
 
 	c.metricsLock.Lock()
 	defer c.metricsLock.Unlock()
-	c.metricsCounterMapping = &map[string]uint64{}
+	c.metricsCounterMapping = &map[string]uint32{}
 }

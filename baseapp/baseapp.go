@@ -793,7 +793,6 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // returned if the tx does not run out of gas and if all the messages are valid
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
-	// Store metrics for number of messages and transactions.
 	defer ctx.ContextMemCache().IncrMetricCounter(1, sdk.TX_COUNT)
 
 	// Reset events after each checkTx or simulateTx or recheckTx

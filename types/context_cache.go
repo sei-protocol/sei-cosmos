@@ -18,7 +18,7 @@ type ContextMemCache struct {
 	deferredWithdrawals *DeferredBankOperationMapping
 
 	metricsLock 		*sync.RWMutex
-	metricsCounterMapping *map[string]uint64
+	metricsCounterMapping *map[string]uint32
 }
 
 func NewContextMemCache() *ContextMemCache {
@@ -27,7 +27,7 @@ func NewContextMemCache() *ContextMemCache {
 		deferredSends:       NewDeferredBankOperationMap(),
 		deferredWithdrawals: NewDeferredBankOperationMap(),
 		metricsLock: &sync.RWMutex{},
-		metricsCounterMapping: &map[string]uint64{},
+		metricsCounterMapping: &map[string]uint32{},
 	}
 }
 
@@ -39,7 +39,7 @@ func (c *ContextMemCache) GetDeferredWithdrawals() *DeferredBankOperationMapping
 	return c.deferredWithdrawals
 }
 
-func (c *ContextMemCache) IncrMetricCounter(count uint64, metric_name string)  {
+func (c *ContextMemCache) IncrMetricCounter(count uint32, metric_name string)  {
 	c.metricsLock.Lock()
 	defer c.metricsLock.Unlock()
 
@@ -47,7 +47,7 @@ func (c *ContextMemCache) IncrMetricCounter(count uint64, metric_name string)  {
 	(*c.metricsCounterMapping)[metric_name] = newCounter
 }
 
-func (c *ContextMemCache) GetMetricCounters() *map[string]uint64{
+func (c *ContextMemCache) GetMetricCounters() *map[string]uint32{
 	c.metricsLock.RLock()
 	defer c.metricsLock.RUnlock()
 	return c.metricsCounterMapping

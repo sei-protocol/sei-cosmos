@@ -869,7 +869,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}
 
 	msgs := tx.GetMsgs()
-	ctx.ContextMemCache().IncrMetricCounter(uint64(len(msgs)), sdk.MESSAGE_COUNT)
+	ctx.ContextMemCache().IncrMetricCounter(uint32(len(msgs)), sdk.MESSAGE_COUNT)
 
 	if err := validateBasicTxMsgs(msgs); err != nil {
 		return sdk.GasInfo{}, nil, nil, 0, err

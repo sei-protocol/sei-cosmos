@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	message_count	= "message_count"
+	MESSAGE_COUNT	= "message_count"
 	TX_COUNT		= "transaction_count"
-	order_count		= "order_count"
+	ORDER_COUNT		= "order_count"
 )
 
 type ContextMemCache struct {

@@ -35,6 +35,8 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	// TODO: migrate the signing info first
 	ctx.Logger().Info("Migrating Signing Info")
 	signInfoIter := sdk.KVStorePrefixIterator(store, types.ValidatorSigningInfoKeyPrefix)
+	newSignInfoKeys := [][]byte{}
+	newSignInfoVals := []types.ValidatorSigningInfo{}
 	defer signInfoIter.Close()
 	for ; signInfoIter.Valid(); signInfoIter.Next() {
 		ctx.Logger().Info(fmt.Sprintf("Migrating Signing Info for key: %v\n", signInfoIter.Key()))
@@ -48,11 +50,22 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 			Tombstoned:          oldInfo.Tombstoned,
 			MissedBlocksCounter: oldInfo.MissedBlocksCounter,
 		}
-
-		bz := m.keeper.cdc.MustMarshal(&newInfo)
-		store.Set(signInfoIter.Key(), bz)
+		newSignInfoKeys = append(newSignInfoKeys, signInfoIter.Key())
+		newSignInfoVals = append(newSignInfoVals, newInfo)
 	}
+	signInfoIter.Close()
+
+	if len(newSignInfoKeys) != len(newSignInfoVals) {
+		return fmt.Errorf("new sign info data length doesn't match up")
+	}
+	ctx.Logger().Info("Writing New Signing Info")
+	for i := range newSignInfoKeys {
+		bz := m.keeper.cdc.MustMarshal(&newSignInfoVals[i])
+		store.Set(newSignInfoKeys[i], bz)
+	}
+
 	ctx.Logger().Info("Migrating Missed Block Bit Array")
+	keysToDelete := [][]byte{}
 	iter := sdk.KVStorePrefixIterator(store, types.ValidatorMissedBlockBitArrayKeyPrefix)
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
@@ -84,7 +97,11 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 		}
 
 		valMissedMap[consAddr.String()] = arr
-		store.Delete(iter.Key())
+		keysToDelete = append(keysToDelete, iter.Key())
+	}
+
+	for _, key := range keysToDelete {
+		store.Delete(key)
 	}
 
 	ctx.Logger().Info("Writing new validator missed heights")

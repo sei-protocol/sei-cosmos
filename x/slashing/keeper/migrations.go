@@ -100,8 +100,16 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 		keysToDelete = append(keysToDelete, iter.Key())
 	}
 
-	for _, key := range keysToDelete {
+	ctx.Logger().Info(fmt.Sprintf("Starting deletion of missed bit array keys (total %d)", len(keysToDelete)))
+	interval := len(keysToDelete) / 50
+	if interval == 0 {
+		interval = 1
+	}
+	for i, key := range keysToDelete {
 		store.Delete(key)
+		if i%interval == 0 {
+			ctx.Logger().Info(fmt.Sprintf("Processing index %d", i))
+		}
 	}
 
 	ctx.Logger().Info("Writing new validator missed heights")

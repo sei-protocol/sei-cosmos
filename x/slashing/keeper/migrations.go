@@ -32,7 +32,6 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	store := ctx.KVStore(m.keeper.storeKey)
 	valMissedMap := make(map[string]types.ValidatorMissedBlockArray)
 
-	// TODO: migrate the signing info first
 	ctx.Logger().Info("Migrating Signing Info")
 	signInfoIter := sdk.KVStorePrefixIterator(store, types.ValidatorSigningInfoKeyPrefix)
 	newSignInfoKeys := [][]byte{}

@@ -62,7 +62,7 @@ func TestMigrate2to3(t *testing.T) {
 		StartHeight:         22,
 		MissedBlocksCounter: 3,
 	}
-	oldSignInfo := types.ValidatorSigningInfoLegacyV43{
+	oldSignInfo := types.ValidatorSigningInfo{
 		Address:             signInfo.Address,
 		StartHeight:         signInfo.StartHeight,
 		IndexOffset:         5,
@@ -73,7 +73,7 @@ func TestMigrate2to3(t *testing.T) {
 	bz := app.AppCodec().MustMarshal(&oldSignInfo)
 	store.Set(types.ValidatorSigningInfoKey(consAddr), bz)
 
-	oldSignInfo2 := types.ValidatorSigningInfoLegacyV43{
+	oldSignInfo2 := types.ValidatorSigningInfo{
 		Address:             signInfo2.Address,
 		StartHeight:         signInfo2.StartHeight,
 		IndexOffset:         5,
@@ -84,10 +84,10 @@ func TestMigrate2to3(t *testing.T) {
 	bz2 := app.AppCodec().MustMarshal(&oldSignInfo2)
 	store.Set(types.ValidatorSigningInfoKey(consAddr2), bz2)
 
-	_, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
-	require.False(t, found)
-	_, found2 := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr2)
-	require.False(t, found2)
+	bz = store.Get(types.ValidatorMissedBlockBitArrayKey(consAddr))
+	require.Nil(t, bz)
+	bz = store.Get(types.ValidatorMissedBlockBitArrayKey(consAddr2))
+	require.Nil(t, bz)
 
 	for i := 0; i < 5; i++ {
 		keyPrefix := types.ValidatorMissedBlockBitArrayKey(consAddr)
@@ -109,16 +109,18 @@ func TestMigrate2to3(t *testing.T) {
 	err := m.Migrate2to3(ctx)
 	require.NoError(t, err)
 
-	missedArray, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
-	require.True(t, found)
+	var missedArray types.ValidatorMissedBlockArrayLegacyMissedHeights
+	bz = store.Get(types.ValidatorMissedBlockBitArrayKey(consAddr))
+	app.AppCodec().MustUnmarshal(bz, &missedArray)
 	require.Equal(t, []int64{21, 22, 23, 24, 25}, missedArray.MissedHeights)
 
 	s, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
 	require.True(t, found)
 	require.Equal(t, signInfo, s)
 
-	missedArray2, found2 := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr2)
-	require.True(t, found2)
+	var missedArray2 types.ValidatorMissedBlockArrayLegacyMissedHeights
+	bz = store.Get(types.ValidatorMissedBlockBitArrayKey(consAddr2))
+	app.AppCodec().MustUnmarshal(bz, &missedArray2)
 	require.Equal(t, []int64{23, 24, 25, 26, 27}, missedArray2.MissedHeights)
 
 	s2, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr2)

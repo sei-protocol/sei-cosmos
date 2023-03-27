@@ -30,19 +30,19 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 // Migrate1to2 migrates from version 1 to 2.
 func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	store := ctx.KVStore(m.keeper.storeKey)
-	valMissedMap := make(map[string]types.ValidatorMissedBlockArray)
+	valMissedMap := make(map[string]types.ValidatorMissedBlockArrayLegacyMissedHeights)
 
 	ctx.Logger().Info("Migrating Signing Info")
 	signInfoIter := sdk.KVStorePrefixIterator(store, types.ValidatorSigningInfoKeyPrefix)
 	newSignInfoKeys := [][]byte{}
-	newSignInfoVals := []types.ValidatorSigningInfo{}
+	newSignInfoVals := []types.ValidatorSigningInfoLegacyMissedHeights{}
 	defer signInfoIter.Close()
 	for ; signInfoIter.Valid(); signInfoIter.Next() {
 		ctx.Logger().Info(fmt.Sprintf("Migrating Signing Info for key: %v\n", signInfoIter.Key()))
-		var oldInfo types.ValidatorSigningInfoLegacyV43
+		var oldInfo types.ValidatorSigningInfo
 		m.keeper.cdc.MustUnmarshal(signInfoIter.Value(), &oldInfo)
 
-		newInfo := types.ValidatorSigningInfo{
+		newInfo := types.ValidatorSigningInfoLegacyMissedHeights{
 			Address:             oldInfo.Address,
 			StartHeight:         oldInfo.StartHeight,
 			JailedUntil:         oldInfo.JailedUntil,
@@ -84,7 +84,7 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 		arr, ok := valMissedMap[consAddr.String()]
 		if !ok {
 			ctx.Logger().Info(fmt.Sprintf("Migrating for next validator with consAddr: %s\n", consAddr.String()))
-			arr = types.ValidatorMissedBlockArray{
+			arr = types.ValidatorMissedBlockArrayLegacyMissedHeights{
 				Address:       consAddr.String(),
 				MissedHeights: make([]int64, 0),
 			}
@@ -118,7 +118,8 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 		if err != nil {
 			return err
 		}
-		m.keeper.SetValidatorMissedBlocks(ctx, consAddrKey, missedBlockArray)
+		bz := m.keeper.cdc.MustMarshal(&missedBlockArray)
+		store.Set(types.ValidatorMissedBlockBitArrayKey(consAddrKey), bz)
 	}
 	ctx.Logger().Info("Done migrating")
 	return nil

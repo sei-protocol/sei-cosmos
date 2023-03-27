@@ -72,6 +72,62 @@ func (k Keeper) SetValidatorMissedBlocks(ctx sdk.Context, address sdk.ConsAddres
 	store.Set(types.ValidatorMissedBlockBitArrayKey(address), bz)
 }
 
+// Get a boolean representing whether a validator missed a block with a specific index offset
+func (k Keeper) GetValidatorMissedBlockBitFromArray(bitGroupArray []uint64, index int64) bool {
+	// convert the index into indexKey + indexShift
+	indexKey := index / 64
+	indexShift := index % 64
+	if indexKey >= int64(len(bitGroupArray)) {
+		return false
+	}
+	// shift 1 by the indexShift value to generate bit mask (to index into the bitGroup)
+	indexMask := uint64(1) << indexShift
+	// apply the mask and if the value at that `indexShift` is 1 (indicating miss), then the value would be non-zero
+	missed := (bitGroupArray[indexKey] & indexMask) != 0
+	return missed
+}
+
+// Set the missed value for whether a validator missed a block
+func (k Keeper) SetValidatorMissedBlockBitForArray(bitGroupArray []uint64, index int64, missed bool) []uint64 {
+	// convert the index into indexKey + indexShift
+	indexKey := index / 64
+	indexShift := index % 64
+	indexMask := uint64(1) << indexShift
+	if missed {
+		// set bit to 1 by ORing with the specific position as 1
+		bitGroupArray[indexKey] |= indexMask
+	} else {
+		// set bit to 0 by AND NOTing with the specific position as 1
+		bitGroupArray[indexKey] &^= indexMask
+	}
+	// set after updating the position
+	return bitGroupArray
+}
+
+func (k Keeper) ParseBitGroupsToBoolArray(bitGroups []uint64, window int64) []bool {
+	boolArray := make([]bool, window)
+
+	for i := int64(0); i < window; i++ {
+		boolArray[i] = k.GetValidatorMissedBlockBitFromArray(bitGroups, i)
+	}
+	return boolArray
+}
+
+func (k Keeper) ParseBoolArrayToBitGroups(boolArray []bool) []uint64 {
+	arrLen := len(boolArray) / 64
+	if len(boolArray)%64 > 0 {
+		arrLen += 1
+	}
+
+	bitGroups := make([]uint64, arrLen)
+
+	for index, boolVal := range boolArray {
+		bitGroups = k.SetValidatorMissedBlockBitForArray(bitGroups, int64(index), boolVal)
+	}
+
+	return bitGroups
+}
+
 // JailUntil attempts to set a validator's JailedUntil attribute in its signing
 // info. It will panic if the signing info does not exist for the validator.
 func (k Keeper) JailUntil(ctx sdk.Context, consAddr sdk.ConsAddress, jailTime time.Time) {

@@ -129,16 +129,16 @@ func TestGetSetValidatorMissedArrayBit(t *testing.T) {
 	bg1 |= 1 << 4
 	bitGroups := []uint64{bg0, bg1}
 
-	require.True(t, app.SlashingKeeper.GetValidatorMissedBlockBitFromArray(bitGroups, 2))
-	require.True(t, app.SlashingKeeper.GetValidatorMissedBlockBitFromArray(bitGroups, 23))
-	require.True(t, app.SlashingKeeper.GetValidatorMissedBlockBitFromArray(bitGroups, 68))
-	require.False(t, app.SlashingKeeper.GetValidatorMissedBlockBitFromArray(bitGroups, 69))
+	require.True(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 2))
+	require.True(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 23))
+	require.True(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 68))
+	require.False(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 69))
 
-	bitGroups = app.SlashingKeeper.SetValidatorMissedBlockBitForArray(bitGroups, 69, true)
-	bitGroups = app.SlashingKeeper.SetValidatorMissedBlockBitForArray(bitGroups, 68, false)
-	bitGroups = app.SlashingKeeper.SetValidatorMissedBlockBitForArray(bitGroups, 23, false)
+	bitGroups = app.SlashingKeeper.SetGetBooleanInBitGroups(bitGroups, 69, true)
+	bitGroups = app.SlashingKeeper.SetGetBooleanInBitGroups(bitGroups, 68, false)
+	bitGroups = app.SlashingKeeper.SetGetBooleanInBitGroups(bitGroups, 23, false)
 
-	require.False(t, app.SlashingKeeper.GetValidatorMissedBlockBitFromArray(bitGroups, 23))
-	require.False(t, app.SlashingKeeper.GetValidatorMissedBlockBitFromArray(bitGroups, 68))
-	require.True(t, app.SlashingKeeper.GetValidatorMissedBlockBitFromArray(bitGroups, 69))
+	require.False(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 23))
+	require.False(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 68))
+	require.True(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 69))
 }

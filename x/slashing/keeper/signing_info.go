@@ -73,7 +73,7 @@ func (k Keeper) SetValidatorMissedBlocks(ctx sdk.Context, address sdk.ConsAddres
 }
 
 // Get a boolean representing whether a validator missed a block with a specific index offset
-func (k Keeper) GetValidatorMissedBlockBitFromArray(bitGroupArray []uint64, index int64) bool {
+func (k Keeper) GetBooleanFromBitGroups(bitGroupArray []uint64, index int64) bool {
 	// convert the index into indexKey + indexShift
 	indexKey := index / 64
 	indexShift := index % 64
@@ -88,7 +88,7 @@ func (k Keeper) GetValidatorMissedBlockBitFromArray(bitGroupArray []uint64, inde
 }
 
 // Set the missed value for whether a validator missed a block
-func (k Keeper) SetValidatorMissedBlockBitForArray(bitGroupArray []uint64, index int64, missed bool) []uint64 {
+func (k Keeper) SetGetBooleanInBitGroups(bitGroupArray []uint64, index int64, missed bool) []uint64 {
 	// convert the index into indexKey + indexShift
 	indexKey := index / 64
 	indexShift := index % 64
@@ -108,21 +108,17 @@ func (k Keeper) ParseBitGroupsToBoolArray(bitGroups []uint64, window int64) []bo
 	boolArray := make([]bool, window)
 
 	for i := int64(0); i < window; i++ {
-		boolArray[i] = k.GetValidatorMissedBlockBitFromArray(bitGroups, i)
+		boolArray[i] = k.GetBooleanFromBitGroups(bitGroups, i)
 	}
 	return boolArray
 }
 
 func (k Keeper) ParseBoolArrayToBitGroups(boolArray []bool) []uint64 {
-	arrLen := len(boolArray) / 64
-	if len(boolArray)%64 > 0 {
-		arrLen += 1
-	}
-
+	arrLen := (len(boolArray) + 63) / 64
 	bitGroups := make([]uint64, arrLen)
 
 	for index, boolVal := range boolArray {
-		bitGroups = k.SetValidatorMissedBlockBitForArray(bitGroups, int64(index), boolVal)
+		bitGroups = k.SetGetBooleanInBitGroups(bitGroups, int64(index), boolVal)
 	}
 
 	return bitGroups

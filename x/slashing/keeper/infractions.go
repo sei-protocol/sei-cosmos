@@ -36,105 +36,59 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 
 	window := k.SignedBlocksWindow(ctx)
 
-	index := signInfo.IndexOffset % k.SignedBlocksWindow(ctx)
+	index := signInfo.IndexOffset
 
 	missedInfo, found = k.GetValidatorMissedBlocks(ctx, consAddr)
 
 	if !found {
-		arrLen := window / 64
-		if window%64 > 0 {
-			arrLen += 1
-		}
+		arrLen := (window + 63) / 64
 		missedInfo = types.ValidatorMissedBlockArray{
 			Address:      consAddr.String(),
 			WindowSize:   window,
 			MissedBlocks: make([]uint64, arrLen),
 		}
 	}
-	// TODO:  resize if necessary?
 	if found && missedInfo.WindowSize != window {
 		// we need to resize the missed block array AND update the signing info accordingly
 		switch {
 		case missedInfo.WindowSize < window:
 			// missed block array too short, lets expand it
 			boolArray := k.ParseBitGroupsToBoolArray(missedInfo.MissedBlocks, missedInfo.WindowSize)
-			oldIndex := signInfo.IndexOffset % missedInfo.WindowSize
 			newArray := make([]bool, window)
-			copy(newArray[0:oldIndex+1], boolArray[0:oldIndex+1])
-			if oldIndex+1 < missedInfo.WindowSize {
-				copy(newArray[oldIndex+1+(window-missedInfo.WindowSize):], boolArray[oldIndex+1:])
+			copy(newArray[0:index], boolArray[0:index])
+			if index+1 < missedInfo.WindowSize {
+				// insert `0`s corresponding to the difference between the new window size and old window size
+				copy(newArray[index+(window-missedInfo.WindowSize):], boolArray[index:])
 			}
-			// rotate array from oldIndex to newIndex
-			shiftDiff := ((index - oldIndex) + window) % window
-			finalBoolArr := make([]bool, window)
-			copy(finalBoolArr, newArray[window-shiftDiff:])
-			copy(finalBoolArr[shiftDiff:], newArray[:window-shiftDiff])
-			missedInfo.MissedBlocks = k.ParseBoolArrayToBitGroups(finalBoolArr)
+			missedInfo.MissedBlocks = k.ParseBoolArrayToBitGroups(newArray)
 			missedInfo.WindowSize = window
-			// TODO: set missed blocks later
-			// k.SetValidatorMissedBlocks(ctx, writeInfo.ConsAddr, missedInfo)
 		case missedInfo.WindowSize > window:
-			// missed block array too long, we need to trim
-			// we need to keep the last N blocks prior to the validator index offset (wrapping around backwards if necessary)
-			relativeIndexOffset := signInfo.IndexOffset % missedInfo.WindowSize
-			oldMissedBlocksBools := k.ParseBitGroupsToBoolArray(missedInfo.MissedBlocks, missedInfo.WindowSize)
+			// if window size is reduced, we would like to make a clean state so that no validators are unexpectedly jailed due to more recent missed blocks
 			newMissedBlocks := make([]bool, window)
-			// start from relative index offset, go back window blocks (using mod with arr size for proper indexing)
-			// save into a new array starting from index offset, going back (modding by window)
-			// add missed block len so modulus doesnt go negative
-			indexOffsetCounter := index + window
-			for i := relativeIndexOffset + missedInfo.WindowSize; i > relativeIndexOffset+missedInfo.WindowSize-window; i-- {
-				missedBlockIdx := i % missedInfo.WindowSize
-				newMissedBlocks[indexOffsetCounter%window] = oldMissedBlocksBools[missedBlockIdx]
-				indexOffsetCounter--
-			}
 			missedInfo.MissedBlocks = k.ParseBoolArrayToBitGroups(newMissedBlocks)
-			newMissedCount := 0
-			for _, b := range newMissedBlocks {
-				if b {
-					newMissedCount++
-				}
-			}
-			signInfo.MissedBlocksCounter = int64(newMissedCount)
+			signInfo.MissedBlocksCounter = int64(0)
 			missedInfo.WindowSize = window
-			// TODO: set missed blocks later
-			// k.SetValidatorMissedBlocks(ctx, writeInfo.ConsAddr, missedInfo)
+			signInfo.IndexOffset = 0
+			index = 0
 		}
 	}
-	// bump index offset after performing potential resizing
-	signInfo.IndexOffset++
-	previous := k.GetValidatorMissedBlockBitFromArray(missedInfo.MissedBlocks, index)
+	previous := k.GetBooleanFromBitGroups(missedInfo.MissedBlocks, index)
 	missed := !signed
 	switch {
 	case !previous && missed:
 		// Array value has changed from not missed to missed, increment counter
 		signInfo.MissedBlocksCounter++
-		missedInfo.MissedBlocks = k.SetValidatorMissedBlockBitForArray(missedInfo.MissedBlocks, index, true)
+		missedInfo.MissedBlocks = k.SetGetBooleanInBitGroups(missedInfo.MissedBlocks, index, true)
 	case previous && !missed:
 		// Array value has changed from missed to not missed, decrement counter
 		signInfo.MissedBlocksCounter--
-		missedInfo.MissedBlocks = k.SetValidatorMissedBlockBitForArray(missedInfo.MissedBlocks, index, false)
+		missedInfo.MissedBlocks = k.SetGetBooleanInBitGroups(missedInfo.MissedBlocks, index, false)
 	default:
 		// Array value at this index has not changed, no need to update counter
 	}
 
-	// cutoff := height - window
-	// // go through and increment number evicted as necessary
-	// numberEvicted := 0
-	// for _, missedHeight := range missedInfo.MissedHeights {
-	// 	if missedHeight <= cutoff {
-	// 		numberEvicted += 1
-	// 	} else {
-	// 		break
-	// 	}
-	// }
-	// // update Missed Heights by excluding heights outside of the window
-	// missedInfo.MissedHeights = missedInfo.MissedHeights[numberEvicted:]
-	// missed := !signed
-	// if missed {
-	// 	missedInfo.MissedHeights = append(missedInfo.MissedHeights, height-1)
-	// }
-	// signInfo.MissedBlocksCounter = int64(len(missedInfo.MissedHeights))
+	// bump index offset (and mod circular) after performing potential resizing
+	signInfo.IndexOffset = (signInfo.IndexOffset + 1) % window
 
 	minSignedPerWindow := k.MinSignedPerWindow(ctx)
 	if missed {

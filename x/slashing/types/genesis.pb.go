@@ -25,7 +25,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // GenesisState defines the slashing module's genesis state.
 type GenesisState struct {
-	// params defines all the paramaters of related to deposit.
+	// params defines all the paramaters of related to slashing.
 	Params Params `protobuf:"bytes,1,opt,name=params,proto3" json:"params"`
 	// signing_infos represents a map between validator addresses and their
 	// signing infos.
@@ -91,7 +91,7 @@ func (m *GenesisState) GetMissedBlocks() []ValidatorMissedBlockArray {
 
 // GenesisState defines the slashing module's genesis state.
 type GenesisStateLegacyMissingHeights struct {
-	// params defines all the paramaters of related to deposit.
+	// params defines all the paramaters of related to slashing.
 	Params Params `protobuf:"bytes,1,opt,name=params,proto3" json:"params"`
 	// signing_infos represents a map between validator addresses and their
 	// signing infos.
@@ -157,7 +157,7 @@ func (m *GenesisStateLegacyMissingHeights) GetMissedBlocks() []ValidatorMissedBl
 
 // GenesisState defines the slashing module's genesis state.
 type GenesisStateLegacyV43 struct {
-	// params defines all the paramaters of related to deposit.
+	// params defines all the paramaters of related to slashing.
 	Params Params `protobuf:"bytes,1,opt,name=params,proto3" json:"params"`
 	// signing_infos represents a map between validator addresses and their
 	// signing infos.

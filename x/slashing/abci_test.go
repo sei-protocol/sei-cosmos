@@ -415,3 +415,284 @@ func TestResizeExpandShiftValidatorMissedBlocksArrayMultipleBitGroups(t *testing
 	require.True(t, found)
 	require.Equal(t, int64(4), info.MissedBlocksCounter)
 }
+
+func TestResizeExpandShiftValidatorMissedBlocksArrayMultipleBitGroupsBeforeAndAfter(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	addrDels := simapp.AddTestAddrsIncremental(app, ctx, 1, app.StakingKeeper.TokensFromConsensusPower(ctx, 200))
+	valAddrs := simapp.ConvertAddrsToValAddrs(addrDels)
+
+	pks := simapp.CreateTestPubKeys(1)
+
+	tstaking := teststaking.NewHelper(t, ctx, app.StakingKeeper)
+
+	addr, val := valAddrs[0], pks[0]
+	tstaking.CreateValidatorWithValPower(addr, val, 200, true)
+
+	staking.EndBlocker(ctx, app.StakingKeeper)
+
+	params := app.SlashingKeeper.GetParams(ctx)
+	params.SignedBlocksWindow = 100
+	app.SlashingKeeper.SetParams(ctx, params)
+
+	consAddr := sdk.GetConsAddress(val)
+
+	newInfo := types.NewValidatorSigningInfo(
+		consAddr,
+		int64(0),
+		int64(509),
+		time.Unix(2, 0),
+		false,
+		int64(8),
+	)
+	app.SlashingKeeper.SetValidatorSigningInfo(ctx, consAddr, newInfo)
+
+	bg0 := uint64(0)
+	bg0 |= 1 << 0
+	bg0 |= 1 << 20
+	bg0 |= 1 << 31
+	bg0 |= 1 << 32
+	bg0 |= 1 << 39
+	bg0 |= 1 << 40
+	bg1 := uint64(0)
+	bg1 |= 1 << 3
+	bg1 |= 1 << 4
+	tooSmallArray := types.ValidatorMissedBlockArray{
+		Address:      consAddr.String(),
+		WindowSize:   72,
+		MissedBlocks: []uint64{bg0, bg1},
+	}
+	app.SlashingKeeper.SetValidatorMissedBlocks(ctx, consAddr, tooSmallArray)
+
+	ctx = ctx.WithBlockHeight(509)
+	slashing.BeginBlocker(ctx, testslashing.CreateBeginBlockReq(val.Address(), 200, true), app.SlashingKeeper)
+
+	bg0 = uint64(0)
+	bg0 |= 1 << 0
+	bg0 |= 1 << 4
+	bg0 |= 1 << 52
+	bg0 |= 1 << 63
+	bg1 = uint64(0)
+	bg1 |= 1 << 0
+	bg1 |= 1 << 7
+	bg1 |= 1 << 8
+	bg1 |= 1 << 35
+	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, 2, len(missedInfo.MissedBlocks))
+	require.Equal(t, int64(100), missedInfo.WindowSize)
+	require.Equal(t, []uint64{bg0, bg1}, missedInfo.MissedBlocks)
+
+	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, int64(8), info.MissedBlocksCounter)
+}
+
+func TestResizeExpandReverseShiftValidatorMissedBlocksArrayMultipleBitGroups(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	addrDels := simapp.AddTestAddrsIncremental(app, ctx, 1, app.StakingKeeper.TokensFromConsensusPower(ctx, 200))
+	valAddrs := simapp.ConvertAddrsToValAddrs(addrDels)
+
+	pks := simapp.CreateTestPubKeys(1)
+
+	tstaking := teststaking.NewHelper(t, ctx, app.StakingKeeper)
+
+	addr, val := valAddrs[0], pks[0]
+	tstaking.CreateValidatorWithValPower(addr, val, 200, true)
+
+	staking.EndBlocker(ctx, app.StakingKeeper)
+
+	params := app.SlashingKeeper.GetParams(ctx)
+	params.SignedBlocksWindow = 100
+	app.SlashingKeeper.SetParams(ctx, params)
+
+	consAddr := sdk.GetConsAddress(val)
+
+	newInfo := types.NewValidatorSigningInfo(
+		consAddr,
+		int64(0),
+		int64(1402),
+		time.Unix(2, 0),
+		false,
+		int64(6),
+	)
+	app.SlashingKeeper.SetValidatorSigningInfo(ctx, consAddr, newInfo)
+
+	bg0 := uint64(0)
+	bg0 |= 1 << 0
+	bg0 |= 1 << 31
+	bg0 |= 1 << 32
+	bg0 |= 1 << 35
+	bg1 := uint64(0)
+	bg1 |= 1 << 0
+	bg1 |= 1 << 4
+	tooSmallArray := types.ValidatorMissedBlockArray{
+		Address:      consAddr.String(),
+		WindowSize:   72,
+		MissedBlocks: []uint64{bg0, bg1},
+	}
+	app.SlashingKeeper.SetValidatorMissedBlocks(ctx, consAddr, tooSmallArray)
+
+	ctx = ctx.WithBlockHeight(509)
+	slashing.BeginBlocker(ctx, testslashing.CreateBeginBlockReq(val.Address(), 200, true), app.SlashingKeeper)
+
+	bg0 = uint64(0)
+	bg0 |= 1 << 0
+	bg0 |= 1 << 31
+	bg0 |= 1 << 60
+	bg1 = uint64(0)
+	bg1 |= 1 << 0
+	bg1 |= 1 << 4
+	bg1 |= 1 << 35
+	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, 2, len(missedInfo.MissedBlocks))
+	require.Equal(t, int64(100), missedInfo.WindowSize)
+	require.Equal(t, []uint64{bg0, bg1}, missedInfo.MissedBlocks)
+
+	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, int64(6), info.MissedBlocksCounter)
+}
+
+func TestResizeTrimValidatorMissedBlocksArrayMultipleBitGroups(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	addrDels := simapp.AddTestAddrsIncremental(app, ctx, 1, app.StakingKeeper.TokensFromConsensusPower(ctx, 200))
+	valAddrs := simapp.ConvertAddrsToValAddrs(addrDels)
+
+	pks := simapp.CreateTestPubKeys(1)
+
+	tstaking := teststaking.NewHelper(t, ctx, app.StakingKeeper)
+
+	addr, val := valAddrs[0], pks[0]
+	tstaking.CreateValidatorWithValPower(addr, val, 200, true)
+
+	staking.EndBlocker(ctx, app.StakingKeeper)
+
+	params := app.SlashingKeeper.GetParams(ctx)
+	params.SignedBlocksWindow = 72
+	app.SlashingKeeper.SetParams(ctx, params)
+
+	consAddr := sdk.GetConsAddress(val)
+
+	newInfo := types.NewValidatorSigningInfo(
+		consAddr,
+		int64(0),
+		int64(1305),
+		time.Unix(2, 0),
+		false,
+		int64(8),
+	)
+	app.SlashingKeeper.SetValidatorSigningInfo(ctx, consAddr, newInfo)
+
+	bg0 := uint64(0)
+	bg0 |= 1 << 5
+	bg0 |= 1 << 6
+	bg0 |= 1 << 33
+	bg0 |= 1 << 34
+	bg1 := uint64(0)
+	bg1 |= 1 << 23
+	bg1 |= 1 << 24
+	bg1 |= 1 << 32
+	bg1 |= 1 << 35
+	tooSmallArray := types.ValidatorMissedBlockArray{
+		Address:      consAddr.String(),
+		WindowSize:   100,
+		MissedBlocks: []uint64{bg0, bg1},
+	}
+	app.SlashingKeeper.SetValidatorMissedBlocks(ctx, consAddr, tooSmallArray)
+
+	ctx = ctx.WithBlockHeight(509)
+	slashing.BeginBlocker(ctx, testslashing.CreateBeginBlockReq(val.Address(), 200, false), app.SlashingKeeper)
+
+	bg0 = uint64(0)
+	bg0 |= 1 << 0
+	bg0 |= 1 << 3
+	bg0 |= 1 << 9
+	bg0 |= 1 << 10
+	bg0 |= 1 << 63
+	bg1 = uint64(0)
+	bg1 |= 1 << 0
+	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, 2, len(missedInfo.MissedBlocks))
+	require.Equal(t, int64(72), missedInfo.WindowSize)
+	require.Equal(t, []uint64{bg0, bg1}, missedInfo.MissedBlocks)
+
+	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, int64(6), info.MissedBlocksCounter)
+}
+
+func TestResizeTrimValidatorMissedBlocksArrayEliminateBitGroup(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	addrDels := simapp.AddTestAddrsIncremental(app, ctx, 1, app.StakingKeeper.TokensFromConsensusPower(ctx, 200))
+	valAddrs := simapp.ConvertAddrsToValAddrs(addrDels)
+
+	pks := simapp.CreateTestPubKeys(1)
+
+	tstaking := teststaking.NewHelper(t, ctx, app.StakingKeeper)
+
+	addr, val := valAddrs[0], pks[0]
+	tstaking.CreateValidatorWithValPower(addr, val, 200, true)
+
+	staking.EndBlocker(ctx, app.StakingKeeper)
+
+	params := app.SlashingKeeper.GetParams(ctx)
+	params.SignedBlocksWindow = 128
+	app.SlashingKeeper.SetParams(ctx, params)
+
+	consAddr := sdk.GetConsAddress(val)
+
+	newInfo := types.NewValidatorSigningInfo(
+		consAddr,
+		int64(0),
+		int64(447),
+		time.Unix(2, 0),
+		false,
+		int64(6),
+	)
+	app.SlashingKeeper.SetValidatorSigningInfo(ctx, consAddr, newInfo)
+
+	bg0 := uint64(0)
+	bg0 |= 1 << 0
+	bg0 |= 1 << 63
+	bg1 := uint64(0)
+	bg1 |= 1 << 1
+	bg1 |= 1 << 62
+	bg2 := uint64(0)
+	bg2 |= 1 << 2
+	bg2 |= 1 << 61
+	tooSmallArray := types.ValidatorMissedBlockArray{
+		Address:      consAddr.String(),
+		WindowSize:   192,
+		MissedBlocks: []uint64{bg0, bg1, bg2},
+	}
+	app.SlashingKeeper.SetValidatorMissedBlocks(ctx, consAddr, tooSmallArray)
+
+	ctx = ctx.WithBlockHeight(509)
+	slashing.BeginBlocker(ctx, testslashing.CreateBeginBlockReq(val.Address(), 200, false), app.SlashingKeeper)
+
+	bg0 = uint64(0)
+	bg0 |= 1 << 0
+	bg0 |= 1 << 63
+	bg1 = uint64(0)
+	bg1 |= 1 << 2
+	bg1 |= 1 << 61
+	missedInfo, found := app.SlashingKeeper.GetValidatorMissedBlocks(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, 2, len(missedInfo.MissedBlocks))
+	require.Equal(t, int64(128), missedInfo.WindowSize)
+	require.Equal(t, []uint64{bg0, bg1}, missedInfo.MissedBlocks)
+
+	info, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
+	require.True(t, found)
+	require.Equal(t, int64(4), info.MissedBlocksCounter)
+}

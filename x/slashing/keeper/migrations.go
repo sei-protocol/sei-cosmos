@@ -76,11 +76,16 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 
 		consAddr := sdk.ConsAddress(consAddrBytes)
 		index := int64(binary.LittleEndian.Uint64(indexBytes))
+		// load legacy signing info type
+		var signInfo types.ValidatorSigningInfoLegacyMissedHeights
+		signInfoKey := types.ValidatorSigningInfoKey(consAddr)
+		bz := store.Get(signInfoKey)
 
-		signInfo, found := m.keeper.GetValidatorSigningInfo(ctx, consAddr)
-		if !found {
-			return fmt.Errorf("signing info not found")
-		}
+		m.keeper.cdc.MustUnmarshal(bz, &signInfo)
+		// signInfo, found := m.keeper.GetValidatorSigningInfo(ctx, consAddr)
+		// if !found {
+		// 	return fmt.Errorf("signing info not found")
+		// }
 		arr, ok := valMissedMap[consAddr.String()]
 		if !ok {
 			ctx.Logger().Info(fmt.Sprintf("Migrating for next validator with consAddr: %s\n", consAddr.String()))

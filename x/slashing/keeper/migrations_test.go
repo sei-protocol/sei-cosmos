@@ -52,12 +52,12 @@ func TestMigrate2to3(t *testing.T) {
 	consAddr2 := sdk.GetConsAddress(val2)
 	store := ctx.KVStore(app.SlashingKeeper.GetStoreKey())
 
-	signInfo := types.ValidatorSigningInfo{
+	signInfo := types.ValidatorSigningInfoLegacyMissedHeights{
 		Address:             consAddr.String(),
 		StartHeight:         21,
 		MissedBlocksCounter: 2,
 	}
-	signInfo2 := types.ValidatorSigningInfo{
+	signInfo2 := types.ValidatorSigningInfoLegacyMissedHeights{
 		Address:             consAddr2.String(),
 		StartHeight:         22,
 		MissedBlocksCounter: 3,
@@ -114,8 +114,10 @@ func TestMigrate2to3(t *testing.T) {
 	app.AppCodec().MustUnmarshal(bz, &missedArray)
 	require.Equal(t, []int64{21, 22, 23, 24, 25}, missedArray.MissedHeights)
 
-	s, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr)
-	require.True(t, found)
+	var s types.ValidatorSigningInfoLegacyMissedHeights
+	signInfoKey := types.ValidatorSigningInfoKey(consAddr)
+	bz = store.Get(signInfoKey)
+	app.AppCodec().MustUnmarshal(bz, &s)
 	require.Equal(t, signInfo, s)
 
 	var missedArray2 types.ValidatorMissedBlockArrayLegacyMissedHeights
@@ -123,7 +125,11 @@ func TestMigrate2to3(t *testing.T) {
 	app.AppCodec().MustUnmarshal(bz, &missedArray2)
 	require.Equal(t, []int64{23, 24, 25, 26, 27}, missedArray2.MissedHeights)
 
-	s2, found := app.SlashingKeeper.GetValidatorSigningInfo(ctx, consAddr2)
-	require.True(t, found)
+	var s2 types.ValidatorSigningInfoLegacyMissedHeights
+	signInfoKey2 := types.ValidatorSigningInfoKey(consAddr2)
+	bz = store.Get(signInfoKey2)
+	app.AppCodec().MustUnmarshal(bz, &s2)
 	require.Equal(t, signInfo2, s2)
 }
+
+// TODO: test migrate 3 -> 4

@@ -49,28 +49,7 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 		}
 	}
 	if found && missedInfo.WindowSize != window {
-		// we need to resize the missed block array AND update the signing info accordingly
-		switch {
-		case missedInfo.WindowSize < window:
-			// missed block array too short, lets expand it
-			boolArray := k.ParseBitGroupsToBoolArray(missedInfo.MissedBlocks, missedInfo.WindowSize)
-			newArray := make([]bool, window)
-			copy(newArray[0:index], boolArray[0:index])
-			if index+1 < missedInfo.WindowSize {
-				// insert `0`s corresponding to the difference between the new window size and old window size
-				copy(newArray[index+(window-missedInfo.WindowSize):], boolArray[index:])
-			}
-			missedInfo.MissedBlocks = k.ParseBoolArrayToBitGroups(newArray)
-			missedInfo.WindowSize = window
-		case missedInfo.WindowSize > window:
-			// if window size is reduced, we would like to make a clean state so that no validators are unexpectedly jailed due to more recent missed blocks
-			newMissedBlocks := make([]bool, window)
-			missedInfo.MissedBlocks = k.ParseBoolArrayToBitGroups(newMissedBlocks)
-			signInfo.MissedBlocksCounter = int64(0)
-			missedInfo.WindowSize = window
-			signInfo.IndexOffset = 0
-			index = 0
-		}
+		missedInfo, signInfo, index = k.ResizeMissedBlockArray(missedInfo, signInfo, window, index)
 	}
 	previous := k.GetBooleanFromBitGroups(missedInfo.MissedBlocks, index)
 	missed := !signed
@@ -171,4 +150,30 @@ func (k Keeper) SlashJailAndUpdateSigningInfo(ctx sdk.Context, consAddr sdk.Cons
 		"jailed_until", signInfo.JailedUntil,
 	)
 	return signInfo
+}
+
+func (k Keeper) ResizeMissedBlockArray(missedInfo types.ValidatorMissedBlockArray, signInfo types.ValidatorSigningInfo, window int64, index int64) (types.ValidatorMissedBlockArray, types.ValidatorSigningInfo, int64) {
+	// we need to resize the missed block array AND update the signing info accordingly
+	switch {
+	case missedInfo.WindowSize < window:
+		// missed block array too short, lets expand it
+		boolArray := k.ParseBitGroupsToBoolArray(missedInfo.MissedBlocks, missedInfo.WindowSize)
+		newArray := make([]bool, window)
+		copy(newArray[0:index], boolArray[0:index])
+		if index+1 < missedInfo.WindowSize {
+			// insert `0`s corresponding to the difference between the new window size and old window size
+			copy(newArray[index+(window-missedInfo.WindowSize):], boolArray[index:])
+		}
+		missedInfo.MissedBlocks = k.ParseBoolArrayToBitGroups(newArray)
+		missedInfo.WindowSize = window
+	case missedInfo.WindowSize > window:
+		// if window size is reduced, we would like to make a clean state so that no validators are unexpectedly jailed due to more recent missed blocks
+		newMissedBlocks := make([]bool, window)
+		missedInfo.MissedBlocks = k.ParseBoolArrayToBitGroups(newMissedBlocks)
+		signInfo.MissedBlocksCounter = int64(0)
+		missedInfo.WindowSize = window
+		signInfo.IndexOffset = 0
+		index = 0
+	}
+	return missedInfo, signInfo, index
 }

@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/binary"
 	"fmt"
+	"sort"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v043 "github.com/cosmos/cosmos-sdk/x/slashing/legacy/v043"
@@ -117,7 +118,13 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	}
 
 	ctx.Logger().Info("Writing new validator missed heights")
-	for key, missedBlockArray := range valMissedMap {
+	valKeys := []string{}
+	for key := range valMissedMap {
+		valKeys = append(valKeys, key)
+	}
+	sort.Strings(valKeys)
+	for _, key := range valKeys {
+		missedBlockArray := valMissedMap[key]
 		consAddrKey, err := sdk.ConsAddressFromBech32(key)
 		ctx.Logger().Info(fmt.Sprintf("Writing missed heights for validator: %s\n", consAddrKey.String()))
 		if err != nil {
@@ -202,7 +209,13 @@ func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 	}
 
 	ctx.Logger().Info("Writing new validator missed blocks infos")
-	for key, missedBlockArray := range valMissedMap {
+	valKeys := []string{}
+	for key := range valMissedMap {
+		valKeys = append(valKeys, key)
+	}
+	sort.Strings(valKeys)
+	for _, key := range valKeys {
+		missedBlockArray := valMissedMap[key]
 		consAddr, err := sdk.ConsAddressFromBech32(key)
 		ctx.Logger().Info(fmt.Sprintf("Writing missed heights for validator: %s\n", consAddr.String()))
 		if err != nil {

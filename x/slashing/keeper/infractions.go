@@ -41,7 +41,7 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 	missedInfo, found = k.GetValidatorMissedBlocks(ctx, consAddr)
 
 	if !found {
-		arrLen := (window + 63) / 64
+		arrLen := (window + UINT_64_NUM_BITS - 1) / UINT_64_NUM_BITS
 		missedInfo = types.ValidatorMissedBlockArray{
 			Address:      consAddr.String(),
 			WindowSize:   window,
@@ -53,15 +53,14 @@ func (k Keeper) HandleValidatorSignatureConcurrent(ctx sdk.Context, addr cryptot
 	}
 	previous := k.GetBooleanFromBitGroups(missedInfo.MissedBlocks, index)
 	missed := !signed
+	missedInfo.MissedBlocks = k.SetBooleanInBitGroups(missedInfo.MissedBlocks, index, missed)
 	switch {
 	case !previous && missed:
 		// Array value has changed from not missed to missed, increment counter
 		signInfo.MissedBlocksCounter++
-		missedInfo.MissedBlocks = k.SetGetBooleanInBitGroups(missedInfo.MissedBlocks, index, true)
 	case previous && !missed:
 		// Array value has changed from missed to not missed, decrement counter
 		signInfo.MissedBlocksCounter--
-		missedInfo.MissedBlocks = k.SetGetBooleanInBitGroups(missedInfo.MissedBlocks, index, false)
 	default:
 		// Array value at this index has not changed, no need to update counter
 	}

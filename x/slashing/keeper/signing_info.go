@@ -7,6 +7,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing/types"
 )
 
+const UINT_64_NUM_BITS = 64
+
 // GetValidatorSigningInfo retruns the ValidatorSigningInfo for a specific validator
 // ConsAddress
 func (k Keeper) GetValidatorSigningInfo(ctx sdk.Context, address sdk.ConsAddress) (info types.ValidatorSigningInfo, found bool) {
@@ -75,8 +77,8 @@ func (k Keeper) SetValidatorMissedBlocks(ctx sdk.Context, address sdk.ConsAddres
 // Get a boolean representing whether a validator missed a block with a specific index offset
 func (k Keeper) GetBooleanFromBitGroups(bitGroupArray []uint64, index int64) bool {
 	// convert the index into indexKey + indexShift
-	indexKey := index / 64
-	indexShift := index % 64
+	indexKey := index / UINT_64_NUM_BITS
+	indexShift := index % UINT_64_NUM_BITS
 	if indexKey >= int64(len(bitGroupArray)) {
 		return false
 	}
@@ -88,10 +90,10 @@ func (k Keeper) GetBooleanFromBitGroups(bitGroupArray []uint64, index int64) boo
 }
 
 // Set the missed value for whether a validator missed a block
-func (k Keeper) SetGetBooleanInBitGroups(bitGroupArray []uint64, index int64, missed bool) []uint64 {
+func (k Keeper) SetBooleanInBitGroups(bitGroupArray []uint64, index int64, missed bool) []uint64 {
 	// convert the index into indexKey + indexShift
-	indexKey := index / 64
-	indexShift := index % 64
+	indexKey := index / UINT_64_NUM_BITS
+	indexShift := index % UINT_64_NUM_BITS
 	indexMask := uint64(1) << indexShift
 	if missed {
 		// set bit to 1 by ORing with the specific position as 1
@@ -114,11 +116,11 @@ func (k Keeper) ParseBitGroupsToBoolArray(bitGroups []uint64, window int64) []bo
 }
 
 func (k Keeper) ParseBoolArrayToBitGroups(boolArray []bool) []uint64 {
-	arrLen := (len(boolArray) + 63) / 64
+	arrLen := (len(boolArray) + UINT_64_NUM_BITS - 1) / UINT_64_NUM_BITS
 	bitGroups := make([]uint64, arrLen)
 
 	for index, boolVal := range boolArray {
-		bitGroups = k.SetGetBooleanInBitGroups(bitGroups, int64(index), boolVal)
+		bitGroups = k.SetBooleanInBitGroups(bitGroups, int64(index), boolVal)
 	}
 
 	return bitGroups

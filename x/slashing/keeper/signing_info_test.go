@@ -134,9 +134,9 @@ func TestGetSetValidatorMissedArrayBit(t *testing.T) {
 	require.True(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 68))
 	require.False(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 69))
 
-	bitGroups = app.SlashingKeeper.SetGetBooleanInBitGroups(bitGroups, 69, true)
-	bitGroups = app.SlashingKeeper.SetGetBooleanInBitGroups(bitGroups, 68, false)
-	bitGroups = app.SlashingKeeper.SetGetBooleanInBitGroups(bitGroups, 23, false)
+	bitGroups = app.SlashingKeeper.SetBooleanInBitGroups(bitGroups, 69, true)
+	bitGroups = app.SlashingKeeper.SetBooleanInBitGroups(bitGroups, 68, false)
+	bitGroups = app.SlashingKeeper.SetBooleanInBitGroups(bitGroups, 23, false)
 
 	require.False(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 23))
 	require.False(t, app.SlashingKeeper.GetBooleanFromBitGroups(bitGroups, 68))

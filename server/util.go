@@ -3,6 +3,8 @@ package server
 import (
 	"errors"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/client"
+	clientconfig "github.com/cosmos/cosmos-sdk/client/config"
 	"io"
 	"net"
 	"os"
@@ -431,4 +433,25 @@ func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
 		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
 		0666,
 	)
+}
+
+func getAndValidateChainId(cmd *cobra.Command) (chainID string, err error) {
+	clientCtx, err := client.GetClientQueryContext(cmd)
+	if err != nil {
+		return "", err
+	}
+	clientCtx, err = clientconfig.ReadFromClientConfig(clientCtx)
+	if err != nil {
+		return "", err
+	}
+
+	chainID = clientCtx.ChainID
+	flagChainID, _ := cmd.Flags().GetString(FlagChainID)
+	if flagChainID != "" {
+		if flagChainID != chainID {
+			panic(fmt.Sprintf("chain-id mismatch: %s vs %s. The chain-id passed in is different from the value in ~/.sei/config/client.toml \n", flagChainID, chainID))
+		}
+		chainID = flagChainID
+	}
+	return chainID, nil
 }

@@ -37,7 +37,7 @@ var (
 
 // Store Implements types.KVStore and CommitKVStore.
 type Store struct {
-	tree Tree
+	tree    Tree
 	treeMtx *sync.RWMutex
 }
 
@@ -91,7 +91,7 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 	}
 
 	return &Store{
-		tree: tree,
+		tree:    tree,
 		treeMtx: &sync.RWMutex{},
 	}, nil
 }
@@ -104,7 +104,7 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 // passed into iavl.MutableTree
 func UnsafeNewStore(tree *iavl.MutableTree) *Store {
 	return &Store{
-		tree: tree,
+		tree:    tree,
 		treeMtx: &sync.RWMutex{},
 	}
 }
@@ -120,7 +120,7 @@ func (st *Store) GetImmutable(version int64) (*Store, error) {
 
 	if !st.VersionExists(version) {
 		return &Store{
-			tree: &immutableTree{&iavl.ImmutableTree{}},
+			tree:    &immutableTree{&iavl.ImmutableTree{}},
 			treeMtx: &sync.RWMutex{},
 		}, nil
 	}
@@ -131,7 +131,7 @@ func (st *Store) GetImmutable(version int64) (*Store, error) {
 	}
 
 	return &Store{
-		tree: &immutableTree{iTree},
+		tree:    &immutableTree{iTree},
 		treeMtx: &sync.RWMutex{},
 	}, nil
 }
@@ -260,6 +260,10 @@ func (st *Store) Delete(key []byte) {
 // happen in a single batch with a single commit.
 func (st *Store) DeleteVersions(versions ...int64) error {
 	return st.tree.DeleteVersions(versions...)
+}
+
+func (st *Store) DeleteVersionsAsync(versions ...int64) error {
+	return st.tree.DeleteVersionsAsync(versions...)
 }
 
 // LoadVersionForOverwriting attempts to load a tree at a previously committed

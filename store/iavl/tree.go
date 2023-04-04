@@ -26,6 +26,7 @@ type (
 		SaveCurrentVersion() ([]byte, int64, error)
 		DeleteVersion(version int64) error
 		DeleteVersions(versions ...int64) error
+		DeleteVersionsAsync(versions ...int64) error
 		Version() int64
 		Hash() ([]byte, error)
 		WorkingHash() ([]byte, error)
@@ -71,6 +72,10 @@ func (it *immutableTree) DeleteVersion(_ int64) error {
 }
 
 func (it *immutableTree) DeleteVersions(_ ...int64) error {
+	panic("cannot call 'DeleteVersions' on an immutable IAVL tree")
+}
+
+func (it *immutableTree) DeleteVersionsAsync(_ ...int64) error {
 	panic("cannot call 'DeleteVersions' on an immutable IAVL tree")
 }
 

@@ -252,6 +252,8 @@ func NewBaseApp(
 	}
 	app.startCompactionRoutine(db)
 
+	app.cms.(*rootmulti.Store).StartPruneStore()
+
 	return app
 }
 

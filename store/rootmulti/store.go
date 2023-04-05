@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	iavltree "github.com/cosmos/iavl"
 	protoio "github.com/gogo/protobuf/io"
@@ -63,6 +64,7 @@ type Store struct {
 	traceWriter       io.Writer
 	traceContext      types.TraceContext
 	traceContextMutex sync.Mutex
+	pruneHeightsMtx   sync.RWMutex
 
 	interBlockCache types.MultiStorePersistentCache
 
@@ -485,14 +487,16 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		// - KeepEvery % (height - KeepRecent) != 0 as that means the height is not
 		// a 'snapshot' height.
 		if rs.pruningOpts.KeepEvery == 0 || pruneHeight%int64(rs.pruningOpts.KeepEvery) != 0 {
+			rs.pruneHeightsMtx.Lock()
+			defer rs.pruneHeightsMtx.Unlock()
 			rs.pruneHeights = append(rs.pruneHeights, pruneHeight)
 		}
 	}
 
 	// batch prune if the current height is a pruning interval height
-	if rs.pruningOpts.Interval > 0 && version%int64(rs.pruningOpts.Interval) == 0 {
-		rs.PruneStores(true, nil)
-	}
+	// if rs.pruningOpts.Interval > 0 && version%int64(rs.pruningOpts.Interval) == 0 {
+	// 	rs.PruneStores(true, nil)
+	// }
 
 	return types.CommitID{
 		Version: version,
@@ -504,13 +508,16 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 // If clearStorePruningHeihgts is true, store's pruneHeights is appended to the
 // pruningHeights and reset after finishing pruning.
 func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int64) {
+	rs.pruneHeightsMtx.RLock()
 	if clearStorePruningHeihgts {
 		pruningHeights = append(pruningHeights, rs.pruneHeights...)
 	}
 
 	if len(rs.pruneHeights) == 0 {
+		rs.pruneHeightsMtx.RUnlock()
 		return
 	}
+	rs.pruneHeightsMtx.RUnlock()
 
 	for key, store := range rs.stores {
 		if store.GetStoreType() == types.StoreTypeIAVL {
@@ -518,7 +525,7 @@ func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int
 			// it to get the underlying IAVL store.
 			store = rs.GetCommitKVStore(key)
 
-			if err := store.(*iavl.Store).DeleteVersions(pruningHeights...); err != nil {
+			if err := store.(*iavl.Store).DeleteVersionsAsync(pruningHeights...); err != nil {
 				if errCause := errors.Cause(err); errCause != nil && errCause != iavltree.ErrVersionDoesNotExist {
 					panic(err)
 				}
@@ -527,8 +534,19 @@ func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int
 	}
 
 	if clearStorePruningHeihgts {
+		rs.pruneHeightsMtx.Lock()
+		defer rs.pruneHeightsMtx.Unlock()
 		rs.pruneHeights = make([]int64, 0)
 	}
+}
+
+func (rs *Store) StartPruneStore() {
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			rs.PruneStores(true, nil)
+		}
+	}()
 }
 
 // CacheWrap implements CacheWrapper/Store/CommitStore.
@@ -1016,7 +1034,7 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 		flushCommitInfo(batch, version, cInfo)
 	}
 	flushLatestVersion(batch, version)
-	flushPruningHeights(batch, rs.pruneHeights)
+	//flushPruningHeights(batch, rs.pruneHeights)
 	if err := batch.WriteSync(); err != nil {
 		panic(fmt.Errorf("error on batch write %w", err))
 	}

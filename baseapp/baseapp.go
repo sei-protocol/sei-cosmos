@@ -255,7 +255,9 @@ func NewBaseApp(
 	if app.ChainID == "" {
 		panic("must pass --chain-id when calling 'seid start' or set in ~/.sei/config/client.toml")
 	}
+
 	app.startCompactionRoutine(db)
+	app.cms.(*rootmulti.Store).StartPruneStore()
 
 	return app
 }

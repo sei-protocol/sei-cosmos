@@ -777,6 +777,17 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		return strings.Compare(stores[i].name, stores[j].name) == -1
 	})
 
+	storeExporterMap := make(map[string]*iavltree.Exporter)
+	// Start exporter async fetching
+	for _, store := range stores {
+		storeExporter, err := store.Export(int64(height))
+		storeExporterMap[store.name] = storeExporter
+		if err != nil {
+			return err
+		}
+
+		defer storeExporter.Close()
+	}
 	// Export each IAVL store. Stores are serialized as a stream of SnapshotItem Protobuf
 	// messages. The first item contains a SnapshotStore with store metadata (i.e. name),
 	// and the following messages contain a SnapshotNode (i.e. an ExportNode). Store changes
@@ -784,12 +795,8 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	for _, store := range stores {
 		startTime := time.Now()
 		fmt.Printf("[Cosmos-Debug] Start exporting snapshot for store %s\n", store.name)
-		exporter, err := store.Export(int64(height))
-		if err != nil {
-			return err
-		}
-		defer exporter.Close()
-		err = protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
+		exporter := storeExporterMap[store.name]
+		err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 			Item: &snapshottypes.SnapshotItem_Store{
 				Store: &snapshottypes.SnapshotStoreItem{
 					Name: store.name,

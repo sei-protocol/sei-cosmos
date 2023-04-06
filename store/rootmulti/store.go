@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	iavltree "github.com/cosmos/iavl"
 	protoio "github.com/gogo/protobuf/io"
@@ -740,6 +741,12 @@ func parsePath(path string) (storeName string, subpath string, err error) {
 // identical across nodes such that chunks from different sources fit together. If the output for a
 // given format changes (at the byte level), the snapshot format must be bumped - see
 // TestMultistoreSnapshot_Checksum test.
+var TotalWaitNextLatency = int64(0)
+var TotalWriteMsgLatency = int64(0)
+var TotalCreateExporterLatency = int64(0)
+var TotalLatency = int64(0)
+var TotalItems = 0
+
 func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	if height == 0 {
 		return sdkerrors.Wrap(sdkerrors.ErrLogic, "cannot snapshot height 0")
@@ -775,6 +782,8 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	// and the following messages contain a SnapshotNode (i.e. an ExportNode). Store changes
 	// are demarcated by new SnapshotStore items.
 	for _, store := range stores {
+		startTime := time.Now()
+		fmt.Printf("[Cosmos-Debug] Start exporting snapshot for store %s\n", store.name)
 		exporter, err := store.Export(int64(height))
 		if err != nil {
 			return err
@@ -790,14 +799,17 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		if err != nil {
 			return err
 		}
-
+		TotalCreateExporterLatency += time.Since(startTime).Microseconds()
 		for {
+			iterStartTime := time.Now()
 			node, err := exporter.Next()
+			TotalWaitNextLatency += time.Since(iterStartTime).Microseconds()
 			if err == iavltree.ExportDone {
 				break
 			} else if err != nil {
 				return err
 			}
+			writeStartTime := time.Now()
 			err = protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_IAVL{
 					IAVL: &snapshottypes.SnapshotIAVLItem{
@@ -808,11 +820,18 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 					},
 				},
 			})
+			TotalWriteMsgLatency += time.Since(writeStartTime).Microseconds()
+			TotalItems++
+			if TotalItems%10000 == 0 {
+				fmt.Printf("[CosmosDebug] Total item %d, iterate latency %d, writeMsg latency %d\n", TotalItems, TotalWaitNextLatency, TotalWriteMsgLatency)
+			}
 			if err != nil {
 				return err
 			}
 		}
 		exporter.Close()
+		TotalLatency += time.Since(startTime).Microseconds()
+		fmt.Printf("[Cosmos-Debug] Finished exporting snapshot for store %s, total latency %d\n", store.name, TotalLatency)
 	}
 
 	return nil

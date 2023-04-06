@@ -839,6 +839,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		exporter.Close()
 		TotalLatency += time.Since(startTime).Microseconds()
 		fmt.Printf("[Cosmos-Debug] Finished exporting snapshot for store %s, total latency %d\n", store.name, TotalLatency)
+		TotalLatency, TotalItems, TotalWaitNextLatency, TotalWriteMsgLatency = 0, 0, 0, 0
 	}
 
 	return nil

@@ -813,7 +813,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		for {
 			iterStartTime := time.Now()
 			node, err := exporter.Next()
-			iterateNextLatency += time.Since(iterStartTime).Milliseconds()
+			iterateNextLatency += time.Since(iterStartTime).Microseconds()
 			if err == iavltree.ExportDone {
 				break
 			} else if err != nil {
@@ -830,7 +830,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 					},
 				},
 			})
-			writeMessageLatency += time.Since(writeStartTime).Milliseconds()
+			writeMessageLatency += time.Since(writeStartTime).Microseconds()
 			itemCount++
 			if itemCount%10000 == 0 {
 				fmt.Printf("[Cosmos-Debug] Store %s, has total item %d, iterate latency %d, writeMsg latency %d\n", store.name, itemCount, iterateNextLatency, writeMessageLatency)
@@ -839,10 +839,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 				return err
 			}
 		}
-		fmt.Printf("[Cosmos-Debug] Finished exporting snapshot for store %s, total item %d, total latency %d\n", store.name, itemCount, time.Since(startTime).Milliseconds())
+		fmt.Printf("[Cosmos-Debug] Finished exporting snapshot for store %s, total item %d, total latency %d\n", store.name, itemCount, time.Since(startTime).Microseconds())
 		TotalWaitNextLatency[store.name] = iterateNextLatency
 		TotalWriteMsgLatency[store.name] = writeMessageLatency
-		TotalLatency[store.name] = time.Since(startTime).Milliseconds()
+		TotalLatency[store.name] = time.Since(startTime).Microseconds()
 		TotalItems[store.name] = itemCount
 		exporter.Close()
 	}

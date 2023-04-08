@@ -840,7 +840,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			writeMessageLatency += time.Since(writeStartTime).Microseconds()
 			itemCount++
 			if itemCount%10000 == 0 {
-				fmt.Printf("[Cosmos-Debug] Store %s, has total item %d, iterate latency %d, writeMsg latency %d, channel size %d, treeNext latency %d\n", store.name, itemCount, iterateNextLatency, writeMessageLatency, exporter.GetChannelSize(), iavltree.TotalTreeNextLatency)
+				fmt.Printf("[Cosmos-Debug] Store %s, has total item %d, exporter.next latency %d, writeMsg latency %d, channel size %d, iavl doNext latency %d, db read latency %d\n", store.name, itemCount, iterateNextLatency, writeMessageLatency, exporter.GetChannelSize(), iavltree.TotalDoNextLatency, iavltree.TotalDBReadLatency)
 			}
 			if err != nil {
 				return err

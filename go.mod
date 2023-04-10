@@ -137,7 +137,6 @@ require (
 replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-
 	github.com/cosmos/iavl => ../sei-iavl
 
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
@@ -146,6 +145,7 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
 	github.com/tendermint/tendermint => github.com/sei-protocol/sei-tendermint v0.1.181
+	github.com/tendermint/tm-db => github.com/sei-protocol/tm-db v0.0.3
 
 	// latest grpc doesn't work with with our modified proto compiler, so we need to enforce
 	// the following version across all dependencies.

@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"fmt"
+	clientconfig "github.com/cosmos/cosmos-sdk/client/config"
 	"net/http"
 	"os"
 	"runtime/pprof"
@@ -139,14 +140,26 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 				}()
 			}
 
-			chainID, err := getAndValidateChainId(cmd)
+			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
-			
+			clientCtx, err = clientconfig.ReadFromClientConfig(clientCtx)
+			if err != nil {
+				return err
+			}
+
+			chainID := clientCtx.ChainID
+			flagChainID, _ := cmd.Flags().GetString(FlagChainID)
+			if flagChainID != "" {
+				if flagChainID != chainID {
+					panic(fmt.Sprintf("chain-id mismatch: %s vs %s. The chain-id passed in is different from the value in ~/.sei/config/client.toml \n", flagChainID, chainID))
+				}
+				chainID = flagChainID
+			}
+
 			serverCtx.Viper.Set(flags.FlagChainID, chainID)
 
-			clientCtx, err := client.GetClientQueryContext(cmd)
 			genesisFile, _ := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
 			if genesisFile.ChainID != clientCtx.ChainID {
 				panic(fmt.Sprintf("genesis file chain-id=%s does not equal config.toml chain-id=%s", genesisFile.ChainID, clientCtx.ChainID))

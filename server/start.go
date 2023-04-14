@@ -36,6 +36,7 @@ import (
 	crgserver "github.com/cosmos/cosmos-sdk/server/rosetta/lib/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 )
 
 const (
@@ -179,13 +180,36 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			}
 
 			// amino is needed here for backwards compatibility of REST routes
-			err = startInProcess(serverCtx, clientCtx, appCreator, tracerProviderOptions)
-			errCode, ok := err.(ErrorCode)
-			if !ok {
-				return err
-			}
+			exitCode := RestartErrorCode
 
-			serverCtx.Logger.Debug(fmt.Sprintf("received quit signal: %d", errCode.Code))
+			serverCtx.Logger.Info("Creating node metrics provider")
+			nodeMetricsProvider := node.DefaultMetricsProvider(serverCtx.Config.Instrumentation)(clientCtx.ChainID)
+
+			config, _ := config.GetConfig(serverCtx.Viper)
+			apiMetrics,  err := telemetry.New(config.Telemetry)
+			if err != nil {
+				return fmt.Errorf("failed to initialize telemetry: %w", err)
+			}
+			for {
+				err = startInProcess(
+					serverCtx,
+					clientCtx,
+					appCreator,
+					tracerProviderOptions,
+					nodeMetricsProvider,
+					apiMetrics,
+				)
+				errCode, ok := err.(ErrorCode)
+				exitCode = errCode.Code
+				if !ok {
+					return err
+				}
+				if exitCode != RestartErrorCode {
+					break
+				}
+				serverCtx.Logger.Info("Restarting node...")
+			}
+			serverCtx.Logger.Debug(fmt.Sprintf("received quit signal: %d", exitCode))
 			return nil
 		},
 	}
@@ -271,14 +295,20 @@ func startStandAlone(ctx *Context, appCreator types.AppCreator) error {
 	}()
 
 	var restartCh chan struct{}
-	if ctx.Config.P2P.SelfKillNoPeers {
-		restartCh = make(chan struct{})
-	}
+	restartCh = make(chan struct{})
+
 	// Wait for SIGINT or SIGTERM signal
 	return WaitForQuitSignals(restartCh)
 }
 
-func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.AppCreator, tracerProviderOptions []trace.TracerProviderOption) error {
+func startInProcess(
+	ctx *Context,
+	clientCtx client.Context,
+	appCreator types.AppCreator,
+	tracerProviderOptions []trace.TracerProviderOption,
+	nodeMetricsProvider *node.NodeMetrics,
+	apiMetrics *telemetry.Metrics,
+) error {
 	cfg := ctx.Config
 	home := cfg.RootDir
 	goCtx, cancel := context.WithCancel(context.Background())
@@ -330,9 +360,8 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 		restartCh chan struct{}
 		gRPCOnly  = ctx.Viper.GetBool(flagGRPCOnly)
 	)
-	if ctx.Config.P2P.SelfKillNoPeers {
-		restartCh = make(chan struct{})
-	}
+
+	restartCh = make(chan struct{})
 
 	if gRPCOnly {
 		ctx.Logger.Info("starting node in gRPC only mode; Tendermint is disabled")
@@ -347,15 +376,19 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 			abciclient.NewLocalClient(ctx.Logger, app),
 			nil,
 			tracerProviderOptions,
+			nodeMetricsProvider,
 		)
+		ctx.Logger.Info("really going to start new node")
 		if err != nil {
-			return err
+			return fmt.Errorf("error creating node: %w", err)
 		}
 		if err := tmNode.Start(goCtx); err != nil {
-			return err
+			return fmt.Errorf("error starting node: %w", err)
 		}
+		ctx.Logger.Info("started ABCI Tendermint")
 	}
 
+	ctx.Logger.Info("starting GPRC")
 	// Add the tx service to the gRPC router. We only need to register this
 	// service if API or gRPC is enabled, and avoid doing so in the general
 	// case, because it spawns a new local tendermint RPC client.
@@ -370,6 +403,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 		app.RegisterTendermintService(clientCtx)
 	}
 
+	ctx.Logger.Info("starting API")
 	var apiSrv *api.Server
 	if config.API.Enable {
 		clientCtx := clientCtx.WithHomeDir(home).WithChainID(clientCtx.ChainID)
@@ -378,14 +412,14 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 		errCh := make(chan error)
 
 		go func() {
-			if err := apiSrv.Start(config); err != nil {
+			if err := apiSrv.Start(config, apiMetrics); err != nil {
 				errCh <- err
 			}
 		}()
 
 		select {
 		case err := <-errCh:
-			return err
+			return fmt.Errorf("error starting api server: %w", err)
 
 		case <-time.After(types.ServerStartTime): // assume server started successfully
 		}
@@ -481,7 +515,10 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 			}
 		}
 
-		ctx.Logger.Info("exiting...")
+		ctx.Logger.Info("close any other open resource...")
+		if err := app.Close(); err != nil {
+			ctx.Logger.Error("error closing database", "err", err)
+		}
 	}()
 
 	// wait for signal capture and gracefully return

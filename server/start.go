@@ -190,6 +190,10 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			if err != nil {
 				return fmt.Errorf("failed to initialize telemetry: %w", err)
 			}
+
+			restartCoolDownDuration := time.Second * time.Duration(serverCtx.Config.SelfRemediation.RestartCooldownSeconds)
+			// Set the first restart time to be now - restartCoolDownDuration so that the first restart can trigger whenever
+			canRestartAfter := time.Now().Add(-restartCoolDownDuration)
 			for {
 				err = startInProcess(
 					serverCtx,
@@ -198,6 +202,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 					tracerProviderOptions,
 					nodeMetricsProvider,
 					apiMetrics,
+					canRestartAfter,
 				)
 				errCode, ok := err.(ErrorCode)
 				exitCode = errCode.Code
@@ -207,9 +212,9 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 				if exitCode != RestartErrorCode {
 					break
 				}
-				serverCtx.Logger.Info("Restarting node...")
+				serverCtx.Logger.Info("restarting node...")
+				canRestartAfter = time.Now().Add(restartCoolDownDuration)
 			}
-			serverCtx.Logger.Debug(fmt.Sprintf("received quit signal: %d", exitCode))
 			return nil
 		},
 	}
@@ -294,11 +299,10 @@ func startStandAlone(ctx *Context, appCreator types.AppCreator) error {
 		svr.Wait()
 	}()
 
-	var restartCh chan struct{}
-	restartCh = make(chan struct{})
+	restartCh := make(chan struct{})
 
 	// Wait for SIGINT or SIGTERM signal
-	return WaitForQuitSignals(restartCh)
+	return WaitForQuitSignals(restartCh, time.Now())
 }
 
 func startInProcess(
@@ -308,6 +312,7 @@ func startInProcess(
 	tracerProviderOptions []trace.TracerProviderOption,
 	nodeMetricsProvider *node.NodeMetrics,
 	apiMetrics *telemetry.Metrics,
+	canRestartAfter time.Time,
 ) error {
 	cfg := ctx.Config
 	home := cfg.RootDir
@@ -317,12 +322,11 @@ func startInProcess(
 	if cpuProfile := ctx.Viper.GetString(flagCPUProfile); cpuProfile != "" {
 		f, err := os.Create(cpuProfile)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create cpuProfile file %w", err)
 		}
 
-		ctx.Logger.Info("starting CPU profiler", "profile", cpuProfile)
 		if err := pprof.StartCPUProfile(f); err != nil {
-			return err
+			return fmt.Errorf("failed to start CPU Profiler %w", err)
 		}
 
 		cpuProfileCleanup = func() {
@@ -378,17 +382,14 @@ func startInProcess(
 			tracerProviderOptions,
 			nodeMetricsProvider,
 		)
-		ctx.Logger.Info("really going to start new node")
 		if err != nil {
 			return fmt.Errorf("error creating node: %w", err)
 		}
 		if err := tmNode.Start(goCtx); err != nil {
 			return fmt.Errorf("error starting node: %w", err)
 		}
-		ctx.Logger.Info("started ABCI Tendermint")
 	}
 
-	ctx.Logger.Info("starting GPRC")
 	// Add the tx service to the gRPC router. We only need to register this
 	// service if API or gRPC is enabled, and avoid doing so in the general
 	// case, because it spawns a new local tendermint RPC client.
@@ -403,7 +404,6 @@ func startInProcess(
 		app.RegisterTendermintService(clientCtx)
 	}
 
-	ctx.Logger.Info("starting API")
 	var apiSrv *api.Server
 	if config.API.Enable {
 		clientCtx := clientCtx.WithHomeDir(home).WithChainID(clientCtx.ChainID)
@@ -449,7 +449,7 @@ func startInProcess(
 	// we do not need to start Rosetta or handle any Tendermint related processes.
 	if gRPCOnly {
 		// wait for signal capture and gracefully return
-		return WaitForQuitSignals(restartCh)
+		return WaitForQuitSignals(restartCh, canRestartAfter)
 	}
 
 	var rosettaSrv crgserver.Server
@@ -522,5 +522,5 @@ func startInProcess(
 	}()
 
 	// wait for signal capture and gracefully return
-	return WaitForQuitSignals(restartCh)
+	return WaitForQuitSignals(restartCh, canRestartAfter)
 }

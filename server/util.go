@@ -385,7 +385,7 @@ func TrapSignal(cleanupFunc func()) {
 }
 
 // WaitForQuitSignals waits for SIGINT and SIGTERM and returns.
-func WaitForQuitSignals(restartCh chan struct{}) ErrorCode {
+func WaitForQuitSignals(restartCh chan struct{}, canRestartAfter time.Time) ErrorCode {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	if restartCh != nil {
@@ -394,6 +394,10 @@ func WaitForQuitSignals(restartCh chan struct{}) ErrorCode {
 			case sig := <-sigs:
 				return ErrorCode{Code: int(sig.(syscall.Signal)) + 128}
 			case <-restartCh:
+				// If it's in the restart cooldown period
+				if time.Now().Before(canRestartAfter) {
+					continue
+				}
 				return ErrorCode{Code: RestartErrorCode}
 			}
 		}

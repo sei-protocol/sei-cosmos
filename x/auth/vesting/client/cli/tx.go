@@ -85,7 +85,7 @@ timestamp. You can also optionally configure the 'admin' field using the flag '-
 	}
 
 	cmd.Flags().Bool(FlagDelayed, false, "Create a delayed vesting account if true")
-	cmd.Flags().String(FlagDelayed, "", "Add an admin to the vesting account if set")
+	cmd.Flags().String(FlagAdmin, "", "Add an admin to the vesting account if set")
 	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd

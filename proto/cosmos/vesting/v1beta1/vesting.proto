@@ -30,6 +30,8 @@ message BaseVestingAccount {
     (gogoproto.moretags)     = "yaml:\"delegated_vesting\""
   ];
   int64 end_time = 5 [(gogoproto.moretags) = "yaml:\"end_time\""];
+  // admin field (optional), an address who has oversight powers for the vesting account such as cancelling
+  string admin = 6 [(gogoproto.moretags) = "yaml:\"admin\""];
 }
 
 // ContinuousVestingAccount implements the VestingAccount interface. It

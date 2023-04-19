@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -1099,4 +1100,19 @@ func (app *BaseApp) Close() error {
 		return err
 	}
 	return app.snapshotManager.Close()
+}
+
+func (app *BaseApp) ReloadDB() error {
+	if err := app.db.Close(); err != nil {
+		return err
+	}
+	rootDir := "/root/.sei"
+	dataDir := filepath.Join(rootDir, "data")
+	db, err := sdk.NewLevelDB("application", dataDir)
+	if err != nil {
+		return err
+	}
+	app.db = db
+	app.cms = store.NewCommitMultiStore(db)
+	return nil
 }

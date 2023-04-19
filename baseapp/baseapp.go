@@ -80,6 +80,7 @@ type BaseApp struct { //nolint: maligned
 	processProposalHandler sdk.ProcessProposalHandler
 	finalizeBlocker        sdk.FinalizeBlocker
 	anteHandler            sdk.AnteHandler // ante handler for fee and auth
+	loadVersionHandler     sdk.LoadVersionHandler
 
 	appStore
 	baseappVersions

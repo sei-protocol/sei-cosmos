@@ -1098,3 +1098,10 @@ func (app *BaseApp) ExtendVote(ctx context.Context, req *abci.RequestExtendVote)
 func (app *BaseApp) VerifyVoteExtension(ctx context.Context, req *abci.RequestVerifyVoteExtension) (*abci.ResponseVerifyVoteExtension, error) {
 	return &abci.ResponseVerifyVoteExtension{}, nil
 }
+
+func (app *BaseApp) LoadLatest(ctx context.Context, req *abci.RequestLoadLatest) (*abci.ResponseLoadLatest, error) {
+	if err := app.LoadLatestVersion(); err != nil {
+		return nil, err
+	}
+	return &abci.ResponseLoadLatest{}, nil
+}

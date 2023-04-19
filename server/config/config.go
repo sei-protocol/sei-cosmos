@@ -225,6 +225,7 @@ func DefaultConfig() *Config {
 			IAVLCacheSize:       781250, // 50 MB
 			IAVLDisableFastNode: true,
 			CompactionInterval:  0,
+			LoadLatest:          true,
 		},
 		Telemetry: telemetry.Config{
 			Enabled:      false,

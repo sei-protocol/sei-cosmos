@@ -449,6 +449,10 @@ func addrToIP(addr net.Addr) net.IP {
 	return ip
 }
 
+func OpenDB(rootDir string) (dbm.DB, error) {
+	return openDB(rootDir)
+}
+
 func openDB(rootDir string) (dbm.DB, error) {
 	dataDir := filepath.Join(rootDir, "data")
 	return sdk.NewLevelDB("application", dataDir)

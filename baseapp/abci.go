@@ -1103,5 +1103,6 @@ func (app *BaseApp) LoadLatest(ctx context.Context, req *abci.RequestLoadLatest)
 	if err := app.LoadLatestVersion(); err != nil {
 		return nil, err
 	}
+	app.initialHeight = app.cms.LastCommitID().Version
 	return &abci.ResponseLoadLatest{}, nil
 }

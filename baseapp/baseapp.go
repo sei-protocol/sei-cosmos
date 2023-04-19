@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -1092,4 +1093,19 @@ func (app *BaseApp) startCompactionRoutine(db dbm.DB) {
 			app.Logger().Info("exit compaction routine because underlying DB does not support compaction")
 		}
 	}()
+}
+
+func (app *BaseApp) ReloadDB() error {
+	if err := app.db.Close(); err != nil {
+		return err
+	}
+	rootDir := "/root/.sei"
+	dataDir := filepath.Join(rootDir, "data")
+	db, err := sdk.NewLevelDB("application", dataDir)
+	if err != nil {
+		return err
+	}
+	app.db = db
+	app.cms = store.NewCommitMultiStore(db)
+	return nil
 }

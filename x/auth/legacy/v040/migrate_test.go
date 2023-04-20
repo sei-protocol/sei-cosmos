@@ -123,6 +123,7 @@ func TestMigrate(t *testing.T) {
         },
         "sequence": "0"
       },
+      "cancelled_time": "0",
       "delegated_free": [
         {
           "amount": "50",
@@ -156,6 +157,7 @@ func TestMigrate(t *testing.T) {
           },
           "sequence": "0"
         },
+        "cancelled_time": "0",
         "delegated_free": [],
         "delegated_vesting": [],
         "end_time": "3160620846",
@@ -181,6 +183,7 @@ func TestMigrate(t *testing.T) {
           },
           "sequence": "0"
         },
+        "cancelled_time": "0",
         "delegated_free": [],
         "delegated_vesting": [],
         "end_time": "3160620846",
@@ -217,6 +220,7 @@ func TestMigrate(t *testing.T) {
           },
           "sequence": "0"
         },
+        "cancelled_time": "0",
         "delegated_free": [],
         "delegated_vesting": [],
         "end_time": "3160620846",

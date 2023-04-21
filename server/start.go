@@ -187,7 +187,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			nodeMetricsProvider := node.DefaultMetricsProvider(serverCtx.Config.Instrumentation)(clientCtx.ChainID)
 
 			config, _ := config.GetConfig(serverCtx.Viper)
-			apiMetrics,  err := telemetry.New(config.Telemetry)
+			apiMetrics, err := telemetry.New(config.Telemetry)
 			if err != nil {
 				return fmt.Errorf("failed to initialize telemetry: %w", err)
 			}
@@ -360,6 +360,7 @@ func startInProcess(
 			"(SDK v0.45). Please explicitly put the desired minimum-gas-prices in your app.toml.")
 	}
 	app := appCreator(ctx.Logger, db, traceWriter, ctx.Viper)
+	app.SetTendermintConfig(ctx.Config)
 
 	var (
 		tmNode    service.Service

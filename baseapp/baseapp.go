@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -15,6 +14,7 @@ import (
 	"github.com/spf13/cast"
 	leveldbutils "github.com/syndtr/goleveldb/leveldb/util"
 	abci "github.com/tendermint/tendermint/abci/types"
+	tmcfg "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -151,6 +151,8 @@ type BaseApp struct { //nolint: maligned
 	votesInfoLock sync.RWMutex
 
 	compactionInterval uint64
+
+	tmConfig *tmcfg.Config
 }
 
 type appStore struct {
@@ -255,6 +257,10 @@ func NewBaseApp(
 	app.startCompactionRoutine(db)
 
 	return app
+}
+
+func (app *BaseApp) SetTendermintConfig(cfg *tmcfg.Config) {
+	app.tmConfig = cfg
 }
 
 // Name returns the name of the BaseApp.
@@ -1106,9 +1112,7 @@ func (app *BaseApp) ReloadDB() error {
 	if err := app.db.Close(); err != nil {
 		return err
 	}
-	rootDir := "/root/.sei"
-	dataDir := filepath.Join(rootDir, "data")
-	db, err := sdk.NewLevelDB("application", dataDir)
+	db, err := sdk.NewLevelDB("application", app.tmConfig.DBDir())
 	if err != nil {
 		return err
 	}

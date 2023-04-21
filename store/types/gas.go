@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"math"
 	"sync"
+
+	"github.com/armon/go-metrics"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 )
 
 // Gas consumption descriptors.
@@ -107,11 +110,22 @@ func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
 	if overflow {
 		g.consumed = math.MaxUint64
+		incrGasExceededCounter("overflow")
 		panic(ErrorGasOverflow{descriptor})
 	}
 	if g.consumed > g.limit {
+		incrGasExceededCounter("out_of_gas")
 		panic(ErrorOutOfGas{descriptor})
 	}
+}
+
+// cosmos_tx_gas_exceeded
+func incrGasExceededCounter(errorType string) {
+	telemetry.IncrCounterWithLabels(
+		[]string{"tx", "gas", "exceeded"},
+		1,
+		[]metrics.Label{telemetry.NewLabel("error", errorType)},
+	)
 }
 
 // RefundGas will deduct the given amount from the gas consumed. If the amount is greater than the

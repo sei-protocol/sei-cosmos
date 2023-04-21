@@ -39,7 +39,6 @@ func LatestVersionCmd(defaultNodeHome string) *cobra.Command {
 	}
 
 	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
-	cmd.Flags().String(FlagChainID, "", "Chain ID")
 
 	return cmd
 }

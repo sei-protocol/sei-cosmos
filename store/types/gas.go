@@ -110,21 +110,22 @@ func (g *basicGasMeter) ConsumeGas(amount Gas, descriptor string) {
 	g.consumed, overflow = addUint64Overflow(g.consumed, amount)
 	if overflow {
 		g.consumed = math.MaxUint64
-		incrGasExceededCounter("overflow")
+		g.incrGasExceededCounter("overflow", descriptor)
 		panic(ErrorGasOverflow{descriptor})
 	}
 	if g.consumed > g.limit {
-		incrGasExceededCounter("out_of_gas")
+		g.incrGasExceededCounter("out_of_gas", descriptor)
 		panic(ErrorOutOfGas{descriptor})
 	}
 }
 
 // cosmos_tx_gas_exceeded
-func incrGasExceededCounter(errorType string) {
+func (g *basicGasMeter) incrGasExceededCounter(errorType string, descriptor string) {
 	telemetry.IncrCounterWithLabels(
-		[]string{"tx", "gas", "exceeded"},
+		[]string{"gas", "exceeded"},
 		1,
-		[]metrics.Label{telemetry.NewLabel("error", errorType)},
+		// descriptor is a label to distinguish between different gas meters (e.g block vs tx)
+		[]metrics.Label{telemetry.NewLabel("error", errorType), telemetry.NewLabel("descriptor", descriptor)},
 	)
 }
 

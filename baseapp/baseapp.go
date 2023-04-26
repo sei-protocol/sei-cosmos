@@ -1115,5 +1115,8 @@ func (app *BaseApp) ReloadDB() error {
 	}
 	app.db = db
 	app.cms = store.NewCommitMultiStore(db)
+	if app.snapshotManager != nil {
+		app.snapshotManager.SetMultiStore(app.cms)
+	}
 	return nil
 }

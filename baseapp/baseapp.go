@@ -152,7 +152,7 @@ type BaseApp struct { //nolint: maligned
 
 	compactionInterval uint64
 
-	tmConfig *tmcfg.Config
+	TmConfig *tmcfg.Config
 }
 
 type appStore struct {
@@ -260,7 +260,7 @@ func NewBaseApp(
 }
 
 func (app *BaseApp) SetTendermintConfig(cfg *tmcfg.Config) {
-	app.tmConfig = cfg
+	app.TmConfig = cfg
 }
 
 // Name returns the name of the BaseApp.
@@ -1112,7 +1112,7 @@ func (app *BaseApp) ReloadDB() error {
 	if err := app.db.Close(); err != nil {
 		return err
 	}
-	db, err := sdk.NewLevelDB("application", app.tmConfig.DBDir())
+	db, err := sdk.NewLevelDB("application", app.TmConfig.DBDir())
 	if err != nil {
 		return err
 	}

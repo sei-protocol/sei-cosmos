@@ -407,7 +407,7 @@ func (k BaseKeeper) SendCoinsFromModuleToModule(
 		return nil
 	}
 
-	k.Logger(ctx).Debug("Sending coins from module to module", "sender", senderModule, "sender_address", senderAddr.String(), "recipient", recipientModule, "recipient_addr", recipientAcc.GetAddress().String(), "amount", amt.String())
+	k.Logger(ctx).Debug("Sending coins from module to module", "sender", senderModule, "sender_address", senderAddr.String(), "recipient", recipientModule, "recipient_addrress", recipientAcc.GetAddress().String(), "amount", amt.String())
 	return k.SendCoins(ctx, senderAddr, recipientAcc.GetAddress(), amt)
 }
 

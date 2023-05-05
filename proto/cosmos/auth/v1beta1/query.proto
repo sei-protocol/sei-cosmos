@@ -72,3 +72,14 @@ message QueryParamsResponse {
   // params defines the parameters of the module.
   Params params = 1 [(gogoproto.nullable) = false];
 }
+
+
+
+// QueryNextAccountRequest is the request type for the Query/NextAccountNumber RPC method.
+message QueryNextAccountNumberRequest {}
+
+// QueryNextAccountResponse is the response type for the Query/NextAccountNumber RPC method.
+message QueryNextAccountNumberResponse {
+  // count defines the next account number.
+  uint64 count = 1;
+}

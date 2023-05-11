@@ -13,6 +13,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
@@ -842,9 +843,19 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// resources are acceessed by the ante handlers and message handlers.
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
-	// TODO: add span for AFTER the waiting period for blocking signals
-	_, span := app.TracingInfo.Start("RunTx")
-	defer span.End()
+	// check for existing parent tracer, and if applicable, use it
+	spanCtx, tracer := ctx.SpanAndTracer()
+	if tracer != nil {
+		spanCtx, span := (*tracer).Start(spanCtx, "RunTx")
+		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
+		// update ctx span and tracer in case of further child tracing
+		ctx = ctx.WithSpanAndTracer(spanCtx, tracer)
+		defer span.End()
+	} else {
+		// this is unexpected, but we can just make a normal span
+		_, span := app.TracingInfo.Start("RunTx")
+		defer span.End()
+	}
 
 	if goCtx := ctx.Context(); goCtx != nil {
 		if v := goCtx.Value(RunTxPreHookKey); v != nil {

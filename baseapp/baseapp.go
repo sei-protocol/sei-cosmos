@@ -9,7 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"context"
+
 	"github.com/gogo/protobuf/proto"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
 	"github.com/spf13/cast"
 	leveldbutils "github.com/syndtr/goleveldb/leveldb/util"
@@ -153,6 +159,8 @@ type BaseApp struct { //nolint: maligned
 	compactionInterval uint64
 
 	TmConfig *tmcfg.Config
+
+	TracingInfo *tracing.Info
 }
 
 type appStore struct {
@@ -223,6 +231,18 @@ func NewBaseApp(
 			cms = store.NewCommitMultiStoreWithArchival(db, arweaveDb, archivalVersion)
 		}
 	}
+
+	tp := trace.NewNoopTracerProvider()
+	otel.SetTracerProvider(trace.NewNoopTracerProvider())
+	tr := tp.Tracer("component-main")
+	if tracingEnabled := cast.ToBool(appOpts.Get(tracing.FlagTracing)); tracingEnabled {
+		tp, err := tracing.DefaultTracerProvider()
+		if err != nil {
+			panic(err)
+		}
+		otel.SetTracerProvider(tp)
+		tr = tp.Tracer("component-main")
+	}
 	app := &BaseApp{
 		logger: logger,
 		name:   name,
@@ -240,7 +260,12 @@ func NewBaseApp(
 		},
 		txDecoder: txDecoder,
 		TmConfig:  tmConfig,
+		TracingInfo: &tracing.Info{
+			Tracer: &tr,
+		},
 	}
+
+	app.TracingInfo.SetContext(context.Background())
 
 	for _, option := range options {
 		option(app)
@@ -817,6 +842,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// resources are acceessed by the ante handlers and message handlers.
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
+	// TODO: add span for AFTER the waiting period for blocking signals
+	_, span := app.TracingInfo.Start("RunTx")
+	defer span.End()
 
 	if goCtx := ctx.Context(); goCtx != nil {
 		if v := goCtx.Value(RunTxPreHookKey); v != nil {

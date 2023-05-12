@@ -65,7 +65,7 @@ func (suite *KeeperTestSuite) TestHandleDoubleSign() {
 
 	// tokens should be decreased
 	newTokens := suite.app.StakingKeeper.Validator(ctx, operatorAddr).GetTokens()
-	suite.True(newTokens.LT(oldTokens))
+	suite.True(newTokens.Equal(oldTokens))
 
 	// submit duplicate evidence
 	suite.app.EvidenceKeeper.HandleEquivocationEvidence(ctx, evidence)

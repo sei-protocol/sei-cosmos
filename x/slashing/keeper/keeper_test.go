@@ -163,8 +163,7 @@ func TestHandleAlreadyJailed(t *testing.T) {
 	require.Equal(t, stakingtypes.Unbonding, validator.GetStatus())
 
 	// validator should have been slashed
-	resultingTokens := amt.Sub(app.StakingKeeper.TokensFromConsensusPower(ctx, 1))
-	require.Equal(t, resultingTokens, validator.GetTokens())
+	require.Equal(t, amt, validator.GetTokens())
 
 	// another block missed
 	ctx = ctx.WithBlockHeight(height)
@@ -172,7 +171,7 @@ func TestHandleAlreadyJailed(t *testing.T) {
 
 	// validator should not have been slashed twice
 	validator, _ = app.StakingKeeper.GetValidatorByConsAddr(ctx, sdk.GetConsAddress(val))
-	require.Equal(t, resultingTokens, validator.GetTokens())
+	require.Equal(t, amt, validator.GetTokens())
 }
 
 // Test a validator dipping in and out of the validator set

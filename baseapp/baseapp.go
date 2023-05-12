@@ -845,18 +845,18 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it
 	spanCtx, tracer := ctx.SpanAndTracer()
-	var span trace.Span
 	if tracer != nil {
 		spanCtx, span := (*tracer).Start(spanCtx, "RunTx")
+		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 		// update ctx span and tracer in case of further child tracing
 		ctx = ctx.WithSpanAndTracer(spanCtx, tracer)
 		defer span.End()
 	} else {
 		// this is unexpected, but we can just make a normal span
 		_, span := app.TracingInfo.Start("RunTx")
+		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 		defer span.End()
 	}
-	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 
 	if goCtx := ctx.Context(); goCtx != nil {
 		if v := goCtx.Value(RunTxPreHookKey); v != nil {

@@ -455,7 +455,7 @@ func (rs *Store) GetWorkingHash() ([]byte, error) {
 func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	startTime := time.Now()
 	defer func() {
-		rs.logger.Info(fmt.Sprintf("[Cosmos-Debug] RootMultipleStore Commit() took %d ms to complete", time.Since(startTime)))
+		rs.logger.Info(fmt.Sprintf("[Cosmos-Debug] RootMultipleStore Commit() took %d ms to complete", time.Since(startTime).Milliseconds()))
 	}()
 	var previousHeight, version int64
 	if rs.lastCommitInfo.GetVersion() == 0 && rs.initialVersion > 1 {

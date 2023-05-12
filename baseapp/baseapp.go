@@ -847,7 +847,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	spanCtx, tracer := ctx.SpanAndTracer()
 	if tracer != nil {
 		spanCtx, span := (*tracer).Start(spanCtx, "RunTx")
-		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 		// update ctx span and tracer in case of further child tracing
 		ctx = ctx.WithSpanAndTracer(spanCtx, tracer)
 		defer span.End()
@@ -856,6 +855,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		_, span := app.TracingInfo.Start("RunTx")
 		defer span.End()
 	}
+	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 
 	if goCtx := ctx.Context(); goCtx != nil {
 		if v := goCtx.Value(RunTxPreHookKey); v != nil {

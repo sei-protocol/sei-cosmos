@@ -496,6 +496,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 
 	// batch prune if the current height is a pruning interval height
 	if rs.pruningOpts.Interval > 0 && version%int64(rs.pruningOpts.Interval) == 0 {
+
 		rs.PruneStores(true, nil)
 	}
 
@@ -509,6 +510,10 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 // If clearStorePruningHeihgts is true, store's pruneHeights is appended to the
 // pruningHeights and reset after finishing pruning.
 func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int64) {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Cosmos-Debug] PruneStores took %d ms to prune %d heights", time.Since(startTime), len(pruningHeights))
+	}()
 	if clearStorePruningHeihgts {
 		pruningHeights = append(pruningHeights, rs.pruneHeights...)
 	}

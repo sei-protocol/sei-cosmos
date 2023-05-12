@@ -263,7 +263,10 @@ func (st *Store) Delete(key []byte) {
 // is returned if any single version is invalid or the delete fails. All writes
 // happen in a single batch with a single commit.
 func (st *Store) DeleteVersions(versions ...int64) error {
-	return st.tree.DeleteVersions(versions...)
+	startTime := time.Now()
+	err := st.tree.DeleteVersions(versions...)
+	fmt.Printf("[Cosmos-Debug] IavlStore took %d ms to delete %d versions", time.Since(startTime).Milliseconds(), len(versions))
+	return err
 }
 
 // LoadVersionForOverwriting attempts to load a tree at a previously committed

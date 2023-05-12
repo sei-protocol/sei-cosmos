@@ -845,6 +845,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it
 	spanCtx, tracer := ctx.SpanAndTracer()
+	var span trace.Span
 	if tracer != nil {
 		spanCtx, span := (*tracer).Start(spanCtx, "RunTx")
 		// update ctx span and tracer in case of further child tracing

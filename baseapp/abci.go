@@ -287,7 +287,7 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 func (app *BaseApp) WriteStateToCommitAndGetWorkingHash() []byte {
 	startTime := time.Now()
 	defer func() {
-		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] WriteStateToCommitAndGetWorkingHash took %d ms", time.Since(startTime)))
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] WriteStateToCommitAndGetWorkingHash took %d ms", time.Since(startTime).Milliseconds()))
 	}()
 	app.stateToCommit.ms.Write()
 	hash, err := app.cms.GetWorkingHash()
@@ -317,7 +317,7 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
 	startTime := time.Now()
 	defer func() {
-		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] Commit took %d ms in total", time.Since(startTime)))
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] Commit took %d ms in total", time.Since(startTime).Milliseconds()))
 	}()
 
 	if app.stateToCommit == nil {
@@ -331,7 +331,7 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 
 	cmsCommitStart := time.Now()
 	app.cms.Commit(true)
-	app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] cms commit took %d ms", time.Since(cmsCommitStart)))
+	app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] cms commit took %d ms", time.Since(cmsCommitStart).Milliseconds()))
 
 	// Reset the Check state to the latest committed.
 	//
@@ -725,7 +725,7 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 func (app *BaseApp) GetBlockRetentionHeight(commitHeight int64) int64 {
 	startTime := time.Now()
 	defer func() {
-		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] GetBlockRetentionHeight took %d ms", time.Since(startTime)))
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] GetBlockRetentionHeight took %d ms", time.Since(startTime).Milliseconds()))
 	}()
 	// pruning is disabled if minRetainBlocks is zero
 	if app.minRetainBlocks == 0 {

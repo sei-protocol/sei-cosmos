@@ -486,7 +486,7 @@ func (app *BaseApp) IsSealed() bool { return app.sealed }
 func (app *BaseApp) setCheckState(header tmproto.Header) {
 	startTime := time.Now()
 	defer func() {
-		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] setCheckState took %d ms", time.Since(startTime)))
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] setCheckState took %d ms", time.Since(startTime).Milliseconds()))
 	}()
 	ms := app.cms.CacheMultiStore()
 	ctx := sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices)

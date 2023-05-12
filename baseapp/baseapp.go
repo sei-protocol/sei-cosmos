@@ -484,6 +484,10 @@ func (app *BaseApp) IsSealed() bool { return app.sealed }
 // provided header, and minimum gas prices set. It is set on InitChain and reset
 // on Commit.
 func (app *BaseApp) setCheckState(header tmproto.Header) {
+	startTime := time.Now()
+	defer func() {
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] setCheckState took %d ms", time.Since(startTime)))
+	}()
 	ms := app.cms.CacheMultiStore()
 	ctx := sdk.NewContext(ms, header, true, app.logger).WithMinGasPrices(app.minGasPrices)
 	if app.checkState == nil {

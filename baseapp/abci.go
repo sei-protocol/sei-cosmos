@@ -285,6 +285,10 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 }
 
 func (app *BaseApp) WriteStateToCommitAndGetWorkingHash() []byte {
+	startTime := time.Now()
+	defer func() {
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] WriteStateToCommitAndGetWorkingHash took %d ms", time.Since(startTime)))
+	}()
 	app.stateToCommit.ms.Write()
 	hash, err := app.cms.GetWorkingHash()
 	if err != nil {
@@ -311,15 +315,23 @@ func (app *BaseApp) SetDeliverStateToCommit() {
 // height.
 func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
+	startTime := time.Now()
+	defer func() {
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] Commit took %d ms in total", time.Since(startTime)))
+	}()
 
 	if app.stateToCommit == nil {
 		panic("no state to commit")
 	}
+
 	header := app.stateToCommit.ctx.BlockHeader()
 	retainHeight := app.GetBlockRetentionHeight(header.Height)
 
 	app.WriteStateToCommitAndGetWorkingHash()
+
+	cmsCommitStart := time.Now()
 	app.cms.Commit(true)
+	app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] cms commit took %d ms", time.Since(cmsCommitStart)))
 
 	// Reset the Check state to the latest committed.
 	//
@@ -360,6 +372,10 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 // halt attempts to gracefully shutdown the node via SIGINT and SIGTERM falling
 // back on os.Exit if both fail.
 func (app *BaseApp) halt() {
+	startTime := time.Now()
+	defer func() {
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] halt took %d ms", time.Since(startTime)))
+	}()
 	app.logger.Info("halting node per configuration", "height", app.haltHeight, "time", app.haltTime)
 
 	p, err := os.FindProcess(os.Getpid())
@@ -707,6 +723,10 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 // be a need to vary retention for other nodes, e.g. sentry nodes which do not
 // need historical blocks.
 func (app *BaseApp) GetBlockRetentionHeight(commitHeight int64) int64 {
+	startTime := time.Now()
+	defer func() {
+		app.logger.Info(fmt.Sprintf("[COSMOS-DEBUG] GetBlockRetentionHeight took %d ms", time.Since(startTime)))
+	}()
 	// pruning is disabled if minRetainBlocks is zero
 	if app.minRetainBlocks == 0 {
 		return 0

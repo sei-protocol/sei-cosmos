@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -39,6 +40,7 @@ func NewApp(rootDir string, logger log.Logger) (abci.Application, error) {
 	baseApp.SetInitChainer(InitChainer(capKeyMainStore))
 	baseApp.SetFinalizeBlocker(func(ctx sdk.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
 		txResults := []*abci.ExecTxResult{}
+		startTime := time.Now()
 		for _, tx := range req.Txs {
 			deliverTxResp := baseApp.DeliverTx(ctx, abci.RequestDeliverTx{
 				Tx: tx,
@@ -54,6 +56,7 @@ func NewApp(rootDir string, logger log.Logger) (abci.Application, error) {
 				Codespace: deliverTxResp.Codespace,
 			})
 		}
+		logger.Info(fmt.Sprintf("[Cosmos-Debug] DeliverTx took %d to execute %d transactions", time.Since(startTime).Milliseconds(), len(req.Txs)))
 		return &abci.ResponseFinalizeBlock{
 			TxResults: txResults,
 		}, nil

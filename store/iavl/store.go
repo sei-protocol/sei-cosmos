@@ -265,7 +265,7 @@ func (st *Store) Delete(key []byte) {
 func (st *Store) DeleteVersions(versions ...int64) error {
 	startTime := time.Now()
 	err := st.tree.DeleteVersions(versions...)
-	fmt.Printf("[Cosmos-Debug] IavlStore took %d ms to delete %d versions", time.Since(startTime).Milliseconds(), len(versions))
+	fmt.Printf("[Cosmos-Debug] IavlStore took %d ms to delete %d versions\n", time.Since(startTime).Milliseconds(), len(versions))
 	return err
 }
 

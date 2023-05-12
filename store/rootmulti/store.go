@@ -512,7 +512,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int64) {
 	startTime := time.Now()
 	defer func() {
-		fmt.Printf("[Cosmos-Debug] PruneStores took %d ms to prune %d heights", time.Since(startTime), len(pruningHeights))
+		fmt.Printf("[Cosmos-Debug] PruneStores took %d ms to prune %d heights\n", time.Since(startTime), len(pruningHeights))
 	}()
 	if clearStorePruningHeihgts {
 		pruningHeights = append(pruningHeights, rs.pruneHeights...)

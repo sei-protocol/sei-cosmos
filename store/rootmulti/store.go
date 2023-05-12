@@ -176,10 +176,6 @@ func (rs *Store) GetCommitStore(key types.StoreKey) types.CommitStore {
 // GetCommitKVStore returns a mounted CommitKVStore for a given StoreKey. If the
 // store is wrapped in an inter-block cache, it will be unwrapped before returning.
 func (rs *Store) GetCommitKVStore(key types.StoreKey) types.CommitKVStore {
-	startTime := time.Now()
-	defer func() {
-		fmt.Printf("[Cosmos-Debug] GetCommitKVStore took %d ms to unrap a store key\n", time.Since(startTime).Milliseconds())
-	}()
 	// If the Store has an inter-block cache, first attempt to lookup and unwrap
 	// the underlying CommitKVStore by StoreKey. If it does not exist, fallback to
 	// the main mapping of CommitKVStores.

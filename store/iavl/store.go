@@ -145,12 +145,8 @@ func (st *Store) GetWorkingHash() ([]byte, error) {
 // Normally commit should always bump version. Commit without version bump is
 // needed by use cases like rollback
 func (st *Store) Commit(bumpVersion bool) types.CommitID {
-	startTime := time.Now()
 	st.treeMtx.Lock()
 	defer st.treeMtx.Unlock()
-	defer func() {
-		fmt.Printf("[Cosmos-Debug] IavlStore Commit() took %d ms to complete\n", time.Since(startTime).Milliseconds())
-	}()
 	defer telemetry.MeasureSince(time.Now(), "store", "iavl", "commit")
 
 	var hash []byte

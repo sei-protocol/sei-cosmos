@@ -844,18 +844,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it
-	spanCtx, tracer := ctx.SpanAndTracer()
-	if tracer != nil {
-		spanCtx, span := (*tracer).Start(spanCtx, "RunTx")
-		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
-		// update ctx span and tracer in case of further child tracing
-		ctx = ctx.WithSpanAndTracer(spanCtx, tracer)
-		defer span.End()
-	} else {
-		// this is unexpected, but we can just make a normal span
-		_, span := app.TracingInfo.Start("RunTx")
-		defer span.End()
-	}
+	spanCtx, span := app.TracingInfo.Start("RunTx")
+	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
+	app.TracingInfo.SetContext(spanCtx)
+	defer span.End()
 
 	if goCtx := ctx.Context(); goCtx != nil {
 		if v := goCtx.Value(RunTxPreHookKey); v != nil {
@@ -926,6 +918,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}
 
 	if app.anteHandler != nil {
+		// trace AnteHandler
+		_, anteSpan := app.TracingInfo.Start("AnteHandler")
+		defer anteSpan.End()
 		var (
 			anteCtx sdk.Context
 			msCache sdk.CacheMultiStore
@@ -982,6 +977,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		priority = ctx.Priority()
 		msCache.Write()
 		anteEvents = events.ToABCIEvents()
+		anteSpan.End()
 	}
 
 	// Create a new Context based off of the existing Context with a MultiStore branch
@@ -1020,6 +1016,10 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			panic(err)
 		}
 	}()
+	// trace AnteHandler
+	spanCtx, span := app.TracingInfo.Start("RunMsgs")
+	app.TracingInfo.SetContext(spanCtx)
+	defer span.End()
 	msgLogs := make(sdk.ABCIMessageLogs, 0, len(msgs))
 	events := sdk.EmptyEvents()
 	txMsgData := &sdk.TxMsgData{

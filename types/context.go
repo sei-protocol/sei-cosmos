@@ -9,7 +9,6 @@ import (
 	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 	"github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/cosmos/cosmos-sdk/store/gaskv"
 	stypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -50,9 +49,6 @@ type Context struct {
 	messageIndex int // Used to track current message being processed
 
 	contextMemCache *ContextMemCache
-
-	spanCtx context.Context
-	tracer  *trace.Tracer
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -164,10 +160,6 @@ func (c Context) HeaderHash() tmbytes.HexBytes {
 
 func (c Context) ConsensusParams() *tmproto.ConsensusParams {
 	return proto.Clone(c.consParams).(*tmproto.ConsensusParams)
-}
-
-func (c Context) SpanAndTracer() (context.Context, *trace.Tracer) {
-	return c.spanCtx, c.tracer
 }
 
 // create a new context
@@ -345,12 +337,6 @@ func (c Context) WithMsgValidator(msgValidator *acltypes.MsgValidator) Context {
 // WithContextMemCache returns a Context with a new context mem cache
 func (c Context) WithContextMemCache(contextMemCache *ContextMemCache) Context {
 	c.contextMemCache = contextMemCache
-	return c
-}
-
-func (c Context) WithSpanAndTracer(spanCtx context.Context, currTracer *trace.Tracer) Context {
-	c.spanCtx = spanCtx
-	c.tracer = currTracer
 	return c
 }
 

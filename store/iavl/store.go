@@ -37,7 +37,7 @@ var (
 
 // Store Implements types.KVStore and CommitKVStore.
 type Store struct {
-	tree Tree
+	tree    Tree
 	treeMtx *sync.RWMutex
 }
 
@@ -91,7 +91,7 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 	}
 
 	return &Store{
-		tree: tree,
+		tree:    tree,
 		treeMtx: &sync.RWMutex{},
 	}, nil
 }
@@ -104,7 +104,7 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 // passed into iavl.MutableTree
 func UnsafeNewStore(tree *iavl.MutableTree) *Store {
 	return &Store{
-		tree: tree,
+		tree:    tree,
 		treeMtx: &sync.RWMutex{},
 	}
 }
@@ -120,7 +120,7 @@ func (st *Store) GetImmutable(version int64) (*Store, error) {
 
 	if !st.VersionExists(version) {
 		return &Store{
-			tree: &immutableTree{&iavl.ImmutableTree{}},
+			tree:    &immutableTree{&iavl.ImmutableTree{}},
 			treeMtx: &sync.RWMutex{},
 		}, nil
 	}
@@ -131,7 +131,7 @@ func (st *Store) GetImmutable(version int64) (*Store, error) {
 	}
 
 	return &Store{
-		tree: &immutableTree{iTree},
+		tree:    &immutableTree{iTree},
 		treeMtx: &sync.RWMutex{},
 	}, nil
 }
@@ -145,6 +145,10 @@ func (st *Store) GetWorkingHash() ([]byte, error) {
 // Normally commit should always bump version. Commit without version bump is
 // needed by use cases like rollback
 func (st *Store) Commit(bumpVersion bool) types.CommitID {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Cosmos-Debug] IavlStore Commit() took %d ms to complete\n", time.Since(startTime))
+	}()
 	st.treeMtx.Lock()
 	defer st.treeMtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "iavl", "commit")

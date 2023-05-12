@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	iavltree "github.com/cosmos/iavl"
 	protoio "github.com/gogo/protobuf/io"
@@ -452,6 +453,10 @@ func (rs *Store) GetWorkingHash() ([]byte, error) {
 
 // Commit implements Committer/CommitStore.
 func (rs *Store) Commit(bumpVersion bool) types.CommitID {
+	startTime := time.Now()
+	defer func() {
+		rs.logger.Info(fmt.Sprintf("[Cosmos-Debug] RootMultipleStore Commit() took %d ms to complete", time.Since(startTime)))
+	}()
 	var previousHeight, version int64
 	if rs.lastCommitInfo.GetVersion() == 0 && rs.initialVersion > 1 {
 		// This case means that no commit has been made in the store, we

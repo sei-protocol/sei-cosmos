@@ -176,6 +176,10 @@ func (rs *Store) GetCommitStore(key types.StoreKey) types.CommitStore {
 // GetCommitKVStore returns a mounted CommitKVStore for a given StoreKey. If the
 // store is wrapped in an inter-block cache, it will be unwrapped before returning.
 func (rs *Store) GetCommitKVStore(key types.StoreKey) types.CommitKVStore {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Cosmos-Debug] GetCommitKVStore took %d ms to unrap a store key\n", time.Since(startTime).Milliseconds())
+	}()
 	// If the Store has an inter-block cache, first attempt to lookup and unwrap
 	// the underlying CommitKVStore by StoreKey. If it does not exist, fallback to
 	// the main mapping of CommitKVStores.
@@ -511,16 +515,15 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 // pruningHeights and reset after finishing pruning.
 func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int64) {
 	startTime := time.Now()
-	defer func() {
-		fmt.Printf("[Cosmos-Debug] PruneStores took %d ms to prune %d heights\n", time.Since(startTime), len(pruningHeights))
-	}()
 	if clearStorePruningHeihgts {
 		pruningHeights = append(pruningHeights, rs.pruneHeights...)
 	}
-
 	if len(rs.pruneHeights) == 0 {
 		return
 	}
+	defer func() {
+		fmt.Printf("[Cosmos-Debug] PruneStores took %d ms to prune %d heights\n", time.Since(startTime).Milliseconds(), len(pruningHeights))
+	}()
 
 	for key, store := range rs.stores {
 		if store.GetStoreType() == types.StoreTypeIAVL {

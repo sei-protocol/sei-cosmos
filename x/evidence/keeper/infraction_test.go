@@ -14,12 +14,17 @@ import (
 func (suite *KeeperTestSuite) TestHandleDoubleSign() {
 	ctx := suite.ctx.WithIsCheckTx(false).WithBlockHeight(1)
 	suite.populateValidators(ctx)
-	params := suite.app.StakingKeeper.GetParams(ctx)
-	params.MinCommissionRate = sdk.NewDec(0)
-	suite.app.StakingKeeper.SetParams(ctx, params)
+	stakingParams := suite.app.StakingKeeper.GetParams(ctx)
+	stakingParams.MinCommissionRate = sdk.NewDec(0)
+	suite.app.StakingKeeper.SetParams(ctx, stakingParams)
+
+	slashingParams := suite.app.SlashingKeeper.GetParams(ctx)
+	slashingParams.SlashFractionDoubleSign = sdk.NewDec(1).Quo(sdk.NewDec(20))
+	slashingParams.SlashFractionDowntime = sdk.NewDec(1).Quo(sdk.NewDec(100))
+	suite.app.SlashingKeeper.SetParams(ctx, slashingParams)
 
 	power := int64(100)
-	stakingParams := suite.app.StakingKeeper.GetParams(ctx)
+	stakingParams = suite.app.StakingKeeper.GetParams(ctx)
 	operatorAddr, val := valAddresses[0], pubkeys[0]
 	tstaking := teststaking.NewHelper(suite.T(), ctx, suite.app.StakingKeeper)
 
@@ -65,7 +70,7 @@ func (suite *KeeperTestSuite) TestHandleDoubleSign() {
 
 	// tokens should be decreased
 	newTokens := suite.app.StakingKeeper.Validator(ctx, operatorAddr).GetTokens()
-	suite.True(newTokens.Equal(oldTokens))
+	suite.True(newTokens.LT(oldTokens))
 
 	// submit duplicate evidence
 	suite.app.EvidenceKeeper.HandleEquivocationEvidence(ctx, evidence)

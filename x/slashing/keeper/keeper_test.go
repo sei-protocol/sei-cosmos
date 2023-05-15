@@ -142,6 +142,11 @@ func TestHandleAlreadyJailed(t *testing.T) {
 	params.SignedBlocksWindow = 1000
 	app.SlashingKeeper.SetParams(ctx, params)
 
+	slashingParams := app.SlashingKeeper.GetParams(ctx)
+	slashingParams.SlashFractionDoubleSign = sdk.NewDec(1).Quo(sdk.NewDec(20))
+	slashingParams.SlashFractionDowntime = sdk.NewDec(1).Quo(sdk.NewDec(100))
+	app.SlashingKeeper.SetParams(ctx, slashingParams)
+
 	// 1000 first blocks OK
 	height := int64(0)
 	for ; height < app.SlashingKeeper.SignedBlocksWindow(ctx); height++ {
@@ -163,7 +168,8 @@ func TestHandleAlreadyJailed(t *testing.T) {
 	require.Equal(t, stakingtypes.Unbonding, validator.GetStatus())
 
 	// validator should have been slashed
-	require.Equal(t, amt, validator.GetTokens())
+	resultingTokens := amt.Sub(app.StakingKeeper.TokensFromConsensusPower(ctx, 1))
+	require.Equal(t, resultingTokens, validator.GetTokens())
 
 	// another block missed
 	ctx = ctx.WithBlockHeight(height)
@@ -171,7 +177,7 @@ func TestHandleAlreadyJailed(t *testing.T) {
 
 	// validator should not have been slashed twice
 	validator, _ = app.StakingKeeper.GetValidatorByConsAddr(ctx, sdk.GetConsAddress(val))
-	require.Equal(t, amt, validator.GetTokens())
+	require.Equal(t, resultingTokens, validator.GetTokens())
 }
 
 // Test a validator dipping in and out of the validator set

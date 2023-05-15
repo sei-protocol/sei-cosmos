@@ -60,6 +60,7 @@ const (
 	FlagPruningKeepRecent  = "pruning-keep-recent"
 	FlagPruningKeepEvery   = "pruning-keep-every"
 	FlagPruningInterval    = "pruning-interval"
+	FlagAsyncPruning       = "async-pruning"
 	FlagIndexEvents        = "index-events"
 	FlagMinRetainBlocks    = "min-retain-blocks"
 	FlagIAVLCacheSize      = "iavl-cache-size"
@@ -240,6 +241,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Uint(FlagInvCheckPeriod, 0, "Assert registered invariants every N blocks")
 	cmd.Flags().Uint64(FlagMinRetainBlocks, 0, "Minimum block height offset during ABCI commit to prune Tendermint blocks")
 	cmd.Flags().Uint64(FlagCompactionInterval, 0, "Time interval in between forced levelDB compaction. 0 means no forced compaction.")
+	cmd.Flags().Bool(FlagAsyncPruning, false, "Enable asynchronous pruning")
 
 	cmd.Flags().Bool(flagGRPCOnly, false, "Start the node in gRPC query only mode (no Tendermint process is started)")
 	cmd.Flags().Bool(flagGRPCEnable, true, "Define if the gRPC server should be enabled")

@@ -34,6 +34,7 @@ type BaseConfig struct {
 	PruningKeepRecent string `mapstructure:"pruning-keep-recent"`
 	PruningKeepEvery  string `mapstructure:"pruning-keep-every"`
 	PruningInterval   string `mapstructure:"pruning-interval"`
+	AsyncPruning      bool   `mapstructure:"async-pruning"`
 
 	// HaltHeight contains a non-zero block height at which a node will gracefully
 	// halt and shutdown that can be used to assist upgrades and testing.
@@ -218,6 +219,7 @@ func DefaultConfig() *Config {
 			PruningKeepRecent:   "0",
 			PruningKeepEvery:    "0",
 			PruningInterval:     "0",
+			AsyncPruning:        false,
 			MinRetainBlocks:     0,
 			IndexEvents:         make([]string, 0),
 			IAVLCacheSize:       781250, // 50 MB
@@ -284,6 +286,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			Pruning:             v.GetString("pruning"),
 			PruningKeepRecent:   v.GetString("pruning-keep-recent"),
 			PruningInterval:     v.GetString("pruning-interval"),
+			AsyncPruning:        v.GetBool("async-pruning"),
 			HaltHeight:          v.GetUint64("halt-height"),
 			HaltTime:            v.GetUint64("halt-time"),
 			IndexEvents:         v.GetStringSlice("index-events"),

@@ -33,6 +33,9 @@ pruning-keep-recent = "{{ .BaseConfig.PruningKeepRecent }}"
 pruning-keep-every = "{{ .BaseConfig.PruningKeepEvery }}"
 pruning-interval = "{{ .BaseConfig.PruningInterval }}"
 
+# whether pruning should happen asynchronously
+async-pruning = "{{ .BaseConfig.AsyncPruning }}"
+
 # HaltHeight contains a non-zero block height at which a node will gracefully
 # halt and shutdown that can be used to assist upgrades and testing.
 #

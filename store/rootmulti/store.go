@@ -60,6 +60,7 @@ type Store struct {
 	pruneHeights        []int64
 	initialVersion      int64
 	archivalVersion     int64
+	asyncPruning        bool
 
 	traceWriter       io.Writer
 	traceContext      types.TraceContext
@@ -494,9 +495,9 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	}
 
 	// batch prune if the current height is a pruning interval height
-	// if rs.pruningOpts.Interval > 0 && version%int64(rs.pruningOpts.Interval) == 0 {
-	// 	rs.PruneStores(true, nil)
-	// }
+	if !rs.asyncPruning && rs.pruningOpts.Interval > 0 && version%int64(rs.pruningOpts.Interval) == 0 {
+		rs.PruneStores(true, nil)
+	}
 
 	return types.CommitID{
 		Version: version,
@@ -525,7 +526,13 @@ func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int
 			// it to get the underlying IAVL store.
 			store = rs.GetCommitKVStore(key)
 
-			if err := store.(*iavl.Store).DeleteVersionsAsync(pruningHeights...); err != nil {
+			var err error
+			if rs.asyncPruning {
+				err = store.(*iavl.Store).DeleteVersionsAsync(pruningHeights...)
+			} else {
+				err = store.(*iavl.Store).DeleteVersions(pruningHeights...)
+			}
+			if err != nil {
 				if errCause := errors.Cause(err); errCause != nil && errCause != iavltree.ErrVersionDoesNotExist {
 					panic(err)
 				}
@@ -1044,7 +1051,9 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 		flushCommitInfo(batch, version, cInfo)
 	}
 	flushLatestVersion(batch, version)
-	//flushPruningHeights(batch, rs.pruneHeights)
+	if !rs.asyncPruning {
+		flushPruningHeights(batch, rs.pruneHeights)
+	}
 	if err := batch.WriteSync(); err != nil {
 		panic(fmt.Errorf("error on batch write %w", err))
 	}
@@ -1114,6 +1123,10 @@ func (rs *Store) doProofsQuery(req abci.RequestQuery) abci.ResponseQuery {
 		res.ProofOps.Ops = append(res.ProofOps.Ops, commitInfo.ProofOp(storeInfo.Name))
 	}
 	return res
+}
+
+func (rs *Store) SetAsyncPruning() {
+	rs.asyncPruning = true
 }
 
 // Gets commitInfo from disk.

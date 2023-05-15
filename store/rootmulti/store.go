@@ -534,9 +534,19 @@ func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int
 	}
 
 	if clearStorePruningHeihgts {
+		prunedHeights := map[int64]struct{}{}
+		for _, h := range pruningHeights {
+			prunedHeights[h] = struct{}{}
+		}
 		rs.pruneHeightsMtx.Lock()
 		defer rs.pruneHeightsMtx.Unlock()
-		rs.pruneHeights = make([]int64, 0)
+		newPruneHeights := make([]int64, 0)
+		for _, pruneHeight := range rs.pruneHeights {
+			if _, ok := prunedHeights[pruneHeight]; !ok {
+				newPruneHeights = append(newPruneHeights, pruneHeight)
+			}
+		}
+		rs.pruneHeights = newPruneHeights
 	}
 }
 

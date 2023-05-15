@@ -489,8 +489,8 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		// a 'snapshot' height.
 		if rs.pruningOpts.KeepEvery == 0 || pruneHeight%int64(rs.pruningOpts.KeepEvery) != 0 {
 			rs.pruneHeightsMtx.Lock()
-			defer rs.pruneHeightsMtx.Unlock()
 			rs.pruneHeights = append(rs.pruneHeights, pruneHeight)
+			rs.pruneHeightsMtx.Unlock()
 		}
 	}
 

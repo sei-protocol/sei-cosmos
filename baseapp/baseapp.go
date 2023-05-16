@@ -845,9 +845,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it
 	spanCtx, span := app.TracingInfo.Start("RunTx")
-	oldCtx := app.TracingInfo.GetContext()
 	defer span.End()
 	// restore the context when exiting
+	oldCtx := app.TracingInfo.GetContext()
 	defer app.TracingInfo.SetContext(oldCtx)
 	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 	app.TracingInfo.SetContext(spanCtx)
@@ -1021,9 +1021,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 	}()
 	// trace AnteHandler
 	spanCtx, span := app.TracingInfo.Start("RunMsgs")
-	oldCtx := app.TracingInfo.GetContext()
 	defer span.End()
 	// restore the context when exiting
+	oldCtx := app.TracingInfo.GetContext()
 	defer app.TracingInfo.SetContext(oldCtx)
 	app.TracingInfo.SetContext(spanCtx)
 	msgLogs := make(sdk.ABCIMessageLogs, 0, len(msgs))

@@ -419,6 +419,7 @@ func TestWaitForQuitSignals(t *testing.T) {
 		}()
 
 		errCode := server.WaitForQuitSignals(
+			&server.Context{},
 			restartCh,
 			time.Now().Add(500*time.Millisecond),
 		)
@@ -436,6 +437,7 @@ func TestWaitForQuitSignals(t *testing.T) {
 		}()
 
 		errCode := server.WaitForQuitSignals(
+			&server.Context{},
 			restartCh,
 			time.Now().Add(-100*time.Millisecond),
 		)
@@ -454,6 +456,7 @@ func TestWaitForQuitSignals(t *testing.T) {
 		}()
 
 		errCode := server.WaitForQuitSignals(
+			&server.Context{},
 			make(chan struct{}),
 			time.Now(),
 		)
@@ -470,6 +473,7 @@ func TestWaitForQuitSignals(t *testing.T) {
 		}()
 
 		errCode := server.WaitForQuitSignals(
+			&server.Context{},
 			make(chan struct{}),
 			time.Now(),
 		)

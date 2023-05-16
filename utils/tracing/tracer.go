@@ -63,6 +63,15 @@ func (i *Info) Start(name string) (context.Context, otrace.Span) {
 	return (*i.Tracer).Start(i.tracerContext, name)
 }
 
+func (i *Info) StartWithContext(name string, ctx context.Context) (context.Context, otrace.Span) {
+	i.mtx.Lock()
+	defer i.mtx.Unlock()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return (*i.Tracer).Start(ctx, name)
+}
+
 func (i *Info) GetContext() context.Context {
 	i.mtx.RLock()
 	defer i.mtx.RUnlock()

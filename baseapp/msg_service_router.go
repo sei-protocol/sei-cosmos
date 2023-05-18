@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/armon/go-metrics"
 	gogogrpc "github.com/gogo/protobuf/grpc"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
@@ -70,6 +71,11 @@ func (msr *MsgServiceRouter) RegisterService(sd *grpc.ServiceDesc, handler inter
 			}
 
 			requestTypeName = sdk.MsgTypeURL(msg)
+			metrics.IncrCounterWithLabels(
+				[]string{"msg", "router", "noop", "counter"},
+				1,
+				[]metrics.Label{{Name: "path", Value: requestTypeName}},
+			)
 			return nil
 		}, noopInterceptor)
 
@@ -109,6 +115,11 @@ func (msr *MsgServiceRouter) RegisterService(sd *grpc.ServiceDesc, handler inter
 		msr.routes[requestTypeName] = func(ctx sdk.Context, req sdk.Msg) (*sdk.Result, error) {
 			ctx = ctx.WithEventManager(sdk.NewEventManager())
 			interceptor := func(goCtx context.Context, _ interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+				metrics.IncrCounterWithLabels(
+					[]string{"msg", "service", "router", "counter"},
+					1,
+					[]metrics.Label{{Name: "type", Value: requestTypeName}},
+				)
 				goCtx = context.WithValue(goCtx, sdk.SdkContextKey, ctx)
 				return handler(goCtx, req)
 			}
@@ -145,6 +156,7 @@ func (msr *MsgServiceRouter) SetInterfaceRegistry(interfaceRegistry codectypes.I
 
 func noopDecoder(_ interface{}) error { return nil }
 func noopInterceptor(_ context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
+
 	return nil, nil
 }
 

@@ -1,23 +1,22 @@
 package baseapp
 
 import (
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/armon/go-metrics"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 
-	"context"
-
-	"github.com/gogo/protobuf/proto"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
+	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
 	"github.com/spf13/cast"
 	leveldbutils "github.com/syndtr/goleveldb/leveldb/util"

@@ -45,6 +45,11 @@ func (msr *MsgServiceRouter) Handler(msg sdk.Msg) MsgServiceHandler {
 // HandlerByTypeURL returns the MsgServiceHandler for a given query route path or nil
 // if not found.
 func (msr *MsgServiceRouter) HandlerByTypeURL(typeURL string) MsgServiceHandler {
+	metrics.IncrCounterWithLabels(
+		[]string{"msg", "get", "handler", "counter"},
+		1,
+		[]metrics.Label{{Name: "handler", Value: typeURL}},
+	)
 	return msr.routes[typeURL]
 }
 

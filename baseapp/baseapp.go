@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
 	"github.com/spf13/cast"
@@ -975,6 +976,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 // Handler does not exist for a given message route. Otherwise, a reference to a
 // Result is returned. The caller must not commit state if an error is returned.
 func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*sdk.Result, error) {
+
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
@@ -993,6 +995,11 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if mode == runTxModeCheck || mode == runTxModeReCheck {
 			break
 		}
+		metrics.IncrCounterWithLabels(
+			[]string{"cosmos", "run", "msg", "counter"},
+			1,
+			[]metrics.Label{{Name: "type", Value: sdk.MsgTypeURL(msg)}},
+		)
 
 		var (
 			msgResult    *sdk.Result

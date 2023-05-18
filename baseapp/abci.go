@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -427,7 +428,11 @@ func (app *BaseApp) Query(ctx context.Context, req *abci.RequestQuery) (res *abc
 	if req.Height == 0 {
 		req.Height = app.LastBlockHeight()
 	}
-
+	metrics.IncrCounterWithLabels(
+		[]string{"abci", "query", "counter"},
+		1,
+		[]metrics.Label{{Name: "path", Value: req.Path}},
+	)
 	// handle gRPC routes first rather than calling splitPath because '/' characters
 	// are used as part of gRPC paths
 	if grpcHandler := app.grpcQueryRouter.Route(req.Path); grpcHandler != nil {

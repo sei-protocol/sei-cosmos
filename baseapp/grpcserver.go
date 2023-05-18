@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/armon/go-metrics"
 	gogogrpc "github.com/gogo/protobuf/grpc"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -30,7 +31,6 @@ func (app *BaseApp) RegisterGRPCServer(server gogogrpc.Server) {
 		if !ok {
 			return nil, status.Error(codes.Internal, "unable to retrieve metadata")
 		}
-
 		// Get height header from the request context, if present.
 		var height int64
 		if heightHeaders := md.Get(grpctypes.GRPCBlockHeightHeader); len(heightHeaders) == 1 {
@@ -77,6 +77,11 @@ func (app *BaseApp) RegisterGRPCServer(server gogogrpc.Server) {
 			newMethods[i] = grpc.MethodDesc{
 				MethodName: method.MethodName,
 				Handler: func(srv interface{}, ctx context.Context, dec func(interface{}) error, _ grpc.UnaryServerInterceptor) (interface{}, error) {
+					metrics.IncrCounterWithLabels(
+						[]string{"grpc", "query", "router", "counter"},
+						1,
+						[]metrics.Label{{Name: "type", Value: method.MethodName}},
+					)
 					return methodHandler(srv, ctx, dec, grpcmiddleware.ChainUnaryServer(
 						grpcrecovery.UnaryServerInterceptor(),
 						interceptor,

@@ -34,6 +34,11 @@ type MsgServiceHandler = func(ctx sdk.Context, req sdk.Msg) (*sdk.Result, error)
 
 // Handler returns the MsgServiceHandler for a given msg or nil if not found.
 func (msr *MsgServiceRouter) Handler(msg sdk.Msg) MsgServiceHandler {
+	metrics.IncrCounterWithLabels(
+		[]string{"msg", "get", "handler", "counter"},
+		1,
+		[]metrics.Label{{Name: "handler", Value: sdk.MsgTypeURL(msg)}},
+	)
 	return msr.routes[sdk.MsgTypeURL(msg)]
 }
 

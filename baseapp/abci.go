@@ -230,10 +230,16 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	if err == nil {
 		msgs := tx.GetMsgs()
 		countMap := make(map[string]int)
+		contractMap := make(map[string]int)
 		for _, msg := range msgs {
 			countMap[proto.MessageName(msg)] += 1
+			if proto.MessageName(msg) == "cosmwasm.wasm.v1.MsgExecuteContract" {
+				res1 := strings.Split(msg.String(), "msg")[0]
+				contract := strings.Split(res1, "contract")[1][2:]
+				contractMap[contract] += 1
+			}
 		}
-		fmt.Printf("[Cosmos-Debug] Transaction %d contain messages of %v\n", len(req.Tx), countMap)
+		fmt.Printf("[Cosmos-Debug] Transaction %d contain messages of %v, contract breakdown: %v\n", len(req.Tx), countMap, contractMap)
 	}
 
 	sdkCtx := app.getContextForTx(mode, req.Tx)

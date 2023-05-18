@@ -225,6 +225,16 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	default:
 		panic(fmt.Sprintf("unknown RequestCheckTx type: %s", req.Type))
 	}
+	tx, err := app.txDecoder(req.Tx)
+
+	if err == nil {
+		msgs := tx.GetMsgs()
+		countMap := make(map[string]int)
+		for _, msg := range msgs {
+			countMap[proto.MessageName(msg)] += 1
+		}
+		fmt.Printf("[Cosmos-Debug] Transaction %d contain messages of %v\n", len(req.Tx), countMap)
+	}
 
 	sdkCtx := app.getContextForTx(mode, req.Tx)
 	gInfo, result, _, priority, err := app.runTx(sdkCtx, mode, req.Tx)

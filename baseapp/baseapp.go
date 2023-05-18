@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/armon/go-metrics"
 	"reflect"
 	"strings"
 	"sync"
@@ -1045,6 +1046,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			// ADR 031 request type routing
 			msgResult, err = handler(msgCtx, msg)
 			eventMsgName = sdk.MsgTypeURL(msg)
+			ctx.ContextMemCache().IncrMetricCounterWithLabel(1, sdk.MESSAGE_TYPE_COUNT, metrics.Label{Name: "msg_type", Value: eventMsgName})
 		} else if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 			// legacy sdk.Msg routing
 			// Assuming that the app developer has migrated all their Msgs to

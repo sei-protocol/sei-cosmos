@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
 	"github.com/spf13/cast"
@@ -993,7 +994,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if mode == runTxModeCheck || mode == runTxModeReCheck {
 			break
 		}
-
 		var (
 			msgResult    *sdk.Result
 			eventMsgName string // name to use as value in event `message.action`
@@ -1003,10 +1003,16 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		msgCtx, msgMsCache := app.cacheTxContext(ctx, []byte{})
 		msgCtx = msgCtx.WithMessageIndex(i)
 
+		startTime := time.Now()
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
 			// ADR 031 request type routing
 			msgResult, err = handler(msgCtx, msg)
 			eventMsgName = sdk.MsgTypeURL(msg)
+			metrics.MeasureSinceWithLabels(
+				[]string{"cosmos", "run", "msg", "latency"},
+				startTime,
+				[]metrics.Label{{Name: "type", Value: eventMsgName}},
+			)
 		} else if legacyMsg, ok := msg.(legacytx.LegacyMsg); ok {
 			// legacy sdk.Msg routing
 			// Assuming that the app developer has migrated all their Msgs to
@@ -1020,6 +1026,11 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 				return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s; message index: %d", msgRoute, i)
 			}
 			msgResult, err = handler(msgCtx, msg)
+			metrics.MeasureSinceWithLabels(
+				[]string{"cosmos", "run", "msg", "latency"},
+				startTime,
+				[]metrics.Label{{Name: "type", Value: eventMsgName}},
+			)
 		} else {
 			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 		}

@@ -71,6 +71,11 @@ func (msr *MsgServiceRouter) RegisterService(sd *grpc.ServiceDesc, handler inter
 			}
 
 			requestTypeName = sdk.MsgTypeURL(msg)
+			metrics.IncrCounterWithLabels(
+				[]string{"msg", "router", "noop", "counter"},
+				1,
+				[]metrics.Label{{Name: "path", Value: requestTypeName}},
+			)
 			return nil
 		}, noopInterceptor)
 
@@ -151,6 +156,7 @@ func (msr *MsgServiceRouter) SetInterfaceRegistry(interfaceRegistry codectypes.I
 
 func noopDecoder(_ interface{}) error { return nil }
 func noopInterceptor(_ context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
+
 	return nil, nil
 }
 

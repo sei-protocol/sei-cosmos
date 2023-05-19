@@ -47,6 +47,10 @@ func SetMinRetainBlocks(minRetainBlocks uint64) func(*BaseApp) {
 	return func(bapp *BaseApp) { bapp.setMinRetainBlocks(minRetainBlocks) }
 }
 
+func SetAsyncPruning(asyncPruning bool) func(*BaseApp) {
+	return func(bapp *BaseApp) { bapp.setAsyncPruning(asyncPruning) }
+}
+
 func SetCompactionInterval(compactionInterval uint64) func(*BaseApp) {
 	return func(bapp *BaseApp) { bapp.setCompactionInterval(compactionInterval) }
 }

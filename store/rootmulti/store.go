@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -61,10 +62,12 @@ type Store struct {
 	pruneHeights        []int64
 	initialVersion      int64
 	archivalVersion     int64
+	asyncPruning        bool
 
 	traceWriter       io.Writer
 	traceContext      types.TraceContext
 	traceContextMutex sync.Mutex
+	pruneHeightsMtx   sync.RWMutex
 
 	interBlockCache types.MultiStorePersistentCache
 
@@ -487,12 +490,14 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		// - KeepEvery % (height - KeepRecent) != 0 as that means the height is not
 		// a 'snapshot' height.
 		if rs.pruningOpts.KeepEvery == 0 || pruneHeight%int64(rs.pruningOpts.KeepEvery) != 0 {
+			rs.pruneHeightsMtx.Lock()
 			rs.pruneHeights = append(rs.pruneHeights, pruneHeight)
+			rs.pruneHeightsMtx.Unlock()
 		}
 	}
 
 	// batch prune if the current height is a pruning interval height
-	if rs.pruningOpts.Interval > 0 && version%int64(rs.pruningOpts.Interval) == 0 {
+	if !rs.asyncPruning && rs.pruningOpts.Interval > 0 && version%int64(rs.pruningOpts.Interval) == 0 {
 		rs.PruneStores(true, nil)
 	}
 
@@ -506,13 +511,16 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 // If clearStorePruningHeihgts is true, store's pruneHeights is appended to the
 // pruningHeights and reset after finishing pruning.
 func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int64) {
+	rs.pruneHeightsMtx.RLock()
 	if clearStorePruningHeihgts {
 		pruningHeights = append(pruningHeights, rs.pruneHeights...)
 	}
 
 	if len(rs.pruneHeights) == 0 {
+		rs.pruneHeightsMtx.RUnlock()
 		return
 	}
+	rs.pruneHeightsMtx.RUnlock()
 
 	for key, store := range rs.stores {
 		if store.GetStoreType() == types.StoreTypeIAVL {
@@ -520,7 +528,13 @@ func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int
 			// it to get the underlying IAVL store.
 			store = rs.GetCommitKVStore(key)
 
-			if err := store.(*iavl.Store).DeleteVersions(pruningHeights...); err != nil {
+			var err error
+			if rs.asyncPruning {
+				err = store.(*iavl.Store).DeleteVersionsAsync(pruningHeights...)
+			} else {
+				err = store.(*iavl.Store).DeleteVersions(pruningHeights...)
+			}
+			if err != nil {
 				if errCause := errors.Cause(err); errCause != nil && errCause != iavltree.ErrVersionDoesNotExist {
 					panic(err)
 				}
@@ -529,8 +543,29 @@ func (rs *Store) PruneStores(clearStorePruningHeihgts bool, pruningHeights []int
 	}
 
 	if clearStorePruningHeihgts {
-		rs.pruneHeights = make([]int64, 0)
+		prunedHeights := map[int64]struct{}{}
+		for _, h := range pruningHeights {
+			prunedHeights[h] = struct{}{}
+		}
+		rs.pruneHeightsMtx.Lock()
+		defer rs.pruneHeightsMtx.Unlock()
+		newPruneHeights := make([]int64, 0)
+		for _, pruneHeight := range rs.pruneHeights {
+			if _, ok := prunedHeights[pruneHeight]; !ok {
+				newPruneHeights = append(newPruneHeights, pruneHeight)
+			}
+		}
+		rs.pruneHeights = newPruneHeights
 	}
+}
+
+func (rs *Store) StartPruneStore() {
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			rs.PruneStores(true, nil)
+		}
+	}()
 }
 
 // CacheWrap implements CacheWrapper/Store/CommitStore.
@@ -1041,7 +1076,9 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 		flushCommitInfo(batch, version, cInfo)
 	}
 	flushLatestVersion(batch, version)
-	flushPruningHeights(batch, rs.pruneHeights)
+	if !rs.asyncPruning {
+		flushPruningHeights(batch, rs.pruneHeights)
+	}
 	if err := batch.WriteSync(); err != nil {
 		panic(fmt.Errorf("error on batch write %w", err))
 	}
@@ -1111,6 +1148,10 @@ func (rs *Store) doProofsQuery(req abci.RequestQuery) abci.ResponseQuery {
 		res.ProofOps.Ops = append(res.ProofOps.Ops, commitInfo.ProofOp(storeInfo.Name))
 	}
 	return res
+}
+
+func (rs *Store) SetAsyncPruning() {
+	rs.asyncPruning = true
 }
 
 // Gets commitInfo from disk.

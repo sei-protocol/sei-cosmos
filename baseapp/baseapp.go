@@ -145,6 +145,8 @@ type BaseApp struct { //nolint: maligned
 	// trace set will return full stack traces for errors in ABCI Log field
 	trace bool
 
+	asyncPruning bool
+
 	// indexEvents defines the set of events in the form {eventType}.{attributeKey},
 	// which informs Tendermint what to index. If empty, all events will be indexed.
 	indexEvents map[string]struct{}
@@ -281,7 +283,12 @@ func NewBaseApp(
 	if app.ChainID == "" {
 		panic("must pass --chain-id when calling 'seid start' or set in ~/.sei/config/client.toml")
 	}
+
 	app.startCompactionRoutine(db)
+	if app.asyncPruning {
+		app.cms.(*rootmulti.Store).SetAsyncPruning()
+		app.cms.(*rootmulti.Store).StartPruneStore()
+	}
 
 	return app
 }
@@ -463,6 +470,10 @@ func (app *BaseApp) setHaltTime(haltTime uint64) {
 
 func (app *BaseApp) setMinRetainBlocks(minRetainBlocks uint64) {
 	app.minRetainBlocks = minRetainBlocks
+}
+
+func (app *BaseApp) setAsyncPruning(asyncPruning bool) {
+	app.asyncPruning = asyncPruning
 }
 
 func (app *BaseApp) setInterBlockCache(cache sdk.MultiStorePersistentCache) {

@@ -12,9 +12,8 @@ const (
 	MetricKeyMidBlocker   = "mid_blocker"
 	MetricKeyEndBlocker   = "end_blocker"
 	MetricLabelNameModule = "module"
-	MESSAGE_COUNT		  = "message_count"
-	TX_COUNT			  = "transaction_count"
-	ORDER_COUNT			  = "order_count"
+	MessageCount          = "message_count"
+	TxCount               = "transaction_count"
 )
 
 // NewLabel creates a new instance of Label with name and value

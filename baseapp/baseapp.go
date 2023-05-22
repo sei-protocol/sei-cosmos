@@ -850,7 +850,7 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 
 	defer telemetry.MeasureThroughputSinceWithLabels(
-		telemetry.TX_COUNT,
+		telemetry.TxCount,
 		[]metrics.Label{
 			telemetry.NewLabel("mode", modeKeyToString[mode]),
 		},
@@ -1035,7 +1035,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*sdk.Result, error) {
 
 	defer telemetry.MeasureThroughputSinceWithLabels(
-		telemetry.MESSAGE_COUNT,
+		telemetry.MessageCount,
 		[]metrics.Label{
 			telemetry.NewLabel("mode", modeKeyToString[mode]),
 		},

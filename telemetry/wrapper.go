@@ -12,6 +12,9 @@ const (
 	MetricKeyMidBlocker   = "mid_blocker"
 	MetricKeyEndBlocker   = "end_blocker"
 	MetricLabelNameModule = "module"
+	MESSAGE_COUNT		  = "message_count"
+	TX_COUNT			  = "transaction_count"
+	ORDER_COUNT			  = "order_count"
 )
 
 // NewLabel creates a new instance of Label with name and value
@@ -81,11 +84,23 @@ func MeasureSinceWithLabels(keys []string, start time.Time, labels []metrics.Lab
 // validator_slashed
 func IncrValidatorSlashedCounter(validator string, slashingType string) {
 	metrics.IncrCounterWithLabels(
-		[]string{"validator", "slashed"},
+		[]string{"sei", "cosmos", "validator", "slashed"},
 		1,
 		[]metrics.Label{
 			NewLabel("type", slashingType),
 			NewLabel("validator", validator),
 		},
+	)
+}
+
+// Measures throughput
+// Metric Name:
+//
+//	sei_throughput_<metric_name>
+func MeasureThroughputSinceWithLabels(metricName string, labels []metrics.Label, start time.Time) {
+	metrics.MeasureSinceWithLabels(
+		[]string{"sei", "cosmos", "throughput", metricName},
+		start.UTC(),
+		labels,
 	)
 }

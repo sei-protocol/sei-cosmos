@@ -226,21 +226,25 @@ func (k Keeper) InitializeCapability(ctx sdk.Context, index uint64, owners types
 // Note, namespacing is completely local, which is safe since records are prefixed
 // with the module name and no two ScopedKeeper can have the same module name.
 func (sk ScopedKeeper) NewCapability(ctx sdk.Context, name string) (*types.Capability, error) {
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG ScopedKeeper NewCapability name %s", name))
 	if strings.TrimSpace(name) == "" {
 		return nil, sdkerrors.Wrap(types.ErrInvalidCapabilityName, "capability name cannot be empty")
 	}
 	store := ctx.KVStore(sk.storeKey)
 
 	if _, ok := sk.GetCapability(ctx, name); ok {
+		ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG Capability taken err %s", name))
 		return nil, sdkerrors.Wrapf(types.ErrCapabilityTaken, fmt.Sprintf("module: %s, name: %s", sk.module, name))
 	}
 
 	// create new capability with the current global index
 	index := types.IndexFromKey(store.Get(types.KeyIndex))
 	cap := types.NewCapability(index)
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG ScopedKeeper NewCapability index %d", index))
 
 	// update capability owner set
 	if err := sk.addOwner(ctx, cap, name); err != nil {
+		ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG NewCapability err %s", err.Error()))
 		return nil, err
 	}
 
@@ -279,7 +283,9 @@ func (sk ScopedKeeper) AuthenticateCapability(ctx sdk.Context, cap *types.Capabi
 	if strings.TrimSpace(name) == "" || cap == nil {
 		return false
 	}
-	return sk.GetCapabilityName(ctx, cap) == name
+	capName := sk.GetCapabilityName(ctx, cap)
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG ScopedKeeper AuthenticateCapability name %s, capName %s", name, capName))
+	return capName == name
 }
 
 // ClaimCapability attempts to claim a given Capability. The provided name and
@@ -394,6 +400,7 @@ func (sk ScopedKeeper) GetCapability(ctx sdk.Context, name string) (*types.Capab
 // capability given the capability
 func (sk ScopedKeeper) GetCapabilityName(ctx sdk.Context, cap *types.Capability) string {
 	if cap == nil {
+		ctx.Logger().Info("IBC-DEBUG ScopedKeeper GetCapabilityName cap nil")
 		return ""
 	}
 	memStore := ctx.KVStore(sk.memKey)

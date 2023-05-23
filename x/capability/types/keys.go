@@ -42,8 +42,11 @@ func FwdCapabilityKey(module string, cap *Capability) []byte {
 	// encode the key to a fixed length to avoid breaking consensus state machine
 	// it's a hacky backport of https://github.com/cosmos/cosmos-sdk/pull/11737
 	// the length 10 is picked so it's backward compatible on common architectures.
+	fmt.Printf("IBC-DEBUG FwdCapabilityKey module %s, cap %p", module, cap)
 	key := fmt.Sprintf("%#010p", cap)
+	fmt.Printf("IBC-DEBUG FwdCapabilityKey key %s", key)
 	if len(key) > 10 {
+		fmt.Printf("IBC-DEBUG key len > 10")
 		key = key[len(key)-10:]
 	}
 	return []byte(fmt.Sprintf("%s/fwd/0x%s", module, key))

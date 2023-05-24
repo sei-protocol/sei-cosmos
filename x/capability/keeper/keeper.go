@@ -262,7 +262,7 @@ func (sk ScopedKeeper) NewCapability(ctx sdk.Context, name string) (*types.Capab
 	fwdKey := types.FwdCapabilityKey(sk.module, cap)
 	verifyMemStore := string(memStore.Get(types.FwdCapabilityKey(sk.module, cap)))
 
-	ctx.Logger().Info("IBC-DEBUG NewCapability fwdKey %s, cap name %s, expected name %s\n", string(fwdKey), verifyMemStore, name)
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG NewCapability fwdKey %s, cap name %s, expected name %s\n", string(fwdKey), verifyMemStore, name))
 
 	// Set the reverse mapping between the module and capability name and the
 	// index in the in-memory store. Since marshalling and unmarshalling into a store

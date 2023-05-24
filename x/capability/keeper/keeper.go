@@ -250,12 +250,19 @@ func (sk ScopedKeeper) NewCapability(ctx sdk.Context, name string) (*types.Capab
 
 	// increment global index
 	store.Set(types.KeyIndex, types.IndexToKey(index+1))
+	verifyIndex := types.IndexFromKey(store.Get(types.KeyIndex))
+	ctx.Logger().Info("IBC-DEBUG NewCapability new index %d, expected value %d\n", verifyIndex, index+1)
 
 	memStore := ctx.KVStore(sk.memKey)
 
 	// Set the forward mapping between the module and capability tuple and the
 	// capability name in the memKVStore
 	memStore.Set(types.FwdCapabilityKey(sk.module, cap), []byte(name))
+
+	fwdKey := types.FwdCapabilityKey(sk.module, cap)
+	verifyMemStore := string(memStore.Get(types.FwdCapabilityKey(sk.module, cap)))
+
+	ctx.Logger().Info("IBC-DEBUG NewCapability fwdKey %s, cap name %s, expected name %s\n", string(fwdKey), verifyMemStore, name)
 
 	// Set the reverse mapping between the module and capability name and the
 	// index in the in-memory store. Since marshalling and unmarshalling into a store
@@ -403,7 +410,10 @@ func (sk ScopedKeeper) GetCapabilityName(ctx sdk.Context, cap *types.Capability)
 		ctx.Logger().Info("IBC-DEBUG ScopedKeeper GetCapabilityName cap nil\n")
 		return ""
 	}
+	ctx.Logger().Info("IBC-DEBUG ")
 	memStore := ctx.KVStore(sk.memKey)
+	capKey := types.FwdCapabilityKey(sk.module, cap)
+	fmt.Printf("IBC-DEBUG GetCapabilityName FwdCapabilityKey module %s, cap %p\n capKey %s\n", sk.module, cap, string(capKey))
 
 	return string(memStore.Get(types.FwdCapabilityKey(sk.module, cap)))
 }

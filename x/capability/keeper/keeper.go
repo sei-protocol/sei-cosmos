@@ -239,6 +239,11 @@ func (sk ScopedKeeper) NewCapability(ctx sdk.Context, name string) (*types.Capab
 	index := types.IndexFromKey(store.Get(types.KeyIndex))
 	cap := types.NewCapability(index)
 
+	height := ctx.BlockHeight()
+	capKey := string(types.FwdCapabilityKey(sk.module, cap))
+
+	ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] Creating a new Capability for name %s with index %d and capKey %s at height %d", name, index, capKey, height))
+
 	// update capability owner set
 	if err := sk.addOwner(ctx, cap, name); err != nil {
 		return nil, err
@@ -249,6 +254,7 @@ func (sk ScopedKeeper) NewCapability(ctx sdk.Context, name string) (*types.Capab
 
 	memStore := ctx.KVStore(sk.memKey)
 
+	ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] Persist cap key %s with name %s to memStore at height %d", capKey, name, height))
 	// Set the forward mapping between the module and capability tuple and the
 	// capability name in the memKVStore
 	memStore.Set(types.FwdCapabilityKey(sk.module, cap), []byte(name))
@@ -261,6 +267,8 @@ func (sk ScopedKeeper) NewCapability(ctx sdk.Context, name string) (*types.Capab
 
 	// Set the mapping from index from index to in-memory capability in the go map
 	sk.capMap[index] = cap
+
+	ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] Updated capmap to %v at height %d", sk.capMap, height))
 
 	logger(ctx).Info("created new capability", "module", sk.module, "name", name)
 
@@ -279,7 +287,10 @@ func (sk ScopedKeeper) AuthenticateCapability(ctx sdk.Context, cap *types.Capabi
 	if strings.TrimSpace(name) == "" || cap == nil {
 		return false
 	}
-	return sk.GetCapabilityName(ctx, cap) == name
+	capKey := types.FwdCapabilityKey(sk.module, cap)
+	capName := sk.GetCapabilityName(ctx, cap)
+	ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] AuthenticateCapability search by cap key %s and name %s, we got capName %s", capKey, name, capName))
+	return capName == name
 }
 
 // ClaimCapability attempts to claim a given Capability. The provided name and
@@ -300,6 +311,9 @@ func (sk ScopedKeeper) ClaimCapability(ctx sdk.Context, cap *types.Capability, n
 	}
 
 	memStore := ctx.KVStore(sk.memKey)
+
+	capKey := string(types.FwdCapabilityKey(sk.module, cap))
+	ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] Claim capability for key %s and name %s", capKey, name))
 
 	// Set the forward mapping between the module and capability tuple and the
 	// capability name in the memKVStore
@@ -329,6 +343,9 @@ func (sk ScopedKeeper) ReleaseCapability(ctx sdk.Context, cap *types.Capability)
 	}
 
 	memStore := ctx.KVStore(sk.memKey)
+
+	capKey := string(types.FwdCapabilityKey(sk.module, cap))
+	ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] Delete capability for key %s and name %s", capKey, name))
 
 	// Delete the forward mapping between the module and capability tuple and the
 	// capability name in the memKVStore
@@ -397,8 +414,10 @@ func (sk ScopedKeeper) GetCapabilityName(ctx sdk.Context, cap *types.Capability)
 		return ""
 	}
 	memStore := ctx.KVStore(sk.memKey)
-
-	return string(memStore.Get(types.FwdCapabilityKey(sk.module, cap)))
+	capKey := string(types.FwdCapabilityKey(sk.module, cap))
+	result := memStore.Get(types.FwdCapabilityKey(sk.module, cap))
+	ctx.Logger().Info(fmt.Sprintf("[Cosmos-Debug] GetCapabilityName from memStore for capKey %s result is:%v", capKey, result))
+	return string(result)
 }
 
 // GetOwners all the Owners that own the capability associated with the name this ScopedKeeper uses

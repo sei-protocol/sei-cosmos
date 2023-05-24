@@ -1,6 +1,8 @@
 package capability
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	"github.com/cosmos/cosmos-sdk/x/capability/types"
@@ -9,12 +11,14 @@ import (
 // InitGenesis initializes the capability module's state from a provided genesis
 // state.
 func InitGenesis(ctx sdk.Context, k keeper.Keeper, genState types.GenesisState) {
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG InitGenesis Call"))
 	if err := k.InitializeIndex(ctx, genState.Index); err != nil {
 		panic(err)
 	}
 
 	// set owners for each index
 	for _, genOwner := range genState.Owners {
+		ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG genOwner %+v\n", genOwner))
 		k.SetOwners(ctx, genOwner.Index, genOwner.IndexOwners)
 	}
 	// initialize in-memory capabilities

@@ -105,6 +105,7 @@ func (k *Keeper) Seal() {
 // `BeginBlock` or `InitChain` - whichever is first). We need access to the store so we
 // can't initialize it in a constructor.
 func (k *Keeper) InitMemStore(ctx sdk.Context) {
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG InitMemStore Call"))
 	memStore := ctx.KVStore(k.memKey)
 	memStoreType := memStore.GetStoreType()
 	if memStoreType != sdk.StoreTypeMemory {
@@ -128,6 +129,7 @@ func (k *Keeper) InitMemStore(ctx sdk.Context) {
 			var capOwners types.CapabilityOwners
 
 			k.cdc.MustUnmarshal(iterator.Value(), &capOwners)
+			ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG InitMemStore index %d, capOwners %+v\n", index, capOwners))
 			k.InitializeCapability(noGasCtx, index, capOwners)
 		}
 

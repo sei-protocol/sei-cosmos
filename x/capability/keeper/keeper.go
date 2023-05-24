@@ -251,7 +251,7 @@ func (sk ScopedKeeper) NewCapability(ctx sdk.Context, name string) (*types.Capab
 	// increment global index
 	store.Set(types.KeyIndex, types.IndexToKey(index+1))
 	verifyIndex := types.IndexFromKey(store.Get(types.KeyIndex))
-	ctx.Logger().Info("IBC-DEBUG NewCapability new index %d, expected value %d\n", verifyIndex, index+1)
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG NewCapability new index %d, expected value %d\n", verifyIndex, index+1))
 
 	memStore := ctx.KVStore(sk.memKey)
 

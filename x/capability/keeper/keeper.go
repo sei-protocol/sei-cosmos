@@ -290,6 +290,19 @@ func (sk ScopedKeeper) AuthenticateCapability(ctx sdk.Context, cap *types.Capabi
 	capKey := types.FwdCapabilityKey(sk.module, cap)
 	capName := sk.GetCapabilityName(ctx, cap)
 	ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] AuthenticateCapability search by cap key %s and name %s, we got capName %s", capKey, name, capName))
+	if capName != name {
+		ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] Current capMap is: %v", sk.capMap))
+		memStore := ctx.KVStore(sk.memKey)
+		itr := memStore.Iterator(nil, nil)
+		ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] Dumping all existing key values in memStore:"))
+		defer itr.Close()
+		for itr.Valid() {
+			key := itr.Key()
+			value := itr.Value()
+			ctx.Logger().Info(fmt.Sprintf("[CosmosDebug] key: %s, value: %s", string(key), string(value)))
+			itr.Next()
+		}
+	}
 	return capName == name
 }
 

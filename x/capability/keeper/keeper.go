@@ -410,10 +410,9 @@ func (sk ScopedKeeper) GetCapabilityName(ctx sdk.Context, cap *types.Capability)
 		ctx.Logger().Info("IBC-DEBUG ScopedKeeper GetCapabilityName cap nil\n")
 		return ""
 	}
-	ctx.Logger().Info("IBC-DEBUG ")
 	memStore := ctx.KVStore(sk.memKey)
 	capKey := types.FwdCapabilityKey(sk.module, cap)
-	fmt.Printf("IBC-DEBUG GetCapabilityName FwdCapabilityKey module %s, cap %p\n capKey %s\n", sk.module, cap, string(capKey))
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG GetCapabilityName FwdCapabilityKey module %s, cap %p\n capKey %s\n", sk.module, cap, string(capKey)))
 
 	return string(memStore.Get(types.FwdCapabilityKey(sk.module, cap)))
 }

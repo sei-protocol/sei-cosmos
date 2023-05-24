@@ -215,6 +215,7 @@ func (k Keeper) InitializeCapability(ctx sdk.Context, index uint64, owners types
 		// Set the mapping from index from index to in-memory capability in the go map
 		k.capMap[index] = cap
 	}
+	ctx.Logger().Info(fmt.Sprintf("IBC-DEBUG capMap %+v\n", k.capMap))
 
 }
 

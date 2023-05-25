@@ -12,3 +12,7 @@ message FeesParams {
   repeated cosmos.base.v1beta1.Coin global_minimum_fees = 1
       [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"];
 }
+
+message GenesisState {
+  FeesParams fee_params = 1 [(gogoproto.nullable) = false];
+}

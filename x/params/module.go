@@ -45,7 +45,9 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 
 // DefaultGenesis returns default genesis state as raw bytes for the params
 // module.
-func (AppModuleBasic) DefaultGenesis(_ codec.JSONCodec) json.RawMessage { return nil }
+func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
+	return cdc.MustMarshalJSON(types.DefaultGenesis())
+}
 
 // ValidateGenesis performs genesis state validation for the params module.
 func (AppModuleBasic) ValidateGenesis(_ codec.JSONCodec, config client.TxEncodingConfig, _ json.RawMessage) error {

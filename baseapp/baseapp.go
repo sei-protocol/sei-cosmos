@@ -1059,8 +1059,10 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 	// NOTE: GasWanted is determined by the AnteHandler and GasUsed by the GasMeter.
 	for i, msg := range msgs {
+		_, innerSpan := app.TracingInfo.StartWithContext(fmt.Sprintf("[PSUDebug] RunMsg Loop %s", msg.String()), ctx.TraceSpanContext())
 		// skip actual execution for (Re)CheckTx mode
 		if mode == runTxModeCheck || mode == runTxModeReCheck {
+			innerSpan.End()
 			break
 		}
 		var (
@@ -1103,10 +1105,12 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 				[]metrics.Label{{Name: "type", Value: eventMsgName}},
 			)
 		} else {
+			innerSpan.End()
 			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 		}
 
 		if err != nil {
+			innerSpan.End()
 			return nil, sdkerrors.Wrapf(err, "failed to execute message; message index: %d", i)
 		}
 
@@ -1127,6 +1131,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		msgMsCache.Write()
 
 		if ctx.MsgValidator() == nil {
+			innerSpan.End()
 			continue
 		}
 		storeAccessOpEvents := msgMsCache.GetEvents()
@@ -1139,6 +1144,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			}
 			errMessage := fmt.Sprintf("Invalid Concurrent Execution messageIndex=%d, missing %d access operations", i, len(missingAccessOps))
 			// we need to bubble up the events for inspection
+			innerSpan.End()
 			return &sdk.Result{
 				Log:    strings.TrimSpace(msgLogs.String()),
 				Events: events.ToABCIEvents(),

@@ -35,5 +35,8 @@ func ConsensusParamsKeyTable() types.KeyTable {
 		types.NewParamSetPair(
 			baseapp.ParamStoreKeyABCIParams, tmproto.ABCIParams{}, baseapp.ValidateABCIParams,
 		),
+		types.NewParamSetPair(
+			baseapp.ParamStoreKeyFeesParams, types.FeesParams{}, types.ValidateFeesParams,
+		),
 	)
 }

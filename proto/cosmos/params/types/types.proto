@@ -9,10 +9,10 @@ import "cosmos/base/v1beta1/coin.proto";
 
 // Defines fee params that are controlled through governance
 message FeesParams {
-  repeated cosmos.base.v1beta1.Coin global_minimum_fees = 1
-      [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"];
+  repeated cosmos.base.v1beta1.DecCoin global_minimum_gas_prices = 1
+      [(gogoproto.nullable) = false, (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.DecCoins"];
 }
 
 message GenesisState {
-  FeesParams fee_params = 1 [(gogoproto.nullable) = false];
+  FeesParams fees_params = 1 [(gogoproto.nullable) = false];
 }

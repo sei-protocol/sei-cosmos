@@ -7,10 +7,14 @@ import (
 // DefaultGenesis returns the default Capability genesis state
 func DefaultGenesis() *GenesisState {
 	return &GenesisState{
-		FeeParams: FeesParams{
-			GlobalMinimumFees: sdk.Coins{
-				sdk.NewCoin(sdk.DefaultBondDenom, sdk.Int(sdk.NewDecWithPrec(1, 2))),
+		FeesParams: FeesParams{
+			GlobalMinimumGasPrices: sdk.DecCoins{
+				sdk.NewDecCoinFromDec(sdk.DefaultBondDenom, sdk.NewDecWithPrec(1, 2)),
 			},
 		},
 	}
+}
+
+func (gs GenesisState) Validate() error {
+	return gs.FeesParams.Validate()
 }

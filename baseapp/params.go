@@ -22,7 +22,6 @@ var (
 	ParamStoreKeySynchronyParams = []byte("SynchronyParams")
 	ParamStoreKeyTimeoutParams   = []byte("TimeoutParams")
 	ParamStoreKeyABCIParams      = []byte("ABCIParams")
-	ParamStoreKeyFeesParams      = []byte("FeesParams")
 )
 
 // ParamStore defines the interface the parameter store used by the BaseApp must

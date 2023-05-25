@@ -93,6 +93,7 @@ func (bm BasicManager) RegisterInterfaces(registry codectypes.InterfaceRegistry)
 func (bm BasicManager) DefaultGenesis(cdc codec.JSONCodec) map[string]json.RawMessage {
 	genesis := make(map[string]json.RawMessage)
 	for _, b := range bm {
+		println(b.Name())
 		genesis[b.Name()] = b.DefaultGenesis(cdc)
 	}
 

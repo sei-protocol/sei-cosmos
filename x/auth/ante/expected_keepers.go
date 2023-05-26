@@ -21,7 +21,7 @@ type FeegrantKeeper interface {
 }
 
 // ParamKeeper defines the expected param keeper.
-type ParamKeeper interface {
+type ParamsKeeper interface {
 	SetFeesParams(ctx sdk.Context, feesParams paramtypes.FeesParams)
 	GetFeesParams(ctx sdk.Context) paramtypes.FeesParams
 }

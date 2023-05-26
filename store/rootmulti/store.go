@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -63,6 +65,10 @@ type Store struct {
 	archivalVersion     int64
 	noVersioning        bool
 
+	exposingSnapshotStats atomic.Bool
+	snapshotStats         map[string]StoreIavlStats
+	snapshotMtx           sync.Mutex
+
 	traceWriter       io.Writer
 	traceContext      types.TraceContext
 	traceContextMutex sync.Mutex
@@ -76,6 +82,39 @@ var (
 	_ types.CommitMultiStore = (*Store)(nil)
 	_ types.Queryable        = (*Store)(nil)
 )
+
+type StoreIavlStats struct {
+	TotalNumberOfKeys     int64
+	TotalKeySizeInBytes   int64
+	TotalValueSizeInBytes int64
+}
+
+func (rs *Store) exposeSnapshotStats() {
+	for {
+		if rs.snapshotStats != nil {
+			rs.snapshotMtx.Lock()
+			for storeName, iavlStats := range rs.snapshotStats {
+				telemetry.SetGaugeWithLabels(
+					[]string{"iavl", "store", "total_num_keys"},
+					float32(iavlStats.TotalNumberOfKeys),
+					[]metrics.Label{telemetry.NewLabel("store_name", storeName)},
+				)
+				telemetry.SetGaugeWithLabels(
+					[]string{"iavl", "store", "total_key_bytes"},
+					float32(iavlStats.TotalKeySizeInBytes),
+					[]metrics.Label{telemetry.NewLabel("store_name", storeName)},
+				)
+				telemetry.SetGaugeWithLabels(
+					[]string{"iavl", "store", "total_value_bytes"},
+					float32(iavlStats.TotalValueSizeInBytes),
+					[]metrics.Label{telemetry.NewLabel("store_name", storeName)},
+				)
+			}
+			rs.snapshotMtx.Unlock()
+		}
+		time.Sleep(60 * time.Second)
+	}
+}
 
 // keysForStoreKeyMap returns a slice of keys for the provided map lexically sorted by StoreKey.Name()
 func keysForStoreKeyMap[V any](m map[types.StoreKey]V) []types.StoreKey {
@@ -96,16 +135,18 @@ func keysForStoreKeyMap[V any](m map[types.StoreKey]V) []types.StoreKey {
 // LoadVersion must be called.
 func NewStore(db dbm.DB, logger log.Logger) *Store {
 	return &Store{
-		db:                  db,
-		logger:              logger,
-		pruningOpts:         types.PruneNothing,
-		iavlCacheSize:       iavl.DefaultIAVLCacheSize,
-		iavlDisableFastNode: iavlDisablefastNodeDefault,
-		storesParams:        make(map[types.StoreKey]storeParams),
-		stores:              make(map[types.StoreKey]types.CommitKVStore),
-		keysByName:          make(map[string]types.StoreKey),
-		pruneHeights:        make([]int64, 0),
-		listeners:           make(map[types.StoreKey][]types.WriteListener),
+		db:                    db,
+		logger:                logger,
+		pruningOpts:           types.PruneNothing,
+		iavlCacheSize:         iavl.DefaultIAVLCacheSize,
+		iavlDisableFastNode:   iavlDisablefastNodeDefault,
+		storesParams:          make(map[types.StoreKey]storeParams),
+		stores:                make(map[types.StoreKey]types.CommitKVStore),
+		keysByName:            make(map[string]types.StoreKey),
+		pruneHeights:          make([]int64, 0),
+		listeners:             make(map[types.StoreKey][]types.WriteListener),
+		exposingSnapshotStats: atomic.Bool{},
+		snapshotStats:         make(map[string]StoreIavlStats),
 	}
 }
 
@@ -751,6 +792,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		return sdkerrors.Wrapf(sdkerrors.ErrLogic, "cannot snapshot future height %v", height)
 	}
 
+	if rs.exposingSnapshotStats.CompareAndSwap(false, true) {
+		go rs.exposeSnapshotStats()
+	}
+
 	// Collect stores to snapshot (only IAVL stores are supported)
 	type namedStore struct {
 		*iavl.Store
@@ -778,9 +823,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	// and the following messages contain a SnapshotNode (i.e. an ExportNode). Store changes
 	// are demarcated by new SnapshotStore items.
 	for _, store := range stores {
+		totalNumKeys := int64(0)
 		totalKeyBytes := int64(0)
 		totalValueBytes := int64(0)
-		totalNumKeys := int64(0)
 		exporter, err := store.Export(int64(height))
 		if err != nil {
 			return err
@@ -821,24 +866,16 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			totalValueBytes += int64(len(node.Value))
 			totalNumKeys += 1
 		}
-		telemetry.SetGaugeWithLabels(
-			[]string{"iavl", "store", "total_num_keys"},
-			float32(totalNumKeys),
-			[]metrics.Label{telemetry.NewLabel("store_name", store.name)},
-		)
-		telemetry.SetGaugeWithLabels(
-			[]string{"iavl", "store", "total_key_bytes"},
-			float32(totalKeyBytes),
-			[]metrics.Label{telemetry.NewLabel("store_name", store.name)},
-		)
-		telemetry.SetGaugeWithLabels(
-			[]string{"iavl", "store", "total_value_bytes"},
-			float32(totalValueBytes),
-			[]metrics.Label{telemetry.NewLabel("store_name", store.name)},
-		)
-		rs.logger.Info(fmt.Sprintf("Exported snapshot for store %s, with total number of keys %d, total key bytes %d, total value bytes %d",
-			store.name, totalNumKeys, totalKeyBytes, totalValueBytes))
+		updatedStats := StoreIavlStats{
+			TotalNumberOfKeys:     totalNumKeys,
+			TotalKeySizeInBytes:   totalKeyBytes,
+			TotalValueSizeInBytes: totalValueBytes,
+		}
+		rs.snapshotMtx.Lock()
+		rs.snapshotStats[store.name] = updatedStats
+		rs.snapshotMtx.Unlock()
 		exporter.Close()
+
 	}
 
 	return nil

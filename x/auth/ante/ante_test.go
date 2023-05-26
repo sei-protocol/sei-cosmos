@@ -1071,7 +1071,11 @@ func (suite *AnteTestSuite) TestAnteHandlerReCheck() {
 	suite.SetupTest(false) // setup
 	// Set recheck=true
 	suite.ctx = suite.ctx.WithIsReCheckTx(true)
+
 	suite.txBuilder = suite.clientCtx.TxConfig.NewTxBuilder()
+	feeParam := suite.app.ParamsKeeper.GetFeesParams(suite.ctx)
+	feeParam.GlobalMinimumGasPrices = sdk.NewDecCoins(sdk.NewDecCoinFromDec("atom", sdk.NewDecWithPrec(1, 5)))
+	suite.app.ParamsKeeper.SetFeesParams(suite.ctx, feeParam)
 
 	// Same data for every test cases
 	accounts := suite.CreateTestAccounts(1)

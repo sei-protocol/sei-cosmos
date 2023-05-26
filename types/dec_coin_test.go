@@ -515,7 +515,7 @@ func (s *decCoinTestSuite) TestUnionMax() {
 	for _, tc := range cases {
 		s.Run(tc.name, func() {
 			res := tc.coins.UnionMax(tc.coinsB)
-			s.Require().Equal(tc.expected, res, "unexpected result")
+			res.IsEqual(tc.expected)
 		})
 	}
 }

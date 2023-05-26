@@ -46,6 +46,11 @@ func (k Keeper) SetFeesParams(ctx sdk.Context, feesParams types.FeesParams) {
 
 func (k Keeper) GetFeesParams(ctx sdk.Context) types.FeesParams {
 	subspace, _ := k.GetSubspace(types.ModuleName)
+
+	if !subspace.Has(ctx, types.ParamStoreKeyFeesParams) {
+		return *types.DefaultFeesParams()
+	}
+
 	bz := subspace.GetRaw(ctx, types.ParamStoreKeyFeesParams)
 	var feesParams types.FeesParams
 	json.Unmarshal(bz, &feesParams)

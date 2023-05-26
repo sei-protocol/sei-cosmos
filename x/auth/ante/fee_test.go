@@ -62,6 +62,11 @@ func (suite *AnteTestSuite) TestEnsureMempoolFees() {
 	suite.ctx = suite.ctx.WithMinGasPrices(lowGasPrice)
 
 	newCtx, err := antehandler(suite.ctx, tx, false)
+
+	feeParam := suite.app.ParamsKeeper.GetFeesParams(suite.ctx)
+	feeParam.GlobalMinimumGasPrices = sdk.NewDecCoins(sdk.NewDecCoinFromDec("atom", sdk.NewDec(0)), sdk.NewDecCoinFromDec("usei", sdk.NewDec(0)))
+	suite.app.ParamsKeeper.SetFeesParams(suite.ctx, feeParam)
+
 	suite.Require().Nil(err, "Decorator should not have errored on fee higher than local gasPrice")
 	// Priority is the smallest gas price amount in any denom. Since we have only 1 gas price
 	// of 10atom, the priority here is 10.

@@ -21,6 +21,8 @@ const (
 	FormatDefault    = ""
 	FormatPrometheus = "prometheus"
 	FormatText       = "text"
+	Namespace        = "cosmos"
+	Subsystem        = "se"
 )
 
 // Config defines the configuration options for application telemetry.
@@ -96,16 +98,10 @@ func New(cfg Config) (*Metrics, error) {
 	fanout := metrics.FanoutSink{memSink}
 
 	if cfg.PrometheusRetentionTime > 0 {
-		m.prometheusEnabled = true
-		prometheusOpts := metricsprom.PrometheusOpts{
-			Expiration: time.Duration(cfg.PrometheusRetentionTime) * time.Second,
-		}
-
-		promSink, err := metricsprom.NewPrometheusSinkFrom(prometheusOpts)
+		promSink, err := m.setupPrometheus(cfg)
 		if err != nil {
 			return nil, err
 		}
-
 		fanout = append(fanout, promSink)
 	}
 
@@ -114,6 +110,44 @@ func New(cfg Config) (*Metrics, error) {
 	}
 
 	return m, nil
+}
+
+func (m *Metrics) setupPrometheus(cfg Config) (*metricsprom.PrometheusSink, error) {
+	m.prometheusEnabled = true
+	prometheusOpts := metricsprom.PrometheusOpts{
+		Expiration: time.Duration(cfg.PrometheusRetentionTime) * time.Second,
+		GaugeDefinitions: []metricsprom.GaugeDefinition{
+			{
+				Name: []string{"cosmos", "upgrade", "plan", "height"},
+				Help: "Next upgrade height",
+			},
+			{
+				Name: []string{"iavl", "store", "total_num_keys"},
+				Help: "Total Number of keys per IAVL store module",
+			},
+			{
+				Name: []string{"iavl", "store", "total_key_bytes"},
+				Help: "Total yes per IAVL store module",
+			},
+			{
+				Name: []string{"iavl", "store", "total_value_bytes"},
+				Help: "Total Number of value bytes per IAVL store module",
+			},
+		},
+		CounterDefinitions: []metricsprom.CounterDefinition{
+			{
+				Name: []string{"sei_cosmos_validator_slashed"},
+				Help: "Total number of validator was slashed",
+			},
+		},
+	}
+
+	promSink, err := metricsprom.NewPrometheusSinkFrom(prometheusOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return promSink, nil
 }
 
 // Gather collects all registered metrics and returns a GatherResponse where the

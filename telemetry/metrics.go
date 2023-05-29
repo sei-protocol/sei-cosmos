@@ -21,8 +21,6 @@ const (
 	FormatDefault    = ""
 	FormatPrometheus = "prometheus"
 	FormatText       = "text"
-	Namespace        = "cosmos"
-	Subsystem        = "se"
 )
 
 // Config defines the configuration options for application telemetry.

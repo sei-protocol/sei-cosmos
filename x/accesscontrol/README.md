@@ -48,7 +48,7 @@ Update Resource Dependency Mapping Proposal: Submits a proposal to update resour
 }
 ```
 
-Run with: seid tx accesscontrol update-resource-dependency-mapping [proposal-file]​2​.
+Run with: seid tx accesscontrol update-resource-dependency-mapping [proposal-file].
 
 Register Wasm Dependency Mapping: Registers dependencies for a Wasm contract. The mapping should be provided as a JSON file with the following structure:
 
@@ -58,4 +58,4 @@ Register Wasm Dependency Mapping: Registers dependencies for a Wasm contract. Th
 }
 ```
 
-Run with: seid tx accesscontrol register-wasm-dependency-mapping [mapping-json-file]​2​.
+Run with: seid tx accesscontrol register-wasm-dependency-mapping [mapping-json-file].

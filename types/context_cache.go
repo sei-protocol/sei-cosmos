@@ -14,9 +14,9 @@ type ContextMemCache struct {
 
 func NewContextMemCache() *ContextMemCache {
 	return &ContextMemCache{
-		deferredBankOpsLock:     &sync.Mutex{},
-		deferredSends:           NewDeferredBankOperationMap(),
-		deferredWithdrawals:     NewDeferredBankOperationMap(),
+		deferredBankOpsLock: &sync.Mutex{},
+		deferredSends:       NewDeferredBankOperationMap(),
+		deferredWithdrawals: NewDeferredBankOperationMap(),
 	}
 }
 

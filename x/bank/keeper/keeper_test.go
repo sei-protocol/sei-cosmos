@@ -332,7 +332,7 @@ func (suite *IntegrationTestSuite) TestSupply_DeferredMintCoinsDuo() {
 	suite.Require().NoError(err)
 
 	keeper.WriteDeferredOperations(ctx)
-	suite.Require().Equal(initialSupply.Add(initCoins...), totalSupply)
+	suite.Require().Equal(initialSupply.Add(initCoins...).Add(initCoins...), totalSupply)
 }
 
 func (suite *IntegrationTestSuite) TestSupply_BurnCoins() {

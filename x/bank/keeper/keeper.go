@@ -461,7 +461,7 @@ func (k BaseKeeper) WriteDeferredDepositsToModuleAccounts(ctx sdk.Context) []abc
 			if recipientAcc == nil {
 				panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipient))
 			}
-			log.Printf("Adding coin=%s to module=%s address=%s", amount, recipient, recipientAcc.GetAddress())
+			println(fmt.Sprintf("Adding coin=%s to module=%s address=%s\n", amount, recipient, recipientAcc.GetAddress()))
 			err := k.addCoins(ctx, recipientAcc.GetAddress(), amount)
 			if err != nil {
 				ctx.Logger().Error(fmt.Sprintf("Failed to add coin=%s to module=%s address=%s, error is: %s", amount, recipient, recipientAcc.GetAddress(), err))

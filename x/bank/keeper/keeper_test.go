@@ -35,6 +35,7 @@ var (
 	holderAcc     = authtypes.NewEmptyModuleAccount(holder)
 	burnerAcc     = authtypes.NewEmptyModuleAccount(authtypes.Burner, authtypes.Burner)
 	minterAcc     = authtypes.NewEmptyModuleAccount(authtypes.Minter, authtypes.Minter)
+	factoryAcc    = authtypes.NewEmptyModuleAccount("TokenFactory", authtypes.Minter)
 	multiPermAcc  = authtypes.NewEmptyModuleAccount(multiPerm, authtypes.Burner, authtypes.Minter, authtypes.Staking)
 	randomPermAcc = authtypes.NewEmptyModuleAccount(randomPerm, "random")
 
@@ -300,6 +301,38 @@ func (suite *IntegrationTestSuite) TestSupply_DeferredMintCoins() {
 
 	suite.Require().Equal(initialSupply.Add(initCoins...), totalSupply)
 	suite.Require().Panics(func() { keeper.DeferredMintCoins(ctx, authtypes.Burner, initCoins) }) // nolint:errcheck
+}
+
+func (suite *IntegrationTestSuite) TestSupply_DeferredMintCoinsDuo() {
+	ctx := suite.ctx
+
+	// add module accounts to supply keeper
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+
+	authKeeper.SetModuleAccount(ctx, minterAcc)
+	authKeeper.SetModuleAccount(ctx, factoryAcc)
+
+	initialSupply, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
+	suite.Require().NoError(err)
+
+	err = keeper.DeferredMintCoins(ctx, "TokenFactory", initCoins)
+	suite.Require().NoError(err)
+
+	keeper.SendCoins(ctx, factoryAcc.GetAddress(), randomPermAcc.GetAddress(), initCoins)
+	keeper.SendCoins(ctx, randomPermAcc.GetAddress(), burnerAcc.GetAddress(), initCoins)
+
+	err = keeper.DeferredMintCoins(ctx, "TokenFactory", initCoins)
+	suite.Require().NoError(err)
+
+	keeper.SendCoins(ctx, factoryAcc.GetAddress(), randomPermAcc.GetAddress(), initCoins)
+	keeper.SendCoins(ctx, randomPermAcc.GetAddress(), burnerAcc.GetAddress(), initCoins)
+
+	suite.Require().Equal(sdk.Coins{}, getCoinsByName(ctx, keeper, authKeeper, authtypes.Minter))
+	totalSupply, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
+	suite.Require().NoError(err)
+
+	keeper.WriteDeferredOperations(ctx)
+	suite.Require().Equal(initialSupply.Add(initCoins...), totalSupply)
 }
 
 func (suite *IntegrationTestSuite) TestSupply_BurnCoins() {

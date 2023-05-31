@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	holderAcc     = authtypes.NewEmptyModuleAccount(holder)
+	holderAcc     = authtypes.NewEmptyModuleAccount(holder, authtypes.Burner, authtypes.Minter, authtypes.Staking)
 	burnerAcc     = authtypes.NewEmptyModuleAccount(authtypes.Burner, authtypes.Burner)
 	minterAcc     = authtypes.NewEmptyModuleAccount(authtypes.Minter, authtypes.Minter)
 	factoryAcc    = authtypes.NewEmptyModuleAccount("TokenFactory", authtypes.Minter)
@@ -310,18 +310,18 @@ func (suite *IntegrationTestSuite) TestSupply_DeferredMintCoinsDuo() {
 	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
 
 	authKeeper.SetModuleAccount(ctx, minterAcc)
-	authKeeper.SetModuleAccount(ctx, factoryAcc)
+	authKeeper.SetModuleAccount(ctx, holderAcc)
 
 	initialSupply, _, err := keeper.GetPaginatedTotalSupply(ctx, &query.PageRequest{})
 	suite.Require().NoError(err)
 
-	err = keeper.DeferredMintCoins(ctx, "TokenFactory", initCoins)
+	err = keeper.DeferredMintCoins(ctx, holderAcc.Name, initCoins)
 	suite.Require().NoError(err)
 
 	keeper.SendCoins(ctx, factoryAcc.GetAddress(), randomPermAcc.GetAddress(), initCoins)
 	keeper.SendCoins(ctx, randomPermAcc.GetAddress(), burnerAcc.GetAddress(), initCoins)
 
-	err = keeper.DeferredMintCoins(ctx, "TokenFactory", initCoins)
+	err = keeper.DeferredMintCoins(ctx, holderAcc.Name, initCoins)
 	suite.Require().NoError(err)
 
 	keeper.SendCoins(ctx, factoryAcc.GetAddress(), randomPermAcc.GetAddress(), initCoins)

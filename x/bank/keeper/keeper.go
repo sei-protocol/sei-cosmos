@@ -593,6 +593,7 @@ func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 // writes at the end of a block.
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) DeferredMintCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
+	ctx.Logger().Info((fmt.Sprintf("DEFERRED-DEBUG DeferredMintCoins moduleName %s, amounts %+v\n", moduleName, amounts)))
 	addFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 		return ctx.ContextMemCache().UpsertDeferredSends(moduleName, amounts)
 	}

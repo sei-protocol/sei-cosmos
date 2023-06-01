@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"sync"
 
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -14,9 +15,9 @@ type ContextMemCache struct {
 
 func NewContextMemCache() *ContextMemCache {
 	return &ContextMemCache{
-		deferredBankOpsLock:     &sync.Mutex{},
-		deferredSends:           NewDeferredBankOperationMap(),
-		deferredWithdrawals:     NewDeferredBankOperationMap(),
+		deferredBankOpsLock: &sync.Mutex{},
+		deferredSends:       NewDeferredBankOperationMap(),
+		deferredWithdrawals: NewDeferredBankOperationMap(),
 	}
 }
 
@@ -29,7 +30,9 @@ func (c *ContextMemCache) GetDeferredWithdrawals() *DeferredBankOperationMapping
 }
 
 func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins) error {
+	fmt.Printf("DEFERRED-DEBUG UpsertDeferredSends moduleAccount %s, amount %+v\n", moduleAccount, amount)
 	if !amount.IsValid() {
+		fmt.Printf("DEFERRED-DEBUG UpsertDeferredSends amount Invalid %+v\n", amount)
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amount.String())
 	}
 
@@ -59,7 +62,9 @@ func (c *ContextMemCache) RangeOnDeferredSendsAndDelete(apply func(recipient str
 }
 
 func (c *ContextMemCache) UpsertDeferredWithdrawals(moduleAccount string, amount Coins) error {
+	fmt.Printf("DEFERRED-DEBUG UpsertDeferredWithdrawals moduleAccount %s, amount %+v\n", moduleAccount, amount)
 	if !amount.IsValid() {
+		fmt.Printf("DEFERRED-DEBUG UpsertDeferredWithdrawals amount Invalid %+v\n", amount)
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amount.String())
 	}
 

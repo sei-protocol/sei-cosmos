@@ -339,7 +339,7 @@ func (suite *AnteTestSuite) TestMultipleGlobalMinimumFees() {
 
 	// keys and addresses
 	priv1, _, addr1 := testdata.KeyTestPubAddr()
-	coins := sdk.NewCoins(sdk.NewCoin("atom", sdk.NewInt(3000000000)))
+	coins := sdk.NewCoins(sdk.NewCoin("atom", sdk.NewInt(3000000000)), sdk.NewCoin("usei", sdk.NewInt(3000000000)))
 	err := simapp.FundAccount(suite.app.BankKeeper, suite.ctx, addr1, coins)
 	suite.Require().NoError(err)
 

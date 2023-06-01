@@ -401,6 +401,7 @@ func (suite *AnteTestSuite) TestMultipleGlobalMinimumFees() {
 	_, err = antehandler(suite.ctx, tx, false)
 	suite.Require().Nil(err, "Decorator should not have errored on equal fee for global gasPrice")
 
+	// Test case: enough fee based on max local
 	feeParam = suite.app.ParamsKeeper.GetFeesParams(suite.ctx)
 	feeParam.GlobalMinimumGasPrices = sdk.NewDecCoins(sdk.NewDecCoinFromDec("atom", sdk.NewDec(1)))
 	suite.app.ParamsKeeper.SetFeesParams(suite.ctx, feeParam)
@@ -410,6 +411,7 @@ func (suite *AnteTestSuite) TestMultipleGlobalMinimumFees() {
 	_, err = antehandler(suite.ctx, tx, false)
 	suite.Require().Nil(err, "Decorator should not have errored on equal fee for global gasPrice")
 
+	// Test case: enough fee based on max global
 	feeParam = suite.app.ParamsKeeper.GetFeesParams(suite.ctx)
 	feeParam.GlobalMinimumGasPrices = sdk.NewDecCoins(sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)))
 	suite.app.ParamsKeeper.SetFeesParams(suite.ctx, feeParam)
@@ -475,7 +477,7 @@ func (suite *AnteTestSuite) TestMultipleGlobalMinimumFees() {
 		sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)),
 		sdk.NewDecCoinFromDec("usei", sdk.NewDec(5)), // less than global minimum
 	})
-	tx, _ = suite.createTestTxWithGas(msg, 750000, 15000, priv1, "usei")
+	tx, _ = suite.createTestTxWithGas(msg, 100000, 15000, priv1, "usei")
 	_, err = antehandler(suite.ctx, tx, false)
 	suite.Assert().ErrorContains(err, "insufficient fees")
 }

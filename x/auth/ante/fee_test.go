@@ -439,28 +439,28 @@ func (suite *AnteTestSuite) TestMultipleGlobalMinimumFees() {
 	// Test case: the fee provided in all denominations is greater than the global minimum gas prices
 	feeParam = suite.app.ParamsKeeper.GetFeesParams(suite.ctx)
 	feeParam.GlobalMinimumGasPrices = sdk.NewDecCoins(
-		sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)),
 		sdk.NewDecCoinFromDec("usei", sdk.NewDec(2)),
+		sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)),
 	)
 	suite.app.ParamsKeeper.SetFeesParams(suite.ctx, feeParam)
 	suite.ctx = suite.ctx.WithMinGasPrices([]sdk.DecCoin{
-		sdk.NewDecCoinFromDec("atom", sdk.NewDec(100)), // greater than global minimum
 		sdk.NewDecCoinFromDec("usei", sdk.NewDec(10)),  // greater than global minimum
+		sdk.NewDecCoinFromDec("atom", sdk.NewDec(100)), // greater than global minimum
 	})
 	tx, _ = suite.createTestTxWithGas(msg, 1500000, 15000, priv1, "atom")
 	_, err = antehandler(suite.ctx, tx, false)
 	suite.Require().Nil(err, "Decorator should not have errored, fee is sufficient in all denominations")
 
-	// Test case: fee provided in 'usei' denomination is greater than the global minimum gas prices
+	// Test case: fee provided in 'usei' denomination is greater than the global minimum gas prices in reverse order
 	feeParam = suite.app.ParamsKeeper.GetFeesParams(suite.ctx)
 	feeParam.GlobalMinimumGasPrices = sdk.NewDecCoins(
-		sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)),
 		sdk.NewDecCoinFromDec("usei", sdk.NewDec(2)),
+		sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)),
 	)
 	suite.app.ParamsKeeper.SetFeesParams(suite.ctx, feeParam)
 	suite.ctx = suite.ctx.WithMinGasPrices([]sdk.DecCoin{
-		sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)),
 		sdk.NewDecCoinFromDec("usei", sdk.NewDec(10)), // greater than global minimum
+		sdk.NewDecCoinFromDec("atom", sdk.NewDec(50)),
 	})
 	tx, _ = suite.createTestTxWithGas(msg, 1500000, 15000, priv1, "usei")
 	_, err = antehandler(suite.ctx, tx, false)

@@ -330,15 +330,22 @@ func (k BaseKeeper) SendCoinsFromModuleToAccount(
 	if k.BlockedAddr(recipientAddr) {
 		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", recipientAddr)
 	}
-
-	// Try subtract from the in mem var first, prevents the condition where
-	// the module may have a pending deposit that would be enough to pay for this send
-	ok := ctx.ContextMemCache().SafeSubDeferredSends(senderModule, amt)
-	if ok {
-		return k.addCoins(ctx, recipientAddr, amt)
+	addCoinsAmount := amt
+	// if we dont call the remainder, the total amount was processed against deferrred sends, so we can "addCoins" the full amount
+	err := ctx.ContextMemCache().SaturatingSubDeferredSends(senderModule, amt, func(amount sdk.Coins) error {
+		// modify the `addCoins` amount to represent the amount subtracted from deferred sends
+		addCoinsAmount = addCoinsAmount.Sub(amount)
+		// sendCoins the remainder
+		return k.SendCoins(ctx, senderAddr, recipientAddr, amount)
+	})
+	if err != nil {
+		return err
 	}
-
-	return k.SendCoins(ctx, senderAddr, recipientAddr, amt)
+	if !addCoinsAmount.IsZero() {
+		// if we have some amount that was processed against the deferred balance, we need to send them
+		return k.addCoins(ctx, recipientAddr, addCoinsAmount)
+	}
+	return nil
 }
 
 // SendCoinsFromModuleToModule transfers coins from a ModuleAccount to another.
@@ -357,19 +364,24 @@ func (k BaseKeeper) SendCoinsFromModuleToModule(
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))
 	}
 
-	// Try subtract from the in mem var first, prevents the condition where
-	// the module may have a pending deposit that would be enough to pay for this send
-	ok := ctx.ContextMemCache().SafeSubDeferredSends(senderModule, amt)
-	if ok {
-		return k.addCoins(ctx, recipientAcc.GetAddress(), amt)
-	}
-
 	if amt.IsZero() {
 		return nil
 	}
 
 	k.Logger(ctx).Debug("Sending coins from module to module", "sender", senderModule, "sender_address", senderAddr.String(), "recipient", recipientModule, "recipient_address", recipientAcc.GetAddress().String(), "amount", amt.String())
-	return k.SendCoins(ctx, senderAddr, recipientAcc.GetAddress(), amt)
+
+	addCoinsAmount := amt
+	// if we dont call the remainder, the total amount was processed against deferrred sends, so we can "addCoins" the full amount
+	err := ctx.ContextMemCache().SaturatingSubDeferredSends(senderModule, amt, func(amount sdk.Coins) error {
+		// modify the `addCoins` amount to represent the amount subtracted from deferred sends
+		addCoinsAmount = addCoinsAmount.Sub(amount)
+		// sendCoins the remainder
+		return k.SendCoins(ctx, senderAddr, recipientAcc.GetAddress(), amount)
+	})
+	if err != nil {
+		return err
+	}
+	return k.addCoins(ctx, recipientAcc.GetAddress(), addCoinsAmount)
 }
 
 // SendCoinsFromAccountToModule transfers coins from an AccAddress to a ModuleAccount.
@@ -558,15 +570,12 @@ func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk
 // It will panic if the module account does not exist or is unauthorized.
 func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 	subFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
-
-		// Try to subtract from the in mem var first, prevents the condition where
-		// the module may have a pending deposit that would be enough to pay for this send
-		ok := ctx.ContextMemCache().SafeSubDeferredSends(moduleName, amounts)
-		if ok {
-			return nil
-		}
-		acc := k.ak.GetModuleAccount(ctx, moduleName)
-		return k.subUnlockedCoins(ctx, acc.GetAddress(), amounts)
+		// first subtract from deferred sends
+		return ctx.ContextMemCache().SaturatingSubDeferredSends(moduleName, amounts, func(remainder sdk.Coins) error {
+			acc := k.ak.GetModuleAccount(ctx, moduleName)
+			// then sub Unlocked coins on the remainder, if there is an error here, contextMemcache will rollback AND subFn will error
+			return k.subUnlockedCoins(ctx, acc.GetAddress(), remainder)
+		})
 	}
 
 	err := k.destroyCoins(ctx, moduleName, amounts, subFn)

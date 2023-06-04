@@ -38,8 +38,7 @@ func (m *DeferredBankOperationMapping) Set(moduleAccount string, amount Coins) {
 
 // SaturatingSub will subtract the given amount from the module account as long as the resulting balance is positive or zero.
 // If there would be a remainder (eg. negative balance after subtraction), then it would subtract the full balance in the map
-//
-//	and then return the remainder that was unable to be subtracted.
+// and then return the remainder that was unable to be subtracted.
 func (m *DeferredBankOperationMapping) SaturatingSub(moduleAccount string, amount Coins) Coins {
 	m.mappingLock.Lock()
 	defer m.mappingLock.Unlock()

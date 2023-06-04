@@ -40,26 +40,28 @@ func (c *ContextMemCache) SaturatingSubDeferredSends(moduleAccount string, amoun
 	if !amount.IsValid() {
 		panic(sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amount.String()))
 	}
+	c.deferredBankOpsLock.Lock()
+	defer c.deferredBankOpsLock.Unlock()
+
 	originalBalance, ok := c.deferredSends.Get(moduleAccount)
-	if ok {
-		// found a balance, try to perform the logic
-		remainder := c.deferredSends.SaturatingSub(moduleAccount, amount)
-		if remainder.IsZero() {
-			// no remainder, return now
-			return nil
-		}
-		err := remainderHandler(remainder)
-		if err != nil {
-			// revert the map subtraction and the bubble up error
-			c.deferredSends.Set(moduleAccount, originalBalance)
-		}
-		return err
-	} else {
+	if !ok {
 		// run the remainder handler on the full amount
 		err := remainderHandler(amount)
 		// no need for revert because we dont even attempt a saturating sub, bubble up error if applicable
 		return err
 	}
+	// found a balance, try to perform the logic
+	remainder := c.deferredSends.SaturatingSub(moduleAccount, amount)
+	if remainder.IsZero() {
+		// no remainder, return now
+		return nil
+	}
+	err := remainderHandler(remainder)
+	if err != nil {
+		// revert the map subtraction and the bubble up error
+		c.deferredSends.Set(moduleAccount, originalBalance)
+	}
+	return err
 }
 
 func (c *ContextMemCache) SafeSubDeferredSends(moduleAccount string, amount Coins) bool {

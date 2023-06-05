@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
 	"github.com/stretchr/testify/require"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -25,36 +26,97 @@ func TestResourceDependencyMappingFromMessageKey(t *testing.T) {
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
 	keeper := app.AccessControlKeeper
-	_, err := keeper.ResourceDependencyMappingFromMessageKey(
+	response, err := keeper.ResourceDependencyMappingFromMessageKey(
 		sdk.WrapSDKContext(ctx),
 		&types.ResourceDependencyMappingFromMessageKeyRequest{MessageKey: "key"},
 	)
 
 	require.NoError(t, err)
-	require.Equal(t, keeper.GetResourceDependencyMapping(ctx, types.MessageKey("key")), types.ResourceDependencyMappingFromMessageKeyResponse{})
+	require.Equal(t, keeper.GetResourceDependencyMapping(ctx, types.MessageKey("key")), response.MessageDependencyMapping)
 }
 
 func TestWasmDependencyMappingCall(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 	keeper := app.AccessControlKeeper
-	_, err := keeper.WasmDependencyMapping(sdk.WrapSDKContext(ctx), &types.WasmDependencyMappingRequest{ContractAddress: "sei1qy352eufqy352eufqy352eufqy35neufqy35"})
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	wasmContractAddress := wasmContractAddresses[0]
+	wasmMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation:    &acltypes.AccessOperation{ResourceType: acltypes.ResourceType_KV, AccessType: acltypes.AccessType_WRITE, IdentifierTemplate: "someResource"},
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: wasmContractAddress.String(),
+	}
+	// set the dependency mapping
+	err := app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
 	require.NoError(t, err)
+
+	_, err = keeper.WasmDependencyMapping(sdk.WrapSDKContext(ctx), &types.WasmDependencyMappingRequest{ContractAddress: wasmContractAddress.String()})
+	require.NoError(t, err)
+
+	_, err = keeper.WasmDependencyMapping(sdk.WrapSDKContext(ctx), &types.WasmDependencyMappingRequest{ContractAddress: "invalid"})
+	require.Error(t, err)
+
+	_, err = keeper.WasmDependencyMapping(sdk.WrapSDKContext(ctx), &types.WasmDependencyMappingRequest{ContractAddress: wasmContractAddresses[1].String()})
+	require.Error(t, err)
 }
 
 func TestListResourceDependencyMapping(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
-	keeper := app.AccessControlKeeper
-	_, err := keeper.ListResourceDependencyMapping(sdk.WrapSDKContext(ctx), &types.ListResourceDependencyMappingRequest{})
+	testDependencyMapping := acltypes.MessageDependencyMapping{
+		MessageKey: "testKey",
+		AccessOps: []acltypes.AccessOperation{
+			{
+				ResourceType:       acltypes.ResourceType_KV_EPOCH,
+				AccessType:         acltypes.AccessType_READ,
+				IdentifierTemplate: "someIdentifier",
+			},
+			*types.CommitAccessOp(),
+		},
+	}
+	err := app.AccessControlKeeper.SetResourceDependencyMapping(ctx, testDependencyMapping)
 	require.NoError(t, err)
+
+	keeper := app.AccessControlKeeper
+	result, err := keeper.ListResourceDependencyMapping(sdk.WrapSDKContext(ctx), &types.ListResourceDependencyMappingRequest{})
+	require.NoError(t, err)
+	require.Len(t, result.MessageDependencyMappingList, 1)
 }
 
 func TestListWasmDependencyMapping(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
-	keeper := app.AccessControlKeeper
-	_, err := keeper.ListWasmDependencyMapping(sdk.WrapSDKContext(ctx), &types.ListWasmDependencyMappingRequest{})
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	wasmContractAddress := wasmContractAddresses[0]
+	wasmMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation:    &acltypes.AccessOperation{ResourceType: acltypes.ResourceType_KV, AccessType: acltypes.AccessType_WRITE, IdentifierTemplate: "someResource"},
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: wasmContractAddress.String(),
+	}
+	// set the dependency mapping
+	err := app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
 	require.NoError(t, err)
+
+	keeper := app.AccessControlKeeper
+	result, err := keeper.ListWasmDependencyMapping(sdk.WrapSDKContext(ctx), &types.ListWasmDependencyMappingRequest{})
+	require.NoError(t, err)
+	require.Len(t, result.WasmDependencyMappingList, 1)
 }

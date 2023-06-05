@@ -447,6 +447,7 @@ func (k Keeper) SetWasmDependencyMapping(
 		return err
 	}
 	resourceKey := types.GetWasmContractAddressKey(contractAddr)
+	println(resourceKey)
 	store.Set(resourceKey, b)
 	return nil
 }

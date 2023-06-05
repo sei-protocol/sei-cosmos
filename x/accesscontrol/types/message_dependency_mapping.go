@@ -120,8 +120,8 @@ func DefaultWasmDependencyMappings() []acltypes.WasmDependencyMapping {
 
 // Base access operation list must end with access type commit
 func ValidateWasmDependencyMapping(mapping acltypes.WasmDependencyMapping) error {
-	lastAccessOp := mapping.BaseAccessOps[len(mapping.BaseAccessOps)-1]
-	if lastAccessOp.Operation.AccessType != acltypes.AccessType_COMMIT {
+	numOps := len(mapping.BaseAccessOps)
+	if numOps == 0 || mapping.BaseAccessOps[numOps-1].Operation.AccessType != acltypes.AccessType_COMMIT {
 		return ErrNoCommitAccessOp
 	}
 

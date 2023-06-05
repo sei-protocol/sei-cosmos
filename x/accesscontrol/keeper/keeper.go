@@ -26,7 +26,7 @@ import (
 
 // Option is an extension point to instantiate keeper with non default values
 type Option interface {
-	apply(*Keeper)
+	Apply(*Keeper)
 }
 
 type MessageDependencyGenerator func(keeper Keeper, ctx sdk.Context, msg sdk.Msg) ([]acltypes.AccessOperation, error)
@@ -68,7 +68,7 @@ func NewKeeper(
 	}
 
 	for _, o := range opts {
-		o.apply(keeper)
+		o.Apply(keeper)
 	}
 
 	return *keeper
@@ -585,6 +585,11 @@ func DefaultMessageDependencyGenerator() DependencyGeneratorMap {
 	return DependencyGeneratorMap{
 		//TODO: define default granular behavior here
 	}
+}
+
+func (m *DependencyGeneratorMap) Contains(key string) bool {
+	_, ok := (*m)[types.MessageKey(key)]
+	return ok
 }
 
 func (k Keeper) GetStoreKey() sdk.StoreKey {

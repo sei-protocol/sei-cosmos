@@ -269,6 +269,7 @@ func NewBaseApp(
 		TracingInfo: &tracing.Info{
 			Tracer: &tr,
 		},
+		commitLock: &sync.Mutex{},
 	}
 
 	app.TracingInfo.SetContext(context.Background())

@@ -2594,6 +2594,81 @@ func (suite *KeeperTestSuite) TestImportContractReferences() {
 	req.ErrorContains(err, "proto: WasmDependencyMapping")
 }
 
+func (suite *KeeperTestSuite) TestBuildSelectorOps_JQ() {
+	suite.SetupTest()
+	app := suite.app
+	ctx := suite.ctx
+	req := suite.Require()
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	msgInfo, _ := types.NewExecuteMessageInfo([]byte("{\"test\":\"value\"}"))
+
+	accessOps := []*acltypes.WasmAccessOperation{
+		{
+			Operation: &acltypes.AccessOperation{
+				ResourceType:       acltypes.ResourceType_KV,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "test",
+			},
+			SelectorType: acltypes.AccessOperationSelectorType_JQ,
+			Selector:     ".test",
+		},
+	}
+	_, err := app.AccessControlKeeper.BuildSelectorOps(
+		ctx, wasmContractAddresses[0], accessOps, wasmContractAddresses[0].String(), msgInfo, make(aclkeeper.ContractReferenceLookupMap))
+	req.NoError(err)
+}
+
+func (suite *KeeperTestSuite) TestBuildSelectorOps_AccessOperationSelectorType_CONTRACT_ADDRESS() {
+	suite.SetupTest()
+	app := suite.app
+	ctx := suite.ctx
+	req := suite.Require()
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	msgInfo, _ := types.NewExecuteMessageInfo([]byte("{\"test\":\"value\"}"))
+
+	accessOps := []*acltypes.WasmAccessOperation{
+		{
+			Operation: &acltypes.AccessOperation{
+				ResourceType:       acltypes.ResourceType_KV,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "test",
+			},
+			SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_ADDRESS,
+			Selector:     ".test",
+		},
+	}
+	_, err := app.AccessControlKeeper.BuildSelectorOps(
+		ctx, wasmContractAddresses[0], accessOps, wasmContractAddresses[0].String(), msgInfo, make(aclkeeper.ContractReferenceLookupMap))
+	req.Error(err)
+}
+
+func (suite *KeeperTestSuite) TestBuildSelectorOps_AccessOperationSelectorType_CONTRACT_REFERENCE() {
+	suite.SetupTest()
+	app := suite.app
+	ctx := suite.ctx
+	req := suite.Require()
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	msgInfo, _ := types.NewExecuteMessageInfo([]byte("{\"test\":\"value\"}"))
+
+	accessOps := []*acltypes.WasmAccessOperation{
+		{
+			Operation: &acltypes.AccessOperation{
+				ResourceType:       acltypes.ResourceType_KV,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "test",
+			},
+			SelectorType: acltypes.AccessOperationSelectorType_CONTRACT_REFERENCE,
+			Selector:     ".test",
+		},
+	}
+	_, err := app.AccessControlKeeper.BuildSelectorOps(
+		ctx, wasmContractAddresses[0], accessOps, wasmContractAddresses[0].String(), msgInfo, make(aclkeeper.ContractReferenceLookupMap))
+	req.NoError(err)
+}
+
 func TestKeeperTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(KeeperTestSuite))

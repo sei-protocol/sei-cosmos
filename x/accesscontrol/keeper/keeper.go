@@ -482,14 +482,11 @@ func (k Keeper) ResetWasmDependencyMapping(
 func (k Keeper) IterateWasmDependencies(ctx sdk.Context, handler func(wasmDependencyMapping acltypes.WasmDependencyMapping) (stop bool)) {
 	store := ctx.KVStore(k.storeKey)
 
-	println("wasmKey", types.GetWasmMappingKey())
 	iter := sdk.KVStorePrefixIterator(store, types.GetWasmMappingKey())
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		dependencyMapping := acltypes.WasmDependencyMapping{}
-		println("key", iter.Key())
 		k.cdc.MustUnmarshal(iter.Value(), &dependencyMapping)
-		println(dependencyMapping.ContractAddress)
 		if handler(dependencyMapping) {
 			break
 		}

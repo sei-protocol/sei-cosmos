@@ -2140,6 +2140,105 @@ func TestBuildDependencyDag_DecoderError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func BenchmarkAccessOpsBuildDependencyDag(b *testing.B) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	accounts := simapp.AddTestAddrsIncremental(app, ctx, 3, sdk.NewInt(30000000))
+
+	msgs1 := []sdk.Msg{
+		banktypes.NewMsgSend(accounts[0], accounts[1], sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(1)))),
+	}
+
+	msgs2 := []sdk.Msg{
+		banktypes.NewMsgSend(accounts[1], accounts[2], sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(1)))),
+	}
+
+	txBuilder := simapp.MakeTestEncodingConfig().TxConfig.NewTxBuilder()
+	_ = txBuilder.SetMsgs(msgs1...)
+	bz1, _ := simapp.MakeTestEncodingConfig().TxConfig.TxEncoder()(txBuilder.GetTx())
+
+	_ = txBuilder.SetMsgs(msgs2...)
+	bz2, _ := simapp.MakeTestEncodingConfig().TxConfig.TxEncoder()(txBuilder.GetTx())
+
+	txs := [][]byte{
+		bz1,
+		bz1,
+		bz1,
+		bz1,
+		bz1,
+		bz1,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
+	}
+
+	mockAnteDepGenerator := func(_ []acltypes.AccessOperation, _ sdk.Tx) ([]acltypes.AccessOperation, error) {
+		return []acltypes.AccessOperation{
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_READ,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			{
+				ResourceType:       acltypes.ResourceType_KV_AUTH_GLOBAL_ACCOUNT_NUMBER,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "ABC",
+			},
+			*types.CommitAccessOp(),
+		}, nil
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, _ = app.AccessControlKeeper.BuildDependencyDag(
+			ctx, simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(), mockAnteDepGenerator, txs)
+	}
+}
+
 func TestInvalidAccessOpsBuildDependencyDag(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
@@ -2167,6 +2266,10 @@ func TestInvalidAccessOpsBuildDependencyDag(t *testing.T) {
 
 	txs := [][]byte{
 		bz1,
+		bz2,
+		bz2,
+		bz2,
+		bz2,
 		bz2,
 	}
 
@@ -2200,7 +2303,6 @@ func TestInvalidAccessOpsBuildDependencyDag(t *testing.T) {
 	_, err = app.AccessControlKeeper.BuildDependencyDag(
 		ctx, simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(), mockAnteDepGenerator, txs)
 	require.NoError(t, err)
-	require.ErrorIs(t, err, types.ErrCycleInDAG)
 }
 
 func (suite *KeeperTestSuite) TestMessageDependencies() {

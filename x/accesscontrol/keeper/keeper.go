@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	pp "github.com/k0kubun/pp/v3"
 	"github.com/savaki/jq"
 	"github.com/yourbasic/graph"
 
@@ -524,8 +523,10 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 				dependencyDag.AddNodeBuildDependency(messageIndex, txIndex, accessOp)
 			}
 		}
-		pp.Println(dependencyDag)
 	}
+	// This should never happen base on existing DAG algorithm but it's not a significant
+	// performance overhead, it would be better to keep this check. If a cyclic dependency
+	// is ever found it may cause the chain to halt
 	if !graph.Acyclic(&dependencyDag) {
 		return nil, types.ErrCycleInDAG
 	}

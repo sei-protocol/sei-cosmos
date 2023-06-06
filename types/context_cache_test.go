@@ -18,6 +18,7 @@ func TestContextCacheTestSuite(t *testing.T) {
 }
 
 func (s *contextCacheTestSuite) SetupSuite() {
+	s.T().Parallel()
 	s.contextCache = *sdk.NewContextMemCache()
 }
 

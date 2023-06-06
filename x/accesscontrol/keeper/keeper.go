@@ -496,8 +496,8 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 		if err != nil {
 			return nil, err
 		}
-
 		anteDepSet := make(map[acltypes.AccessOperation]struct{})
+
 		for _, accessOp := range anteDeps {
 			// if found in set, we've already included this access Op in out ante dependencies, so skip it
 			if _, found := anteDepSet[accessOp]; found {
@@ -563,10 +563,8 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 	}
 	if dependencyMapping.DynamicEnabled {
 		// there was an issue with dynamic generation, so lets disable it
-		err := k.SetDependencyMappingDynamicFlag(ctx, messageKey, false)
-		if err != nil {
-			ctx.Logger().Error("Error disabling dynamic enabled: ", err)
-		}
+		// this will not error, the validation check was done in previous calls already
+		_ = k.SetDependencyMappingDynamicFlag(ctx, messageKey, false)
 	}
 	return dependencyMapping.AccessOps
 }

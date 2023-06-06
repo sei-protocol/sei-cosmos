@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	"github.com/cosmos/cosmos-sdk/types/address"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	aclkeeper "github.com/cosmos/cosmos-sdk/x/accesscontrol/keeper"
 	acltestutil "github.com/cosmos/cosmos-sdk/x/accesscontrol/testutil"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
@@ -306,7 +308,7 @@ func TestResetWasmDependencyMapping(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
-	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 1, sdk.NewInt(30000000))
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
 	wasmContractAddress := wasmContractAddresses[0]
 	wasmMapping := acltypes.WasmDependencyMapping{
 		BaseAccessOps: []*acltypes.WasmAccessOperation{
@@ -328,6 +330,9 @@ func TestResetWasmDependencyMapping(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wasmMapping, *mapping)
 	// test resetting
+	err = app.AccessControlKeeper.ResetWasmDependencyMapping(ctx, wasmContractAddresses[1], "some reason")
+	require.ErrorIs(t, err, sdkerrors.ErrKeyNotFound)
+
 	err = app.AccessControlKeeper.ResetWasmDependencyMapping(ctx, wasmContractAddress, "some reason")
 	require.NoError(t, err)
 	mapping, err = app.AccessControlKeeper.GetRawWasmDependencyMapping(ctx, wasmContractAddress)
@@ -2023,7 +2028,101 @@ func TestBuildDependencyDagWithGovMessage(t *testing.T) {
 	}
 	// ensure no errors creating dag
 	_, err = app.AccessControlKeeper.BuildDependencyDag(ctx, simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(), app.GetAnteDepGenerator(), txs)
-	require.Error(t, types.ErrGovMsgInBlock)
+	require.ErrorIs(t, err, types.ErrGovMsgInBlock)
+}
+
+func TestBuildDependencyDag_MultipleTransactions(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	accounts := simapp.AddTestAddrsIncremental(app, ctx, 3, sdk.NewInt(30000000))
+
+	msgs1 := []sdk.Msg{
+		banktypes.NewMsgSend(accounts[0], accounts[1], sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(1)))),
+	}
+
+	msgs2 := []sdk.Msg{
+		banktypes.NewMsgSend(accounts[1], accounts[2], sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(1)))),
+	}
+
+	txBuilder := simapp.MakeTestEncodingConfig().TxConfig.NewTxBuilder()
+	err := txBuilder.SetMsgs(msgs1...)
+	require.NoError(t, err)
+	bz1, err := simapp.MakeTestEncodingConfig().TxConfig.TxEncoder()(txBuilder.GetTx())
+	require.NoError(t, err)
+
+	err = txBuilder.SetMsgs(msgs2...)
+	require.NoError(t, err)
+	bz2, err := simapp.MakeTestEncodingConfig().TxConfig.TxEncoder()(txBuilder.GetTx())
+	require.NoError(t, err)
+
+	txs := [][]byte{
+		bz1,
+		bz2,
+	}
+
+	_, err = app.AccessControlKeeper.BuildDependencyDag(ctx, simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(), app.GetAnteDepGenerator(), txs)
+	require.NoError(t, err)
+
+	mockAnteDepGenerator := func(_ []acltypes.AccessOperation, _ sdk.Tx) ([]acltypes.AccessOperation, error) {
+		return nil, errors.New("Mocked error")
+	}
+	_, err = app.AccessControlKeeper.BuildDependencyDag(ctx, simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(), mockAnteDepGenerator, txs)
+	require.ErrorContains(t, err, "Mocked error")
+}
+
+func TestBuildDependencyDag_DecoderError(t *testing.T) {
+	// Set up a mocked app with a failing decoder
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	// Encode an invalid transaction
+	txs := [][]byte{
+		[]byte("invalid tx"),
+	}
+
+	_, err := app.AccessControlKeeper.BuildDependencyDag(
+		ctx,
+		simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(),
+		app.GetAnteDepGenerator(),
+		txs,
+	)
+	require.Error(t, err)
+}
+
+func TestInvalidAccessOpsBuildDependencyDag(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	accounts := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	// setup test txs
+	msgs := []sdk.Msg{
+		banktypes.NewMsgSend(accounts[0], accounts[1], sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(1)))),
+	}
+
+	txBuilder := simapp.MakeTestEncodingConfig().TxConfig.NewTxBuilder()
+	err := txBuilder.SetMsgs(msgs...)
+	require.NoError(t, err)
+	bz, err := simapp.MakeTestEncodingConfig().TxConfig.TxEncoder()(txBuilder.GetTx())
+	require.NoError(t, err)
+	txs := [][]byte{
+		bz,
+	}
+
+	mockAnteDepGenerator := func(_ []acltypes.AccessOperation, _ sdk.Tx) ([]acltypes.AccessOperation, error) {
+		return []acltypes.AccessOperation{
+			{
+				ResourceType:       acltypes.ResourceType_KV_STAKING_DELEGATION,
+				AccessType:         acltypes.AccessType_WRITE,
+				IdentifierTemplate: "",
+			},
+		}, nil
+	}
+
+	// ensure no errors creating dag
+	_, err = app.AccessControlKeeper.BuildDependencyDag(
+		ctx, simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(), mockAnteDepGenerator, txs)
+	require.Error(t, err)
 }
 
 func (suite *KeeperTestSuite) TestMessageDependencies() {

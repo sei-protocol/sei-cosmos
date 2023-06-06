@@ -73,6 +73,8 @@ func (c *ContextMemCache) SafeSubDeferredSends(moduleAccount string, amount Coin
 }
 
 func (c *ContextMemCache) RangeOnDeferredSendsAndDelete(apply func(recipient string, amount Coins)) {
+	c.deferredBankOpsLock.Lock()
+	defer c.deferredBankOpsLock.Unlock()
 	c.deferredSends.RangeAndRemove(apply)
 }
 

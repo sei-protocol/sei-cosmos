@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	pp "github.com/k0kubun/pp/v3"
 	"github.com/savaki/jq"
 	"github.com/yourbasic/graph"
 
@@ -523,7 +524,7 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 				dependencyDag.AddNodeBuildDependency(messageIndex, txIndex, accessOp)
 			}
 		}
-
+		pp.Println(dependencyDag)
 	}
 	if !graph.Acyclic(&dependencyDag) {
 		return nil, types.ErrCycleInDAG

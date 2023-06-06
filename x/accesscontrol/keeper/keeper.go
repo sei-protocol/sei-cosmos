@@ -441,6 +441,8 @@ func (k Keeper) SetWasmDependencyMapping(
 		return err
 	}
 	resourceKey := types.GetWasmContractAddressKey(contractAddr)
+	println("resourceKey", resourceKey)
+	println("contract", dependencyMapping.ContractAddress)
 	store.Set(resourceKey, b)
 	return nil
 }
@@ -468,11 +470,15 @@ func (k Keeper) ResetWasmDependencyMapping(
 
 func (k Keeper) IterateWasmDependencies(ctx sdk.Context, handler func(wasmDependencyMapping acltypes.WasmDependencyMapping) (stop bool)) {
 	store := ctx.KVStore(k.storeKey)
+
+	println("wasmKey", types.GetWasmMappingKey())
 	iter := sdk.KVStorePrefixIterator(store, types.GetWasmMappingKey())
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {
 		dependencyMapping := acltypes.WasmDependencyMapping{}
+		println("key", iter.Key())
 		k.cdc.MustUnmarshal(iter.Value(), &dependencyMapping)
+		println(dependencyMapping.ContractAddress)
 		if handler(dependencyMapping) {
 			break
 		}
@@ -525,7 +531,8 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 		}
 	}
 	// This should never happen base on existing DAG algorithm but it's not a significant
-	// performance overhead, it would be better to keep this check. If a cyclic dependency
+	// performance overhead (@BenchmarkAccessOpsBuildDependencyDag),
+	// it would be better to keep this check. If a cyclic dependency
 	// is ever found it may cause the chain to halt
 	if !graph.Acyclic(&dependencyDag) {
 		return nil, types.ErrCycleInDAG

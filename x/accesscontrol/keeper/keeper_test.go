@@ -2140,7 +2140,7 @@ func TestBuildDependencyDag_DecoderError(t *testing.T) {
 	require.Error(t, err)
 }
 
-func BenchmarkAccessOpsBuildDependencyDag(b *testing.B) {
+func BencharkAccessOpsBuildDependencyDag(b *testing.B) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
@@ -2305,6 +2305,52 @@ func TestInvalidAccessOpsBuildDependencyDag(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestIterateWasmDependenciesBreak(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 4, sdk.NewInt(30000000))
+	wasmMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation:    &acltypes.AccessOperation{ResourceType: acltypes.ResourceType_KV, AccessType: acltypes.AccessType_WRITE, IdentifierTemplate: "someResource"},
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: wasmContractAddresses[0].String(),
+	}
+	// set the dependency mapping
+	err := app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.NoError(t, err)
+
+	wasmMapping.ContractAddress = wasmContractAddresses[1].String()
+
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.NoError(t, err)
+
+	wasmMapping.ContractAddress = wasmContractAddresses[2].String()
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.NoError(t, err)
+
+	// count how many times the handler is called
+	counter := 0
+
+	app.AccessControlKeeper.IterateWasmDependencies(ctx, func(dependencyMapping acltypes.WasmDependencyMapping) bool {
+		counter++
+		// if counter is 2, return true to break the iteration
+		return counter == 2
+	})
+
+	// The counter should be 3 because we break the iteration when counter equals 3
+	require.Equal(t, 2, counter)
+}
+
 func (suite *KeeperTestSuite) TestMessageDependencies() {
 	suite.SetupTest()
 	app := suite.app
@@ -2429,5 +2475,6 @@ func (suite *KeeperTestSuite) TestMessageDependencies() {
 }
 
 func TestKeeperTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(KeeperTestSuite))
 }

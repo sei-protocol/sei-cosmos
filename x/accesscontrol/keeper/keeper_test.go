@@ -2474,6 +2474,126 @@ func (suite *KeeperTestSuite) TestMessageDependencies() {
 	req.Equal(false, dependencyMapping.DynamicEnabled)
 }
 
+func (suite *KeeperTestSuite) TestImportContractReferences() {
+	suite.SetupTest()
+	app := suite.app
+	ctx := suite.ctx
+	req := suite.Require()
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+
+	wasmMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "someResource",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: wasmContractAddresses[0].String(),
+	}
+
+	// set the dependency mapping
+	err := app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	req.NoError(err)
+
+	contractReferences := []*acltypes.WasmContractReference{
+		{
+			ContractAddress:         wasmContractAddresses[0].String(),
+			MessageName:             "test",
+			MessageType:             acltypes.WasmMessageSubtype_EXECUTE,
+			JsonTranslationTemplate: "{\"test\":{}}",
+		},
+	}
+
+	msgInfo, _ := types.NewExecuteMessageInfo([]byte("{\"test\":{}}"))
+	_, err = app.AccessControlKeeper.ImportContractReferences(
+		ctx,
+		wasmContractAddresses[1],
+		contractReferences,
+		wasmContractAddresses[1].String(),
+		msgInfo,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+	req.NoError(err)
+
+	_, err = app.AccessControlKeeper.ImportContractReferences(
+		ctx,
+		wasmContractAddresses[1],
+		contractReferences,
+		wasmContractAddresses[1].String(),
+		nil,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+	req.ErrorIs(err, types.ErrInvalidMsgInfo)
+
+	contractReferences = []*acltypes.WasmContractReference{
+		{
+			ContractAddress:         wasmContractAddresses[0].String(),
+			MessageName:             "test",
+			MessageType:             acltypes.WasmMessageSubtype_EXECUTE,
+			JsonTranslationTemplate: "{\"test\":{}, \"test2\":{}}",
+		},
+	}
+	_, err = app.AccessControlKeeper.ImportContractReferences(
+		ctx,
+		wasmContractAddresses[1],
+		contractReferences,
+		wasmContractAddresses[1].String(),
+		msgInfo,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+	req.ErrorContains(err, "expected exactly one top-level")
+
+	contractReferences = []*acltypes.WasmContractReference{
+		{
+			ContractAddress:         wasmContractAddresses[0].String(),
+			MessageName:             "test",
+			MessageType:             acltypes.WasmMessageSubtype_QUERY,
+			JsonTranslationTemplate: "{\"test\":{}, \"test2\":{}}",
+		},
+	}
+	msgInfo.MessageType = acltypes.WasmMessageSubtype_QUERY
+	_, err = app.AccessControlKeeper.ImportContractReferences(
+		ctx,
+		wasmContractAddresses[1],
+		contractReferences,
+		wasmContractAddresses[1].String(),
+		msgInfo,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+	req.ErrorContains(err, "expected exactly one top-level")
+
+	store := ctx.KVStore(app.AccessControlKeeper.GetStoreKey())
+	wasmContractAddress := wasmContractAddresses[0]
+	store.Set(types.GetWasmContractAddressKey(wasmContractAddress), []byte{0x1})
+
+	contractReferences = []*acltypes.WasmContractReference{
+		{
+			ContractAddress:         wasmContractAddresses[0].String(),
+			MessageName:             "test",
+			MessageType:             acltypes.WasmMessageSubtype_QUERY,
+			JsonTranslationTemplate: "{\"test\":{}}",
+		},
+	}
+	_, err = app.AccessControlKeeper.ImportContractReferences(
+		ctx,
+		wasmContractAddresses[1],
+		contractReferences,
+		wasmContractAddresses[1].String(),
+		msgInfo,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+	req.ErrorContains(err, "proto: WasmDependencyMapping")
+}
+
 func TestKeeperTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(KeeperTestSuite))

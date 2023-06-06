@@ -247,10 +247,23 @@ func ParseContractReferenceAddress(maybeContractAddress string, sender string, m
 	return newValBytes
 }
 
-func (k Keeper) ImportContractReferences(ctx sdk.Context, contractAddr sdk.AccAddress, contractReferences []*acltypes.WasmContractReference, senderBech string, msgInfo *types.WasmMessageInfo, circularDepLookup ContractReferenceLookupMap) (*types.AccessOperationSet, error) {
+func (k Keeper) ImportContractReferences(
+	ctx sdk.Context,
+	contractAddr sdk.AccAddress,
+	contractReferences []*acltypes.WasmContractReference,
+	senderBech string,
+	msgInfo *types.WasmMessageInfo,
+	circularDepLookup ContractReferenceLookupMap,
+) (*types.AccessOperationSet, error) {
 	importedAccessOps := types.NewEmptyAccessOperationSet()
 
 	jsonTranslator := types.NewWasmMessageTranslator(senderBech, contractAddr.String(), msgInfo)
+
+	// msgInfo can't be nil, it will panic
+	if msgInfo == nil {
+		return nil, sdkerrors.Wrap(types.ErrInvalidMsgInfo, "msgInfo cannot be nil")
+	}
+
 	for _, contractReference := range contractReferences {
 		parsedContractReferenceAddress := ParseContractReferenceAddress(contractReference.ContractAddress, senderBech, msgInfo)
 		// if parsing failed and contractAddress is invalid, this step will error and indicate invalid address
@@ -441,8 +454,6 @@ func (k Keeper) SetWasmDependencyMapping(
 		return err
 	}
 	resourceKey := types.GetWasmContractAddressKey(contractAddr)
-	println("resourceKey", resourceKey)
-	println("contract", dependencyMapping.ContractAddress)
 	store.Set(resourceKey, b)
 	return nil
 }

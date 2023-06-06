@@ -15,6 +15,7 @@ var (
 	ErrDuplicateWasmMethodName           = fmt.Errorf("a method name is defined multiple times in specific access operation list")
 	ErrQueryRefNonQueryMessageType       = fmt.Errorf("query contract references can only have query message types")
 	ErrSelectorDeprecated                = fmt.Errorf("this selector type is deprecated")
+	ErrInvalidMsgInfo                    = fmt.Errorf("msg info cannot be nil")
 )
 
 type MessageKey string

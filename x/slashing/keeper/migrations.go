@@ -53,7 +53,6 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 		newSignInfoKeys = append(newSignInfoKeys, signInfoIter.Key())
 		newSignInfoVals = append(newSignInfoVals, newInfo)
 	}
-	signInfoIter.Close()
 
 	if len(newSignInfoKeys) != len(newSignInfoVals) {
 		return fmt.Errorf("new sign info data length doesn't match up")
@@ -166,7 +165,6 @@ func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 		newSignInfoKeys = append(newSignInfoKeys, signInfoIter.Key())
 		newSignInfoVals = append(newSignInfoVals, newInfo)
 	}
-	signInfoIter.Close()
 
 	if len(newSignInfoKeys) != len(newSignInfoVals) {
 		return fmt.Errorf("new sign info data length doesn't match up")

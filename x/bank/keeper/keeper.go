@@ -332,7 +332,7 @@ func (k BaseKeeper) SendCoinsFromModuleToAccount(
 	}
 	addCoinsAmount := amt
 	// if we dont call the remainder, the total amount was processed against deferrred sends, so we can "addCoins" the full amount
-	err := ctx.ContextMemCache().SaturatingSubDeferredSends(senderModule, amt, func(amount sdk.Coins) error {
+	err := ctx.ContextMemCache().AtomicSpilloverSubDeferredSends(senderModule, amt, func(amount sdk.Coins) error {
 		// modify the `addCoins` amount to represent the amount subtracted from deferred sends
 		addCoinsAmount = addCoinsAmount.Sub(amount)
 		// sendCoins the remainder
@@ -372,7 +372,7 @@ func (k BaseKeeper) SendCoinsFromModuleToModule(
 
 	addCoinsAmount := amt
 	// if we dont call the remainder, the total amount was processed against deferrred sends, so we can "addCoins" the full amount
-	err := ctx.ContextMemCache().SaturatingSubDeferredSends(senderModule, amt, func(amount sdk.Coins) error {
+	err := ctx.ContextMemCache().AtomicSpilloverSubDeferredSends(senderModule, amt, func(amount sdk.Coins) error {
 		// modify the `addCoins` amount to represent the amount subtracted from deferred sends
 		addCoinsAmount = addCoinsAmount.Sub(amount)
 		// sendCoins the remainder
@@ -571,7 +571,7 @@ func (k BaseKeeper) destroyCoins(ctx sdk.Context, moduleName string, amounts sdk
 func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 	subFn := func(ctx sdk.Context, moduleName string, amounts sdk.Coins) error {
 		// first subtract from deferred sends
-		return ctx.ContextMemCache().SaturatingSubDeferredSends(moduleName, amounts, func(remainder sdk.Coins) error {
+		return ctx.ContextMemCache().AtomicSpilloverSubDeferredSends(moduleName, amounts, func(remainder sdk.Coins) error {
 			acc := k.ak.GetModuleAccount(ctx, moduleName)
 			// then sub Unlocked coins on the remainder, if there is an error here, contextMemcache will rollback AND subFn will error
 			return k.subUnlockedCoins(ctx, acc.GetAddress(), remainder)

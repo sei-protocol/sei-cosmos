@@ -155,7 +155,7 @@ func (s *contextCacheTestSuite) TestDeferredSendSaturatingSub() {
 	))
 
 	// valid saturating sub - should succeed
-	err := s.contextCache.SaturatingSubDeferredSends(
+	err := s.contextCache.AtomicSpilloverSubDeferredSends(
 		"module1",
 		sdk.NewCoins(
 			sdk.NewInt64Coin("denom3", 25),
@@ -169,7 +169,7 @@ func (s *contextCacheTestSuite) TestDeferredSendSaturatingSub() {
 
 	// saturating sub with nonexisting denom and valid one - should fail
 	called := false
-	err = s.contextCache.SaturatingSubDeferredSends(
+	err = s.contextCache.AtomicSpilloverSubDeferredSends(
 		"module1",
 		sdk.NewCoins(
 			sdk.NewInt64Coin("denom1", 20),
@@ -188,7 +188,7 @@ func (s *contextCacheTestSuite) TestDeferredSendSaturatingSub() {
 
 	// different saturaing sub but this time the balance *is* present in underlying store
 	called = false
-	err = s.contextCache.SaturatingSubDeferredSends(
+	err = s.contextCache.AtomicSpilloverSubDeferredSends(
 		"module1",
 		sdk.NewCoins(
 			sdk.NewInt64Coin("denom1", 5),
@@ -206,7 +206,7 @@ func (s *contextCacheTestSuite) TestDeferredSendSaturatingSub() {
 
 	// test failed subtraction from underlying store
 	called = false
-	err = s.contextCache.SaturatingSubDeferredSends(
+	err = s.contextCache.AtomicSpilloverSubDeferredSends(
 		"module2",
 		sdk.NewCoins(
 			sdk.NewInt64Coin("denom3", 50),
@@ -224,7 +224,7 @@ func (s *contextCacheTestSuite) TestDeferredSendSaturatingSub() {
 
 	// saturating sub that uses all the balance of a denom and spills over into underlying store
 	called = false
-	err = s.contextCache.SaturatingSubDeferredSends(
+	err = s.contextCache.AtomicSpilloverSubDeferredSends(
 		"module3",
 		sdk.NewCoins(
 			sdk.NewInt64Coin("denom1", 75),
@@ -241,7 +241,7 @@ func (s *contextCacheTestSuite) TestDeferredSendSaturatingSub() {
 
 	// saturating sub for a module that doesnt exist in the map
 	called = false
-	err = s.contextCache.SaturatingSubDeferredSends(
+	err = s.contextCache.AtomicSpilloverSubDeferredSends(
 		"module4",
 		sdk.NewCoins(
 			sdk.NewInt64Coin("denom2", 30),

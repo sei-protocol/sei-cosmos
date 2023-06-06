@@ -36,7 +36,7 @@ func (c *ContextMemCache) UpsertDeferredSends(moduleAccount string, amount Coins
 }
 
 // This will perform a saturating sub against the deferred module balance atomically. This means that it will subtract any balances that it is able to, and then call the passed in `remainder handler` to ensure the remaining balance can be safely subtracted as well. If this remainderHandler returns an error, we will revert the saturating sub to ensure atomicity of the subtraction across the multiple balances
-func (c *ContextMemCache) SaturatingSubDeferredSends(moduleAccount string, amount Coins, remainderHandler func(amount Coins) error) error {
+func (c *ContextMemCache) AtomicSpilloverSubDeferredSends(moduleAccount string, amount Coins, remainderHandler func(amount Coins) error) error {
 	if !amount.IsValid() {
 		panic(sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amount.String()))
 	}

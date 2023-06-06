@@ -9,7 +9,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/savaki/jq"
-	"github.com/tendermint/tendermint/libs/log"
 	"github.com/yourbasic/graph"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -72,10 +71,6 @@ func NewKeeper(
 	}
 
 	return *keeper
-}
-
-func (k Keeper) Logger(ctx sdk.Context) log.Logger {
-	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
 func (k Keeper) GetResourceDependencyMapping(ctx sdk.Context, messageKey types.MessageKey) acltypes.MessageDependencyMapping {
@@ -234,10 +229,9 @@ func ParseContractReferenceAddress(maybeContractAddress string, sender string, m
 		return sender
 	}
 	// parse the jq instruction from the template - if we can't then assume that its ACTUALLY an address
-	op, err := jq.Parse(maybeContractAddress)
-	if err != nil {
-		return maybeContractAddress
-	}
+	// doesn't actually return any errors, just returns nil
+	op, _ := jq.Parse(maybeContractAddress)
+
 	// retrieve the appropriate item from the original msg
 	data, err := op.Apply(msgInfo.MessageFullBody)
 	// if we do have a jq selector but it doesn't apply properly, return maybeContractAddress
@@ -562,12 +556,9 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 			validateErr := types.ValidateAccessOps(dependencies)
 			if validateErr == nil {
 				return dependencies
-			} else {
-				errorMessage := fmt.Sprintf("Invalid Access Ops for message=%s. %s", messageKey, validateErr.Error())
-				ctx.Logger().Error(errorMessage)
 			}
-		} else {
-			ctx.Logger().Error("Error generating message dependencies: ", err)
+			errorMessage := fmt.Sprintf("Invalid Access Ops for message=%s. %s", messageKey, validateErr.Error())
+			ctx.Logger().Error(errorMessage)
 		}
 	}
 	if dependencyMapping.DynamicEnabled {
@@ -581,9 +572,8 @@ func (k Keeper) GetMessageDependencies(ctx sdk.Context, msg sdk.Msg) []acltypes.
 }
 
 func DefaultMessageDependencyGenerator() DependencyGeneratorMap {
-	return DependencyGeneratorMap{
-		//TODO: define default granular behavior here
-	}
+	//TODO: define default granular behavior here
+	return DependencyGeneratorMap{}
 }
 
 func (m *DependencyGeneratorMap) Contains(key string) bool {

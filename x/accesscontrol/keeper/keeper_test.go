@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	"gotest.tools/assert"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/simapp"
@@ -86,9 +87,30 @@ func TestResourceDependencyMapping(t *testing.T) {
 	counter := 0
 	app.AccessControlKeeper.IterateResourceKeys(ctx, func(dependencyMapping acltypes.MessageDependencyMapping) (stop bool) {
 		counter++
-		return false
+		return true
 	})
 	require.Equal(t, 1, counter)
+}
+
+func TestInvalidGetMessageDependencies(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	addrs := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	// setup staking delegate msg
+	stakingUndelegate := stakingtypes.MsgUndelegate{
+		DelegatorAddress: addrs[0].String(),
+		ValidatorAddress: addrs[1].String(),
+		Amount:           sdk.Coin{Denom: "usei", Amount: sdk.NewInt(10)},
+	}
+	undelegateKey := types.GenerateMessageKey(&stakingUndelegate)
+
+	// get the message dependencies from keeper (because nothing configured, should return synchronous)
+	app.AccessControlKeeper.SetDependencyMappingDynamicFlag(ctx, undelegateKey, true)
+	delete(app.AccessControlKeeper.MessageDependencyGeneratorMapper, undelegateKey)
+	accessOps := app.AccessControlKeeper.GetMessageDependencies(ctx, &stakingUndelegate)
+	require.Equal(t, types.SynchronousMessageDependencyMapping("").AccessOps, accessOps)
+	require.False(t, app.AccessControlKeeper.GetResourceDependencyMapping(ctx, undelegateKey).DynamicEnabled)
 }
 
 func TestWasmDependencyMapping(t *testing.T) {
@@ -123,11 +145,32 @@ func TestWasmDependencyMapping(t *testing.T) {
 	require.Error(t, aclkeeper.ErrWasmDependencyMappingNotFound, err)
 }
 
+func TestInvalidWasmDependencyMapping(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	store := ctx.KVStore(app.AccessControlKeeper.GetStoreKey())
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	wasmContractAddress := wasmContractAddresses[0]
+	store.Set(types.GetWasmContractAddressKey(wasmContractAddress), []byte{0x1})
+
+	_, err := app.AccessControlKeeper.GetRawWasmDependencyMapping(ctx, wasmContractAddress)
+
+	require.ErrorContains(t, err, "proto: WasmDependencyMapping")
+
+	info, _ := types.NewExecuteMessageInfo(
+		[]byte("{\"test\":{}}"),
+	)
+
+	_, err = app.AccessControlKeeper.GetWasmDependencyAccessOps(ctx, wasmContractAddress, "", info, make(aclkeeper.ContractReferenceLookupMap))
+	require.ErrorContains(t, err, "proto: WasmDependencyMapping")
+}
+
 func TestWasmDependencyMappingWithExecuteMsgInfo(t *testing.T) {
 	app := simapp.Setup(false)
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 
-	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 1, sdk.NewInt(30000000))
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
 	wasmContractAddress := wasmContractAddresses[0]
 	wasmMapping := acltypes.WasmDependencyMapping{
 		BaseAccessOps: []*acltypes.WasmAccessOperation{
@@ -164,6 +207,56 @@ func TestWasmDependencyMappingWithExecuteMsgInfo(t *testing.T) {
 		*types.CommitAccessOp(),
 	}
 	require.Equal(t, ops, expectedAccessOps)
+
+	wasmContractAddress = wasmContractAddresses[1]
+	wasmMapping = acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType: acltypes.ResourceType_KV, AccessType: acltypes.AccessType_WRITE, IdentifierTemplate: "someResource",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
+				Selector:     "abcdefg",
+			},
+		},
+		ContractAddress: wasmContractAddress.String(),
+	}
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.Error(t, err)
+
+	wasmContractAddress = wasmContractAddresses[1]
+	wasmMapping = acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType: acltypes.ResourceType_KV, AccessType: acltypes.AccessType_WRITE, IdentifierTemplate: "someResource",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_SENDER_BECH32_ADDRESS,
+				Selector:     "abcdefg",
+			},
+			{
+				Operation: types.CommitAccessOp(),
+			},
+		},
+		ContractAddress: wasmContractAddress.String(),
+	}
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.NoError(t, err)
+
+	// test getting the access operations
+	info, _ = types.NewExecuteMessageInfo(
+		[]byte("{\"test\":{}}"),
+	)
+	_, err = app.AccessControlKeeper.GetWasmDependencyAccessOps(
+		ctx,
+		wasmContractAddress,
+		"",
+		info,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+	require.Error(t, err)
 }
 
 func TestWasmDependencyMappingWithQueryMsgInfo(t *testing.T) {
@@ -717,6 +810,213 @@ func TestWasmDependencyMappingWithContractReference(t *testing.T) {
 		*types.CommitAccessOp(),
 	}
 	require.Equal(t, types.NewAccessOperationSet(expectedAccessOps), types.NewAccessOperationSet(deps))
+}
+
+func TestWasmDependencyMappingWithContractReferenceQuery(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 3, sdk.NewInt(30000000))
+	wasmContractAddress := wasmContractAddresses[0]
+	interContractAddress := wasmContractAddresses[1]
+	thirdAddr := wasmContractAddresses[2]
+
+	// create a dummy mapping of a bank balance write for the sender address (eg. performing some action like depositing funds)
+	// also performs a bank write to an address specified by the JSON body (following same schema as contract A for now)
+	interContractMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
+			},
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+				Selector:     ".send.address",
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: interContractAddress.String(),
+	}
+	// set the dependency mapping
+	err := app.AccessControlKeeper.SetWasmDependencyMapping(ctx, interContractMapping)
+	require.NoError(t, err)
+
+	// this mapping creates a reference to the inter-contract dependency
+	wasmMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			// this one should be appropriately discarded because we are not processing a contract reference
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+				Selector:     ".field.doesnt.exist",
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		BaseContractReferences: []*acltypes.WasmContractReference{
+			{
+				ContractAddress: interContractAddress.String(),
+				MessageType:     acltypes.WasmMessageSubtype_QUERY,
+				MessageName:     "some_message",
+			},
+		},
+		QueryContractReferences: []*acltypes.WasmContractReferences{
+			{
+				MessageName: "query",
+				ContractReferences: []*acltypes.WasmContractReference{
+					{
+						ContractAddress:         interContractAddress.String(),
+						MessageType:             acltypes.WasmMessageSubtype_QUERY,
+						MessageName:             "some_message",
+						JsonTranslationTemplate: "{\"some_message\":{\"address\":\".send.address\"}}",
+					},
+				},
+			},
+		},
+		ContractAddress: wasmContractAddress.String(),
+	}
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.NoError(t, err)
+
+	// test getting the dependency mapping
+	mapping, err := app.AccessControlKeeper.GetRawWasmDependencyMapping(ctx, wasmContractAddress)
+	require.NoError(t, err)
+	require.Equal(t, wasmMapping, *mapping)
+
+	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
+	require.NoError(t, err)
+	info, _ := types.NewQueryMessageInfo([]byte(fmt.Sprintf("{\"send\":{\"address\":\"%s\",\"amount\":10}}", thirdAddr.String())))
+	_, err = app.AccessControlKeeper.GetWasmDependencyAccessOps(
+		ctx,
+		wasmContractAddress,
+		thirdAddr.String(),
+		info,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+	require.NoError(t, err)
+}
+
+func TestWasmDependencyMappingWithInvalidContractReference(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	wasmContractAddresses := simapp.AddTestAddrsIncremental(app, ctx, 3, sdk.NewInt(30000000))
+	wasmContractAddress := wasmContractAddresses[0]
+	interContractAddress := wasmContractAddresses[1]
+	thirdAddr := wasmContractAddresses[2]
+
+	// create a dummy mapping of a bank balance write for the sender address (eg. performing some action like depositing funds)
+	// also performs a bank write to an address specified by the JSON body (following same schema as contract A for now)
+	interContractMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_SENDER_LENGTH_PREFIXED_ADDRESS,
+			},
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+				Selector:     ".send.address",
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		ContractAddress: interContractAddress.String(),
+	}
+	// set the dependency mapping
+	err := app.AccessControlKeeper.SetWasmDependencyMapping(ctx, interContractMapping)
+	require.NoError(t, err)
+
+	// this mapping creates a reference to the inter-contract dependency
+	wasmMapping := acltypes.WasmDependencyMapping{
+		BaseAccessOps: []*acltypes.WasmAccessOperation{
+			// this one should be appropriately discarded because we are not processing a contract reference
+			{
+				Operation: &acltypes.AccessOperation{
+					ResourceType:       acltypes.ResourceType_KV_BANK_BALANCES,
+					AccessType:         acltypes.AccessType_WRITE,
+					IdentifierTemplate: "02%s",
+				},
+				SelectorType: acltypes.AccessOperationSelectorType_JQ_LENGTH_PREFIXED_ADDRESS,
+				Selector:     ".field.doesnt.exist",
+			},
+			{
+				Operation:    types.CommitAccessOp(),
+				SelectorType: acltypes.AccessOperationSelectorType_NONE,
+			},
+		},
+		BaseContractReferences: []*acltypes.WasmContractReference{
+			{
+				ContractAddress: "Another bad reference",
+				MessageType:     acltypes.WasmMessageSubtype_QUERY,
+				MessageName:     "some_message",
+			},
+		},
+		QueryContractReferences: []*acltypes.WasmContractReferences{
+			{
+				MessageName: "query",
+				ContractReferences: []*acltypes.WasmContractReference{
+					{
+						ContractAddress:         "Invalid Contract Reference",
+						MessageType:             acltypes.WasmMessageSubtype_QUERY,
+						MessageName:             "some_message",
+						JsonTranslationTemplate: "{\"some_message\":{\"address\":\".send.address\"}}",
+					},
+				},
+			},
+		},
+		ContractAddress: wasmContractAddress.String(),
+	}
+	// set the dependency mapping
+	err = app.AccessControlKeeper.SetWasmDependencyMapping(ctx, wasmMapping)
+	require.NoError(t, err)
+
+	// test getting the dependency mapping
+	mapping, err := app.AccessControlKeeper.GetRawWasmDependencyMapping(ctx, wasmContractAddress)
+	require.NoError(t, err)
+	require.Equal(t, wasmMapping, *mapping)
+
+	// test getting a dependency mapping with selector that expands the inter-contract reference into the contract's dependencies
+	require.NoError(t, err)
+	info, _ := types.NewQueryMessageInfo([]byte(fmt.Sprintf("{\"send\":{\"address\":\"%s\",\"amount\":10}}", thirdAddr.String())))
+	_, err = app.AccessControlKeeper.GetWasmDependencyAccessOps(
+		ctx,
+		wasmContractAddress,
+		thirdAddr.String(),
+		info,
+		make(aclkeeper.ContractReferenceLookupMap),
+	)
+
+	require.ErrorContains(t, err, "decoding bech32 failed")
 }
 
 func TestWasmDependencyMappingWithContractReferenceWasmTranslator(t *testing.T) {
@@ -1618,6 +1918,66 @@ func TestContractReferenceAddressParser(t *testing.T) {
 
 	parsedJQInvalid := aclkeeper.ParseContractReferenceAddress(".test_msg.other_addr", wasmBech32, &msgInfo)
 	require.Equal(t, ".test_msg.other_addr", parsedJQInvalid)
+}
+
+func TestParseContractReferenceAddress(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		maybeContractAddress string
+		sender               string
+		msgInfo              *types.WasmMessageInfo
+		expectedAddress      string
+	}{
+		{
+			name:                 "Should return sender when reserved sender is passed",
+			maybeContractAddress: "_sender",
+			sender:               "cosmos1qy352eufqy352eufqy352eufqy35neufqy35",
+			msgInfo:              &types.WasmMessageInfo{},
+			expectedAddress:      "cosmos1qy352eufqy352eufqy352eufqy35neufqy35",
+		},
+		{
+			name:                 "Should return the address when it's a valid address and not a jq instruction",
+			maybeContractAddress: "cosmos1qy352eufqy352eufqy35",
+			sender:               "cosmos1qy352eufqy352eufqy35",
+			msgInfo:              &types.WasmMessageInfo{MessageFullBody: []byte(`{"valid_field": "jq_result"}`)},
+			expectedAddress:      "cosmos1qy352eufqy352eufqy35",
+		},
+		{
+			name:                 "Should return the passed string when it cannot parse as a jq instruction",
+			maybeContractAddress: "invalid_jq",
+			sender:               "cosmos1qy352eufqy352eufqy352eufqy35neufqy35",
+			msgInfo:              &types.WasmMessageInfo{},
+			expectedAddress:      "invalid_jq",
+		},
+		{
+			name:                 "Should return the passed string when the jq selector does not apply properly",
+			maybeContractAddress: ".invalid_field",
+			sender:               "cosmos1qy352eufqy352eufqy352eufqy35neufqy35",
+			msgInfo:              &types.WasmMessageInfo{MessageFullBody: []byte(`{"valid_field": "value"}`)},
+			expectedAddress:      ".invalid_field",
+		},
+		{
+			name:                 "Should return the passed string when cannot unmarshal the jq result",
+			maybeContractAddress: ".valid_field",
+			sender:               "cosmos1qy352eufqy352eufqy352eufqy35neufqy35",
+			msgInfo:              &types.WasmMessageInfo{MessageFullBody: []byte(`{"valid_field": 123}`)},
+			expectedAddress:      ".valid_field",
+		},
+		{
+			name:                 "Should return the jq result when the jq selector applies properly",
+			maybeContractAddress: ".valid_field",
+			sender:               "cosmos1qy352eufqy352eufqy352eufqy35neufqy35",
+			msgInfo:              &types.WasmMessageInfo{MessageFullBody: []byte(`{"valid_field": "jq_result"}`)},
+			expectedAddress:      "jq_result",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := aclkeeper.ParseContractReferenceAddress(tc.maybeContractAddress, tc.sender, tc.msgInfo)
+			assert.Equal(t, tc.expectedAddress, result)
+		})
+	}
 }
 
 func TestBuildDependencyDag(t *testing.T) {

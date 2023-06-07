@@ -68,6 +68,8 @@ func (c *ContextMemCache) SafeSubDeferredSends(moduleAccount string, amount Coin
 	if !amount.IsValid() {
 		panic(sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amount.String()))
 	}
+	c.deferredBankOpsLock.Lock()
+	defer c.deferredBankOpsLock.Unlock()
 
 	return c.deferredSends.SafeSub(moduleAccount, amount)
 }

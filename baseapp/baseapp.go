@@ -158,6 +158,7 @@ type BaseApp struct { //nolint: maligned
 	ChainID string
 
 	votesInfoLock sync.RWMutex
+	commitLock    *sync.Mutex
 
 	compactionInterval uint64
 
@@ -268,6 +269,7 @@ func NewBaseApp(
 		TracingInfo: &tracing.Info{
 			Tracer: &tr,
 		},
+		commitLock: &sync.Mutex{},
 	}
 
 	app.TracingInfo.SetContext(context.Background())
@@ -974,6 +976,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			if len(missingAccessOps) != 0 {
 				for op := range missingAccessOps {
 					ctx.Logger().Info((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))
+					op.EmitValidationFailMetrics()
 				}
 				errMessage := fmt.Sprintf("Invalid Concurrent Execution antehandler missing %d access operations", len(missingAccessOps))
 				return gInfo, nil, nil, 0, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
@@ -1162,6 +1165,10 @@ func (app *BaseApp) startCompactionRoutine(db dbm.DB) {
 }
 
 func (app *BaseApp) Close() error {
+	// we do not want to close when a commit is ongoing since commit writes to stores
+	// and metadata in a non-atomic way
+	app.commitLock.Lock()
+	defer app.commitLock.Unlock()
 	if err := app.appStore.db.Close(); err != nil {
 		return err
 	}

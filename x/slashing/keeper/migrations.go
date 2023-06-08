@@ -156,6 +156,9 @@ func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 	// use previous height to calculate index offset
 	window := m.keeper.SignedBlocksWindow(ctx)
 	index := window - 1
+	// Note that we close the iterator twice. 2 iterators cannot be open at the same time due to mutex on the storage
+	// This close within defer is a safety net, while the close() after iteration is to close the iterator before opening
+	// a new one.
 	defer signInfoIter.Close()
 	for ; signInfoIter.Valid(); signInfoIter.Next() {
 		ctx.Logger().Info(fmt.Sprintf("Migrating Signing Info for key: %v\n", signInfoIter.Key()))
@@ -173,6 +176,7 @@ func (m Migrator) Migrate3to4(ctx sdk.Context) error {
 		newSignInfoKeys = append(newSignInfoKeys, signInfoIter.Key())
 		newSignInfoVals = append(newSignInfoVals, newInfo)
 	}
+	signInfoIter.Close()
 
 	if len(newSignInfoKeys) != len(newSignInfoVals) {
 		return fmt.Errorf("new sign info data length doesn't match up")

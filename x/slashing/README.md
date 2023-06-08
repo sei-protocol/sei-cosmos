@@ -7,7 +7,7 @@ The slashing module enables Cosmos SDK-based blockchains to disincentivize any a
 by a protocol-recognized actor with value at stake by penalizing them ("slashing").
 
 Penalties may include, but are not limited to:
-* Burning some amount of their stake
+* Slash some amount of their stake
 * Removing their ability to vote on future blocks for a period of time.
 
 ## State

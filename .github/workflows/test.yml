@@ -129,14 +129,13 @@ jobs:
         run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
       - name: Add GOPATH/bin to PATH
-        run: echo "$(go env GOPATH)/bin" >> $GITHUB_ENV
+        run: echo "GOBIN=$(go env GOPATH)/bin" >> $GITHUB_ENV
 
       - name: Install gocovmerge
         run: go get github.com/wadey/gocovmerge
 
       - name: Merge coverage reports
         run: gocovmerge $(find . -name *profile.out) > coverage.txt
-
 
       # Now we upload the merged report to Codecov
       - name: Upload coverage to Codecov

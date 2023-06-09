@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: ci-${{ github.ref }}-tests
@@ -108,3 +109,6 @@ jobs:
         with:
           name: "${{ github.sha }}-${{ matrix.part }}-coverage"
           path: ./${{ matrix.part }}profile.out
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3

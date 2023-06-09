@@ -88,7 +88,9 @@ jobs:
             **/**.go
             go.mod
             go.sum
-
+      - uses: actions/download-artifact@v3
+        with:
+          name: "${{ github.sha }}-${{ matrix.part }}"
       - name: Get data from Go build cache
         uses: actions/cache@v3
         with:

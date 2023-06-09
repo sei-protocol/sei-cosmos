@@ -132,7 +132,10 @@ jobs:
         run: go get -u github.com/wadey/gocovmerge
 
       - name: Print GOPATH
-        run: echo $GOPATH || ls $GOPATH/bin
+        run: echo $GOPATH
+
+      - name: Print GOPATH
+        run: ls $GOPATH/bin
 
       - name: Merge coverage reports
         run: |

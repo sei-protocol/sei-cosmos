@@ -88,6 +88,7 @@ jobs:
             **/**.go
             go.mod
             go.sum
+
       - name: Get data from Go build cache
         uses: actions/cache@v3
         with:
@@ -96,10 +97,10 @@ jobs:
             ~/.cache/golangci-lint
             ~/.cache/go-build
           key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+
       - name: test & coverage report creation
         run: |
           cat pkgs.txt.part.${{ matrix.part }} | xargs go test -mod=readonly -race -timeout 5m -coverprofile=${{ matrix.part }}profile.out -covermode=atomic -tags='ledger test_ledger_mock'
-        if: env.GIT_DIFF
 
       - uses: actions/upload-artifact@v3
         with:

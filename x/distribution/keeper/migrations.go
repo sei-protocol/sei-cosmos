@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v043 "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v043"
 	v304 "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v304"
@@ -29,14 +31,24 @@ func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 		info types.DelegatorStartingInfo
 	}
 	infoList := []infoTuple{}
+	cnt := 0
 	v304.IterateDelegatorStartingInfos(ctx, func(val sdk.ValAddress, del sdk.AccAddress, info types.DelegatorStartingInfo) (stop bool) {
 		infoList = append(infoList, infoTuple{val: val, del: del, info: info})
+		cnt++
+		if cnt%10000 == 0 {
+			fmt.Printf("Iterated %d info\n", cnt)
+		}
 		return false
 	}, m.keeper.storeKey, m.keeper.cdc)
 
+	cnt = 0
 	for _, info := range infoList {
 		v304.DeleteDelegatorStartingInfo(ctx, info.val, info.del, m.keeper.storeKey)
 		m.keeper.SetDelegatorStartingInfo(ctx, info.val, info.del, info.info)
+		cnt++
+		if cnt%10000 == 0 {
+			fmt.Printf("Processed %d info\n", cnt)
+		}
 	}
 	return nil
 }

@@ -134,11 +134,6 @@ jobs:
       - name: Print GOPATH
         run: echo $GOPATH || ls $GOPATH/bin
 
-
-      - name: Merge coverage reports
-        run: |
-          $GOPATH/bin/gocovmerge ./*-coverage > coverage.txt
-
       - name: Merge coverage reports
         run: |
           gocovmerge ./*-coverage > coverage.txt

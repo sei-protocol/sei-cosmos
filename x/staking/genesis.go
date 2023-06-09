@@ -38,6 +38,7 @@ func InitGenesis(
 
 	for _, validator := range data.Validators {
 		keeper.SetValidator(ctx, validator)
+		keeper.SetValidatorID(ctx, validator.GetOperator())
 
 		// Manually set indices for the first time
 		keeper.SetValidatorByConsAddr(ctx, validator)

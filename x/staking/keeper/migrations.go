@@ -19,3 +19,11 @@ func NewMigrator(keeper Keeper) Migrator {
 func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 	return v043.MigrateStore(ctx, m.keeper.storeKey)
 }
+
+func (m Migrator) Migrate2to3(ctx sdk.Context) error {
+	for _, val := range m.keeper.GetAllValidators(ctx) {
+		m.keeper.SetValidatorID(ctx, val.GetOperator())
+	}
+
+	return nil
+}

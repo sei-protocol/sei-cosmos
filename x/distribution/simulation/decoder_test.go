@@ -15,10 +15,12 @@ import (
 )
 
 var (
-	delPk1    = ed25519.GenPrivKey().PubKey()
-	delAddr1  = sdk.AccAddress(delPk1.Address())
-	valAddr1  = sdk.ValAddress(delPk1.Address())
-	consAddr1 = sdk.ConsAddress(delPk1.Address().Bytes())
+	delPk1     = ed25519.GenPrivKey().PubKey()
+	delAddr1   = sdk.AccAddress(delPk1.Address())
+	delAccNum1 = uint64(123)
+	valAddr1   = sdk.ValAddress(delPk1.Address())
+	valID1     = uint32(456)
+	consAddr1  = sdk.ConsAddress(delPk1.Address().Bytes())
 )
 
 func TestDecodeDistributionStore(t *testing.T) {
@@ -41,7 +43,7 @@ func TestDecodeDistributionStore(t *testing.T) {
 			{Key: types.ProposerKey, Value: consAddr1.Bytes()},
 			{Key: types.GetValidatorOutstandingRewardsKey(valAddr1), Value: cdc.MustMarshal(&outstanding)},
 			{Key: types.GetDelegatorWithdrawAddrKey(delAddr1), Value: delAddr1.Bytes()},
-			{Key: types.GetDelegatorStartingInfoKey(valAddr1, delAddr1), Value: cdc.MustMarshal(&info)},
+			{Key: types.GetDelegatorStartingInfoKey(valID1, delAccNum1), Value: cdc.MustMarshal(&info)},
 			{Key: types.GetValidatorHistoricalRewardsKey(valAddr1, 100), Value: cdc.MustMarshal(&historicalRewards)},
 			{Key: types.GetValidatorCurrentRewardsKey(valAddr1), Value: cdc.MustMarshal(&currentRewards)},
 			{Key: types.GetValidatorAccumulatedCommissionKey(valAddr1), Value: cdc.MustMarshal(&commission)},

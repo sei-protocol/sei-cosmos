@@ -98,6 +98,7 @@ func (k msgServer) CreateValidator(goCtx context.Context, msg *types.MsgCreateVa
 	k.SetValidator(ctx, validator)
 	k.SetValidatorByConsAddr(ctx, validator)
 	k.SetNewValidatorByPowerIndex(ctx, validator)
+	k.SetValidatorID(ctx, validator.GetOperator())
 
 	// call the after-creation hook
 	k.AfterValidatorCreated(ctx, validator.GetOperator())

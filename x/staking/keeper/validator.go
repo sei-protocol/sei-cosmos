@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -175,6 +176,8 @@ func (k Keeper) RemoveValidator(ctx sdk.Context, address sdk.ValAddress) {
 	store.Delete(types.GetValidatorKey(address))
 	store.Delete(types.GetValidatorByConsAddrKey(valConsAddr))
 	store.Delete(types.GetValidatorsByPowerIndexKey(validator, k.PowerReduction(ctx)))
+	store.Delete(types.GetValidatorByIDKey(store.Get(types.GetValidatorIDKey(address))))
+	store.Delete(types.GetValidatorIDKey(address))
 
 	// call hooks
 	k.AfterValidatorRemoved(ctx, valConsAddr, validator.GetOperator())
@@ -447,4 +450,32 @@ func (k Keeper) UnbondAllMatureValidators(ctx sdk.Context) {
 			store.Delete(key)
 		}
 	}
+}
+
+func (k Keeper) SetValidatorID(ctx sdk.Context, valAddress sdk.ValAddress) {
+	store := ctx.KVStore(k.storeKey)
+	nextID := uint32(0)
+	nextIDBz := store.Get(types.ValidatorNextIDKey)
+	if nextIDBz != nil {
+		nextID = binary.BigEndian.Uint32(nextIDBz)
+	} else {
+		nextIDBz = make([]byte, 4)
+		binary.BigEndian.PutUint32(nextIDBz, nextID)
+	}
+	store.Set(types.GetValidatorIDKey(valAddress), nextIDBz)
+	store.Set(types.GetValidatorByIDKey(nextIDBz), valAddress)
+	newIDBz := make([]byte, 4)
+	binary.BigEndian.PutUint32(newIDBz, nextID+1)
+	store.Set(types.ValidatorNextIDKey, newIDBz)
+}
+
+func (k Keeper) GetValidatorID(ctx sdk.Context, valAddress sdk.ValAddress) uint32 {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.GetValidatorIDKey(valAddress))
+	return binary.BigEndian.Uint32(bz)
+}
+
+func (k Keeper) GetValidatorByID(ctx sdk.Context, idBz []byte) sdk.ValAddress {
+	store := ctx.KVStore(k.storeKey)
+	return sdk.ValAddress(store.Get(types.GetValidatorByIDKey(idBz)))
 }

@@ -138,19 +138,8 @@ jobs:
         run: wc -l coverage.txt
         continue-on-error: true
 
-      - name: Merge coverage reports
-        run: gocovmerge $(find . -type f -name '*coverage') > coverage.txt
-
-      - name: Check coverage report lines
-        run: wc -l coverage.txt
-        continue-on-error: true
-
-      - name: Check coverage report lines
+      - name: Check coverage report files
         run: ls **/*profile.out
-        continue-on-error: true
-
-      - name: Check coverage report lines
-        run: ls **/*coverage
         continue-on-error: true
 
       # Now we upload the merged report to Codecov

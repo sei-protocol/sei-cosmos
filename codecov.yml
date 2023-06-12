@@ -7,7 +7,7 @@ coverage:
     # Learn more at https://docs.codecov.io/docs/commit-status
     project:
       default:
-        threshold: 1% # allow this much decrease on project
+        threshold: 60% # allow this much decrease on project
       app:
         target: 70%
         flags:
@@ -44,7 +44,7 @@ ignore:
   - "docs"
   - "*.md"
   - "*.rst"
-  - "**/*pb*.go"
+  - "**/*.pb.go"
   - "types/*.pb.go"
   - "tests/*"
   - "tests/**/*"

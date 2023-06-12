@@ -139,8 +139,5 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.txt
-<<<<<<< Updated upstream
-=======
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
->>>>>>> Stashed changes

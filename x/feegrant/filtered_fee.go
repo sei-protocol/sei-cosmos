@@ -61,7 +61,19 @@ func (a *AllowedMsgAllowance) Accept(ctx sdk.Context, fee sdk.Coins, msgs []sdk.
 		return false, err
 	}
 
-	return allowance.Accept(ctx, fee, msgs)
+    remove, err := allowance.Accept(ctx, fee, msgs)
+    if err != nil {
+        return false, err
+    }
+
+    any, err := types.NewAnyWithValue(allowance.(proto.Message))
+    if err != nil {
+        return false, err
+    }
+
+    a.Allowance = any
+
+    return remove, nil
 }
 
 func (a *AllowedMsgAllowance) allowedMsgsToMap(ctx sdk.Context) map[string]bool {

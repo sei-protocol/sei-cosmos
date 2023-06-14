@@ -36,7 +36,7 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_BANK_DENOM:                    {ResourceType_KV_BANK, []ResourceType{}},
 	ResourceType_KV_BANK_BALANCES:                 {ResourceType_KV_BANK, []ResourceType{}},
 	ResourceType_KV_BANK_DEFERRED:                 {ResourceType_KV, []ResourceType{ResourceType_KV_BANK_DEFERRED_MODULE_TX_INDEX}},
-	ResourceType_KV_BANK_DEFERRED_MODULE_TX_INDEX: {ResourceType_KV, []ResourceType{}},
+	ResourceType_KV_BANK_DEFERRED_MODULE_TX_INDEX: {ResourceType_KV_BANK_DEFERRED, []ResourceType{}},
 	ResourceType_KV_STAKING: {ResourceType_KV, []ResourceType{
 		ResourceType_KV_STAKING_DELEGATION,
 		ResourceType_KV_STAKING_VALIDATOR,

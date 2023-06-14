@@ -616,8 +616,6 @@ func (suite *IntegrationTestSuite) TestWriteDeferredOperations() {
 	suite.Require().NoError(app.BankKeeper.DeferredSendCoinsFromAccountToModule(ctx, addr2, multiPerm, deferredBalances))
 
 	bankBalances := sdk.NewCoins(newFooCoin(20), newBarCoin(30))
-	// setup deferred balances
-	// ctx.ContextMemCache().UpsertDeferredSends(multiPerm, deferredBalances)
 	// set up bank balances
 	suite.Require().NoError(simapp.FundAccount(app.BankKeeper, ctx, multiPermAcc.GetAddress(), bankBalances))
 

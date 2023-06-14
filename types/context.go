@@ -49,8 +49,6 @@ type Context struct {
 	messageIndex int // Used to track current message being processed
 	txIndex      int
 
-	contextMemCache *ContextMemCache
-
 	traceSpanContext context.Context
 }
 
@@ -142,10 +140,6 @@ func (c Context) MsgValidator() *acltypes.MsgValidator {
 	return c.msgValidator
 }
 
-func (c Context) ContextMemCache() *ContextMemCache {
-	return c.contextMemCache
-}
-
 // clone the header before returning
 func (c Context) BlockHeader() tmproto.Header {
 	msg := proto.Clone(&c.header).(*tmproto.Header)
@@ -178,16 +172,15 @@ func NewContext(ms MultiStore, header tmproto.Header, isCheckTx bool, logger log
 	// https://github.com/gogo/protobuf/issues/519
 	header.Time = header.Time.UTC()
 	return Context{
-		ctx:             context.Background(),
-		ms:              ms,
-		header:          header,
-		chainID:         header.ChainID,
-		checkTx:         isCheckTx,
-		logger:          logger,
-		gasMeter:        stypes.NewInfiniteGasMeter(),
-		minGasPrice:     DecCoins{},
-		eventManager:    NewEventManager(),
-		contextMemCache: NewContextMemCache(),
+		ctx:          context.Background(),
+		ms:           ms,
+		header:       header,
+		chainID:      header.ChainID,
+		checkTx:      isCheckTx,
+		logger:       logger,
+		gasMeter:     stypes.NewInfiniteGasMeter(),
+		minGasPrice:  DecCoins{},
+		eventManager: NewEventManager(),
 
 		txBlockingChannels:   make(acltypes.MessageAccessOpsChannelMapping),
 		txCompletionChannels: make(acltypes.MessageAccessOpsChannelMapping),
@@ -348,12 +341,6 @@ func (c Context) WithTxIndex(txIndex int) Context {
 
 func (c Context) WithMsgValidator(msgValidator *acltypes.MsgValidator) Context {
 	c.msgValidator = msgValidator
-	return c
-}
-
-// WithContextMemCache returns a Context with a new context mem cache
-func (c Context) WithContextMemCache(contextMemCache *ContextMemCache) Context {
-	c.contextMemCache = contextMemCache
 	return c
 }
 

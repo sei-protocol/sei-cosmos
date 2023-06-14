@@ -21,7 +21,7 @@ var (
 	}
 )
 
-// use -1 to indicate that it is prior to msgs in the tx
+// We generate dependencies on a per message basis for a trnasaction, but antehandlers also use resources. As a result we use -1 for the ante handler index (used as map key) to indicate that it is prior to msgs in the tx
 const ANTE_MSG_INDEX = int(-1)
 
 type Comparator struct {

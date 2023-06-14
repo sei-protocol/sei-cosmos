@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 )
 
@@ -253,7 +252,7 @@ func (s *CLITestSuite) TestCmdQueryDeposits() {
 }
 
 func (s *CLITestSuite) TestCmdQueryDeposit() {
-	val := testutil.CreateKeyringAccounts(s.T(), s.kr, 1)
+	val := s.validators
 
 	testCases := []struct {
 		name         string
@@ -335,7 +334,7 @@ func (s *CLITestSuite) TestCmdQueryVotes() {
 }
 
 func (s *CLITestSuite) TestCmdQueryVote() {
-	val := testutil.CreateKeyringAccounts(s.T(), s.kr, 1)
+	val := s.validators
 
 	testCases := []struct {
 		name         string

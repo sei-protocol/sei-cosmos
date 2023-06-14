@@ -25,10 +25,11 @@ import (
 type CLITestSuite struct {
 	suite.Suite
 
-	kr        keyring.Keyring
-	encCfg    testutilmod.TestEncodingConfig
-	baseCtx   client.Context
-	clientCtx client.Context
+	kr         keyring.Keyring
+	encCfg     testutilmod.TestEncodingConfig
+	baseCtx    client.Context
+	clientCtx  client.Context
+	validators []testutil.TestAccount
 }
 
 func TestCLITestSuite(t *testing.T) {
@@ -57,11 +58,12 @@ func (s *CLITestSuite) SetupSuite() {
 		return s.baseCtx.WithClient(c)
 	}
 	s.clientCtx = ctxGen().WithOutput(&outBuf)
+	s.validators = testutil.CreateKeyringAccounts(s.T(), s.kr, 1)
+
 }
 
 func (s *CLITestSuite) TestNewCmdSubmitLegacyProposal() {
-	val := testutil.CreateKeyringAccounts(s.T(), s.kr, 1)
-
+	val := s.validators
 	invalidProp := `{
 	  "title": "",
 		"description": "Where is the title!?",
@@ -153,7 +155,7 @@ func (s *CLITestSuite) TestNewCmdSubmitLegacyProposal() {
 }
 
 func (s *CLITestSuite) TestNewCmdDeposit() {
-	val := testutil.CreateKeyringAccounts(s.T(), s.kr, 1)
+	val := s.validators
 
 	testCases := []struct {
 		name      string
@@ -215,7 +217,7 @@ func (s *CLITestSuite) TestNewCmdDeposit() {
 }
 
 func (s *CLITestSuite) TestNewCmdWeightedVote() {
-	val := testutil.CreateKeyringAccounts(s.T(), s.kr, 1)
+	val := s.validators
 
 	testCases := []struct {
 		name         string

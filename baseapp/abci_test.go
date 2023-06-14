@@ -246,7 +246,31 @@ func TestABCI_Proposal_Reset_State_Between_Calls(t *testing.T) {
 
 	require.Nil(t, err)
 
+	// Genesis at height 1
 	reqPrepareProposal := abci.RequestPrepareProposal{
+		MaxTxBytes: 1000,
+		Height:     1, // this value can't be 0
+	}
+
+	resPrepareProposal, _ := app.PrepareProposal(ctx.Context(), &reqPrepareProposal)
+	require.Equal(t, 0, len(resPrepareProposal.TxRecords))
+
+	reqProposalTxBytes := [][]byte{}
+	reqProcessProposal := abci.RequestProcessProposal{
+		Txs:    reqProposalTxBytes,
+		Height: 1,
+	}
+
+	resProcessProposal, _ := app.ProcessProposal(ctx.Context(), &reqProcessProposal)
+	require.Equal(t, abci.ResponseProcessProposal_ACCEPT, resProcessProposal.Status)
+
+	app.BeginBlock(ctx, abci.RequestBeginBlock{
+		Header: tmproto.Header{Height: app.LastBlockHeight() + 1},
+	})
+
+	// Post Genesis
+
+	reqPrepareProposal = abci.RequestPrepareProposal{
 		MaxTxBytes: 1000,
 		Height:     2, // this value can't be 0
 	}
@@ -258,8 +282,8 @@ func TestABCI_Proposal_Reset_State_Between_Calls(t *testing.T) {
 		require.Equal(t, 0, len(resPrepareProposal.TxRecords))
 	}
 
-	reqProposalTxBytes := [][]byte{}
-	reqProcessProposal := abci.RequestProcessProposal{
+	reqProposalTxBytes = [][]byte{}
+	reqProcessProposal = abci.RequestProcessProposal{
 		Txs:    reqProposalTxBytes,
 		Height: 2,
 	}

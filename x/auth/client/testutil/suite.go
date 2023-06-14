@@ -797,7 +797,7 @@ func (s *IntegrationTestSuite) TestCLIMultisignSortSignatures() {
 
 	sign1File := testutil.WriteToNewTempFile(s.T(), account1Signature.String())
 
-	// Sign with account1
+	// Sign with account2
 	account2Signature, err := TxSignExec(val1.ClientCtx, account2.GetAddress(), multiGeneratedTxFile.Name(), "--multisig", multisigInfo.GetAddress().String())
 	s.Require().NoError(err)
 
@@ -806,7 +806,7 @@ func (s *IntegrationTestSuite) TestCLIMultisignSortSignatures() {
 	// Sign with dummy account
 	dummyAddr := dummyAcc.GetAddress()
 	s.Require().NoError(err)
-	_, err = TxSignExec(val1.ClientCtx, dummyAddr, multiGeneratedTxFile.Name(), "--multisig", addr.String())
+	_, err = TxSignExec(val1.ClientCtx, dummyAddr, multiGeneratedTxFile.Name(), "--multisig", multisigInfo.GetAddress().String())
 	s.Require().Error(err)
 	s.Require().Contains(err.Error(), "signing key is not a part of multisig key")
 

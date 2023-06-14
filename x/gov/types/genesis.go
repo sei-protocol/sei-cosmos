@@ -62,6 +62,20 @@ func ValidateGenesis(data *GenesisState) error {
 			threshold)
 	}
 
+	if data.GetTallyParams().GetQuorum(false).IsNegative() || data.GetTallyParams().GetQuorum(false).IsZero() {
+		return fmt.Errorf("governance vote quorum should be positive, is %s", data.GetTallyParams().GetQuorum(false).String())
+	}
+
+	if data.GetTallyParams().GetQuorum(true).IsNegative() || data.GetTallyParams().GetQuorum(true).IsZero() {
+		return fmt.Errorf("governance vote expedited quorum should be positive, is %s", data.GetTallyParams().GetQuorum(true).String())
+	}
+
+	if data.GetTallyParams().GetQuorum(true).LTE(data.GetTallyParams().GetQuorum(false)) {
+		return fmt.Errorf("governance vote expedited quorum %s should be greater than regular quorum %s",
+			data.GetTallyParams().GetQuorum(true),
+			data.GetTallyParams().GetQuorum(false))
+	}
+
 	veto := data.TallyParams.VetoThreshold
 	if veto.IsNegative() || veto.GT(sdk.OneDec()) {
 		return fmt.Errorf("governance vote veto threshold should be positive and less or equal to one, is %s",

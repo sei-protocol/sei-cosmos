@@ -154,6 +154,76 @@ func (s *CLITestSuite) TestNewCmdSubmitLegacyProposal() {
 	}
 }
 
+func (s *CLITestSuite) TestNewCmdVote() {
+	val := s.validators
+
+	testCases := []struct {
+		name         string
+		args         []string
+		expectErr    bool
+		expectedCode uint32
+	}{
+		{
+			"invalid vote",
+			[]string{},
+			true, 0,
+		},
+		{
+			"vote for invalid proposal",
+			[]string{
+				"10",
+				"yes",
+				fmt.Sprintf("--%s=%s", flags.FlagFrom, val[0].Address.String()),
+				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastSync),
+				fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin("stake", sdk.NewInt(10))).String()),
+			},
+			false, 3,
+		},
+		{
+			"valid vote",
+			[]string{
+				"1",
+				"yes",
+				fmt.Sprintf("--%s=%s", flags.FlagFrom, val[0].Address.String()),
+				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastSync),
+				fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin("stake", sdk.NewInt(10))).String()),
+			},
+			false, 0,
+		},
+		{
+			"valid vote with metadata",
+			[]string{
+				"1",
+				"yes",
+				fmt.Sprintf("--%s=%s", flags.FlagFrom, val[0].Address.String()),
+				fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
+				fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastSync),
+				fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin("stake", sdk.NewInt(10))).String()),
+			},
+			false, 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		s.Run(tc.name, func() {
+			cmd := cli.NewCmdVote()
+			var txResp sdk.TxResponse
+
+			out, err := clitestutil.ExecTestCLICmd(s.clientCtx, cmd, tc.args)
+
+			if tc.expectErr {
+				s.Require().Error(err)
+			} else {
+				s.Require().NoError(err)
+				s.Require().NoError(s.clientCtx.Codec.UnmarshalJSON(out.Bytes(), &txResp), out.String())
+			}
+		})
+	}
+}
+
 func (s *CLITestSuite) TestNewCmdDeposit() {
 	val := s.validators
 

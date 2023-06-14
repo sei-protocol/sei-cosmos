@@ -21,6 +21,9 @@ var (
 	}
 )
 
+// use -1 to indicate that it is prior to msgs in the tx
+const ANTE_MSG_INDEX = int(-1)
+
 type Comparator struct {
 	AccessType AccessType
 	Identifier string

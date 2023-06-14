@@ -47,6 +47,7 @@ type Context struct {
 
 	msgValidator *acltypes.MsgValidator
 	messageIndex int // Used to track current message being processed
+	txIndex      int
 
 	contextMemCache *ContextMemCache
 
@@ -131,6 +132,10 @@ func (c Context) TxMsgAccessOps() map[int][]acltypes.AccessOperation {
 
 func (c Context) MessageIndex() int {
 	return c.messageIndex
+}
+
+func (c Context) TxIndex() int {
+	return c.txIndex
 }
 
 func (c Context) MsgValidator() *acltypes.MsgValidator {
@@ -332,6 +337,12 @@ func (c Context) WithTxBlockingChannels(blockingChannels acltypes.MessageAccessO
 // WithMessageIndex returns a Context with the current message index that's being processed
 func (c Context) WithMessageIndex(messageIndex int) Context {
 	c.messageIndex = messageIndex
+	return c
+}
+
+// WithTxIndex returns a Context with the current transaction index that's being processed
+func (c Context) WithTxIndex(txIndex int) Context {
+	c.txIndex = txIndex
 	return c
 }
 

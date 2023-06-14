@@ -7,6 +7,8 @@ import (
 )
 
 type ContextMemCache struct {
+	storeKey StoreKey
+
 	deferredBankOpsLock *sync.Mutex
 	deferredSends       *DeferredBankOperationMapping
 }

@@ -84,9 +84,9 @@ func (suite *IntegrationTestSuite) initKeepersWithmAccPerms(blockedAddrs map[str
 		appCodec, app.GetKey(types.StoreKey), app.GetSubspace(types.ModuleName),
 		authtypes.ProtoBaseAccount, maccPerms,
 	)
-	keeper := keeper.NewBaseKeeper(
+	keeper := keeper.NewBaseKeeperWithDeferredCache(
 		appCodec, app.GetKey(types.StoreKey), authKeeper,
-		app.GetSubspace(types.ModuleName), blockedAddrs,
+		app.GetSubspace(types.ModuleName), blockedAddrs, app.GetMemKey(types.DeferredCacheStoreKey),
 	)
 
 	return authKeeper, keeper
@@ -702,14 +702,14 @@ func (suite *IntegrationTestSuite) TestWriteDeferredOperations() {
 	suite.Require().Equal(bankBalances, app.BankKeeper.GetAllBalances(ctx, multiPermAcc.GetAddress()))
 
 	// write deferred balances
-	app.BankKeeper.WriteDeferredOperations(ctx)
+	app.BankKeeper.WriteDeferredBalances(ctx)
 
 	// verify total balance in module bank balances
 	suite.Require().Equal(sdk.NewCoins(newFooCoin(30), newBarCoin(80)), app.BankKeeper.GetAllBalances(ctx, multiPermAcc.GetAddress()))
 
 	// test error
 	ctx.ContextMemCache().GetDeferredSends().Set("asd", deferredBalances)
-	suite.Require().Panics(func() { app.BankKeeper.WriteDeferredOperations(ctx) })
+	suite.Require().Panics(func() { app.BankKeeper.WriteDeferredBalances(ctx) })
 
 }
 
@@ -1337,8 +1337,8 @@ func (suite *IntegrationTestSuite) TestBalanceTrackingEvents() {
 		authtypes.ProtoBaseAccount, maccPerms,
 	)
 
-	suite.app.BankKeeper = keeper.NewBaseKeeper(suite.app.AppCodec(), suite.app.GetKey(types.StoreKey),
-		suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil)
+	suite.app.BankKeeper = keeper.NewBaseKeeperWithDeferredCache(suite.app.AppCodec(), suite.app.GetKey(types.StoreKey),
+		suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil, suite.app.GetKey(types.DeferredCacheStoreKey))
 
 	// set account with multiple permissions
 	suite.app.AccountKeeper.SetModuleAccount(suite.ctx, multiPermAcc)
@@ -1497,8 +1497,8 @@ func (suite *IntegrationTestSuite) TestMintCoinRestrictions() {
 	}
 
 	for _, test := range tests {
-		suite.app.BankKeeper = keeper.NewBaseKeeper(suite.app.AppCodec(), suite.app.GetKey(types.StoreKey),
-			suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil).WithMintCoinsRestriction(keeper.MintingRestrictionFn(test.restrictionFn))
+		suite.app.BankKeeper = keeper.NewBaseKeeperWithDeferredCache(suite.app.AppCodec(), suite.app.GetKey(types.StoreKey),
+			suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil, suite.app.GetKey(types.DeferredCacheStoreKey)).WithMintCoinsRestriction(keeper.MintingRestrictionFn(test.restrictionFn))
 		for _, testCase := range test.testCases {
 			if testCase.expectPass {
 				suite.Require().NoError(

@@ -972,7 +972,12 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps := ctx.TxMsgAccessOps()[acltypes.ANTE_MSG_INDEX]
 
-			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+			accessOpsDepGen, _ := app.anteDepGenerator([]acltypes.AccessOperation{}, tx, ctx.TxIndex())
+
+			fmt.Println("stored access ops: ", accessOps)
+			fmt.Println("generated access ops: ", accessOpsDepGen)
+
+			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOpsDepGen, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
 				for op := range missingAccessOps {
 					ctx.Logger().Info((fmt.Sprintf("Antehandler Missing Access Operation:%s ", op.String())))

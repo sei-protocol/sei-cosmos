@@ -44,6 +44,14 @@ func (data GenesisState) Empty() bool {
 
 // ValidateGenesis checks if parameters are within valid ranges
 func ValidateGenesis(data *GenesisState) error {
+	if data == nil {
+		return fmt.Errorf("governance genesis state cannot be nil")
+	}
+
+	if data.Empty() {
+		return fmt.Errorf("governance genesis state cannot be nil")
+	}
+
 	threshold := data.TallyParams.Threshold
 	if threshold.IsNegative() || threshold.GT(sdk.OneDec()) {
 		return fmt.Errorf("governance vote threshold should be positive and less or equal to one, is %s",

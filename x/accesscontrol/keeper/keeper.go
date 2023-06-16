@@ -493,9 +493,6 @@ func (k Keeper) IterateWasmDependencies(ctx sdk.Context, handler func(wasmDepend
 	}
 }
 
-// use -1 to indicate that it is prior to msgs in the tx
-const ANTE_MSG_INDEX = int(-1)
-
 func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, anteDepGen sdk.AnteDepGenerator, txs [][]byte) (*types.Dag, error) {
 	defer MeasureBuildDagDuration(time.Now(), "BuildDependencyDag")
 	// contains the latest msg index for a specific Access Operation
@@ -506,12 +503,12 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 			return nil, err
 		}
 		// get the ante dependencies and add them to the dag
-		anteDeps, err := anteDepGen([]acltypes.AccessOperation{}, tx)
+		anteDeps, err := anteDepGen([]acltypes.AccessOperation{}, tx, txIndex)
 		if err != nil {
 			return nil, err
 		}
 		anteDepSet := make(map[acltypes.AccessOperation]struct{})
-
+		anteAccessOpsList := []acltypes.AccessOperation{}
 		for _, accessOp := range anteDeps {
 			// if found in set, we've already included this access Op in out ante dependencies, so skip it
 			if _, found := anteDepSet[accessOp]; found {
@@ -522,8 +519,11 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 			if err != nil {
 				return nil, err
 			}
-			dependencyDag.AddNodeBuildDependency(ANTE_MSG_INDEX, txIndex, accessOp)
+			dependencyDag.AddNodeBuildDependency(acltypes.ANTE_MSG_INDEX, txIndex, accessOp)
+			anteAccessOpsList = append(anteAccessOpsList, accessOp)
 		}
+		// add Access ops for msg for anteMsg
+		dependencyDag.AddAccessOpsForMsg(acltypes.ANTE_MSG_INDEX, txIndex, anteAccessOpsList)
 
 		msgs := tx.GetMsgs()
 		for messageIndex, msg := range msgs {

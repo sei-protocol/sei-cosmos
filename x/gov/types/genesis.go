@@ -70,18 +70,18 @@ func ValidateGenesis(data *GenesisState) error {
 			threshold)
 	}
 
-	if data.GetTallyParams().GetQuorum(false).IsNegative() || data.GetTallyParams().GetQuorum(false).IsZero() || data.GetTallyParams().GetQuorum(false).GT(sdk.OneDec()) {
-		return fmt.Errorf("governance vote quorum should be in the range [0, 1], is %s", data.GetTallyParams().GetQuorum(false).String())
+	normalQuorum := data.GetTallyParams().GetQuorum(false)
+	if normalQuorum.IsNegative() || normalQuorum.IsZero() || normalQuorum.GT(sdk.OneDec()) {
+		return fmt.Errorf("governance vote quorum should be in the range [0, 1], is %s", normalQuorum.String())
 	}
 
-	if data.GetTallyParams().GetQuorum(true).IsNegative() || data.GetTallyParams().GetQuorum(true).IsZero() || data.GetTallyParams().GetQuorum(true).GT(sdk.OneDec()) {
-		return fmt.Errorf("governance vote expedited quorum should be in the range [0, 1], is %s", data.GetTallyParams().GetQuorum(true).String())
+	expeditedQuorum := data.GetTallyParams().GetQuorum(false)
+	if expeditedQuorum.IsNegative() || expeditedQuorum.IsZero() || expeditedQuorum.GT(sdk.OneDec()) {
+		return fmt.Errorf("governance vote expedited quorum should be in the range [0, 1], is %s", expeditedQuorum.String())
 	}
 
-	if data.GetTallyParams().GetQuorum(true).LTE(data.GetTallyParams().GetQuorum(false)) {
-		return fmt.Errorf("governance vote expedited quorum %s should be greater than regular quorum %s",
-			data.GetTallyParams().GetQuorum(true),
-			data.GetTallyParams().GetQuorum(false))
+	if expeditedQuorum.LTE(normalQuorum) {
+		return fmt.Errorf("governance vote expedited quorum %s should be greater than regular quorum %s", expeditedQuorum, normalQuorum)
 	}
 
 	veto := data.TallyParams.VetoThreshold

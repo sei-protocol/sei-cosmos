@@ -106,6 +106,8 @@ func (ckv *CommitKVStoreCache) CacheWrap(storeKey types.StoreKey) types.CacheWra
 // If the value doesn't exist in the write-through cache, the query is delegated
 // to the underlying CommitKVStore.
 func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
+	ckv.mtx.Lock()
+	defer ckv.mtx.Unlock()
 
 	types.AssertValidKey(key)
 
@@ -115,9 +117,6 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 		// cache hit
 		return value
 	}
-	// in case of cache miss, we need to lock mutex
-	ckv.mtx.Lock()
-	defer ckv.mtx.Unlock()
 
 	// cache miss; write to cache
 	value = ckv.CommitKVStore.Get(key)

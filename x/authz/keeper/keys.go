@@ -44,8 +44,8 @@ func addressesFromGrantStoreKey(key []byte) (granterAddr, granteeAddr sdk.AccAdd
 	kv.AssertKeyAtLeastLength(key, 3+int(granterAddrLen))
 	granterAddr = sdk.AccAddress(key[2 : 2+granterAddrLen])
 	granteeAddrLen := int(key[2+granterAddrLen])
-	kv.AssertKeyAtLeastLength(key, 4+int(granterAddrLen+byte(granteeAddrLen)))
-	granteeAddr = sdk.AccAddress(key[3+granterAddrLen : 3+granterAddrLen+byte(granteeAddrLen)])
+	kv.AssertKeyAtLeastLength(key, 4+int(granterAddrLen)+int(granteeAddrLen))
+	granteeAddr = sdk.AccAddress(key[3+granterAddrLen : 3+int(granterAddrLen)+int(granteeAddrLen)])
 
 	return granterAddr, granteeAddr
 }

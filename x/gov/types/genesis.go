@@ -74,7 +74,7 @@ func ValidateGenesis(data *GenesisState) error {
 		return fmt.Errorf("governance vote quorum should be in the range [0, 1], is %s", data.GetTallyParams().GetQuorum(false).String())
 	}
 
-	if data.GetTallyParams().GetQuorum(true).IsNegative() || data.GetTallyParams().GetQuorum(true).IsZero() || data.GetTallyParams().GetQuorum(false).GT(sdk.OneDec()) {
+	if data.GetTallyParams().GetQuorum(true).IsNegative() || data.GetTallyParams().GetQuorum(true).IsZero() || data.GetTallyParams().GetQuorum(true).GT(sdk.OneDec()) {
 		return fmt.Errorf("governance vote expedited quorum should be in the range [0, 1], is %s", data.GetTallyParams().GetQuorum(true).String())
 	}
 

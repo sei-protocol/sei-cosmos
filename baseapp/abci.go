@@ -143,13 +143,6 @@ func (app *BaseApp) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) (res
 	if app.beginBlocker != nil {
 		res = app.beginBlocker(ctx, req)
 		res.Events = sdk.MarkEventsToIndex(res.Events, app.indexEvents)
-
-		// call the hooks with the BeginBlock messages
-		for _, streamingListener := range app.abciListeners {
-			if err := streamingListener.ListenBeginBlock(app.deliverState.ctx, req, res); err != nil {
-				app.logger.Error("BeginBlock listening hook failed", "height", req.Header.Height, "err", err)
-			}
-		}
 	}
 
 	// call the streaming service hooks with the EndBlock messages
@@ -312,6 +305,8 @@ func (app *BaseApp) SetDeliverStateToCommit() {
 // height.
 func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
+	app.commitLock.Lock()
+	defer app.commitLock.Unlock()
 
 	if app.stateToCommit == nil {
 		panic("no state to commit")
@@ -834,7 +829,7 @@ func handleQueryApp(app *BaseApp, path []string, req abci.RequestQuery) abci.Res
 	return sdkerrors.QueryResultWithDebug(
 		sdkerrors.Wrap(
 			sdkerrors.ErrUnknownRequest,
-			"expected second parameter to be either 'simulate' or 'version', neither was present",
+			"expected second parameter to be either 'simulate', 'version' or 'snapshot', neither was present",
 		), app.trace)
 }
 

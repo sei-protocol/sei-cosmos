@@ -1,6 +1,9 @@
 package keeper
 
 import (
+	"encoding/binary"
+	"fmt"
+
 	"github.com/gogo/protobuf/grpc"
 
 	v043 "github.com/cosmos/cosmos-sdk/x/auth/legacy/v043"
@@ -40,4 +43,20 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 	})
 
 	return iterErr
+}
+
+func (m Migrator) Migrate2to3(ctx sdk.Context) error {
+	store := ctx.KVStore(m.keeper.key)
+	cnt := 0
+	m.keeper.IterateAccounts(ctx, func(account types.AccountI) (stop bool) {
+		accNumBz := make([]byte, 8)
+		binary.BigEndian.PutUint64(accNumBz, account.GetAccountNumber())
+		store.Set(types.AddressByIDKey(accNumBz), account.GetAddress())
+		cnt++
+		if cnt%10000 == 0 {
+			fmt.Printf("Processed %d accounts\n", cnt)
+		}
+		return false
+	})
+	return nil
 }

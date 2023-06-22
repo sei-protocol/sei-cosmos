@@ -22,6 +22,8 @@ var (
 	// AddressStoreKeyPrefix prefix for account-by-address store
 	AddressStoreKeyPrefix = []byte{0x01}
 
+	AddressByIDPrefix = []byte{0x02}
+
 	// param key for global account number
 	GlobalAccountNumberKey = []byte("globalAccountNumber")
 )
@@ -29,6 +31,10 @@ var (
 // AddressStoreKey turn an address to key used to get it from the account store
 func AddressStoreKey(addr sdk.AccAddress) []byte {
 	return append(AddressStoreKeyPrefix, addr.Bytes()...)
+}
+
+func AddressByIDKey(idBz []byte) []byte {
+	return append(AddressByIDPrefix, idBz...)
 }
 
 func CreateAddressStoreKeyFromBech32(addr string) []byte {

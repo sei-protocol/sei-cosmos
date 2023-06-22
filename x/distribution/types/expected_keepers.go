@@ -15,6 +15,8 @@ type AccountKeeper interface {
 
 	// TODO remove with genesis 2-phases refactor https://github.com/cosmos/cosmos-sdk/issues/2862
 	SetModuleAccount(sdk.Context, types.ModuleAccountI)
+
+	GetAccountByID(sdk.Context, []byte) sdk.AccAddress
 }
 
 // BankKeeper defines the expected interface needed to retrieve account balances.
@@ -65,6 +67,9 @@ type StakingKeeper interface {
 	GetLastValidatorPower(ctx sdk.Context, valAddr sdk.ValAddress) int64
 
 	GetAllSDKDelegations(ctx sdk.Context) []stakingtypes.Delegation
+
+	GetValidatorID(sdk.Context, sdk.ValAddress) uint32
+	GetValidatorByID(sdk.Context, []byte) sdk.ValAddress
 }
 
 // StakingHooks event hooks for staking validator object (noalias)

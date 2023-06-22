@@ -11,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v040distribution "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v040"
 	v043distribution "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v043"
+	v304distribution "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v304"
 	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
@@ -53,7 +54,7 @@ func TestStoreMigration(t *testing.T) {
 		{
 			"DelegatorStartingInfo",
 			v040distribution.GetDelegatorStartingInfoKey(valAddr, addr2),
-			types.GetDelegatorStartingInfoKey(valAddr, addr2),
+			v304distribution.GetDelegatorStartingInfoKey(valAddr, addr2),
 		},
 		{
 			"ValidatorHistoricalRewards",

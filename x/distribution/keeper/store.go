@@ -85,7 +85,7 @@ func (k Keeper) SetPreviousProposerConsAddr(ctx sdk.Context, consAddr sdk.ConsAd
 // get the starting info associated with a delegator
 func (k Keeper) GetDelegatorStartingInfo(ctx sdk.Context, val sdk.ValAddress, del sdk.AccAddress) (period types.DelegatorStartingInfo) {
 	store := ctx.KVStore(k.storeKey)
-	b := store.Get(types.GetDelegatorStartingInfoKey(val, del))
+	b := store.Get(k.getDelegatorStartingInfoKey(ctx, val, del))
 	k.cdc.MustUnmarshal(b, &period)
 	return
 }
@@ -94,19 +94,19 @@ func (k Keeper) GetDelegatorStartingInfo(ctx sdk.Context, val sdk.ValAddress, de
 func (k Keeper) SetDelegatorStartingInfo(ctx sdk.Context, val sdk.ValAddress, del sdk.AccAddress, period types.DelegatorStartingInfo) {
 	store := ctx.KVStore(k.storeKey)
 	b := k.cdc.MustMarshal(&period)
-	store.Set(types.GetDelegatorStartingInfoKey(val, del), b)
+	store.Set(k.getDelegatorStartingInfoKey(ctx, val, del), b)
 }
 
 // check existence of the starting info associated with a delegator
 func (k Keeper) HasDelegatorStartingInfo(ctx sdk.Context, val sdk.ValAddress, del sdk.AccAddress) bool {
 	store := ctx.KVStore(k.storeKey)
-	return store.Has(types.GetDelegatorStartingInfoKey(val, del))
+	return store.Has(k.getDelegatorStartingInfoKey(ctx, val, del))
 }
 
 // delete the starting info associated with a delegator
 func (k Keeper) DeleteDelegatorStartingInfo(ctx sdk.Context, val sdk.ValAddress, del sdk.AccAddress) {
 	store := ctx.KVStore(k.storeKey)
-	store.Delete(types.GetDelegatorStartingInfoKey(val, del))
+	store.Delete(k.getDelegatorStartingInfoKey(ctx, val, del))
 }
 
 // iterate over delegator starting infos
@@ -117,11 +117,24 @@ func (k Keeper) IterateDelegatorStartingInfos(ctx sdk.Context, handler func(val 
 	for ; iter.Valid(); iter.Next() {
 		var info types.DelegatorStartingInfo
 		k.cdc.MustUnmarshal(iter.Value(), &info)
-		val, del := types.GetDelegatorStartingInfoAddresses(iter.Key())
+		val, del := k.GetDelegatorStartingInfoAddresses(ctx, iter.Key())
 		if handler(val, del, info) {
 			break
 		}
 	}
+}
+
+// GetDelegatorStartingInfoAddresses creates the addresses from a delegator starting info key.
+func (k Keeper) GetDelegatorStartingInfoAddresses(ctx sdk.Context, key []byte) (valAddr sdk.ValAddress, delAddr sdk.AccAddress) {
+	valAddr = k.stakingKeeper.GetValidatorByID(ctx, key[1:5])
+	delAddr = k.authKeeper.GetAccountByID(ctx, key[5:13])
+	return
+}
+
+func (k Keeper) getDelegatorStartingInfoKey(ctx sdk.Context, val sdk.ValAddress, del sdk.AccAddress) []byte {
+	valID := k.stakingKeeper.GetValidatorID(ctx, val)
+	accountNumber := k.authKeeper.GetAccount(ctx, del).GetAccountNumber()
+	return types.GetDelegatorStartingInfoKey(valID, accountNumber)
 }
 
 // get historical rewards for a particular period

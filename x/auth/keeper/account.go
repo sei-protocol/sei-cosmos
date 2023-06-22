@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"encoding/binary"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 )
@@ -21,6 +23,11 @@ func (ak AccountKeeper) NewAccount(ctx sdk.Context, acc types.AccountI) types.Ac
 	if err := acc.SetAccountNumber(ak.GetNextAccountNumber(ctx)); err != nil {
 		panic(err)
 	}
+
+	accNumBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(accNumBz, acc.GetAccountNumber())
+	store := ctx.KVStore(ak.key)
+	store.Set(types.AddressByIDKey(accNumBz), acc.GetAddress())
 
 	return acc
 }
@@ -87,4 +94,9 @@ func (ak AccountKeeper) IterateAccounts(ctx sdk.Context, cb func(account types.A
 			break
 		}
 	}
+}
+
+func (ak AccountKeeper) GetAccountByID(ctx sdk.Context, idBz []byte) sdk.AccAddress {
+	store := ctx.KVStore(ak.key)
+	return store.Get(types.AddressByIDKey(idBz))
 }

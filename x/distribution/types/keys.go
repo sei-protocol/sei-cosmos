@@ -81,22 +81,6 @@ func GetDelegatorWithdrawInfoAddress(key []byte) (delAddr sdk.AccAddress) {
 	return sdk.AccAddress(addr)
 }
 
-// GetDelegatorStartingInfoAddresses creates the addresses from a delegator starting info key.
-func GetDelegatorStartingInfoAddresses(key []byte) (valAddr sdk.ValAddress, delAddr sdk.AccAddress) {
-	// key is in the format:
-	// 0x04<valAddrLen (1 Byte)><valAddr_Bytes><accAddrLen (1 Byte)><accAddr_Bytes>
-	kv.AssertKeyAtLeastLength(key, 2)
-	valAddrLen := int(key[1])
-	kv.AssertKeyAtLeastLength(key, 3+valAddrLen)
-	valAddr = sdk.ValAddress(key[2 : 2+valAddrLen])
-	delAddrLen := int(key[2+valAddrLen])
-	kv.AssertKeyAtLeastLength(key, 4+valAddrLen)
-	delAddr = sdk.AccAddress(key[3+valAddrLen:])
-	kv.AssertKeyLength(delAddr.Bytes(), delAddrLen)
-
-	return
-}
-
 // GetValidatorHistoricalRewardsAddressPeriod creates the address & period from a validator's historical rewards key.
 func GetValidatorHistoricalRewardsAddressPeriod(key []byte) (valAddr sdk.ValAddress, period uint64) {
 	// key is in the format:
@@ -163,8 +147,12 @@ func GetDelegatorWithdrawAddrKey(delAddr sdk.AccAddress) []byte {
 }
 
 // GetDelegatorStartingInfoKey creates the key for a delegator's starting info.
-func GetDelegatorStartingInfoKey(v sdk.ValAddress, d sdk.AccAddress) []byte {
-	return append(append(DelegatorStartingInfoPrefix, address.MustLengthPrefix(v.Bytes())...), address.MustLengthPrefix(d.Bytes())...)
+func GetDelegatorStartingInfoKey(valID uint32, delAccNum uint64) []byte {
+	valBz := make([]byte, 4)
+	delBz := make([]byte, 8)
+	binary.BigEndian.PutUint32(valBz, valID)
+	binary.BigEndian.PutUint64(delBz, delAccNum)
+	return append(append(DelegatorStartingInfoPrefix, valBz...), delBz...)
 }
 
 // GetValidatorHistoricalRewardsPrefix creates the prefix key for a validator's historical rewards.

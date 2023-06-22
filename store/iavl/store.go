@@ -56,7 +56,7 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 	tree, err := iavl.NewMutableTreeWithOpts(db, cacheSize, &iavl.Options{
 		InitialVersion:  initialVersion,
 		Sync:            false,
-		VersionsToKeep:  2,
+		SeparateOphanVersionsToKeep:  2,
 		OrphanDirectory: "/root/.sei/data/orphan",
 	}, disableFastNode)
 	if err != nil {

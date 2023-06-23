@@ -99,7 +99,7 @@ separate-orphan-versions-to-keep = {{ .BaseConfig.SeparateOrphanVersionsToKeep }
 num-orphan-per-file = {{ .BaseConfig.NumOrphanPerFile }}
 
 # if separate-orphan-storage is true, where to store orphan data
-orphan-dir = {{ .BaseConfig.OrphanDirectory }}
+orphan-dir = "{{ .BaseConfig.OrphanDirectory }}"
 
 ###############################################################################
 ###                         Telemetry Configuration                         ###

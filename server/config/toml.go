@@ -85,7 +85,13 @@ iavl-disable-fastnode = {{ .BaseConfig.IAVLDisableFastNode }}
 # Default is 0.
 compaction-interval = {{ .BaseConfig.CompactionInterval }}
 
+# deprecated
 no-versioning = {{ .BaseConfig.NoVersioning }}
+
+separate-orphan-storage = {{ .BaseConfig.SeparateOrphanStorage }}
+separate-orphan-versions-to-keep = {{ .BaseConfig.SeparateOrphanVersionsToKeep }}
+num-orphan-per-file = {{ .BaseConfig.NumOrphanPerFile }}
+orphan-dir = {{ .BaseConfig.OrphanDirectory }}
 
 ###############################################################################
 ###                         Telemetry Configuration                         ###

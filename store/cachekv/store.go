@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -47,7 +48,13 @@ func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
 		keys = append(keys, k)
 	}
 	for _, key := range keys {
-		val, _ := b.Get(key)
+		val, ok := b.Get(key)
+		if !ok {
+			panic(fmt.Sprintf("Range is supposed to be atomic but is not when getting %s", key))
+		}
+		if val == nil {
+			panic(fmt.Sprintf("cache backend is not supposed to have nil values but got one for %s", key))
+		}
 		if !f(key, val) {
 			break
 		}
@@ -165,6 +172,10 @@ func (store *Store) Write() {
 	// Not the best, but probably not a bottleneck depending.
 	keys := make([]string, 0, store.cache.Len())
 
+	parent := store.parent
+	storeType := parent.GetStoreType()
+	cacheLen := store.cache.Len()
+	fmt.Printf("store %s has a cache size of %d\n", storeType, cacheLen)
 	store.cache.Range(func(key string, dbValue *types.CValue) bool {
 		if dbValue.Dirty() {
 			keys = append(keys, key)

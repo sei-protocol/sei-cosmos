@@ -74,7 +74,7 @@ const (
 	// state sync-related flags
 	FlagStateSyncSnapshotInterval   = "state-sync.snapshot-interval"
 	FlagStateSyncSnapshotKeepRecent = "state-sync.snapshot-keep-recent"
-	FlagStateSyncSnapshotDir        = "state-sync.snapshot-dir"
+	FlagStateSyncSnapshotDir        = "state-sync.snapshot-directory"
 
 	// gRPC-related flags
 	flagGRPCOnly       = "grpc-only"

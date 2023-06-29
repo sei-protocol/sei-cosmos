@@ -235,7 +235,8 @@ snapshot-keep-recent = {{ .StateSync.SnapshotKeepRecent }}
 
 # snapshot-directory sets the directory for where state sync snapshots are persisted.
 # default is emtpy which will then store under the app home directory same as before.
-snapshot-directory = {{ .StateSync.SnapshotDirectory }}
+snapshot-directory = "{{ .StateSync.SnapshotDirectory }}"
+
 `
 
 var configTemplate *template.Template

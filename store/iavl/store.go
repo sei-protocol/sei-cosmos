@@ -37,8 +37,7 @@ var (
 
 // Store Implements types.KVStore and CommitKVStore.
 type Store struct {
-	tree    Tree
-	treeMtx *sync.RWMutex
+	tree Tree
 }
 
 // LoadStore returns an IAVL Store as a CommitKVStore. Internally, it will load the
@@ -97,8 +96,7 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 	}
 
 	return &Store{
-		tree:    tree,
-		treeMtx: &sync.RWMutex{},
+		tree: tree,
 	}, nil
 }
 
@@ -110,8 +108,7 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 // passed into iavl.MutableTree
 func UnsafeNewStore(tree *iavl.MutableTree) *Store {
 	return &Store{
-		tree:    tree,
-		treeMtx: &sync.RWMutex{},
+		tree: tree,
 	}
 }
 
@@ -121,13 +118,9 @@ func UnsafeNewStore(tree *iavl.MutableTree) *Store {
 // been pruned, an empty immutable IAVL tree will be used.
 // Any mutable operations executed will result in a panic.
 func (st *Store) GetImmutable(version int64) (*Store, error) {
-	st.treeMtx.RLock()
-	defer st.treeMtx.RUnlock()
-
 	if !st.VersionExists(version) {
 		return &Store{
-			tree:    &immutableTree{&iavl.ImmutableTree{}},
-			treeMtx: &sync.RWMutex{},
+			tree: &immutableTree{&iavl.ImmutableTree{}},
 		}, nil
 	}
 
@@ -137,8 +130,7 @@ func (st *Store) GetImmutable(version int64) (*Store, error) {
 	}
 
 	return &Store{
-		tree:    &immutableTree{iTree},
-		treeMtx: &sync.RWMutex{},
+		tree: &immutableTree{iTree},
 	}, nil
 }
 
@@ -151,8 +143,6 @@ func (st *Store) GetWorkingHash() ([]byte, error) {
 // Normally commit should always bump version. Commit without version bump is
 // needed by use cases like rollback
 func (st *Store) Commit(bumpVersion bool) types.CommitID {
-	st.treeMtx.Lock()
-	defer st.treeMtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "iavl", "commit")
 
 	var hash []byte

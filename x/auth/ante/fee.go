@@ -134,7 +134,9 @@ func (d DeductFeeDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sd
 
 func (dfd DeductFeeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	startTime := time.Now()
-	defer fmt.Printf("PSUDEBUG - DeductFeeDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
+	defer func() {
+		fmt.Printf("PSUDEBUG - DeductFeeDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
+	}()
 	fee, priority, err := dfd.txFeeChecker(ctx, tx, simulate, dfd.paramsKeeper)
 	if err != nil {
 		return ctx, err

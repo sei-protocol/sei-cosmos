@@ -2,6 +2,8 @@ package ante
 
 import (
 	"encoding/hex"
+	"fmt"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
@@ -26,6 +28,8 @@ func NewValidateBasicDecorator() ValidateBasicDecorator {
 }
 
 func (vbd ValidateBasicDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
+	startTime := time.Now()
+	fmt.Printf("PSUDEBUG - ValidateBasicDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	// no need to validate basic on recheck tx, call next antehandler
 	if ctx.IsReCheckTx() {
 		return next(ctx, tx, simulate)
@@ -52,6 +56,8 @@ func NewValidateMemoDecorator(ak AccountKeeper) ValidateMemoDecorator {
 }
 
 func (vmd ValidateMemoDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
+	startTime := time.Now()
+	fmt.Printf("PSUDEBUG - ValidateMemoDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	memoTx, ok := tx.(sdk.TxWithMemo)
 	if !ok {
 		return ctx, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "invalid transaction type")
@@ -107,6 +113,8 @@ func NewConsumeGasForTxSizeDecorator(ak AccountKeeper) ConsumeTxSizeGasDecorator
 }
 
 func (cgts ConsumeTxSizeGasDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
+	startTime := time.Now()
+	fmt.Printf("PSUDEBUG - ConsumeTxSizeGasDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	sigTx, ok := tx.(authsigning.SigVerifiableTx)
 	if !ok {
 		return ctx, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "invalid tx type")
@@ -211,6 +219,8 @@ func NewTxTimeoutHeightDecorator() TxTimeoutHeightDecorator {
 // If a height timeout is provided (non-zero) and is less than the current block
 // height, then an error is returned.
 func (txh TxTimeoutHeightDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
+	startTime := time.Now()
+	fmt.Printf("PSUDEBUG - TxTimeoutHeightDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	timeoutTx, ok := tx.(TxWithTimeoutHeight)
 	if !ok {
 		return ctx, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "expected tx to implement TxWithTimeoutHeight")

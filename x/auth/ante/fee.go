@@ -3,6 +3,7 @@ package ante
 import (
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkacltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
@@ -132,6 +133,8 @@ func (d DeductFeeDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperation, tx sd
 }
 
 func (dfd DeductFeeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
+	startTime := time.Now()
+	fmt.Printf("PSUDEBUG - DeductFeeDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	fee, priority, err := dfd.txFeeChecker(ctx, tx, simulate, dfd.paramsKeeper)
 	if err != nil {
 		return ctx, err

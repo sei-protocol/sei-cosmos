@@ -5,6 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
+	"time"
 )
 
 var (
@@ -39,6 +40,8 @@ func NewSetUpContextDecorator(gasMeterSetter func(bool, sdk.Context, uint64, sdk
 }
 
 func (sud SetUpContextDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
+	startTime := time.Now()
+	fmt.Printf("PSUDEBUG - SetUpContextDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	// all transactions must implement GasTx
 	gasTx, ok := tx.(GasTx)
 	if !ok {

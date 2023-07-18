@@ -1061,6 +1061,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		msgCtx = msgCtx.WithMessageIndex(i)
 
 		startTime := time.Now()
+		_, handlerSpan := app.TracingInfo.StartWithContext("PSUDEBUG RunMsgHandler", spanCtx)
+
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
 			// ADR 031 request type routing
 			msgResult, err = handler(msgCtx, msg)
@@ -1080,6 +1082,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			eventMsgName = legacyMsg.Type()
 			handler := app.router.Route(msgCtx, msgRoute)
 			if handler == nil {
+				handlerSpan.End()
 				return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s; message index: %d", msgRoute, i)
 			}
 			msgResult, err = handler(msgCtx, msg)
@@ -1089,9 +1092,10 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 				[]metrics.Label{{Name: "type", Value: eventMsgName}},
 			)
 		} else {
+			handlerSpan.End()
 			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route message %+v", msg)
 		}
-
+		handlerSpan.End()
 		if err != nil {
 			return nil, sdkerrors.Wrapf(err, "failed to execute message; message index: %d", i)
 		}
@@ -1117,7 +1121,9 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		}
 		storeAccessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[i]
+		_, validateAccessOperationsSpan := app.TracingInfo.StartWithContext("PSUDEBUG RunMsg ValidateAccessOperatios", spanCtx)
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+		validateAccessOperationsSpan.End()
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {
 				ctx.Logger().Info((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))

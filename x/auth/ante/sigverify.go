@@ -388,7 +388,7 @@ func NewValidateSigCountDecorator(ak AccountKeeper) ValidateSigCountDecorator {
 
 func (vscd ValidateSigCountDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	startTime := time.Now()
-	defer fmt.Printf("PSUDEBUG - ValidateSigCountDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
+	defer func() { fmt.Printf("PSUDEBUG - ValidateSigCountDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds()) }()
 	time.Sleep(5 * time.Millisecond)
 	sigTx, ok := tx.(authsigning.SigVerifiableTx)
 	if !ok {

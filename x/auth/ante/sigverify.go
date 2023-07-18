@@ -59,7 +59,7 @@ func NewSetPubKeyDecorator(ak AccountKeeper) SetPubKeyDecorator {
 
 func (spkd SetPubKeyDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	startTime := time.Now()
-	fmt.Printf("PSUDEBUG - SetPubKeyDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
+	defer fmt.Printf("PSUDEBUG - SetPubKeyDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	sigTx, ok := tx.(authsigning.SigVerifiableTx)
 	if !ok {
 		return ctx, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "invalid tx type")
@@ -153,7 +153,7 @@ func NewSigGasConsumeDecorator(ak AccountKeeper, sigGasConsumer SignatureVerific
 
 func (sgcd SigGasConsumeDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
 	startTime := time.Now()
-	fmt.Printf("PSUDEBUG - SigGasConsumeDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
+	defer fmt.Printf("PSUDEBUG - SigGasConsumeDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	sigTx, ok := tx.(authsigning.SigVerifiableTx)
 	if !ok {
 		return ctx, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "invalid transaction type")
@@ -353,7 +353,7 @@ func (isd IncrementSequenceDecorator) AnteDeps(txDeps []sdkacltypes.AccessOperat
 
 func (isd IncrementSequenceDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	startTime := time.Now()
-	fmt.Printf("PSUDEBUG - IncrementSequenceDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
+	defer fmt.Printf("PSUDEBUG - IncrementSequenceDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	sigTx, ok := tx.(authsigning.SigVerifiableTx)
 	if !ok {
 		return ctx, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "invalid transaction type")
@@ -388,7 +388,7 @@ func NewValidateSigCountDecorator(ak AccountKeeper) ValidateSigCountDecorator {
 
 func (vscd ValidateSigCountDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
 	startTime := time.Now()
-	fmt.Printf("PSUDEBUG - ValidateSigCountDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
+	defer fmt.Printf("PSUDEBUG - ValidateSigCountDecorator took %d ms\n", time.Now().Sub(startTime).Milliseconds())
 	sigTx, ok := tx.(authsigning.SigVerifiableTx)
 	if !ok {
 		return ctx, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "Tx must be a sigTx")

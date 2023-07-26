@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	memiavlcfg "github.com/cosmos/cosmos-sdk/store/config"
+	memiavlcfg "github.com/sei-protocol/mmap-iavl/store/config"
 	"github.com/spf13/viper"
 	"strings"
 

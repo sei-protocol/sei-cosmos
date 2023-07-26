@@ -3,11 +3,11 @@ package config
 import (
 	"bytes"
 	"fmt"
+	memiavlcfg "github.com/cosmos/cosmos-sdk/store/config"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"text/template"
-
-	"github.com/spf13/viper"
 )
 
 const DefaultConfigTemplate = `# This is a TOML config file.
@@ -237,7 +237,7 @@ snapshot-keep-recent = {{ .StateSync.SnapshotKeepRecent }}
 # default is emtpy which will then store under the app home directory same as before.
 snapshot-directory = "{{ .StateSync.SnapshotDirectory }}"
 
-`
+` + memiavlcfg.DefaultConfigTemplate
 
 var configTemplate *template.Template
 

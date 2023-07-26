@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
-	"strings"
-
+	memiavlcfg "github.com/cosmos/cosmos-sdk/store/config"
 	"github.com/spf13/viper"
+	"strings"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -185,12 +185,13 @@ type Config struct {
 	BaseConfig `mapstructure:",squash"`
 
 	// Telemetry defines the application telemetry configuration
-	Telemetry telemetry.Config `mapstructure:"telemetry"`
-	API       APIConfig        `mapstructure:"api"`
-	GRPC      GRPCConfig       `mapstructure:"grpc"`
-	Rosetta   RosettaConfig    `mapstructure:"rosetta"`
-	GRPCWeb   GRPCWebConfig    `mapstructure:"grpc-web"`
-	StateSync StateSyncConfig  `mapstructure:"state-sync"`
+	Telemetry telemetry.Config         `mapstructure:"telemetry"`
+	API       APIConfig                `mapstructure:"api"`
+	GRPC      GRPCConfig               `mapstructure:"grpc"`
+	Rosetta   RosettaConfig            `mapstructure:"rosetta"`
+	GRPCWeb   GRPCWebConfig            `mapstructure:"grpc-web"`
+	StateSync StateSyncConfig          `mapstructure:"state-sync"`
+	MemIAVL   memiavlcfg.MemIAVLConfig `mapstructure:"memiavl"`
 }
 
 // SetMinGasPrices sets the validator's minimum gas prices.
@@ -270,6 +271,7 @@ func DefaultConfig() *Config {
 			SnapshotKeepRecent: 2,
 			SnapshotDirectory:  "",
 		},
+		MemIAVL: memiavlcfg.DefaultMemIAVLConfig(),
 	}
 }
 
@@ -352,6 +354,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			SnapshotKeepRecent: v.GetUint32("state-sync.snapshot-keep-recent"),
 			SnapshotDirectory:  v.GetString("state-sync.snapshot-directory"),
 		},
+		MemIAVL: memiavlcfg.DefaultMemIAVLConfig(),
 	}, nil
 }
 

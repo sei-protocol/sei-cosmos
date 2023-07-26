@@ -1048,10 +1048,6 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 	rs.logger.Info("App State Saved height=%d hash=%X\n", cInfo.CommitID().Version, cInfo.CommitID().Hash)
 }
 
-func (rs *Store) SetOrphanConfig(opts *iavltree.Options) {
-	rs.orphanOpts = opts
-}
-
 func (rs *Store) LastCommitInfo() *types.CommitInfo {
 	rs.lastCommitInfoMtx.RLock()
 	defer rs.lastCommitInfoMtx.RUnlock()

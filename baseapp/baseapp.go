@@ -173,6 +173,7 @@ type BaseApp struct { //nolint: maligned
 type appStore struct {
 	db          dbm.DB               // common DB backend
 	cms         sdk.CommitMultiStore // Main (uncached) state
+	qms         sdk.MultiStore       // Optional alternative state provider for query service
 	storeLoader StoreLoader          // function to handle store loading, may be overridden with SetStoreLoader()
 
 	// an inter-block write-through cache provided to the context during deliverState
@@ -290,9 +291,6 @@ func NewBaseApp(
 		panic("must pass --chain-id when calling 'seid start' or set in ~/.sei/config/client.toml")
 	}
 	app.startCompactionRoutine(db)
-	if app.orphanConfig != nil {
-		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
-	}
 
 	return app
 }

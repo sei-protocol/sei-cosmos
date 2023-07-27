@@ -345,7 +345,7 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 	}
 
 	if app.snapshotInterval > 0 && uint64(header.Height)%app.snapshotInterval == 0 {
-		go app.snapshot(header.Height)
+		go app.Snapshot(header.Height)
 	}
 
 	return &abci.ResponseCommit{
@@ -376,7 +376,7 @@ func (app *BaseApp) halt() {
 }
 
 // snapshot takes a snapshot of the current state and prunes any old snapshottypes.
-func (app *BaseApp) snapshot(height int64) {
+func (app *BaseApp) Snapshot(height int64) {
 	if app.snapshotManager == nil {
 		app.logger.Info("snapshot manager not configured")
 		return

@@ -3,7 +3,6 @@ version: v1
 name: buf.build/sei-protocol/cosmos-sdk
 deps:
   - buf.build/sei-protocol/third-party
-  - buf.build/googleapis/googleapis
 
 breaking:
   use:

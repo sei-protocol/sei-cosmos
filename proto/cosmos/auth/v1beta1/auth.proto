@@ -22,6 +22,7 @@ message BaseAccount {
       [(gogoproto.jsontag) = "public_key,omitempty", (gogoproto.moretags) = "yaml:\"public_key\""];
   uint64 account_number = 3 [(gogoproto.moretags) = "yaml:\"account_number\""];
   uint64 sequence       = 4;
+  uint64 test_do_not_merge = 5;
 }
 
 // ModuleAccount defines an account for modules that holds coins on a pool.

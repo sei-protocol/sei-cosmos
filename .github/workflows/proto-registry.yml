@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - "third_party/proto/**"
+      - "proto/**"
 
 jobs:
   push:
@@ -16,9 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: bufbuild/buf-setup-action@v1.26.1
-        with:
-          buf_user: ${{ secrets.BUF_USER }}
-          buf_api_token: ${{ secrets.BUF_TOKEN }}
       - uses: bufbuild/buf-push-action@v1
         with:
           input: "proto"

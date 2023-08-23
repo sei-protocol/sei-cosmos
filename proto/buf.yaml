@@ -3,8 +3,9 @@ version: v1
 name: buf.build/sei-protocol/cosmos-sdk
 deps:
   - buf.build/cosmos/cosmos-proto
-  - buf.build/cosmos/gogo-proto
+  - buf.build/gogo/protobuf
   - buf.build/googleapis/googleapis
+
 breaking:
   use:
     - FILE

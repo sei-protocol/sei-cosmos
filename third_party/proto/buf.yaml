@@ -1,8 +1,7 @@
-# This module represents buf.build/sei-protocol/cosmos-sdk
+# This module represents buf.build/sei-protocol/third-party
 version: v1
-name: buf.build/sei-protocol/cosmos-sdk
+name: buf.build/sei-protocol/third-party
 deps:
-  - buf.build/sei-protocol/third-party
   - buf.build/googleapis/googleapis
 
 breaking:

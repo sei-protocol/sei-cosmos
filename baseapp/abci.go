@@ -344,13 +344,17 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 		app.halt()
 	}
 
-	if app.snapshotInterval > 0 && uint64(header.Height)%app.snapshotInterval == 0 {
-		go app.Snapshot(header.Height)
-	}
+	app.SnapshotIfApplicable(uint64(header.Height))
 
 	return &abci.ResponseCommit{
 		RetainHeight: retainHeight,
 	}, nil
+}
+
+func (app *BaseApp) SnapshotIfApplicable(height uint64) {
+	if app.snapshotInterval > 0 && height%app.snapshotInterval == 0 {
+		go app.Snapshot(int64(height))
+	}
 }
 
 // halt attempts to gracefully shutdown the node via SIGINT and SIGTERM falling

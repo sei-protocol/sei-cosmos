@@ -6,6 +6,7 @@ import (
 	"compress/zlib"
 	"crypto/sha256"
 	"errors"
+	"github.com/tendermint/tendermint/libs/log"
 	"io"
 	"io/ioutil"
 	"os"
@@ -156,7 +157,7 @@ func setupBusyManager(t *testing.T) *snapshots.Manager {
 	store, err := snapshots.NewStore(db.NewMemDB(), tempdir)
 	require.NoError(t, err)
 	hung := newHungSnapshotter()
-	mgr := snapshots.NewManager(store, hung)
+	mgr := snapshots.NewManager(store, hung, log.NewNopLogger())
 
 	go func() {
 		_, err := mgr.Create(1)

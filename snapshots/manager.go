@@ -12,6 +12,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/snapshots/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 const (
@@ -51,6 +52,7 @@ type Manager struct {
 	store      *Store
 	multistore types.Snapshotter
 	extensions map[string]types.ExtensionSnapshotter
+	logger     log.Logger
 
 	mtx                sync.Mutex
 	operation          operation
@@ -61,11 +63,12 @@ type Manager struct {
 }
 
 // NewManager creates a new manager.
-func NewManager(store *Store, multistore types.Snapshotter) *Manager {
+func NewManager(store *Store, multistore types.Snapshotter, logger log.Logger) *Manager {
 	return &Manager{
 		store:      store,
 		multistore: multistore,
 		extensions: make(map[string]types.ExtensionSnapshotter),
+		logger:     logger,
 	}
 }
 
@@ -160,7 +163,6 @@ func (m *Manager) Create(height uint64) (*types.Snapshot, error) {
 		return nil, err
 	}
 	defer m.end()
-
 	latest, err := m.store.GetLatest()
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "failed to examine latest snapshot")
@@ -169,7 +171,6 @@ func (m *Manager) Create(height uint64) (*types.Snapshot, error) {
 		return nil, sdkerrors.Wrapf(sdkerrors.ErrConflict,
 			"a more recent snapshot already exists at height %v", latest.Height)
 	}
-
 	// Spawn goroutine to generate snapshot chunks and pass their io.ReadClosers through a channel
 	ch := make(chan io.ReadCloser)
 	go m.createSnapshot(height, ch)
@@ -186,6 +187,7 @@ func (m *Manager) createSnapshot(height uint64, ch chan<- io.ReadCloser) {
 	}
 	defer streamWriter.Close()
 	if err := m.multistore.Snapshot(height, streamWriter); err != nil {
+		m.logger.Error("Snapshot creation failed", "err", err)
 		streamWriter.CloseWithError(err)
 		return
 	}

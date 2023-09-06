@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -593,6 +594,15 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 
 func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQuery) abci.ResponseQuery {
 	ctx, err := app.createQueryContext(req.Height, req.Prove)
+	defer func() {
+		// We should close the multistore to avoid leaking resources.
+		if closer, ok := ctx.MultiStore().(io.Closer); ok {
+			err := closer.Close()
+			if err != nil {
+				app.logger.Error("failed to close Cache MultiStore", "err", err)
+			}
+		}
+	}()
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}
@@ -876,6 +886,16 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 	}
 
 	ctx, err := app.createQueryContext(req.Height, req.Prove)
+	defer func() {
+		// We should close the multistore to avoid leaking resources.
+		if closer, ok := ctx.MultiStore().(io.Closer); ok {
+			err := closer.Close()
+			if err != nil {
+				app.logger.Error("failed to close Cache MultiStore", "err", err)
+			}
+		}
+	}()
+	defer func() {}()
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}

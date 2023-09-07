@@ -47,6 +47,7 @@ func (app *BaseApp) RegisterGRPCServer(server gogogrpc.Server) {
 
 		// Create the sdk.Context. Passing false as 2nd arg, as we can't
 		// actually support proofs with gRPC right now.
+		app.logger.Info("[COSMOS-DEBUG] Calling createQueryContext in grpc interceptor", "height", height)
 		sdkCtx, err := app.createQueryContext(height, false)
 		if err != nil {
 			return nil, err

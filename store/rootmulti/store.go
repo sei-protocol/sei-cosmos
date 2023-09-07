@@ -513,13 +513,20 @@ func (rs *Store) PruneStores(clearStorePruningHeights bool, pruningHeights []int
 		return
 	}
 
+	maxHeight := pruningHeights[0]
+	for _, pruneHeight := range pruningHeights[1:] {
+		if pruneHeight > maxHeight {
+			maxHeight = pruneHeight
+		}
+	}
+
 	for key, store := range rs.stores {
 		if store.GetStoreType() == types.StoreTypeIAVL {
 			// If the store is wrapped with an inter-block cache, we must first unwrap
 			// it to get the underlying IAVL store.
 			store = rs.GetCommitKVStore(key)
 
-			if err := store.(*iavl.Store).DeleteVersions(pruningHeights...); err != nil {
+			if err := store.(*iavl.Store).DeleteVersionsTo(maxHeight); err != nil {
 				if errCause := errors.Cause(err); errCause != nil && errCause != iavltree.ErrVersionDoesNotExist {
 					panic(err)
 				}
@@ -798,7 +805,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 
 		for {
 			node, err := exporter.Next()
-			if err == iavltree.ExportDone {
+			if err == iavltree.ErrorExportDone {
 				break
 			} else if err != nil {
 				return err

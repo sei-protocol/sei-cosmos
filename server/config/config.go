@@ -83,11 +83,6 @@ type BaseConfig struct {
 
 	// deprecated
 	NoVersioning bool `mapstructure:"no-versioning"`
-
-	SeparateOrphanStorage        bool   `mapstructure:"separate-orphan-storage"`
-	SeparateOrphanVersionsToKeep int64  `mapstructure:"separate-orphan-versions-to-keep"`
-	NumOrphanPerFile             int    `mapstructure:"num-orphan-per-file"`
-	OrphanDirectory              string `mapstructure:"orphan-dir"`
 }
 
 // APIConfig defines the API listener configuration.
@@ -306,10 +301,6 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			IAVLDisableFastNode:          v.GetBool("iavl-disable-fastnode"),
 			CompactionInterval:           v.GetUint64("compaction-interval"),
 			NoVersioning:                 v.GetBool("no-versioning"),
-			SeparateOrphanStorage:        v.GetBool("separate-orphan-storage"),
-			SeparateOrphanVersionsToKeep: v.GetInt64("separate-orphan-versions-to-keep"),
-			NumOrphanPerFile:             v.GetInt("num-orphan-per-file"),
-			OrphanDirectory:              v.GetString("orphan-dir"),
 		},
 		Telemetry: telemetry.Config{
 			ServiceName:             v.GetString("telemetry.service-name"),

@@ -23,15 +23,15 @@ type (
 		Set(key, value []byte) (bool, error)
 		Remove(key []byte) ([]byte, bool, error)
 		SaveVersion() ([]byte, int64, error)
-		SaveCurrentVersion() ([]byte, int64, error)
-		DeleteVersion(version int64) error
-		DeleteVersions(versions ...int64) error
+		// DeleteVersion(version int64) error
+		// DeleteVersions(versions ...int64) error
+		DeleteVersionsTo(version int64) error
+
 		Version() int64
 		Hash() ([]byte, error)
 		WorkingHash() ([]byte, error)
 		VersionExists(version int64) bool
 		GetVersioned(key []byte, version int64) ([]byte, error)
-		GetVersionedWithProof(key []byte, version int64) ([]byte, *iavl.RangeProof, error)
 		GetImmutable(version int64) (*iavl.ImmutableTree, error)
 		SetInitialVersion(version uint64)
 		LoadVersionForOverwriting(targetVersion int64) (int64, error)
@@ -58,20 +58,12 @@ func (it *immutableTree) Remove(_ []byte) ([]byte, bool, error) {
 	panic("cannot call 'Remove' on an immutable IAVL tree")
 }
 
-func (it *immutableTree) SaveCurrentVersion() ([]byte, int64, error) {
-	panic("cannot call 'SaveVersion' on an immutable IAVL tree")
-}
-
 func (it *immutableTree) SaveVersion() ([]byte, int64, error) {
 	panic("cannot call 'SaveVersion' on an immutable IAVL tree")
 }
 
-func (it *immutableTree) DeleteVersion(_ int64) error {
-	panic("cannot call 'DeleteVersion' on an immutable IAVL tree")
-}
-
-func (it *immutableTree) DeleteVersions(_ ...int64) error {
-	panic("cannot call 'DeleteVersions' on an immutable IAVL tree")
+func (it *immutableTree) DeleteVersionsTo(version int64) error {
+	panic("cannot call 'DeleteVersionsTo' on an immutable IAVL tree")
 }
 
 func (it *immutableTree) SetInitialVersion(_ uint64) {
@@ -92,14 +84,6 @@ func (it *immutableTree) GetVersioned(key []byte, version int64) ([]byte, error)
 	}
 
 	return it.Get(key)
-}
-
-func (it *immutableTree) GetVersionedWithProof(key []byte, version int64) ([]byte, *iavl.RangeProof, error) {
-	if it.Version() != version {
-		return nil, nil, fmt.Errorf("version mismatch on immutable IAVL tree; got: %d, expected: %d", version, it.Version())
-	}
-
-	return it.GetWithProof(key)
 }
 
 func (it *immutableTree) GetImmutable(version int64) (*iavl.ImmutableTree, error) {

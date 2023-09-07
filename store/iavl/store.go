@@ -11,6 +11,7 @@ import (
 	"github.com/cosmos/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
+	cosmoslog "cosmossdk.io/log"
 	tmcrypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
 	dbm "github.com/tendermint/tm-db"
 
@@ -53,16 +54,9 @@ func LoadStore(db dbm.DB, logger log.Logger, key types.StoreKey, id types.Commit
 // provided DB. An error is returned if the version fails to load, or if called with a positive
 // version on an empty tree.
 func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKey, id types.CommitID, lazyLoading bool, initialVersion uint64, cacheSize int, disableFastNode bool, orphanConfig *iavl.Options) (types.CommitKVStore, error) {
-	opts := iavl.Options{
-		InitialVersion: initialVersion,
-		Sync:           false,
-	}
-	if orphanConfig != nil {
-		opts.SeparateOrphanStorage = orphanConfig.SeparateOrphanStorage
-		opts.SeparateOphanVersionsToKeep = orphanConfig.SeparateOphanVersionsToKeep
-		opts.OrphanDirectory = orphanConfig.OrphanDirectory
-	}
-	tree, err := iavl.NewMutableTreeWithOpts(db, cacheSize, &opts, disableFastNode)
+	initialVersionOption := iavl.InitialVersionOption(initialVersion)
+	syncOption := iavl.SyncOption(false)
+	tree, err := iavl.NewMutableTree(db, cacheSize, disableFastNode, cosmoslog.NewNopLogger(), initialVersionOption, syncOption)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +77,8 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 	}
 
 	if lazyLoading {
-		_, err = tree.LazyLoadVersion(id.Version)
+		// _, err = tree.LazyLoadVersion(id.Version)
+		panic("lazy loading removed")
 	} else {
 		_, err = tree.LoadVersion(id.Version)
 	}
@@ -161,7 +156,8 @@ func (st *Store) Commit(bumpVersion bool) types.CommitID {
 	if bumpVersion {
 		hash, version, err = st.tree.SaveVersion()
 	} else {
-		hash, version, err = st.tree.SaveCurrentVersion()
+		// TODO: May need to update this
+		hash, version, err = st.tree.SaveVersion()
 	}
 	if err != nil {
 		panic(err)
@@ -264,8 +260,9 @@ func (st *Store) Delete(key []byte) {
 // DeleteVersions deletes a series of versions from the MutableTree. An error
 // is returned if any single version is invalid or the delete fails. All writes
 // happen in a single batch with a single commit.
-func (st *Store) DeleteVersions(versions ...int64) error {
-	return st.tree.DeleteVersions(versions...)
+
+func (st *Store) DeleteVersionsTo(version int64) error {
+	return st.tree.DeleteVersionsTo(version)
 }
 
 // LoadVersionForOverwriting attempts to load a tree at a previously committed
@@ -314,7 +311,7 @@ func (st *Store) Export(version int64) (*iavl.Exporter, error) {
 	if !ok || tree == nil {
 		return nil, fmt.Errorf("iavl export failed: unable to fetch tree for version %v", version)
 	}
-	return tree.Export(), nil
+	return tree.Export()
 }
 
 // Import imports an IAVL tree at the given version, returning an iavl.Importer for importing.
@@ -388,8 +385,7 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 			panic(fmt.Sprintf("version exists in store but could not retrieve corresponding versioned tree in store, %s", err.Error()))
 		}
 		mtree := &iavl.MutableTree{
-			ITree: iTree,
-			Mtx:   &sync.RWMutex{},
+			ImmutableTree: iTree,
 		}
 
 		// get proof from tree and convert to merkle.Proof before adding to result
@@ -434,14 +430,14 @@ func getProofFromTree(tree *iavl.MutableTree, key []byte, exists bool) *tmcrypto
 
 	if exists {
 		// value was found
-		commitmentProof, err = tree.ImmutableTree().GetMembershipProof(key)
+		commitmentProof, err = tree.ImmutableTree.GetMembershipProof(key)
 		if err != nil {
 			// sanity check: If value was found, membership proof must be creatable
 			panic(fmt.Sprintf("unexpected value for empty proof: %s", err.Error()))
 		}
 	} else {
 		// value wasn't found
-		commitmentProof, err = tree.ImmutableTree().GetNonMembershipProof(key)
+		commitmentProof, err = tree.ImmutableTree.GetNonMembershipProof(key)
 		if err != nil {
 			// sanity check: If value wasn't found, nonmembership proof must be creatable
 			panic(fmt.Sprintf("unexpected error for nonexistence proof: %s", err.Error()))

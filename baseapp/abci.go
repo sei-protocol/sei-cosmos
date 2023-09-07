@@ -895,6 +895,7 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 		// We should close the multistore to avoid leaking resources.
 		if closer, ok := ctx.MultiStore().(io.Closer); ok {
 			err := closer.Close()
+			app.logger.Info("[COSMOS-DEBUG] Closing CacheMultiStore in handleQueryCustom", "height", req.Height)
 			if err != nil {
 				app.logger.Error("failed to close Cache MultiStore", "err", err)
 			}

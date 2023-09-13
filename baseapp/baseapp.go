@@ -798,6 +798,7 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 
 // cacheTxContext returns a new context based off of the provided context with
 // a branched multi-store.
+// TODO: (occ) This is an example of where we wrap the multistore with a cache multistore, and then return a modified context using that multistore
 func (app *BaseApp) cacheTxContext(ctx sdk.Context, checksum [32]byte) (sdk.Context, sdk.CacheMultiStore) {
 	ms := ctx.MultiStore()
 	// TODO: https://github.com/cosmos/cosmos-sdk/issues/2824
@@ -958,6 +959,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps := ctx.TxMsgAccessOps()[acltypes.ANTE_MSG_INDEX]
 
+			// TODO: (occ) This is an example of where we do our current validation. Note that this validation operates on the declared dependencies for a TX / antehandler + the utilized dependencies, whereas the validation
 			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
 				for op := range missingAccessOps {
@@ -1107,6 +1109,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		storeAccessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[i]
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+		// TODO: (occ) This is where we are currently validating our per message dependencies,
+		// whereas validation will be done holistically based on the mvkv for OCC approach
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {
 				ctx.Logger().Info((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))

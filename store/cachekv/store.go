@@ -68,7 +68,7 @@ func (store *Store) GetStoreType() types.StoreType {
 func (store *Store) getFromCache(key []byte) []byte {
 	if cv, ok := store.cache.Load(conv.UnsafeBytesToStr(key)); ok {
 		return cv.(*types.CValue).Value()
-	} 
+	}
 	return store.parent.Get(key)
 }
 
@@ -181,6 +181,8 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
+	// TODO: (occ) Note that for iterators, we'll need to have special handling (discussed in RFC) to ensure proper validation
+
 	// TODO: (occ) Note that for iterators, we'll need to have special handling (discussed in RFC) to ensure proper validation
 
 	var parent, cache types.Iterator

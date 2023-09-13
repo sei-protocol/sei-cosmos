@@ -113,11 +113,13 @@ func (store *Store) Get(key []byte) (value []byte) {
 
 	cacheValue, ok := store.cache.Get(conv.UnsafeBytesToStr(key))
 	if !ok {
+		// TODO: (occ) This is an example of when we fall through when we dont have a cache hit. Similarly, for mvkv, we'll try to serve reads from a local cache thats transient to the TX, and if its NOT present, then we read through AND mark the access (along with the value that was read) for validation
 		value = store.parent.Get(key)
 		store.setCacheValue(key, value, false, false)
 	} else {
 		value = cacheValue.Value()
 	}
+	// TODO: (occ) This is an example of how we currently track accesses
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 
 	return value
@@ -238,6 +240,8 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
+
+	// TODO: (occ) Note that for iterators, we'll need to have special handling (discussed in RFC) to ensure proper validation
 
 	var parent, cache types.Iterator
 

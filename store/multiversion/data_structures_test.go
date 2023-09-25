@@ -19,27 +19,28 @@ func TestMultiversionItemGetLatest(t *testing.T) {
 	mvItem.Set(1, one)
 	value, found = mvItem.GetLatest()
 	require.True(t, found)
-	require.Equal(t, one, value)
+	require.Equal(t, one, value.Value())
 
 	// assert that we STILL get the "one" value since it is the latest
 	zero := []byte("zero")
 	mvItem.Set(0, zero)
 	value, found = mvItem.GetLatest()
 	require.True(t, found)
-	require.Equal(t, one, value)
+	require.Equal(t, one, value.Value())
 
 	// we should see a deletion as the latest now, aka nil value and found == true
 	mvItem.Delete(2)
 	value, found = mvItem.GetLatest()
 	require.True(t, found)
-	require.Nil(t, value)
+	require.True(t, value.IsDeleted())
+	require.Nil(t, value.Value())
 
 	// Overwrite the deleted value with some data
 	two := []byte("two")
 	mvItem.Set(2, two)
 	value, found = mvItem.GetLatest()
 	require.True(t, found)
-	require.Equal(t, two, value)
+	require.Equal(t, two, value.Value())
 }
 
 func TestMultiversionItemGetByIndex(t *testing.T) {
@@ -52,14 +53,14 @@ func TestMultiversionItemGetByIndex(t *testing.T) {
 	// assert that we find a value after it's set
 	one := []byte("one")
 	mvItem.Set(1, one)
+	// should not be found because we specifically search "LESS THAN"
 	value, found = mvItem.GetValueByIndex(1)
+	require.False(t, found)
+	require.Nil(t, value)
+	// querying from "two" should be found
+	value, found = mvItem.GetValueByIndex(2)
 	require.True(t, found)
-	require.Equal(t, one, value)
-
-	// verify that querying for a later index properly returns the `one`
-	value, found = mvItem.GetValueByIndex(3)
-	require.True(t, found)
-	require.Equal(t, one, value)
+	require.Equal(t, one, value.Value())
 
 	// verify that querying for an earlier index returns nil
 	value, found = mvItem.GetValueByIndex(0)
@@ -69,40 +70,123 @@ func TestMultiversionItemGetByIndex(t *testing.T) {
 	// assert that we STILL get the "one" value when querying with a later index
 	zero := []byte("zero")
 	mvItem.Set(0, zero)
+	// verify that querying for zero should ALWAYS return nil
+	value, found = mvItem.GetValueByIndex(0)
+	require.False(t, found)
+	require.Nil(t, value)
+
 	value, found = mvItem.GetValueByIndex(2)
 	require.True(t, found)
-	require.Equal(t, one, value)
-	// verify we get zero when querying with an earlier index
-	value, found = mvItem.GetValueByIndex(0)
+	require.Equal(t, one, value.Value())
+	// verify we get zero when querying with index 1
+	value, found = mvItem.GetValueByIndex(1)
 	require.True(t, found)
-	require.Equal(t, zero, value)
+	require.Equal(t, zero, value.Value())
 
-	// we should see a deletion as the latest now, aka nil value and found == true
+	// we should see a deletion as the latest now, aka nil value and found == true, but index 4 still returns `one`
 	mvItem.Delete(4)
 	value, found = mvItem.GetValueByIndex(4)
 	require.True(t, found)
-	require.Nil(t, value)
-	// should get deletion item for a later index as well
+	require.Equal(t, one, value.Value())
+	// should get deletion item for a later index
 	value, found = mvItem.GetValueByIndex(5)
 	require.True(t, found)
-	require.Nil(t, value)
+	require.True(t, value.IsDeleted())
+
 	// verify that we still read the proper underlying item for an older index
 	value, found = mvItem.GetValueByIndex(3)
 	require.True(t, found)
-	require.Equal(t, one, value)
+	require.Equal(t, one, value.Value())
 
 	// Overwrite the deleted value with some data and verify we read it properly
 	four := []byte("four")
 	mvItem.Set(4, four)
-	value, found = mvItem.GetValueByIndex(4)
-	require.True(t, found)
-	require.Equal(t, four, value)
 	// also reads the four
 	value, found = mvItem.GetValueByIndex(6)
 	require.True(t, found)
-	require.Equal(t, four, value)
+	require.Equal(t, four, value.Value())
 	// still reads the `one`
+	value, found = mvItem.GetValueByIndex(4)
+	require.True(t, found)
+	require.Equal(t, one, value.Value())
+}
+
+func TestMultiversionItemEstimate(t *testing.T) {
+	mvItem := mv.NewMultiVersionItem()
+	// We have no value, should get found == false and a nil value
+	value, found := mvItem.GetValueByIndex(9)
+	require.False(t, found)
+	require.Nil(t, value)
+
+	// assert that we find a value after it's set
+	one := []byte("one")
+	mvItem.Set(1, one)
+	// should not be found because we specifically search "LESS THAN"
+	value, found = mvItem.GetValueByIndex(1)
+	require.False(t, found)
+	require.Nil(t, value)
+	// querying from "two" should be found
+	value, found = mvItem.GetValueByIndex(2)
+	require.True(t, found)
+	require.False(t, value.IsEstimate())
+	require.Equal(t, one, value.Value())
+	// set as estimate
+	mvItem.SetEstimate(1)
+	// should not be found because we specifically search "LESS THAN"
+	value, found = mvItem.GetValueByIndex(1)
+	require.False(t, found)
+	require.Nil(t, value)
+	// querying from "two" should be found as ESTIMATE
+	value, found = mvItem.GetValueByIndex(2)
+	require.True(t, found)
+	require.True(t, value.IsEstimate())
+
+	// verify that querying for an earlier index returns nil
+	value, found = mvItem.GetValueByIndex(0)
+	require.False(t, found)
+	require.Nil(t, value)
+
+	// assert that we STILL get the "one" value when querying with a later index
+	zero := []byte("zero")
+	mvItem.Set(0, zero)
+	// verify that querying for zero should ALWAYS return nil
+	value, found = mvItem.GetValueByIndex(0)
+	require.False(t, found)
+	require.Nil(t, value)
+
+	value, found = mvItem.GetValueByIndex(2)
+	require.True(t, found)
+	require.True(t, value.IsEstimate())
+	// verify we get zero when querying with index 1
+	value, found = mvItem.GetValueByIndex(1)
+	require.True(t, found)
+	require.Equal(t, zero, value.Value())
+	// reset one to no longer be an estiamte
+	mvItem.Set(1, one)
+	// we should see a deletion as the latest now, aka nil value and found == true, but index 4 still returns `one`
+	mvItem.Delete(4)
+	value, found = mvItem.GetValueByIndex(4)
+	require.True(t, found)
+	require.Equal(t, one, value.Value())
+	// should get deletion item for a later index
+	value, found = mvItem.GetValueByIndex(5)
+	require.True(t, found)
+	require.True(t, value.IsDeleted())
+
+	// verify that we still read the proper underlying item for an older index
 	value, found = mvItem.GetValueByIndex(3)
 	require.True(t, found)
-	require.Equal(t, one, value)
+	require.Equal(t, one, value.Value())
+
+	// Overwrite the deleted value with an estimate and verify we read it properly
+	mvItem.SetEstimate(4)
+	// also reads the four
+	value, found = mvItem.GetValueByIndex(6)
+	require.True(t, found)
+	require.True(t, value.IsEstimate())
+	require.False(t, value.IsDeleted())
+	// still reads the `one`
+	value, found = mvItem.GetValueByIndex(4)
+	require.True(t, found)
+	require.Equal(t, one, value.Value())
 }

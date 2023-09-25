@@ -14,7 +14,7 @@ const (
 
 type MultiVersionValue interface {
 	GetLatest() (value MultiVersionValueItem, found bool)
-	GetValueByIndex(index int) (value MultiVersionValueItem, found bool)
+	GetLatestBeforeIndex(index int) (value MultiVersionValueItem, found bool)
 	Set(index int, value []byte)
 	SetEstimate(index int)
 	Delete(index int)
@@ -58,7 +58,7 @@ func (item *multiVersionItem) GetLatest() (MultiVersionValueItem, bool) {
 // GetLatest returns the latest written value to the btree prior to the index passed in, and returns a boolean indicating whether it was found.
 //
 // A `nil` value along with `found=true` indicates a deletion that has occurred and the underlying parent store doesn't need to be hit.
-func (item *multiVersionItem) GetValueByIndex(index int) (MultiVersionValueItem, bool) {
+func (item *multiVersionItem) GetLatestBeforeIndex(index int) (MultiVersionValueItem, bool) {
 	item.mtx.RLock()
 	defer item.mtx.RUnlock()
 

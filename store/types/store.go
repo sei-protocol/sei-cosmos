@@ -244,6 +244,10 @@ type KVStore interface {
 	ReverseIterator(start, end []byte) Iterator
 
 	GetWorkingHash() ([]byte, error)
+
+	// Get value in the underlying storage for key, regardless of dirty values in the cache layer
+	// If the store doesn't have a cache layer, delegate the call to the underlying storage.
+	GetCommitted(key []byte) []byte
 }
 
 // Iterator is an alias db's Iterator for convenience.

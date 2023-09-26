@@ -452,6 +452,11 @@ func getProofFromTree(tree *iavl.MutableTree, key []byte, exists bool) *tmcrypto
 	return &tmcrypto.ProofOps{Ops: []tmcrypto.ProofOp{op.ProofOp()}}
 }
 
+// iavl is uncached
+func (st *Store) GetCommitted(key []byte) []byte {
+	return st.Get(key)
+}
+
 //----------------------------------------
 
 // Implements types.Iterator.

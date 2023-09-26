@@ -95,5 +95,9 @@ func (dsa Store) CacheWrapWithListeners(storeKey types.StoreKey, listeners []typ
 	return cachekv.NewStore(listenkv.NewStore(dsa, storeKey, listeners), storeKey, types.DefaultCacheSizeLimit)
 }
 
+func (dsa Store) GetCommitted(key []byte) []byte {
+	return dsa.Get(key)
+}
+
 // dbm.DB implements KVStore so we can CacheKVStore it.
 var _ types.KVStore = Store{}

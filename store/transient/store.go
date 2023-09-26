@@ -42,3 +42,8 @@ func (ts *Store) LastCommitID() (id types.CommitID) {
 func (ts *Store) GetStoreType() types.StoreType {
 	return types.StoreTypeTransient
 }
+
+// delegating to parent since GasKV does not have a cache layer
+func (ts *Store) GetCommitted(key []byte) []byte {
+	return ts.GetCommitted(key)
+}

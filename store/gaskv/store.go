@@ -105,6 +105,11 @@ func (gs *Store) CacheWrapWithListeners(_ types.StoreKey, _ []types.WriteListene
 	panic("cannot CacheWrapWithListeners a GasKVStore")
 }
 
+// delegating to parent since GasKV does not have a cache layer
+func (store *Store) GetCommitted(key []byte) []byte {
+	return store.parent.GetCommitted(key)
+}
+
 func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	var parent types.Iterator
 	if ascending {

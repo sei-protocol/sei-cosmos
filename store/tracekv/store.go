@@ -94,6 +94,11 @@ func (tkv *Store) ReverseIterator(start, end []byte) types.Iterator {
 	return tkv.iterator(start, end, false)
 }
 
+// delegating to parent since TraceKV does not have a cache layer
+func (tkv *Store) GetCommitted(key []byte) []byte {
+	return tkv.GetCommitted(key)
+}
+
 // iterator facilitates iteration over a KVStore. It delegates the necessary
 // calls to it's parent KVStore.
 func (tkv *Store) iterator(start, end []byte, ascending bool) types.Iterator {

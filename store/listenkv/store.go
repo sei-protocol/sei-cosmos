@@ -67,6 +67,11 @@ func (s *Store) ReverseIterator(start, end []byte) types.Iterator {
 	return s.iterator(start, end, false)
 }
 
+// delegating to parent since ListenKV does not have a cache layer
+func (s *Store) GetCommitted(key []byte) []byte {
+	return s.GetCommitted(key)
+}
+
 // iterator facilitates iteration over a KVStore. It delegates the necessary
 // calls to it's parent KVStore.
 func (s *Store) iterator(start, end []byte, ascending bool) types.Iterator {

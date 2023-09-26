@@ -124,6 +124,11 @@ func (s Store) ReverseIterator(start, end []byte) types.Iterator {
 	return newPrefixIterator(s.prefix, start, end, iter)
 }
 
+// delegating to parent since PrefixKV does not have cache
+func (s Store) GetCommitted(key []byte) []byte {
+	return s.parent.GetCommitted(s.key(key))
+}
+
 var _ types.Iterator = (*prefixIterator)(nil)
 
 type prefixIterator struct {

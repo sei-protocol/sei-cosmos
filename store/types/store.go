@@ -295,6 +295,9 @@ type CacheWrap interface {
 
 	// CacheWrapWithListeners recursively wraps again with listening enabled
 	CacheWrapWithListeners(storeKey StoreKey, listeners []WriteListener) CacheWrap
+
+	// Get value in the underlying storage for key, regardless of dirty values in the cache layer
+	GetCommitted(key []byte) []byte
 }
 
 type CacheWrapper interface {

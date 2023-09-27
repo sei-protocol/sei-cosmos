@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"encoding/hex"
+	"encoding/base64"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -750,6 +752,7 @@ func parsePath(path string) (storeName string, subpath string, err error) {
 // given format changes (at the byte level), the snapshot format must be bumped - see
 // TestMultistoreSnapshot_Checksum test.
 func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
+	fmt.Printf("DEBUG - Snapshot height %d\n", height)
 	if height == 0 {
 		return sdkerrors.Wrap(sdkerrors.ErrLogic, "cannot snapshot height 0")
 	}
@@ -784,6 +787,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	// and the following messages contain a SnapshotNode (i.e. an ExportNode). Store changes
 	// are demarcated by new SnapshotStore items.
 	for _, store := range stores {
+		fmt.Printf("DEBUG - Snapshot store %s\n", store.name)
 		totalKeyBytes := int64(0)
 		totalValueBytes := int64(0)
 		totalNumKeys := int64(0)
@@ -823,10 +827,13 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			if err != nil {
 				return err
 			}
+			log.Printf("DEBUG - Snapshot hex IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", hex.EncodeToString(node.Key), hex.EncodeToString(node.Value), node.Height, node.Version)
+			log.Printf("DEBUG - Snapshot base64 IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", base64.StdEncoding.EncodeToString(node.Key), base64.StdEncoding.EncodeToString(node.Value), node.Height, node.Version)
 			totalKeyBytes += int64(len(node.Key))
 			totalValueBytes += int64(len(node.Value))
 			totalNumKeys += 1
 		}
+		fmt.Printf("DEBUG - Snapshot store %s num keys %d, key bytes %d, value bytes %d\n", store.name, totalNumKeys, totalKeyBytes, totalValueBytes)
 		telemetry.SetGaugeWithLabels(
 			[]string{"iavl", "store", "total_num_keys"},
 			float32(totalNumKeys),
@@ -855,6 +862,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 func (rs *Store) Restore(
 	height uint64, format uint32, protoReader protoio.Reader,
 ) (snapshottypes.SnapshotItem, error) {
+	fmt.Printf("DEBUG - Restore height %d\n", height)
 	// Import nodes into stores. The first item is expected to be a SnapshotItem containing
 	// a SnapshotStoreItem, telling us which store to import into. The following items will contain
 	// SnapshotNodeItem (i.e. ExportNode) until we reach the next SnapshotStoreItem or EOF.
@@ -872,6 +880,7 @@ loop:
 
 		switch item := snapshotItem.Item.(type) {
 		case *snapshottypes.SnapshotItem_Store:
+			fmt.Printf("DEBUG - Restore snapshot type SnapshotItem_Store\n")
 			if importer != nil {
 				err = importer.Commit()
 				if err != nil {
@@ -890,6 +899,7 @@ loop:
 			defer importer.Close()
 
 		case *snapshottypes.SnapshotItem_IAVL:
+			fmt.Printf("DEBUG - Restore snapshot type SnapshotItem_IAVL\n")
 			if importer == nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(sdkerrors.ErrLogic, "received IAVL node item before store item")
 			}
@@ -911,6 +921,8 @@ loop:
 			if node.Height == 0 && node.Value == nil {
 				node.Value = []byte{}
 			}
+			fmt.Printf("DEBUG - Restore snapshot hex Key: %s, Value: %s, Height: %s. Version: %d\n", hex.EncodeToString(item.IAVL.Key), hex.EncodeToString(item.IAVL.Value), int8(item.IAVL.Height), item.IAVL.Version)
+			fmt.Printf("DEBUG - Restore snapshot base64 Key: %s, Value: %s, Height: %s. Version: %d\n", base64.StdEncoding.EncodeToString(item.IAVL.Key), base64.StdEncoding.EncodeToString(item.IAVL.Value), int8(item.IAVL.Height), item.IAVL.Version)
 			err := importer.Add(node)
 			if err != nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "IAVL node import failed")

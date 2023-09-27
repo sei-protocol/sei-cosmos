@@ -827,8 +827,8 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			if err != nil {
 				return err
 			}
-			log.Printf("DEBUG - Snapshot hex IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", hex.EncodeToString(node.Key), hex.EncodeToString(node.Value), node.Height, node.Version)
-			log.Printf("DEBUG - Snapshot base64 IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", base64.StdEncoding.EncodeToString(node.Key), base64.StdEncoding.EncodeToString(node.Value), node.Height, node.Version)
+			fmt.Printf("DEBUG - Snapshot hex IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", hex.EncodeToString(node.Key), hex.EncodeToString(node.Value), node.Height, node.Version)
+			fmt.Printf("DEBUG - Snapshot base64 IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", base64.StdEncoding.EncodeToString(node.Key), base64.StdEncoding.EncodeToString(node.Value), node.Height, node.Version)
 			totalKeyBytes += int64(len(node.Key))
 			totalValueBytes += int64(len(node.Value))
 			totalNumKeys += 1

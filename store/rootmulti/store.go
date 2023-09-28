@@ -1,9 +1,7 @@
 package rootmulti
 
 import (
-	"encoding/base64"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"math"
@@ -752,7 +750,6 @@ func parsePath(path string) (storeName string, subpath string, err error) {
 // given format changes (at the byte level), the snapshot format must be bumped - see
 // TestMultistoreSnapshot_Checksum test.
 func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
-	fmt.Printf("DEBUG - Snapshot height %d\n", height)
 	if height == 0 {
 		return sdkerrors.Wrap(sdkerrors.ErrLogic, "cannot snapshot height 0")
 	}
@@ -787,7 +784,6 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	// and the following messages contain a SnapshotNode (i.e. an ExportNode). Store changes
 	// are demarcated by new SnapshotStore items.
 	for _, store := range stores {
-		fmt.Printf("DEBUG - Snapshot store %s\n", store.name)
 		totalKeyBytes := int64(0)
 		totalValueBytes := int64(0)
 		totalNumKeys := int64(0)
@@ -828,13 +824,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("DEBUG - Snapshot hex IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", hex.EncodeToString(node.Key), hex.EncodeToString(node.Value), node.Height, node.Version)
-			fmt.Printf("DEBUG - Snapshot base64 IAVL Node - Key: %s, Value: %s, Height: %d, Version: %d\n", base64.StdEncoding.EncodeToString(node.Key), base64.StdEncoding.EncodeToString(node.Value), node.Height, node.Version)
 			totalKeyBytes += int64(len(node.Key))
 			totalValueBytes += int64(len(node.Value))
 			totalNumKeys += 1
 		}
-		fmt.Printf("DEBUG - Snapshot store %s num keys %d, key bytes %d, value bytes %d\n", store.name, totalNumKeys, totalKeyBytes, totalValueBytes)
 		telemetry.SetGaugeWithLabels(
 			[]string{"iavl", "store", "total_num_keys"},
 			float32(totalNumKeys),
@@ -880,7 +873,6 @@ loop:
 
 		switch item := snapshotItem.Item.(type) {
 		case *snapshottypes.SnapshotItem_Store:
-			fmt.Printf("DEBUG - Restore snapshot type SnapshotItem_Store\n")
 			if importer != nil {
 				err = importer.Commit()
 				if err != nil {

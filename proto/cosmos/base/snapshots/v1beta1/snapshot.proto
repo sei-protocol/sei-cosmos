@@ -35,6 +35,12 @@ message SnapshotStoreItem {
   string name = 1;
 }
 
+// NodeKey represents a key of a node in the DB
+message SnapshotNodeKey {
+  int64 version = 1;
+  uint32 nonce = 2;
+}
+
 // SnapshotIAVLItem is an exported IAVL node.
 message SnapshotIAVLItem {
   bytes key   = 1;
@@ -43,6 +49,8 @@ message SnapshotIAVLItem {
   int64 version = 3;
   // height is depth of the tree.
   int32 height = 4;
+  // Inner Node Key with version and nonce
+  SnapshotNodeKey innerkey = 5;
 }
 
 // SnapshotExtensionMeta contains metadata about an external snapshotter.

@@ -16,7 +16,7 @@ PATH="${PATH}:${HOME}/go/bin"
 
 proto_dirs=$(find ./proto -path -prune -o -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq)
 for dir in $proto_dirs; do
-  buf protoc \
+  /usr/local/bin/buf protoc \
     -I "proto" \
     -I "third_party/proto" \
     --gocosmos_out=plugins=interfacetype+grpc,\
@@ -36,7 +36,7 @@ done
 go mod tidy
 
 # generate codec/testdata proto code
-buf protoc -I "proto" -I "third_party/proto" -I "testutil/testdata" --gocosmos_out=plugins=interfacetype+grpc,\
+/usr/local/bin/buf protoc -I "proto" -I "third_party/proto" -I "testutil/testdata" --gocosmos_out=plugins=interfacetype+grpc,\
 Mgoogle/protobuf/any.proto=github.com/cosmos/cosmos-sdk/codec/types:. ./testutil/testdata/*.proto
 
 # move proto files to the right places

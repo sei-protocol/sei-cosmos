@@ -1,15 +1,15 @@
 package rootmulti
 
 import (
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math"
 	"sort"
 	"strings"
 	"sync"
-	"encoding/hex"
-	"encoding/base64"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -817,10 +817,11 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			err = protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_IAVL{
 					IAVL: &snapshottypes.SnapshotIAVLItem{
-						Key:     node.Key,
-						Value:   node.Value,
-						Height:  int32(node.Height),
-						Version: node.Version,
+						Key:      node.Key,
+						Value:    node.Value,
+						Height:   int32(node.Height),
+						Version:  node.Version,
+						Innerkey: node.Innerkey,
 					},
 				},
 			})
@@ -862,7 +863,6 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 func (rs *Store) Restore(
 	height uint64, format uint32, protoReader protoio.Reader,
 ) (snapshottypes.SnapshotItem, error) {
-	fmt.Printf("DEBUG - Restore height %d\n", height)
 	// Import nodes into stores. The first item is expected to be a SnapshotItem containing
 	// a SnapshotStoreItem, telling us which store to import into. The following items will contain
 	// SnapshotNodeItem (i.e. ExportNode) until we reach the next SnapshotStoreItem or EOF.
@@ -899,7 +899,6 @@ loop:
 			defer importer.Close()
 
 		case *snapshottypes.SnapshotItem_IAVL:
-			fmt.Printf("DEBUG - Restore snapshot type SnapshotItem_IAVL\n")
 			if importer == nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(sdkerrors.ErrLogic, "received IAVL node item before store item")
 			}
@@ -908,10 +907,11 @@ loop:
 					item.IAVL.Height, math.MaxInt8)
 			}
 			node := &iavltree.ExportNode{
-				Key:     item.IAVL.Key,
-				Value:   item.IAVL.Value,
-				Height:  int8(item.IAVL.Height),
-				Version: item.IAVL.Version,
+				Key:      item.IAVL.Key,
+				Value:    item.IAVL.Value,
+				Height:   int8(item.IAVL.Height),
+				Version:  item.IAVL.Version,
+				InnerKey: item.IAVL.InnerKey,
 			}
 			// Protobuf does not differentiate between []byte{} as nil, but fortunately IAVL does
 			// not allow nil keys nor nil values for leaf nodes, so we can always set them to empty.
@@ -921,8 +921,6 @@ loop:
 			if node.Height == 0 && node.Value == nil {
 				node.Value = []byte{}
 			}
-			fmt.Printf("DEBUG - Restore snapshot hex Key: %s, Value: %s, Height: %s. Version: %d\n", hex.EncodeToString(item.IAVL.Key), hex.EncodeToString(item.IAVL.Value), int8(item.IAVL.Height), item.IAVL.Version)
-			fmt.Printf("DEBUG - Restore snapshot base64 Key: %s, Value: %s, Height: %s. Version: %d\n", base64.StdEncoding.EncodeToString(item.IAVL.Key), base64.StdEncoding.EncodeToString(item.IAVL.Value), int8(item.IAVL.Height), item.IAVL.Version)
 			err := importer.Add(node)
 			if err != nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "IAVL node import failed")

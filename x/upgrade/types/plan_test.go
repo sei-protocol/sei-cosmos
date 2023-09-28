@@ -149,8 +149,82 @@ func TestShouldExecute(t *testing.T) {
 		tc := tc // copy to local variable for scopelint
 		t.Run(name, func(t *testing.T) {
 			ctx := sdk.NewContext(nil, tmproto.Header{Height: tc.ctxHeight, Time: tc.ctxTime}, false, log.NewNopLogger())
-			should := tc.p.ShouldExecute(ctx)
+			should := tc.p.MustExecute(ctx)
 			assert.Equal(t, tc.expected, should)
+		})
+	}
+}
+
+func TestUpgradeDetails(t *testing.T) {
+	tests := []struct {
+		name    string
+		plan    types.Plan
+		want    types.UpgradeDetails
+		wantErr bool
+	}{
+		{
+			name: "valid upgrade details",
+			plan: types.Plan{
+				Info: `{"upgradeType":"minor"}`,
+			},
+			want: types.UpgradeDetails{
+				UpgradeType: "minor",
+			},
+		},
+		{
+			name: "invalid json in Info",
+			plan: types.Plan{
+				Info: `{upgradeType:"minor"}`,
+			},
+			want: types.UpgradeDetails{},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.plan.UpgradeDetails()
+			if got != test.want {
+				t.Errorf("UpgradeDetails() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestIsMinorRelease(t *testing.T) {
+	tests := []struct {
+		name string
+		plan types.Plan
+		want bool
+	}{
+		{
+			name: "minor release",
+			plan: types.Plan{
+				Info: `{"upgradeType":"minor"}`,
+			},
+			want: true,
+		},
+		{
+			name: "not a minor release",
+			plan: types.Plan{
+				Info: `{"upgradeType":"major"}`,
+			},
+			want: false,
+		},
+		{
+			name: "default to major release",
+			plan: types.Plan{
+				Info: "",
+			},
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ud := test.plan.UpgradeDetails()
+			if got := ud.IsMinorRelease(); got != test.want {
+				t.Errorf("IsMinorRelease() = %v, want %v", got, test.want)
+			}
 		})
 	}
 }

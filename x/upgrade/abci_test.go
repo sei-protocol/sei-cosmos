@@ -35,6 +35,8 @@ type TestSuite struct {
 	ctx     sdk.Context
 }
 
+const minorUpgradeInfo = `{"upgradeType":"minor"}`
+
 var s TestSuite
 
 func setupTest(height int64, skip map[int64]bool) TestSuite {
@@ -461,6 +463,79 @@ func TestBinaryVersion(t *testing.T) {
 				return newCtx, req
 			},
 			true,
+		},
+		{
+			"test not panic: minor version upgrade in future and not applied",
+			func() (sdk.Context, abci.RequestBeginBlock) {
+				err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{
+					Title: "Upgrade test",
+					Plan:  types.Plan{Name: "test2", Height: 13, Info: minorUpgradeInfo},
+				})
+				require.NoError(t, err)
+
+				newCtx := s.ctx.WithBlockHeight(12)
+				req := abci.RequestBeginBlock{Header: newCtx.BlockHeader()}
+				return newCtx, req
+			},
+			false,
+		},
+		{
+			"test panic: minor version upgrade is due",
+			func() (sdk.Context, abci.RequestBeginBlock) {
+				err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{
+					Title: "Upgrade test",
+					Plan:  types.Plan{Name: "test2", Height: 13, Info: minorUpgradeInfo},
+				})
+				require.NoError(t, err)
+
+				newCtx := s.ctx.WithBlockHeight(13)
+				req := abci.RequestBeginBlock{Header: newCtx.BlockHeader()}
+				return newCtx, req
+			},
+			true,
+		},
+		{
+			"test not panic: minor upgrade is in future and already applied",
+			func() (sdk.Context, abci.RequestBeginBlock) {
+				s.keeper.SetUpgradeHandler("test3", func(_ sdk.Context, _ types.Plan, vm module.VersionMap) (module.VersionMap, error) {
+					return vm, nil
+				})
+
+				err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{
+					Title: "Upgrade test",
+					Plan:  types.Plan{Name: "test3", Height: s.ctx.BlockHeight() + 10, Info: minorUpgradeInfo},
+				})
+				require.NoError(t, err)
+
+				newCtx := s.ctx.WithBlockHeight(12)
+				s.keeper.ApplyUpgrade(newCtx, types.Plan{
+					Name:   "test3",
+					Height: 12,
+				})
+
+				req := abci.RequestBeginBlock{Header: newCtx.BlockHeader()}
+				return newCtx, req
+			},
+			false,
+		},
+		{
+			"test not panic: minor upgrade should apply",
+			func() (sdk.Context, abci.RequestBeginBlock) {
+				s.keeper.SetUpgradeHandler("test4", func(_ sdk.Context, _ types.Plan, vm module.VersionMap) (module.VersionMap, error) {
+					return vm, nil
+				})
+
+				err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{
+					Title: "Upgrade test",
+					Plan:  types.Plan{Name: "test4", Height: s.ctx.BlockHeight() + 10, Info: minorUpgradeInfo},
+				})
+				require.NoError(t, err)
+
+				newCtx := s.ctx.WithBlockHeight(12)
+				req := abci.RequestBeginBlock{Header: newCtx.BlockHeader()}
+				return newCtx, req
+			},
+			false,
 		},
 	}
 

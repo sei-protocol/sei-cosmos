@@ -23,7 +23,7 @@ import (
 func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
 
-	plan, found := k.GetUpgradePlan(ctx)
+	plan, planFound := k.GetUpgradePlan(ctx)
 
 	if !k.DowngradeVerified() {
 		k.SetDowngradeVerified(true)
@@ -33,14 +33,14 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 		// 1. If there is no scheduled upgrade.
 		// 2. If the plan is not ready.
 		// 3. If the plan is ready and skip upgrade height is set for current height.
-		if !found || !plan.ShouldExecute(ctx) || (plan.ShouldExecute(ctx) && k.IsSkipHeight(ctx.BlockHeight())) {
+		if !planFound || !plan.MustExecute(ctx) || (plan.MustExecute(ctx) && k.IsSkipHeight(ctx.BlockHeight())) {
 			if lastAppliedPlan != "" && !k.HasHandler(lastAppliedPlan) {
 				panic(fmt.Sprintf("Wrong app version %d, upgrade handler is missing for %s upgrade plan", ctx.ConsensusParams().Version.AppVersion, lastAppliedPlan))
 			}
 		}
 	}
 
-	if !found {
+	if !planFound {
 		return
 	}
 
@@ -53,8 +53,8 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 		},
 	)
 
-	// To make sure clear upgrade is executed at the same block
-	if plan.ShouldExecute(ctx) {
+	// If the plan's block height has passed, then it must be the executed version
+	if plan.MustExecute(ctx) {
 		// If skip upgrade has been set for current height, we clear the upgrade plan
 		if k.IsSkipHeight(ctx.BlockHeight()) {
 			skipUpgradeMsg := fmt.Sprintf("UPGRADE \"%s\" SKIPPED at %d: %s", plan.Name, plan.Height, plan.Info)
@@ -65,6 +65,7 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 			return
 		}
 
+		// If we don't have an upgrade handler for this upgrade name, then we need to shutdown
 		if !k.HasHandler(plan.Name) {
 			// Write the upgrade info to disk. The UpgradeStoreLoader uses this info to perform or skip
 			// store migrations.
@@ -86,7 +87,15 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 		return
 	}
 
-	// if we have a pending upgrade, but it is not yet time, make sure we did not
+	// if minor release pending, it is allowed to run before the scheduled update height
+	if plan.UpgradeDetails().IsMinorRelease() && k.HasHandler(plan.Name) {
+		ctx.Logger().Info(fmt.Sprintf("applying minor upgrade \"%s\" at %s", plan.Name, plan.DueAt()))
+		ctx = ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+		k.ApplyUpgrade(ctx, plan)
+		return
+	}
+
+	// if we have a pending non-minor upgrade, but it is not yet time, make sure we did not
 	// set the handler already
 	if k.HasHandler(plan.Name) {
 		downgradeMsg := fmt.Sprintf("BINARY UPDATED BEFORE TRIGGER! UPGRADE \"%s\" - in binary but not executed on chain", plan.Name)

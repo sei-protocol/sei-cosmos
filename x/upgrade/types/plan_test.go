@@ -149,7 +149,7 @@ func TestShouldExecute(t *testing.T) {
 		tc := tc // copy to local variable for scopelint
 		t.Run(name, func(t *testing.T) {
 			ctx := sdk.NewContext(nil, tmproto.Header{Height: tc.ctxHeight, Time: tc.ctxTime}, false, log.NewNopLogger())
-			should := tc.p.MustExecute(ctx)
+			should := tc.p.ShouldExecute(ctx)
 			assert.Equal(t, tc.expected, should)
 		})
 	}

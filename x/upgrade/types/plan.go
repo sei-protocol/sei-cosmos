@@ -35,8 +35,8 @@ func (p Plan) ValidateBasic() error {
 	return nil
 }
 
-// MustExecute returns true if the Plan is ready to execute given the current context
-func (p Plan) MustExecute(ctx sdk.Context) bool {
+// ShouldExecute returns true if the Plan is ready to execute given the current context
+func (p Plan) ShouldExecute(ctx sdk.Context) bool {
 	if p.Height > 0 {
 		return p.Height <= ctx.BlockHeight()
 	}

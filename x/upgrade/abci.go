@@ -33,7 +33,7 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 		// 1. If there is no scheduled upgrade.
 		// 2. If the plan is not ready.
 		// 3. If the plan is ready and skip upgrade height is set for current height.
-		if !planFound || !plan.MustExecute(ctx) || (plan.MustExecute(ctx) && k.IsSkipHeight(ctx.BlockHeight())) {
+		if !planFound || !plan.ShouldExecute(ctx) || (plan.ShouldExecute(ctx) && k.IsSkipHeight(ctx.BlockHeight())) {
 			if lastAppliedPlan != "" && !k.HasHandler(lastAppliedPlan) {
 				panic(fmt.Sprintf("Wrong app version %d, upgrade handler is missing for %s upgrade plan", ctx.ConsensusParams().Version.AppVersion, lastAppliedPlan))
 			}
@@ -54,54 +54,71 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 	)
 
 	// If the plan's block height has passed, then it must be the executed version
-	if plan.MustExecute(ctx) {
+	if plan.ShouldExecute(ctx) {
 		// If skip upgrade has been set for current height, we clear the upgrade plan
 		if k.IsSkipHeight(ctx.BlockHeight()) {
-			skipUpgradeMsg := fmt.Sprintf("UPGRADE \"%s\" SKIPPED at %d: %s", plan.Name, plan.Height, plan.Info)
-			ctx.Logger().Info(skipUpgradeMsg)
-
-			// Clear the upgrade plan at current height
-			k.ClearUpgradePlan(ctx)
+			skipUpgrade(k, ctx, plan)
 			return
 		}
 
 		// If we don't have an upgrade handler for this upgrade name, then we need to shutdown
 		if !k.HasHandler(plan.Name) {
-			// Write the upgrade info to disk. The UpgradeStoreLoader uses this info to perform or skip
-			// store migrations.
-			err := k.DumpUpgradeInfoWithInfoToDisk(ctx.BlockHeight(), plan.Name, plan.Info)
-			if err != nil {
-				panic(fmt.Errorf("unable to write upgrade info to filesystem: %s", err.Error()))
-			}
-
-			upgradeMsg := BuildUpgradeNeededMsg(plan)
-			// We don't have an upgrade handler for this upgrade name, meaning this software is out of date so shutdown
-			ctx.Logger().Error(upgradeMsg)
-
-			panic(upgradeMsg)
+			panicUpgradeNeeded(k, ctx, plan)
 		}
-		// We have an upgrade handler for this upgrade name, so apply the upgrade
-		ctx.Logger().Info(fmt.Sprintf("applying upgrade \"%s\" at %s", plan.Name, plan.DueAt()))
-		ctx = ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-		k.ApplyUpgrade(ctx, plan)
+
+		applyUpgrade(k, ctx, plan)
 		return
 	}
 
-	// if minor release pending, it is allowed to run before the scheduled update height
-	if plan.UpgradeDetails().IsMinorRelease() && k.HasHandler(plan.Name) {
-		ctx.Logger().Info(fmt.Sprintf("applying minor upgrade \"%s\" at %s", plan.Name, plan.DueAt()))
-		ctx = ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-		k.ApplyUpgrade(ctx, plan)
+	// if not yet upgraded to future release, exit
+	if !k.HasHandler(plan.Name) {
+		return
+	}
+
+	// if running a future minor release, apply the upgrade
+	if plan.UpgradeDetails().IsMinorRelease() {
+		// if the pending upgrade is skipped, don't apply it
+		if k.IsSkipHeight(plan.Height) {
+			skipUpgrade(k, ctx, plan)
+			return
+		}
+		applyUpgrade(k, ctx, plan)
 		return
 	}
 
 	// if we have a pending non-minor upgrade, but it is not yet time, make sure we did not
 	// set the handler already
-	if k.HasHandler(plan.Name) {
-		downgradeMsg := fmt.Sprintf("BINARY UPDATED BEFORE TRIGGER! UPGRADE \"%s\" - in binary but not executed on chain", plan.Name)
-		ctx.Logger().Error(downgradeMsg)
-		panic(downgradeMsg)
+	downgradeMsg := fmt.Sprintf("BINARY UPDATED BEFORE TRIGGER! UPGRADE \"%s\" - in binary but not executed on chain", plan.Name)
+	ctx.Logger().Error(downgradeMsg)
+	panic(downgradeMsg)
+}
+
+func panicUpgradeNeeded(k keeper.Keeper, ctx sdk.Context, plan types.Plan) {
+	// Write the upgrade info to disk. The UpgradeStoreLoader uses this info to perform or skip
+	// store migrations.
+	err := k.DumpUpgradeInfoWithInfoToDisk(ctx.BlockHeight(), plan.Name, plan.Info)
+	if err != nil {
+		panic(fmt.Errorf("unable to write upgrade info to filesystem: %s", err.Error()))
 	}
+
+	upgradeMsg := BuildUpgradeNeededMsg(plan)
+	// We don't have an upgrade handler for this upgrade name, meaning this software is out of date so shutdown
+	ctx.Logger().Error(upgradeMsg)
+
+	panic(upgradeMsg)
+}
+
+func applyUpgrade(k keeper.Keeper, ctx sdk.Context, plan types.Plan) {
+	ctx.Logger().Info(fmt.Sprintf("applying upgrade \"%s\" at %s", plan.Name, plan.DueAt()))
+	ctx = ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	k.ApplyUpgrade(ctx, plan)
+}
+
+// skipUpgrade logs a message that the upgrade has been skipped and clears the upgrade plan.
+func skipUpgrade(k keeper.Keeper, ctx sdk.Context, plan types.Plan) {
+	skipUpgradeMsg := fmt.Sprintf("UPGRADE \"%s\" SKIPPED at %d: %s", plan.Name, plan.Height, plan.Info)
+	ctx.Logger().Info(skipUpgradeMsg)
+	k.ClearUpgradePlan(ctx)
 }
 
 // BuildUpgradeNeededMsg prints the message that notifies that an upgrade is needed.

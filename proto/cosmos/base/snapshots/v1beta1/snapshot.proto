@@ -50,7 +50,9 @@ message SnapshotIAVLItem {
   // height is depth of the tree.
   int32 height = 4;
   // Inner Node Key with version and nonce
-  SnapshotNodeKey innerkey = 5;
+  SnapshotNodeKey innerkey = 5 [
+    (gogoproto.nullable) = false
+  ];
 }
 
 // SnapshotExtensionMeta contains metadata about an external snapshotter.

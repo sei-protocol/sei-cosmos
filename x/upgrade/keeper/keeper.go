@@ -457,7 +457,7 @@ type upgradeInfo struct {
 	Name string `json:"name,omitempty"`
 	// Height has types.Plan.Height value
 	Height int64 `json:"height,omitempty"`
-	// Info is a string, but represents
+	// Info has types.Plan.Info value
 	Info string `json:"info,omitempty"`
 }
 

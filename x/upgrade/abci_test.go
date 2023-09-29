@@ -256,6 +256,38 @@ func TestContains(t *testing.T) {
 	require.False(t, s.keeper.IsSkipHeight(4))
 }
 
+func TestSkipUpgradeSkipMinor(t *testing.T) {
+	var (
+		planHeight int64 = 15
+		height     int64 = 10
+		name             = "minor"
+	)
+	s := setupTest(10, map[int64]bool{planHeight: true})
+
+	newCtx := s.ctx
+
+	req := abci.RequestBeginBlock{Header: newCtx.BlockHeader()}
+	err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{Title: "prop", Plan: types.Plan{
+		Name:   name,
+		Height: planHeight,
+		Info:   minorUpgradeInfo,
+	}})
+	require.NoError(t, err)
+
+	t.Log("Verify if skip upgrade flag clears upgrade plan in both cases")
+	VerifySet(t, map[int64]bool{planHeight: true})
+
+	newCtx = newCtx.WithBlockHeight(height)
+	require.NotPanics(t, func() {
+		s.module.BeginBlock(newCtx, req)
+	})
+
+	// To ensure verification is being done only after both upgrades are cleared
+	t.Log("Verify if both proposals are cleared")
+	VerifyCleared(t, s.ctx)
+	VerifyNotDone(t, s.ctx, name)
+}
+
 func TestSkipUpgradeSkippingAll(t *testing.T) {
 	var (
 		skipOne int64 = 11
@@ -469,11 +501,11 @@ func TestBinaryVersion(t *testing.T) {
 			func() (sdk.Context, abci.RequestBeginBlock) {
 				err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{
 					Title: "Upgrade test",
-					Plan:  types.Plan{Name: "test2", Height: 13, Info: minorUpgradeInfo},
+					Plan:  types.Plan{Name: "test2", Height: 105, Info: minorUpgradeInfo},
 				})
 				require.NoError(t, err)
 
-				newCtx := s.ctx.WithBlockHeight(12)
+				newCtx := s.ctx.WithBlockHeight(100)
 				req := abci.RequestBeginBlock{Header: newCtx.BlockHeader()}
 				return newCtx, req
 			},

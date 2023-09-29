@@ -204,6 +204,13 @@ func TestIsMinorRelease(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "minor release with extra fields",
+			plan: types.Plan{
+				Info: `{"upgradeType":"minor","extra":true}`,
+			},
+			want: true,
+		},
+		{
 			name: "not a minor release",
 			plan: types.Plan{
 				Info: `{"upgradeType":"major"}`,

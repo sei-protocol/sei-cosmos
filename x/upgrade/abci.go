@@ -54,45 +54,49 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 	)
 
 	// If the plan's block height has passed, then it must be the executed version
+	// All major and minor releases are REQUIRED to execute on the scheduled block height
 	if plan.ShouldExecute(ctx) {
 		// If skip upgrade has been set for current height, we clear the upgrade plan
 		if k.IsSkipHeight(ctx.BlockHeight()) {
 			skipUpgrade(k, ctx, plan)
 			return
 		}
-
 		// If we don't have an upgrade handler for this upgrade name, then we need to shutdown
 		if !k.HasHandler(plan.Name) {
 			panicUpgradeNeeded(k, ctx, plan)
 		}
-
 		applyUpgrade(k, ctx, plan)
 		return
 	}
 
-	// if not yet upgraded to future release, exit
-	if !k.HasHandler(plan.Name) {
-		return
-	}
-
-	// if running a future minor release, apply the upgrade
+	// If running a pending minor release, apply the upgrade if handler is present
+	// Minor releases are allowed to run before the scheduled upgrade height, but not required to.
 	if plan.UpgradeDetails().IsMinorRelease() {
 		// if the pending upgrade is skipped, don't apply it
 		if k.IsSkipHeight(plan.Height) {
 			skipUpgrade(k, ctx, plan)
 			return
 		}
+		// if not yet present, then emit a scheduled log (every 100 blocks, to reduce logs)
+		if !k.HasHandler(plan.Name) {
+			if ctx.BlockHeight()%100 == 0 {
+				ctx.Logger().Info(BuildUpgradeScheduledMsg(plan))
+			}
+			return
+		}
 		applyUpgrade(k, ctx, plan)
 		return
 	}
 
-	// if we have a pending non-minor upgrade, but it is not yet time, make sure we did not
-	// set the handler already
-	downgradeMsg := fmt.Sprintf("BINARY UPDATED BEFORE TRIGGER! UPGRADE \"%s\" - in binary but not executed on chain", plan.Name)
-	ctx.Logger().Error(downgradeMsg)
-	panic(downgradeMsg)
+	// if we have a handler for a non-minor upgrade, that means it updated too early and must stop
+	if k.HasHandler(plan.Name) {
+		downgradeMsg := fmt.Sprintf("BINARY UPDATED BEFORE TRIGGER! UPGRADE \"%s\" - in binary but not executed on chain", plan.Name)
+		ctx.Logger().Error(downgradeMsg)
+		panic(downgradeMsg)
+	}
 }
 
+// panicUpgradeNeeded shuts down the node and prints a message that the upgrade needs to be applied.
 func panicUpgradeNeeded(k keeper.Keeper, ctx sdk.Context, plan types.Plan) {
 	// Write the upgrade info to disk. The UpgradeStoreLoader uses this info to perform or skip
 	// store migrations.
@@ -102,7 +106,6 @@ func panicUpgradeNeeded(k keeper.Keeper, ctx sdk.Context, plan types.Plan) {
 	}
 
 	upgradeMsg := BuildUpgradeNeededMsg(plan)
-	// We don't have an upgrade handler for this upgrade name, meaning this software is out of date so shutdown
 	ctx.Logger().Error(upgradeMsg)
 
 	panic(upgradeMsg)
@@ -124,4 +127,9 @@ func skipUpgrade(k keeper.Keeper, ctx sdk.Context, plan types.Plan) {
 // BuildUpgradeNeededMsg prints the message that notifies that an upgrade is needed.
 func BuildUpgradeNeededMsg(plan types.Plan) string {
 	return fmt.Sprintf("UPGRADE \"%s\" NEEDED at %s: %s", plan.Name, plan.DueAt(), plan.Info)
+}
+
+// BuildUpgradeScheduledMsg prints upgrade scheduled message
+func BuildUpgradeScheduledMsg(plan types.Plan) string {
+	return fmt.Sprintf("UPGRADE \"%s\" SCHEDULED at %s: %s", plan.Name, plan.DueAt(), plan.Info)
 }

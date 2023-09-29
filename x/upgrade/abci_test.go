@@ -262,7 +262,7 @@ func TestSkipUpgradeSkipMinor(t *testing.T) {
 		height     int64 = 10
 		name             = "minor"
 	)
-	s := setupTest(10, map[int64]bool{planHeight: true})
+	s := setupTest(height, map[int64]bool{planHeight: true})
 
 	newCtx := s.ctx
 
@@ -274,7 +274,7 @@ func TestSkipUpgradeSkipMinor(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	t.Log("Verify if skip upgrade flag clears upgrade plan in both cases")
+	t.Log("Verify if skip upgrade flag clears minor upgrade plan")
 	VerifySet(t, map[int64]bool{planHeight: true})
 
 	newCtx = newCtx.WithBlockHeight(height)
@@ -282,8 +282,7 @@ func TestSkipUpgradeSkipMinor(t *testing.T) {
 		s.module.BeginBlock(newCtx, req)
 	})
 
-	// To ensure verification is being done only after both upgrades are cleared
-	t.Log("Verify if both proposals are cleared")
+	t.Log("Verify minor proposal is cleared")
 	VerifyCleared(t, s.ctx)
 	VerifyNotDone(t, s.ctx, name)
 }

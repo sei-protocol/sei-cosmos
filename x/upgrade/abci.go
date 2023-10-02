@@ -69,9 +69,14 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 		return
 	}
 
+	details, err := plan.UpgradeDetails()
+	if err != nil {
+		ctx.Logger().Error("failed to parse upgrade details", "err", err)
+	}
+
 	// If running a pending minor release, apply the upgrade if handler is present
 	// Minor releases are allowed to run before the scheduled upgrade height, but not required to.
-	if plan.UpgradeDetails().IsMinorRelease() {
+	if details.IsMinorRelease() {
 		// if not yet present, then emit a scheduled log (every 100 blocks, to reduce logs)
 		if !k.HasHandler(plan.Name) && !k.IsSkipHeight(plan.Height) {
 			if ctx.BlockHeight()%100 == 0 {

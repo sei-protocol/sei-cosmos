@@ -182,7 +182,7 @@ func TestUpgradeDetails(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.plan.UpgradeDetails()
+			got, _ := test.plan.UpgradeDetails()
 			if got != test.want {
 				t.Errorf("UpgradeDetails() = %v, want %v", got, test.want)
 			}
@@ -228,7 +228,7 @@ func TestIsMinorRelease(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ud := test.plan.UpgradeDetails()
+			ud, _ := test.plan.UpgradeDetails()
 			if got := ud.IsMinorRelease(); got != test.want {
 				t.Errorf("IsMinorRelease() = %v, want %v", got, test.want)
 			}

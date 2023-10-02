@@ -13,12 +13,15 @@ type MultiVersionStore interface {
 	SetEstimate(index int, incarnation int, key []byte)
 	Delete(index int, incarnation int, key []byte)
 	Has(index int, key []byte) bool
+	// TODO: do we want to add helper functions for validations with readsets / applying writesets ?
 }
 
 type Store struct {
 	mtx sync.RWMutex
 	// map that stores the key -> MultiVersionValue mapping for accessing from a given key
 	multiVersionMap map[string]MultiVersionValue
+	// TODO: do we need to add something here to persist readsets for later validation
+	// TODO: we need to support iterators as well similar to how cachekv does it
 }
 
 func NewMultiVersionStore() *Store {

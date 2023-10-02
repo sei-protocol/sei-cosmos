@@ -282,8 +282,6 @@ func TestSkipUpgradeSkipMinor(t *testing.T) {
 		s.module.BeginBlock(newCtx, req)
 	})
 
-	t.Log("Verify minor proposal is cleared")
-	VerifyCleared(t, s.ctx)
 	VerifyNotDone(t, s.ctx, name)
 }
 

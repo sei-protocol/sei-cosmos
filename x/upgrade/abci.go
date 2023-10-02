@@ -72,19 +72,12 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 	// If running a pending minor release, apply the upgrade if handler is present
 	// Minor releases are allowed to run before the scheduled upgrade height, but not required to.
 	if plan.UpgradeDetails().IsMinorRelease() {
-		// if the pending upgrade is skipped, don't apply it
-		if k.IsSkipHeight(plan.Height) {
-			skipUpgrade(k, ctx, plan)
-			return
-		}
 		// if not yet present, then emit a scheduled log (every 100 blocks, to reduce logs)
-		if !k.HasHandler(plan.Name) {
+		if !k.HasHandler(plan.Name) && !k.IsSkipHeight(plan.Height) {
 			if ctx.BlockHeight()%100 == 0 {
 				ctx.Logger().Info(BuildUpgradeScheduledMsg(plan))
 			}
-			return
 		}
-		applyUpgrade(k, ctx, plan)
 		return
 	}
 

@@ -12,14 +12,20 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// BeginBlock will check if there is a scheduled plan and if it is ready to be executed.
-// If the current height is in the provided set of heights to skip, it will skip and clear the upgrade plan.
-// If it is ready, it will execute it if the handler is installed, and panic/abort otherwise.
-// If the plan is not ready, it will ensure the handler is not registered too early (and abort otherwise).
+// BeginBlocker checks for a scheduled upgrade plan and determines whether it's time to execute the upgrade.
+// If DowngradeVerified is false, it sets it to true and performs a check to ensure that the binary version is correct.
+// If no plan is found, or the plan should not execute yet, it returns early.
+// If the plan is set to be skipped at the current block height, it clears the upgrade plan.
+// If the plan should execute and a handler for the upgrade is present, it applies the upgrade.
+// If no handler is found, it panics indicating that an upgrade is needed.
+// For minor releases that are pending, if a handler is not found and the plan height is not set to be skipped,
+// it logs a scheduled upgrade message every 100 blocks.
+// If a handler for a non-minor upgrade is found before the plan should execute, it panics indicating that the binary
+// has been updated too early.
 //
-// The purpose is to ensure the binary is switched EXACTLY at the desired block, and to allow
-// a migration to be executed if needed upon this switch (migration defined in the new binary)
-// skipUpgradeHeightArray is a set of block heights for which the upgrade must be skipped
+// The purpose of BeginBlocker is to ensure that the upgrade binary is switched at the exact block height specified
+// in the plan, and to coordinate the execution of any necessary migrations defined in the new binary.
+// skipUpgradeHeightArray is a set of block heights for which the upgrade must be skipped.
 func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
 
@@ -65,13 +71,17 @@ func BeginBlocker(k keeper.Keeper, ctx sdk.Context, _ abci.RequestBeginBlock) {
 		if !k.HasHandler(plan.Name) {
 			panicUpgradeNeeded(k, ctx, plan)
 		}
-		applyUpgrade(k, ctx, plan)
 		return
+	}
+
+	details, err := plan.UpgradeDetails()
+	if err != nil {
+		ctx.Logger().Error("error parsing upgrade info", "err", err.Error())
 	}
 
 	// If running a pending minor release, apply the upgrade if handler is present
 	// Minor releases are allowed to run before the scheduled upgrade height, but not required to.
-	if plan.UpgradeDetails().IsMinorRelease() {
+	if details.IsMinorRelease() {
 		// if not yet present, then emit a scheduled log (every 100 blocks, to reduce logs)
 		if !k.HasHandler(plan.Name) && !k.IsSkipHeight(plan.Height) {
 			if ctx.BlockHeight()%100 == 0 {

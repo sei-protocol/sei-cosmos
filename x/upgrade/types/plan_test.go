@@ -176,21 +176,15 @@ func TestUpgradeDetails(t *testing.T) {
 			plan: types.Plan{
 				Info: `{upgradeType:"minor"}`,
 			},
-			want:    types.UpgradeDetails{},
-			wantErr: true,
+			want: types.UpgradeDetails{},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := test.plan.UpgradeDetails()
+			got := test.plan.UpgradeDetails()
 			if got != test.want {
 				t.Errorf("UpgradeDetails() = %v, want %v", got, test.want)
-			}
-			if test.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
 			}
 		})
 	}
@@ -198,10 +192,9 @@ func TestUpgradeDetails(t *testing.T) {
 
 func TestIsMinorRelease(t *testing.T) {
 	tests := []struct {
-		name    string
-		plan    types.Plan
-		want    bool
-		wantErr bool
+		name string
+		plan types.Plan
+		want bool
 	}{
 		{
 			name: "minor release",
@@ -235,14 +228,9 @@ func TestIsMinorRelease(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ud, err := test.plan.UpgradeDetails()
+			ud := test.plan.UpgradeDetails()
 			if got := ud.IsMinorRelease(); got != test.want {
 				t.Errorf("IsMinorRelease() = %v, want %v", got, test.want)
-			}
-			if test.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
 			}
 		})
 	}

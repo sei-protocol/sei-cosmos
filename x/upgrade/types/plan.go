@@ -56,15 +56,13 @@ type UpgradeDetails struct {
 
 // UpgradeDetails parses and returns a details struct from the Info field of a Plan
 // The upgrade.pb.go is generated from proto, so this is separated here
-func (p Plan) UpgradeDetails() (UpgradeDetails, error) {
-	if p.Info == "" {
-		return UpgradeDetails{}, nil
-	}
+func (p Plan) UpgradeDetails() UpgradeDetails {
 	var details UpgradeDetails
 	if err := json.Unmarshal([]byte(p.Info), &details); err != nil {
-		return UpgradeDetails{}, err
+		// invalid json, assume no upgrade details
+		return UpgradeDetails{}
 	}
-	return details, nil
+	return details
 }
 
 // IsMinorRelease returns true if the upgrade is a minor release

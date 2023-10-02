@@ -509,21 +509,6 @@ func TestBinaryVersion(t *testing.T) {
 			false,
 		},
 		{
-			"test not panic: upgrade with bad json in info field is in future",
-			func() (sdk.Context, abci.RequestBeginBlock) {
-				err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{
-					Title: "Upgrade test",
-					Plan:  types.Plan{Name: "test2", Height: 105, Info: "bad json"},
-				})
-				require.NoError(t, err)
-
-				newCtx := s.ctx.WithBlockHeight(100)
-				req := abci.RequestBeginBlock{Header: newCtx.BlockHeader()}
-				return newCtx, req
-			},
-			false,
-		},
-		{
 			"test panic: minor version upgrade is due",
 			func() (sdk.Context, abci.RequestBeginBlock) {
 				err := s.handler(s.ctx, &types.SoftwareUpgradeProposal{

@@ -6,9 +6,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/internal/conv"
 )
 
-// base multiversion store - contains all of the values for all indices within the store, allow for forking with specified transaction index
-// forked multiversion store - implements KVstore, but also stores the index of the transaction, and so all store actions done through this access with the index passed when initializing the forked store.
-
 type MultiVersionStore interface {
 	GetLatest(key []byte) (value MultiVersionValueItem)
 	GetLatestBeforeIndex(index int, key []byte) (value MultiVersionValueItem)
@@ -22,8 +19,6 @@ type Store struct {
 	mtx sync.RWMutex
 	// map that stores the key -> MultiVersionValue mapping for accessing from a given key
 	multiVersionMap map[string]MultiVersionValue
-	// has to store all the multiversion values
-	// key -> multiversion value
 }
 
 func NewMultiVersionStore() *Store {

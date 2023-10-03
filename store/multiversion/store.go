@@ -43,7 +43,7 @@ func (s *Store) GetLatest(key []byte) (value MultiVersionValueItem) {
 	}
 	val, found := s.multiVersionMap[keyString].GetLatest()
 	if !found {
-		return nil
+		return nil // this shouldn't be possible
 	}
 	return val
 }

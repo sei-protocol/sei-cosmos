@@ -44,3 +44,11 @@ func TestMultiVersionStoreHasLaterValue(t *testing.T) {
 	require.Nil(t, store.GetLatestBeforeIndex(4, []byte("key1")))
 	require.Equal(t, []byte("value2"), store.GetLatestBeforeIndex(6, []byte("key1")).Value())
 }
+
+func TestMultiVersionStoreKeyDNE(t *testing.T) {
+	store := multiversion.NewMultiVersionStore()
+
+	require.Nil(t, store.GetLatest([]byte("key1")))
+	require.Nil(t, store.GetLatestBeforeIndex(0, []byte("key1")))
+	require.False(t, store.Has(0, []byte("key1")))
+}

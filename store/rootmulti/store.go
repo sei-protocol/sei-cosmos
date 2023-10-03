@@ -813,11 +813,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			err = protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_IAVL{
 					IAVL: &snapshottypes.SnapshotIAVLItem{
-						Key:      node.Key,
-						Value:    node.Value,
-						Height:   int32(node.Height),
-						Version:  node.Version,
-						Innerkey: snapshottypes.SnapshotNodeKey{Version: node.Innerkey.Version, Nonce: node.Innerkey.Nonce},
+						Key:     node.Key,
+						Value:   node.Value,
+						Height:  int32(node.Height),
+						Version: node.Version,
 					},
 				},
 			})
@@ -899,11 +898,10 @@ loop:
 					item.IAVL.Height, math.MaxInt8)
 			}
 			node := &iavltree.ExportNode{
-				Key:      item.IAVL.Key,
-				Value:    item.IAVL.Value,
-				Height:   int8(item.IAVL.Height),
-				Version:  item.IAVL.Version,
-				Innerkey: iavltree.NodeKey{Version: item.IAVL.Innerkey.Version, Nonce: item.IAVL.Innerkey.Nonce},
+				Key:     item.IAVL.Key,
+				Value:   item.IAVL.Value,
+				Height:  int8(item.IAVL.Height),
+				Version: item.IAVL.Version,
 			}
 			// Protobuf does not differentiate between []byte{} as nil, but fortunately IAVL does
 			// not allow nil keys nor nil values for leaf nodes, so we can always set them to empty.

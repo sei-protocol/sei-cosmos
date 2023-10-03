@@ -22,6 +22,7 @@ type Store struct {
 	multiVersionMap map[string]MultiVersionValue
 	// TODO: do we need to add something here to persist readsets for later validation
 	// TODO: we need to support iterators as well similar to how cachekv does it
+	// TODO: do we need secondary indexing on index -> keys - this way if we need to abort we can replace those keys with ESTIMATE values? - maybe this just means storing writeset
 }
 
 func NewMultiVersionStore() *Store {

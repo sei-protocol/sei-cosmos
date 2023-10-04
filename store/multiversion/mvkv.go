@@ -168,7 +168,7 @@ func (v *VersionIndexedStore) ReverseIterator(start []byte, end []byte) dbm.Iter
 
 // GetStoreType implements types.KVStore.
 func (v *VersionIndexedStore) GetStoreType() types.StoreType {
-	panic("unimplemented")
+	return v.parent.GetStoreType()
 }
 
 // CacheWrap implements types.KVStore.

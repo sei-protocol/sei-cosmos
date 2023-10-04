@@ -108,3 +108,20 @@ func TestVersionIndexedStoreSetters(t *testing.T) {
 	require.Equal(t, []byte("value3"), vis.Get([]byte("key2")))
 	require.Zero(t, len(vis.GetReadset()))
 }
+
+func TestVersionIndexedStoreBoilerplateFunctions(t *testing.T) {
+	mem := dbadapter.Store{DB: dbm.NewMemDB()}
+	parentKVStore := cachekv.NewStore(mem, types.NewKVStoreKey("mock"), 1000)
+	mvs := multiversion.NewMultiVersionStore()
+	// initialize a new VersionIndexedStore
+	vis := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 1, 2, make(chan scheduler.Abort))
+
+	// asserts panics where appropriate
+	require.Panics(t, func() { vis.CacheWrap(types.NewKVStoreKey("mock")) })
+	require.Panics(t, func() { vis.CacheWrapWithListeners(types.NewKVStoreKey("mock"), nil) })
+	require.Panics(t, func() { vis.CacheWrapWithTrace(types.NewKVStoreKey("mock"), nil, nil) })
+	require.Panics(t, func() { vis.GetWorkingHash() })
+
+	// assert properly returns store type
+	require.Equal(t, types.StoreTypeDB, vis.GetStoreType())
+}

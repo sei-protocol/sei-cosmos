@@ -2,8 +2,6 @@ package multiversion
 
 import (
 	"sync"
-
-	"github.com/cosmos/cosmos-sdk/internal/conv"
 )
 
 type MultiVersionStore interface {
@@ -36,7 +34,7 @@ func (s *Store) GetLatest(key []byte) (value MultiVersionValueItem) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
-	keyString := conv.UnsafeBytesToStr(key)
+	keyString := string(key)
 	// if the key doesn't exist in the overall map, return nil
 	if _, ok := s.multiVersionMap[keyString]; !ok {
 		return nil
@@ -53,7 +51,7 @@ func (s *Store) GetLatestBeforeIndex(index int, key []byte) (value MultiVersionV
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
-	keyString := conv.UnsafeBytesToStr(key)
+	keyString := string(key)
 	// if the key doesn't exist in the overall map, return nil
 	if _, ok := s.multiVersionMap[keyString]; !ok {
 		return nil
@@ -72,7 +70,7 @@ func (s *Store) Has(index int, key []byte) bool {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
-	keyString := conv.UnsafeBytesToStr(key)
+	keyString := string(key)
 	if _, ok := s.multiVersionMap[keyString]; !ok {
 		return false // this is okay because the caller of this will THEN need to access the parent store to verify that the key doesnt exist there
 	}
@@ -94,7 +92,7 @@ func (s *Store) Set(index int, incarnation int, key []byte, value []byte) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	keyString := conv.UnsafeBytesToStr(key)
+	keyString := string(key)
 	s.tryInitMultiVersionItem(keyString)
 	s.multiVersionMap[keyString].Set(index, incarnation, value)
 }
@@ -104,7 +102,7 @@ func (s *Store) SetEstimate(index int, incarnation int, key []byte) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	keyString := conv.UnsafeBytesToStr(key)
+	keyString := string(key)
 	s.tryInitMultiVersionItem(keyString)
 	s.multiVersionMap[keyString].SetEstimate(index, incarnation)
 }
@@ -114,7 +112,7 @@ func (s *Store) Delete(index int, incarnation int, key []byte) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	keyString := conv.UnsafeBytesToStr(key)
+	keyString := string(key)
 	s.tryInitMultiVersionItem(keyString)
 	s.multiVersionMap[keyString].Delete(index, incarnation)
 }

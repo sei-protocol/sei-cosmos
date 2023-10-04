@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/internal/conv"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	scheduler "github.com/cosmos/cosmos-sdk/types/occ"
@@ -88,7 +87,7 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "get")
 
 	types.AssertValidKey(key)
-	strKey := conv.UnsafeBytesToStr(key)
+	strKey := string(key)
 	// first check the MVKV writeset, and return that value if present
 	cacheValue, ok := store.writeset[strKey]
 	if ok {
@@ -195,7 +194,7 @@ func (v *VersionIndexedStore) GetWorkingHash() ([]byte, error) {
 func (store *VersionIndexedStore) setValue(key, value []byte, deleted bool, dirty bool) {
 	types.AssertValidKey(key)
 
-	keyStr := conv.UnsafeBytesToStr(key)
+	keyStr := string(key)
 	store.writeset[keyStr] = value
 	if deleted {
 		store.deleted.Store(keyStr, struct{}{})
@@ -207,9 +206,16 @@ func (store *VersionIndexedStore) setValue(key, value []byte, deleted bool, dirt
 	}
 }
 
+func (store *VersionIndexedStore) WriteToMultiVersionStore() {
+	// write the writeset to the multiversion store
+	for key, value := range store.writeset {
+		store.multiVersionStore.Set(store.transactionIndex, store.incarnation, []byte(key), value)
+	}
+}
+
 func (store *VersionIndexedStore) updateReadSet(key []byte, value []byte) {
 	// add to readset
-	keyStr := conv.UnsafeBytesToStr(key)
+	keyStr := string(key)
 	store.readset[keyStr] = value
 	// add to dirty set
 	store.dirtySet[keyStr] = struct{}{}

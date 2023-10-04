@@ -3,9 +3,11 @@ package multiversion
 import (
 	"io"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/internal/conv"
 	"github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	scheduler "github.com/cosmos/cosmos-sdk/types/occ"
 	dbm "github.com/tendermint/tm-db"
 )
@@ -16,19 +18,28 @@ import (
 // reads should waterfall from cache kv to multiversion store to parent store
 // writes should only be applied to the cache kv, and later we'll update the multiversion store after tx execution
 
+// TODO: is this helpful? its not really gonna be widely used as a pattern, but maybe good to create a standard for future modifications / implementations for mvkv
+type MVKV interface {
+	// validate
+	// write to multiversion store
+
+}
+
 // Version Indexed Store wraps the multiversion store in a way that implements the KVStore interface, but also stores the index of the transaction, and so store actions are applied to the multiversion store using that index
 type VersionIndexedStore struct {
 	mtx sync.Mutex
 	// used for tracking reads and writes for eventual validation + persistence into multi-version store
 	readset  map[string][]byte // contains the key -> value mapping for all keys read from the store (not mvkv, underlying store)
 	writeset map[string][]byte // contains the key -> value mapping for all keys written to the store
+	// TODO: need to add iterateset here as well
 
 	// TODO: do we need this? - I think so? / maybe we just treat `nil` value in the writeset as a delete
 	deleted *sync.Map
 	// dirty keys that haven't been sorted yet for iteration
 	dirtySet map[string]struct{}
 	// used for iterators - populated at the time of iterator instantiation
-	sortedCache *dbm.MemDB // always ascending sorted
+	// TODO: when we want to perform iteration, we need to move all the dirty keys (writeset and readset) into the sortedTree and then combine with the iterators for the underlying stores
+	sortedStore *dbm.MemDB // always ascending sorted
 	// parent stores (both multiversion and underlying parent store)
 	multiVersionStore MultiVersionStore
 	parent            types.KVStore
@@ -47,7 +58,7 @@ func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersion
 		writeset:          make(map[string][]byte),
 		deleted:           &sync.Map{},
 		dirtySet:          make(map[string]struct{}),
-		sortedCache:       dbm.NewMemDB(),
+		sortedStore:       dbm.NewMemDB(),
 		parent:            parent,
 		multiVersionStore: multiVersionStore,
 		transactionIndex:  transactionIndex,
@@ -74,6 +85,7 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	// don't have RW mutex because we have to update readset
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
+	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "get")
 
 	types.AssertValidKey(key)
 	strKey := conv.UnsafeBytesToStr(key)
@@ -103,7 +115,7 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	}
 	// if we didn't find it in the multiversion store, then we want to check the parent store + add to readset
 	parentValue := store.parent.Get(key)
-	store.readset[strKey] = parentValue
+	store.updateReadSet(key, parentValue)
 	return parentValue
 }
 
@@ -113,24 +125,35 @@ func (store *VersionIndexedStore) parseValueAndUpdateReadset(strKey string, mvsV
 	if mvsValue.IsDeleted() {
 		value = nil
 	}
-	store.readset[strKey] = value
+	store.updateReadSet([]byte(strKey), value)
 	return value
 }
 
 // Delete implements types.KVStore.
-func (v *VersionIndexedStore) Delete(key []byte) {
-	// v.multiVersionStore.Delete(v.transactionIndex, key)
-	panic("unimplemented")
+func (store *VersionIndexedStore) Delete(key []byte) {
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "delete")
+
+	types.AssertValidKey(key)
+	store.setValue(key, nil, true, true)
 }
 
+// TODO: with this current implementation, if we check HAS and the underlying parent store has the value, the readset is still populated with key and value, so even if the value changes, although HAS would have the same result, we would still fail validation. Is this an issue?
 // Has implements types.KVStore.
-func (v *VersionIndexedStore) Has(key []byte) bool {
-	panic("unimplemented")
+func (store *VersionIndexedStore) Has(key []byte) bool {
+	// necessary locking happens within store.Get
+	return store.Get(key) != nil
 }
 
 // Set implements types.KVStore.
-func (*VersionIndexedStore) Set(key []byte, value []byte) {
-	panic("unimplemented")
+func (store *VersionIndexedStore) Set(key []byte, value []byte) {
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "set")
+
+	types.AssertValidKey(key)
+	store.setValue(key, value, false, true)
 }
 
 // Iterator implements types.KVStore.
@@ -166,4 +189,33 @@ func (*VersionIndexedStore) CacheWrapWithTrace(storeKey types.StoreKey, w io.Wri
 // GetWorkingHash implements types.KVStore.
 func (v *VersionIndexedStore) GetWorkingHash() ([]byte, error) {
 	panic("should never attempt to get working hash from version indexed store")
+}
+
+// Only entrypoint to mutate writeset
+func (store *VersionIndexedStore) setValue(key, value []byte, deleted bool, dirty bool) {
+	types.AssertValidKey(key)
+
+	keyStr := conv.UnsafeBytesToStr(key)
+	store.writeset[keyStr] = value
+	if deleted {
+		store.deleted.Store(keyStr, struct{}{})
+	} else {
+		store.deleted.Delete(keyStr)
+	}
+	if dirty {
+		store.dirtySet[keyStr] = struct{}{}
+	}
+}
+
+func (store *VersionIndexedStore) updateReadSet(key []byte, value []byte) {
+	// add to readset
+	keyStr := conv.UnsafeBytesToStr(key)
+	store.readset[keyStr] = value
+	// add to dirty set
+	store.dirtySet[keyStr] = struct{}{}
+}
+
+func (store *VersionIndexedStore) isDeleted(key string) bool {
+	_, ok := store.deleted.Load(key)
+	return ok
 }

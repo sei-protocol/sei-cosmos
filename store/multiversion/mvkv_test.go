@@ -12,9 +12,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
-type MockParentStore struct{}
-
-func TestVersionIndexedStoreGet(t *testing.T) {
+func TestVersionIndexedStoreGetters(t *testing.T) {
 	mem := dbadapter.Store{DB: dbm.NewMemDB()}
 	parentKVStore := cachekv.NewStore(mem, types.NewKVStoreKey("mock"), 1000)
 	mvs := multiversion.NewMultiVersionStore()
@@ -27,16 +25,19 @@ func TestVersionIndexedStoreGet(t *testing.T) {
 	// read key that doesn't exist
 	val := vis.Get([]byte("key2"))
 	require.Nil(t, val)
+	require.False(t, vis.Has([]byte("key2")))
 
 	// read key that falls down to parent store
 	val2 := vis.Get([]byte("key1"))
 	require.Equal(t, []byte("value1"), val2)
+	require.True(t, vis.Has([]byte("key1")))
 	// verify value now in readset
 	require.Equal(t, []byte("value1"), vis.GetReadset()["key1"])
 
 	// read the same key that should now be served from the readset (can be verified by setting a different value for the key in the parent store)
 	parentKVStore.Set([]byte("key1"), []byte("value2")) // realistically shouldn't happen, modifying to verify readset access
 	val3 := vis.Get([]byte("key1"))
+	require.True(t, vis.Has([]byte("key1")))
 	require.Equal(t, []byte("value1"), val3)
 
 	// test deleted value written to MVS but not parent store
@@ -44,6 +45,7 @@ func TestVersionIndexedStoreGet(t *testing.T) {
 	parentKVStore.Set([]byte("delKey"), []byte("value4"))
 	valDel := vis.Get([]byte("delKey"))
 	require.Nil(t, valDel)
+	require.False(t, vis.Has([]byte("delKey")))
 
 	// set different key in MVS - for various indices
 	mvs.Set(0, 2, []byte("key3"), []byte("value3"))
@@ -54,12 +56,14 @@ func TestVersionIndexedStoreGet(t *testing.T) {
 	val4 := vis.Get([]byte("key3"))
 	// should equal value3 because value4 is later than the key in question
 	require.Equal(t, []byte("value3"), val4)
+	require.True(t, vis.Has([]byte("key3")))
 
 	// try a read that falls through to MVS with a later tx index
 	vis2 := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 3, 2, make(chan scheduler.Abort))
 	val5 := vis2.Get([]byte("key3"))
 	// should equal value3 because value4 is later than the key in question
 	require.Equal(t, []byte("value4"), val5)
+	require.True(t, vis2.Has([]byte("key3")))
 
 	// test estimate values writing to abortChannel
 	abortChannel := make(chan scheduler.Abort)
@@ -71,5 +75,36 @@ func TestVersionIndexedStoreGet(t *testing.T) {
 	require.Equal(t, 5, abort.DependentTxIdx)
 	require.Equal(t, scheduler.ErrReadEstimate, abort.Err)
 
-	// TODO: also test values that are served from writeset - needs to be AFTER `set` is implemented
+	vis.Set([]byte("key4"), []byte("value4"))
+	// verify proper response for GET
+	val6 := vis.Get([]byte("key4"))
+	require.True(t, vis.Has([]byte("key4")))
+	require.Equal(t, []byte("value4"), val6)
+	// verify that its in the writeset
+	require.Equal(t, []byte("value4"), vis.GetWriteset()["key4"])
+	// verify that its not in the readset
+	require.Nil(t, vis.GetReadset()["key4"])
+}
+
+func TestVersionIndexedStoreSetters(t *testing.T) {
+	mem := dbadapter.Store{DB: dbm.NewMemDB()}
+	parentKVStore := cachekv.NewStore(mem, types.NewKVStoreKey("mock"), 1000)
+	mvs := multiversion.NewMultiVersionStore()
+	// initialize a new VersionIndexedStore
+	vis := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 1, 2, make(chan scheduler.Abort))
+
+	// test simple set
+	vis.Set([]byte("key1"), []byte("value1"))
+	require.Equal(t, []byte("value1"), vis.GetWriteset()["key1"])
+
+	mvs.Set(0, 1, []byte("key2"), []byte("value2"))
+	vis.Delete([]byte("key2"))
+	require.Nil(t, vis.Get([]byte("key2")))
+	// because the delete should be at the writeset level, we should not have populated the readset
+	require.Zero(t, len(vis.GetReadset()))
+
+	// try setting the value again, and then read
+	vis.Set([]byte("key2"), []byte("value3"))
+	require.Equal(t, []byte("value3"), vis.Get([]byte("key2")))
+	require.Zero(t, len(vis.GetReadset()))
 }

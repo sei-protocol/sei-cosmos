@@ -88,6 +88,10 @@ type BaseConfig struct {
 	SeparateOrphanVersionsToKeep int64  `mapstructure:"separate-orphan-versions-to-keep"`
 	NumOrphanPerFile             int    `mapstructure:"num-orphan-per-file"`
 	OrphanDirectory              string `mapstructure:"orphan-dir"`
+
+	// ConcurrencyWorkers defines the number of workers to use for concurrent
+	// transaction execution. A value of -1 means unlimited workers.  Default value is 10.
+	ConcurrencyWorkers int `mapstructure:"concurrency-workers"`
 }
 
 // APIConfig defines the API listener configuration.
@@ -236,6 +240,7 @@ func DefaultConfig() *Config {
 			IAVLDisableFastNode: true,
 			CompactionInterval:  0,
 			NoVersioning:        false,
+			ConcurrencyWorkers:  10,
 		},
 		Telemetry: telemetry.Config{
 			Enabled:      false,
@@ -310,6 +315,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			SeparateOrphanVersionsToKeep: v.GetInt64("separate-orphan-versions-to-keep"),
 			NumOrphanPerFile:             v.GetInt("num-orphan-per-file"),
 			OrphanDirectory:              v.GetString("orphan-dir"),
+			ConcurrencyWorkers:           v.GetInt("concurrency-workers"),
 		},
 		Telemetry: telemetry.Config{
 			ServiceName:             v.GetString("telemetry.service-name"),

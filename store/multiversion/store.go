@@ -10,16 +10,15 @@ import (
 type MultiVersionStore interface {
 	GetLatest(key []byte) (value MultiVersionValueItem)
 	GetLatestBeforeIndex(index int, key []byte) (value MultiVersionValueItem)
-	Set(index int, incarnation int, key []byte, value []byte)
-	SetEstimate(index int, incarnation int, key []byte)
-	Delete(index int, incarnation int, key []byte)
+	Set(index int, incarnation int, key []byte, value []byte) // TODO: maybe we don't need these if all writes are coming from writesets
+	SetEstimate(index int, incarnation int, key []byte)       // TODO: maybe we don't need these if all writes are coming from writesets
+	Delete(index int, incarnation int, key []byte)            // TODO: maybe we don't need these if all writes are coming from writesets
 	Has(index int, key []byte) bool
-	Iterator(index int, start, end []byte) types.Iterator
-	ReverseIterator(index int, start, end []byte) types.Iterator
 	WriteLatestToStore(parentStore types.KVStore)
 	SetWriteset(index int, incarnation int, writeset WriteSet)
 	InvalidateWriteset(index int, incarnation int)
 	SetEstimatedWriteset(index int, incarnation int, writeset WriteSet)
+	GetWritesetKeys() map[int][]string
 }
 
 type WriteSet map[string][]byte
@@ -54,7 +53,7 @@ func (s *Store) GetLatest(key []byte) (value MultiVersionValueItem) {
 	}
 	val, found := s.multiVersionMap[keyString].GetLatest()
 	if !found {
-		return nil // this shouldn't be possible
+		return nil // this is possible IF there is are writeset that are then removed for that key
 	}
 	return val
 }
@@ -192,6 +191,13 @@ func (s *Store) SetEstimatedWriteset(index int, incarnation int, writeset WriteS
 	s.txWritesetKeys[index] = writeSetKeys
 }
 
+// GetWritesetKeys implements MultiVersionStore.
+func (s *Store) GetWritesetKeys() map[int][]string {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	return s.txWritesetKeys
+}
+
 // SetEstimate implements MultiVersionStore.
 func (s *Store) SetEstimate(index int, incarnation int, key []byte) {
 	s.mtx.Lock()
@@ -212,43 +218,6 @@ func (s *Store) Delete(index int, incarnation int, key []byte) {
 	s.multiVersionMap[keyString].Delete(index, incarnation)
 }
 
-// Iterator implements MultiVersionStore.
-func (store *Store) Iterator(index int, start, end []byte) types.Iterator {
-	// return store.iterator(index, start, end, true)
-	panic("unimplemented")
-}
-
-// ReverseIterator implements MultiVersionStore.
-func (store *Store) ReverseIterator(index int, start, end []byte) types.Iterator {
-	// return store.iterator(index, start, end, false)
-	panic("unimplemented")
-}
-
-// func (store *Store) iterator(index int, start, end []byte, ascending bool) types.Iterator {
-// 	store.mtx.Lock()
-// 	defer store.mtx.Unlock()
-
-// 	var parent, cache types.Iterator
-
-// 	if ascending {
-// 		parent = store.parent.Iterator(start, end)
-// 	} else {
-// 		parent = store.parent.ReverseIterator(start, end)
-// 	}
-// 	defer func() {
-// 		if err := recover(); err != nil {
-// 			// close out parent iterator, then reraise panic
-// 			if parent != nil {
-// 				parent.Close()
-// 			}
-// 			panic(err)
-// 		}
-// 	}()
-// 	store.dirtyItems(start, end)
-// 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
-// 	return NewCacheMergeIterator(parent, cache, ascending, store.eventManager, store.storeKey)
-// }
-
 func (s *Store) WriteLatestToStore(parentStore types.KVStore) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -266,7 +235,7 @@ func (s *Store) WriteLatestToStore(parentStore types.KVStore) {
 			// this means that at some point, there was an estimate, but we have since removed it so there isn't anything writeable at the key, so we can skip
 			continue
 		}
-		// we shouldn't have any ESTIMATE values when performing the write, because all transactions should be complete by this point
+		// we shouldn't have any ESTIMATE values when performing the write, because we read the latest non-estimate values only
 		if mvValue.IsEstimate() {
 			panic("should not have any estimate values when writing to parent store")
 		}

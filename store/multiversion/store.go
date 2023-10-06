@@ -1,7 +1,10 @@
 package multiversion
 
 import (
+	"sort"
 	"sync"
+
+	"github.com/cosmos/cosmos-sdk/store/types"
 )
 
 type MultiVersionStore interface {
@@ -11,6 +14,10 @@ type MultiVersionStore interface {
 	SetEstimate(index int, incarnation int, key []byte)
 	Delete(index int, incarnation int, key []byte)
 	Has(index int, key []byte) bool
+	WriteLatestToStore(parentStore types.KVStore)
+	SetWriteset(index int, incarnation int, writeset map[string][]byte)
+	InvalidateWriteset(index int, incarnation int)
+	SetEstimatedWriteset(index int, incarnation int, writeset map[string][]byte)
 	// TODO: do we want to add helper functions for validations with readsets / applying writesets ?
 }
 
@@ -18,14 +25,15 @@ type Store struct {
 	mtx sync.RWMutex
 	// map that stores the key -> MultiVersionValue mapping for accessing from a given key
 	multiVersionMap map[string]MultiVersionValue
-	// TODO: do we need to add something here to persist readsets for later validation
-	// TODO: we need to support iterators as well similar to how cachekv does it
-	// TODO: do we need secondary indexing on index -> keys - this way if we need to abort we can replace those keys with ESTIMATE values? - maybe this just means storing writeset
+	// TODO: do we need to support iterators as well similar to how cachekv does it - yes
+
+	txWritesets map[int]map[string][]byte // map of tx index -> writeset
 }
 
 func NewMultiVersionStore() *Store {
 	return &Store{
 		multiVersionMap: make(map[string]MultiVersionValue),
+		txWritesets:     make(map[int]map[string][]byte),
 	}
 }
 
@@ -97,6 +105,49 @@ func (s *Store) Set(index int, incarnation int, key []byte, value []byte) {
 	s.multiVersionMap[keyString].Set(index, incarnation, value)
 }
 
+// SetWriteset sets a writeset for a transaction index, and also writes all of the multiversion items in the writeset to the multiversion store.
+func (s *Store) SetWriteset(index int, incarnation int, writeset map[string][]byte) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.txWritesets[index] = writeset
+	for key, value := range writeset {
+		s.tryInitMultiVersionItem(key)
+		if value == nil { // TODO: safe assumption?
+			// delete if nil value
+			s.multiVersionMap[key].Delete(index, incarnation)
+		} else {
+			s.multiVersionMap[key].Set(index, incarnation, value)
+		}
+	}
+}
+
+// InvalidateWriteset iterates over the keys for the given index and incarnation writeset and replaces with ESTIMATEs
+func (s *Store) InvalidateWriteset(index int, incarnation int) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	if _, ok := s.txWritesets[index]; ok {
+		for key := range s.txWritesets[index] {
+			// invalidate all of the writeset items - is this suboptimal? - we could potentially do concurrently if slow because locking is on an item specific level
+			s.tryInitMultiVersionItem(key) // this SHOULD no-op because we're invalidating existing keys
+			s.multiVersionMap[key].SetEstimate(index, incarnation)
+		}
+		s.txWritesets[index] = nil
+	}
+}
+
+// SetEstimatedWriteset is used to directly write estimates instead of writing a writeset and later invalidating
+func (s *Store) SetEstimatedWriteset(index int, incarnation int, writeset map[string][]byte) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	for key := range writeset {
+		s.tryInitMultiVersionItem(key)
+		s.multiVersionMap[key].SetEstimate(index, incarnation)
+	}
+}
+
 // SetEstimate implements MultiVersionStore.
 func (s *Store) SetEstimate(index int, incarnation int, key []byte) {
 	s.mtx.Lock()
@@ -118,3 +169,36 @@ func (s *Store) Delete(index int, incarnation int, key []byte) {
 }
 
 var _ MultiVersionStore = (*Store)(nil)
+
+func (s *Store) WriteLatestToStore(parentStore types.KVStore) {
+	// TODO: this shouldn't affect gas because the gas meter wrap happens further within transaction handling - but lets confirm
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	// sort the keys
+	keys := make([]string, 0, len(s.multiVersionMap))
+	for key := range s.multiVersionMap {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		mvValue, _ := s.multiVersionMap[key].GetLatest()
+		// we shouldn't have any ESTIMATE values when performing the write, because all transactions should be complete by this point
+		if mvValue.IsEstimate() {
+			panic("should not have any estimate values when writing to parent store")
+		}
+		// if the value is deleted, then delete it from the parent store
+		if mvValue.IsDeleted() {
+			// We use []byte(key) instead of conv.UnsafeStrToBytes because we cannot
+			// be sure if the underlying store might do a save with the byteslice or
+			// not. Once we get confirmation that .Delete is guaranteed not to
+			// save the byteslice, then we can assume only a read-only copy is sufficient.
+			parentStore.Delete([]byte(key))
+			continue
+		}
+		if mvValue.Value() != nil {
+			parentStore.Set([]byte(key), mvValue.Value())
+		}
+	}
+}

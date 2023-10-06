@@ -92,7 +92,6 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	if mvsValue != nil {
 		if mvsValue.IsEstimate() {
 			store.abortChannel <- scheduler.NewEstimateAbort(mvsValue.Index())
-			// TODO: is it safe to return nil here?
 			return nil
 		} else {
 			// This handles both detecting readset conflicts and updating readset if applicable
@@ -174,7 +173,6 @@ func (store *VersionIndexedStore) Delete(key []byte) {
 	store.setValue(key, nil, true, true)
 }
 
-// TODO: with this current implementation, if we check HAS and the underlying parent store has the value, the readset is still populated with key and value, so even if the value changes, although HAS would have the same result, we would still fail validation. Is this an issue?
 // Has implements types.KVStore.
 func (store *VersionIndexedStore) Has(key []byte) bool {
 	// necessary locking happens within store.Get

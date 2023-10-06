@@ -60,8 +60,7 @@ const (
 	FlagArchivalArweaveIndexDBFullPath = "archival-arweave-index-db-full-path"
 	FlagArchivalArweaveNodeURL         = "archival-arweave-node-url"
 
-	FlagChainID            = "chain-id"
-	FlagConcurrencyWorkers = "concurrency-workers"
+	FlagChainID = "chain-id"
 )
 
 var (
@@ -296,7 +295,6 @@ func NewBaseApp(
 	if app.orphanConfig != nil {
 		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
 	}
-	app.ConcurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
 
 	return app
 }

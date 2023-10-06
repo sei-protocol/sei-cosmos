@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"io"
+	"sort"
 	"sync"
 	"time"
 
@@ -102,7 +103,6 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	// if we didn't find it, then we want to check the multivalue store + add to readset if applicable
 	mvsValue := store.multiVersionStore.GetLatestBeforeIndex(store.transactionIndex, key)
 	if mvsValue != nil {
-		// found something,
 		if mvsValue.IsEstimate() {
 			store.abortChannel <- scheduler.NewEstimateAbort(mvsValue.Index())
 			// TODO: is it safe to return nil here?
@@ -126,6 +126,55 @@ func (store *VersionIndexedStore) parseValueAndUpdateReadset(strKey string, mvsV
 	}
 	store.updateReadSet([]byte(strKey), value)
 	return value
+}
+
+// This function iterates over the readset, validating that the values in the readset are consistent with the values in the multiversion store and underlying parent store, and returns a boolean indicating validity
+func (store *VersionIndexedStore) ValidateReadset() bool {
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "validate_readset")
+
+	// sort the readset keys - this is so we have consistent behavior when theres varying conflicts within the readset (eg. read conflict vs estimate)
+	readsetKeys := make([]string, 0, len(store.readset))
+	for key := range store.readset {
+		readsetKeys = append(readsetKeys, key)
+	}
+	sort.Strings(readsetKeys)
+
+	// iterate over readset keys and values
+	for _, strKey := range readsetKeys {
+		key := []byte(strKey)
+		value := store.readset[strKey]
+		mvsValue := store.multiVersionStore.GetLatestBeforeIndex(store.transactionIndex, key)
+		if mvsValue != nil {
+			if mvsValue.IsEstimate() {
+				// if we see an estimate, that means that we need to abort and rerun
+				store.abortChannel <- scheduler.NewEstimateAbort(mvsValue.Index())
+				return false
+			} else {
+				if mvsValue.IsDeleted() {
+					// check for `nil`
+					if value != nil {
+						return false
+					}
+				} else {
+					// check for equality
+					if string(value) != string(mvsValue.Value()) {
+						return false
+					}
+				}
+			}
+			continue // value is valid, continue to next key
+		}
+
+		parentValue := store.parent.Get(key)
+		if string(parentValue) != string(value) {
+			// this shouldnt happen because if we have a conflict it should always happen within multiversion store
+			panic("we shouldn't ever have a readset conflict in parent store")
+		}
+		// value was correct, we can continue to the next value
+	}
+	return true
 }
 
 // Delete implements types.KVStore.
@@ -207,10 +256,17 @@ func (store *VersionIndexedStore) setValue(key, value []byte, deleted bool, dirt
 }
 
 func (store *VersionIndexedStore) WriteToMultiVersionStore() {
-	// write the writeset to the multiversion store
-	for key, value := range store.writeset {
-		store.multiVersionStore.Set(store.transactionIndex, store.incarnation, []byte(key), value)
-	}
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
+	store.multiVersionStore.SetWriteset(store.transactionIndex, store.incarnation, store.writeset)
+}
+
+func (store *VersionIndexedStore) WriteEstimatesToMultiVersionStore() {
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
+	store.multiVersionStore.SetEstimatedWriteset(store.transactionIndex, store.incarnation, store.writeset)
 }
 
 func (store *VersionIndexedStore) updateReadSet(key []byte, value []byte) {

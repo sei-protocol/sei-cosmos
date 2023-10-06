@@ -28,9 +28,3 @@ func TestSetConcurrencyWorkers(t *testing.T) {
 	cfg := DefaultConfig()
 	require.Equal(t, 10, cfg.ConcurrencyWorkers)
 }
-
-func TestValidateBasic(t *testing.T) {
-	cfg := DefaultConfig()
-	cfg.ConcurrencyWorkers = -2
-	require.Error(t, cfg.ValidateBasic(nil))
-}

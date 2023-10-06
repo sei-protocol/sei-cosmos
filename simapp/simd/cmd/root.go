@@ -312,6 +312,7 @@ func (a appCreator) newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, t
 			NumOrphansPerFile:           cast.ToInt(appOpts.Get(server.FlagNumOrphanPerFile)),
 			OrphanDirectory:             cast.ToString(appOpts.Get(server.FlagOrphanDirectory)),
 		}),
+		baseapp.SetConcurrencyWorkers(cast.ToInt(appOpts.Get(server.FlagConcurrencyWorkers))),
 	)
 }
 

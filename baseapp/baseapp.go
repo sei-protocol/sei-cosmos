@@ -60,7 +60,8 @@ const (
 	FlagArchivalArweaveIndexDBFullPath = "archival-arweave-index-db-full-path"
 	FlagArchivalArweaveNodeURL         = "archival-arweave-node-url"
 
-	FlagChainID = "chain-id"
+	FlagChainID            = "chain-id"
+	FlagConcurrencyWorkers = "concurrency-workers"
 )
 
 var (
@@ -168,6 +169,8 @@ type BaseApp struct { //nolint: maligned
 	TmConfig *tmcfg.Config
 
 	TracingInfo *tracing.Info
+
+	ConcurrencyWorkers int
 }
 
 type appStore struct {
@@ -293,6 +296,7 @@ func NewBaseApp(
 	if app.orphanConfig != nil {
 		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
 	}
+	app.ConcurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
 
 	return app
 }

@@ -18,7 +18,6 @@ type MultiVersionStore interface {
 	SetWriteset(index int, incarnation int, writeset map[string][]byte)
 	InvalidateWriteset(index int, incarnation int)
 	SetEstimatedWriteset(index int, incarnation int, writeset map[string][]byte)
-	// TODO: do we want to add helper functions for validations with readsets / applying writesets ?
 }
 
 type Store struct {
@@ -113,7 +112,7 @@ func (s *Store) SetWriteset(index int, incarnation int, writeset map[string][]by
 	s.txWritesets[index] = writeset
 	for key, value := range writeset {
 		s.tryInitMultiVersionItem(key)
-		if value == nil { // TODO: safe assumption?
+		if value == nil {
 			// delete if nil value
 			s.multiVersionMap[key].Delete(index, incarnation)
 		} else {
@@ -171,7 +170,6 @@ func (s *Store) Delete(index int, incarnation int, key []byte) {
 var _ MultiVersionStore = (*Store)(nil)
 
 func (s *Store) WriteLatestToStore(parentStore types.KVStore) {
-	// TODO: this shouldn't affect gas because the gas meter wrap happens further within transaction handling - but lets confirm
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 

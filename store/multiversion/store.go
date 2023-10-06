@@ -18,7 +18,7 @@ type MultiVersionStore interface {
 	SetWriteset(index int, incarnation int, writeset WriteSet)
 	InvalidateWriteset(index int, incarnation int)
 	SetEstimatedWriteset(index int, incarnation int, writeset WriteSet)
-	GetWritesetKeys() map[int][]string
+	GetAllWritesetKeys() map[int][]string
 }
 
 type WriteSet map[string][]byte
@@ -192,7 +192,7 @@ func (s *Store) SetEstimatedWriteset(index int, incarnation int, writeset WriteS
 }
 
 // GetWritesetKeys implements MultiVersionStore.
-func (s *Store) GetWritesetKeys() map[int][]string {
+func (s *Store) GetAllWritesetKeys() map[int][]string {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.txWritesetKeys

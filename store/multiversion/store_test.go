@@ -131,8 +131,8 @@ func TestMultiVersionStoreWritesetSetAndInvalidate(t *testing.T) {
 	// verify that GetLatest for key3 returns nil - because of removal from writeset
 	require.Nil(t, mvs.GetLatest([]byte("key3")))
 
-	// verify output for GetWritesetKeys
-	writesetKeys := mvs.GetWritesetKeys()
+	// verify output for GetAllWritesetKeys
+	writesetKeys := mvs.GetAllWritesetKeys()
 	// we have 3 writesets
 	require.Equal(t, 3, len(writesetKeys))
 	require.Equal(t, []string{"key1"}, writesetKeys[1])

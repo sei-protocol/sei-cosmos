@@ -12,19 +12,6 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
-// TODO: when integrating, this store needs to be wrapped by a gaskv so that we can appropriately track ALL of the calls that get directed to the various KV layers. We can store this gas usage calculation in the overall tx execution level, and then use the gas calculation for the transactions that succeed validation
-
-// should manage a parent store AND a multiversion store AND a cache kv that's used for generating read / write sets
-// reads should waterfall from cache kv to multiversion store to parent store
-// writes should only be applied to the cache kv, and later we'll update the multiversion store after tx execution
-
-// TODO: is this helpful? its not really gonna be widely used as a pattern, but maybe good to create a standard for future modifications / implementations for mvkv
-type MVKV interface {
-	// validate
-	// write to multiversion store
-
-}
-
 // Version Indexed Store wraps the multiversion store in a way that implements the KVStore interface, but also stores the index of the transaction, and so store actions are applied to the multiversion store using that index
 type VersionIndexedStore struct {
 	mtx sync.Mutex

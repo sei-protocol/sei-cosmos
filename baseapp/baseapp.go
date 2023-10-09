@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/server/config"
 	"reflect"
 	"strings"
 	"sync"
@@ -304,8 +305,8 @@ func NewBaseApp(
 	}
 	// this can only occur if concurrency-workers is explicitly set to 0
 	// a valid default value applies if not set at all
-	if app.ConcurrencyWorkers == 0 || app.ConcurrencyWorkers < -1 {
-		panic("--concurrency-workers must be greater than 0 or -1 for unlimited")
+	if app.ConcurrencyWorkers == 0 {
+		app.ConcurrencyWorkers = config.DefaultConcurrencyWorkers
 	}
 
 	return app

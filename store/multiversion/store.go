@@ -131,7 +131,7 @@ func (s *Store) removeOldWriteset(index int, newWriteSet WriteSet) {
 		}
 	}
 	// unset the writesetKeys for this index
-	s.txWritesetKeys[index] = nil
+	delete(s.txWritesetKeys, index)
 }
 
 // SetWriteset sets a writeset for a transaction index, and also writes all of the multiversion items in the writeset to the multiversion store.

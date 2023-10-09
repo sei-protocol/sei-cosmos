@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/server/config"
 	"reflect"
 	"strings"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/armon/go-metrics"
+	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
@@ -298,13 +298,12 @@ func NewBaseApp(
 		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
 	}
 
-	// initialize concurrency-workers to the flag's value
-	// this avoids forcing every implementation to pass an option
+	// if no option overrode already, initialize to the flags value
+	// this avoids forcing every implementation to pass an option, but allows it
 	if app.ConcurrencyWorkers == 0 {
 		app.ConcurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
 	}
-	// this can only occur if concurrency-workers is explicitly set to 0
-	// a valid default value applies if not set at all
+	// safely default this to the default value if 0
 	if app.ConcurrencyWorkers == 0 {
 		app.ConcurrencyWorkers = config.DefaultConcurrencyWorkers
 	}

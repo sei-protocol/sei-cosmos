@@ -102,7 +102,7 @@ num-orphan-per-file = {{ .BaseConfig.NumOrphanPerFile }}
 orphan-dir = "{{ .BaseConfig.OrphanDirectory }}"
 
 # concurrency-workers defines how many workers to run for concurrent transaction execution
-concurrency-workers = {{ .BaseConfig.ConcurrencyWorkers }}
+# concurrency-workers = {{ .BaseConfig.ConcurrencyWorkers }}
 
 ###############################################################################
 ###                         Telemetry Configuration                         ###

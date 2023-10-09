@@ -171,7 +171,7 @@ type BaseApp struct { //nolint: maligned
 
 	TracingInfo *tracing.Info
 
-	ConcurrencyWorkers int
+	concurrencyWorkers int
 }
 
 type appStore struct {
@@ -300,12 +300,12 @@ func NewBaseApp(
 
 	// if no option overrode already, initialize to the flags value
 	// this avoids forcing every implementation to pass an option, but allows it
-	if app.ConcurrencyWorkers == 0 {
-		app.ConcurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
+	if app.concurrencyWorkers == 0 {
+		app.concurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
 	}
 	// safely default this to the default value if 0
-	if app.ConcurrencyWorkers == 0 {
-		app.ConcurrencyWorkers = config.DefaultConcurrencyWorkers
+	if app.concurrencyWorkers == 0 {
+		app.concurrencyWorkers = config.DefaultConcurrencyWorkers
 	}
 
 	return app
@@ -319,6 +319,11 @@ func (app *BaseApp) Name() string {
 // AppVersion returns the application's protocol version.
 func (app *BaseApp) AppVersion() uint64 {
 	return app.appVersion
+}
+
+// ConcurrencyWorkers returns the number of concurrent workers for the BaseApp.
+func (app *BaseApp) ConcurrencyWorkers() int {
+	return app.concurrencyWorkers
 }
 
 // Version returns the application's version string.

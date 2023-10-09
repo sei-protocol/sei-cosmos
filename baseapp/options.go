@@ -303,7 +303,7 @@ func (app *BaseApp) SetConcurrencyWorkers(workers int) {
 	if app.sealed {
 		panic("SetConcurrencyWorkers() on sealed BaseApp")
 	}
-	app.ConcurrencyWorkers = workers
+	app.concurrencyWorkers = workers
 }
 
 // SetSnapshotKeepRecent sets the number of recent snapshots to keep.

@@ -374,9 +374,6 @@ func (c Config) ValidateBasic(tendermintConfig *tmcfg.Config) error {
 			"cannot enable state sync snapshots with '%s' pruning setting", storetypes.PruningOptionEverything,
 		)
 	}
-	if c.ConcurrencyWorkers == 0 || c.ConcurrencyWorkers < -2 {
-		return sdkerrors.ErrAppConfig.Wrapf("concurrency-workers must be a positive integer or -1 (unlimited)")
-	}
 
 	return nil
 }

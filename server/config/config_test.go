@@ -26,5 +26,5 @@ func TestSetSnapshotDirectory(t *testing.T) {
 
 func TestSetConcurrencyWorkers(t *testing.T) {
 	cfg := DefaultConfig()
-	require.Equal(t, 10, cfg.ConcurrencyWorkers)
+	require.Equal(t, DefaultConcurrencyWorkers, cfg.ConcurrencyWorkers)
 }

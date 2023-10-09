@@ -21,6 +21,9 @@ const (
 
 	// DefaultGRPCWebAddress defines the default address to bind the gRPC-web server to.
 	DefaultGRPCWebAddress = "0.0.0.0:9091"
+
+	// DefaultConcurrencyWorkers defines the default workers to use for concurrent transactions
+	DefaultConcurrencyWorkers = 10
 )
 
 // BaseConfig defines the server's basic configuration
@@ -240,7 +243,7 @@ func DefaultConfig() *Config {
 			IAVLDisableFastNode: true,
 			CompactionInterval:  0,
 			NoVersioning:        false,
-			ConcurrencyWorkers:  10,
+			ConcurrencyWorkers:  DefaultConcurrencyWorkers,
 		},
 		Telemetry: telemetry.Config{
 			Enabled:      false,
@@ -370,6 +373,9 @@ func (c Config) ValidateBasic(tendermintConfig *tmcfg.Config) error {
 		return sdkerrors.ErrAppConfig.Wrapf(
 			"cannot enable state sync snapshots with '%s' pruning setting", storetypes.PruningOptionEverything,
 		)
+	}
+	if c.ConcurrencyWorkers == 0 || c.ConcurrencyWorkers < -2 {
+		return sdkerrors.ErrAppConfig.Wrapf("concurrency-workers must be a positive integer or -1 (unlimited)")
 	}
 
 	return nil

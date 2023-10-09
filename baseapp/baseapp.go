@@ -60,7 +60,8 @@ const (
 	FlagArchivalArweaveIndexDBFullPath = "archival-arweave-index-db-full-path"
 	FlagArchivalArweaveNodeURL         = "archival-arweave-node-url"
 
-	FlagChainID = "chain-id"
+	FlagChainID            = "chain-id"
+	FlagConcurrencyWorkers = "concurrency-workers"
 )
 
 var (
@@ -294,6 +295,17 @@ func NewBaseApp(
 	app.startCompactionRoutine(db)
 	if app.orphanConfig != nil {
 		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
+	}
+
+	// initialize concurrency-workers to the flag's value
+	// this avoids forcing every implementation to pass an option
+	if app.ConcurrencyWorkers == 0 {
+		app.ConcurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
+	}
+	// this can only occur if concurrency-workers is explicitly set to 0
+	// a valid default value applies if not set at all
+	if app.ConcurrencyWorkers == 0 || app.ConcurrencyWorkers < -1 {
+		panic("--concurrency-workers must be greater than 0 or -1 for unlimited")
 	}
 
 	return app

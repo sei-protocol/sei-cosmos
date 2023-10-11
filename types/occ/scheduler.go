@@ -84,7 +84,7 @@ func (s *scheduler) ExecuteAll(ctx sdk.Context, tasks []*Task) (*Result, error) 
 				case <-gCtx.Done():
 					return gCtx.Err()
 				case task := <-ch:
-	
+
 					//TODO: putting abort channel on the context for now
 					//I'm not yet sure how this should get to the mkv store
 					task.abort = nil
@@ -93,7 +93,7 @@ func (s *scheduler) ExecuteAll(ctx sdk.Context, tasks []*Task) (*Result, error) 
 					resp := s.deliverTx(txCtx, task.Request)
 
 					// if this aborted, then mark as aborted
-					//TODO: add to a dependnecies list for retry
+					//TODO: add to a dependencies list for retry
 					if abt, ok := <-abortCh; ok {
 						task.abort = abt
 					} else {

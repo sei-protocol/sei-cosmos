@@ -244,14 +244,11 @@ func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchReques
 	for idx, tx := range req.TxEntries {
 		tasks = append(tasks, occ.NewTask(tx.Request, idx))
 	}
-
-	results, err := scheduler.ExecuteAll(ctx, tasks)
-	if err != nil {
+	if err := scheduler.ProcessAll(ctx, tasks); err != nil {
 		//TODO: handle error
 	}
-
-	for _, tx := range results.Completed {
-		responses = append(responses, &sdk.DeliverTxResult{Response: tx.Response})
+	for _, tx := range tasks {
+		responses = append(responses, &sdk.DeliverTxResult{Response: *tx.Response})
 	}
 	return sdk.DeliverTxBatchResponse{Results: responses}
 }

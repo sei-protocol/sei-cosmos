@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	AbortCtxKey     = struct{}{}
 	ErrReadEstimate = errors.New("multiversion store value contains estimate, cannot read, aborting")
 )
 
@@ -25,29 +24,35 @@ func NewEstimateAbort(dependentTxIdx int) Abort {
 	}
 }
 
+type TaskStatus string
+
+const (
+	TaskStatusPending   TaskStatus = "pending"
+	TaskStatusExecuted  TaskStatus = "executed"
+	TaskStatusAborted   TaskStatus = "aborted"
+	TaskStatusValidated TaskStatus = "validated"
+)
+
 type Task struct {
-	Index    int
-	Request  types.RequestDeliverTx
-	Response types.ResponseDeliverTx
-	abort    *Abort
+	Status      TaskStatus
+	Index       int
+	Incarnation int
+	Request     types.RequestDeliverTx
+	Response    *types.ResponseDeliverTx
 }
 
 // TODO: (TBD) this might not be necessary to externalize, unless others
-// need to reason about aborts and dependencies
 func NewTask(request types.RequestDeliverTx, index int) *Task {
 	return &Task{
 		Request: request,
 		Index:   index,
+		Status:  TaskStatusPending,
 	}
 }
 
-type Result struct {
-	Conflicts []*Task
-	Completed []*Task
-}
-
+// Scheduler processes tasks concurrently
 type Scheduler interface {
-	ExecuteAll(ctx sdk.Context, tasks []*Task) (*Result, error)
+	ProcessAll(ctx sdk.Context, tasks []*Task) error
 }
 
 type scheduler struct {
@@ -55,7 +60,7 @@ type scheduler struct {
 	workers   int
 }
 
-// TODO: this may need a reference to the mkv store?
+// NewScheduler creates a new scheduler
 func NewScheduler(workers int, deliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)) Scheduler {
 	return &scheduler{
 		workers:   workers,
@@ -63,11 +68,48 @@ func NewScheduler(workers int, deliverTxFunc func(ctx sdk.Context, req types.Req
 	}
 }
 
+func (s *scheduler) ProcessAll(ctx sdk.Context, tasks []*Task) error {
+	toExecute := tasks
+	for len(toExecute) > 0 {
+		err := s.executeAll(ctx, toExecute)
+		if err != nil {
+			return err
+		}
+		// note this processes ALL tasks, not just those recently executed
+		toExecute, err = s.validateAll(ctx, tasks)
+		if err != nil {
+			return err
+		}
+		for _, t := range toExecute {
+			t.Incarnation++
+			t.Status = TaskStatusPending
+			//TODO: reset anything that needs resetting
+		}
+	}
+	return nil
+}
+
+// TODO: validate each task
+// TODO: return list of tasks that are invalid
+func (s *scheduler) validateAll(ctx sdk.Context, tasks []*Task) ([]*Task, error) {
+	var res []*Task
+	for _, t := range tasks {
+		// any aborted tx is known to be suspect here
+		if t.Status == TaskStatusAborted {
+			res = append(res, t)
+		} else {
+			//TODO: validate the task and add it if invalid
+			//TODO: create and handle abort for validation
+			t.Status = TaskStatusValidated
+		}
+	}
+	return res, nil
+}
+
 // ExecuteAll (SHELL) executes all tasks concurrently, and returns a result with all completed tasks and all conflicts
 // TODO: retries on aborted tasks
-// TODO: validation logic
 // TODO: error scenarios
-func (s *scheduler) ExecuteAll(ctx sdk.Context, tasks []*Task) (*Result, error) {
+func (s *scheduler) executeAll(ctx sdk.Context, tasks []*Task) error {
 	ch := make(chan *Task, len(tasks))
 	grp, gCtx := errgroup.WithContext(ctx.Context())
 
@@ -84,20 +126,15 @@ func (s *scheduler) ExecuteAll(ctx sdk.Context, tasks []*Task) (*Result, error) 
 				case <-gCtx.Done():
 					return gCtx.Err()
 				case task := <-ch:
-
-					//TODO: putting abort channel on the context for now
-					//I'm not yet sure how this should get to the mkv store
-					task.abort = nil
+					//TODO: ensure version multi store is on context
 					abortCh := make(chan *Abort)
-					txCtx := ctx.WithValue(AbortCtxKey, abortCh)
-					resp := s.deliverTx(txCtx, task.Request)
+					resp := s.deliverTx(ctx, task.Request)
 
-					// if this aborted, then mark as aborted
-					//TODO: add to a dependencies list for retry
-					if abt, ok := <-abortCh; ok {
-						task.abort = abt
+					if _, ok := <-abortCh; ok {
+						task.Status = TaskStatusAborted
 					} else {
-						task.Response = resp
+						task.Status = TaskStatusExecuted
+						task.Response = &resp
 					}
 				}
 			}
@@ -116,20 +153,8 @@ func (s *scheduler) ExecuteAll(ctx sdk.Context, tasks []*Task) (*Result, error) 
 	})
 
 	if err := grp.Wait(); err != nil {
-		return nil, err
+		return err
 	}
 
-	resp := &Result{}
-
-	//TODO: actually do validation (TBD)
-	//TODO: retries on aborted tasks (TBD)
-	for _, task := range tasks {
-		if task.abort != nil {
-			resp.Conflicts = append(resp.Conflicts, task)
-		} else {
-			resp.Completed = append(resp.Completed, task)
-		}
-	}
-
-	return resp, nil
+	return nil
 }

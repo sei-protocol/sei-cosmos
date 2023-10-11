@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	memiavlcfg "github.com/sei-protocol/mmap-iavl/store/config"
+	memiavlcfg "github.com/sei-protocol/sei-db/sc/memiavl/config"
 	"github.com/spf13/viper"
 	"strings"
 

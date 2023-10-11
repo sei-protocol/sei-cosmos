@@ -71,10 +71,14 @@ func NewScheduler(workers int, deliverTxFunc func(ctx sdk.Context, req types.Req
 func (s *scheduler) ProcessAll(ctx sdk.Context, tasks []*Task) error {
 	toExecute := tasks
 	for len(toExecute) > 0 {
+
+		// execute sets statuses of tasks to either executed or aborted
 		err := s.executeAll(ctx, toExecute)
 		if err != nil {
 			return err
 		}
+
+		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
 		toExecute, err = s.validateAll(ctx, tasks)
 		if err != nil {

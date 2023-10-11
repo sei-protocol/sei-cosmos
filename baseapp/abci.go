@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/types/occ"
 	"os"
 	"sort"
 	"strings"
@@ -237,13 +238,20 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // DeliverTxBatch executes multiple txs
 // TODO: support occ logic with scheduling
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
-	// TODO: replace with actual scheduler logic
-	// This is stubbed so that it does something sensible
+	scheduler := occ.NewScheduler(app.concurrencyWorkers, app.DeliverTx)
 	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
-	for _, tx := range req.TxEntries {
-		responses = append(responses, &sdk.DeliverTxResult{
-			Response: app.DeliverTx(ctx, tx.Request),
-		})
+	tasks := make([]*occ.Task, 0, len(req.TxEntries))
+	for idx, tx := range req.TxEntries {
+		tasks = append(tasks, occ.NewTask(tx.Request, idx))
+	}
+
+	results, err := scheduler.ExecuteAll(ctx, tasks)
+	if err != nil {
+		//TODO: handle error
+	}
+
+	for _, tx := range results.Completed {
+		responses = append(responses, &sdk.DeliverTxResult{Response: tx.Response})
 	}
 	return sdk.DeliverTxBatchResponse{Results: responses}
 }

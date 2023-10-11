@@ -110,7 +110,8 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*Task) ([]*Task, error)
 	return res, nil
 }
 
-// ExecuteAll (SHELL) executes all tasks concurrently, and returns a result with all completed tasks and all conflicts
+// ExecuteAll executes all tasks concurrently
+// Tasks are updated with their status
 // TODO: retries on aborted tasks
 // TODO: error scenarios
 func (s *scheduler) executeAll(ctx sdk.Context, tasks []*Task) error {

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	"os"
 	"sort"
@@ -239,7 +238,8 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // DeliverTxBatch executes multiple txs
 // TODO: support occ logic with scheduling
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
-	ctx = ctx.WithMultiVersionStore(multiversion.NewMultiVersionStore())
+	//TODO: inject multiversion store without import cycle (figure out right place for this)
+	// ctx = ctx.WithMultiVersionStore(multiversion.NewMultiVersionStore())
 
 	tasks := make([]*occ.Task, 0, len(req.TxEntries))
 	for idx, tx := range req.TxEntries {

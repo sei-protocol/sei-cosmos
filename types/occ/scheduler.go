@@ -132,7 +132,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*Task) error {
 					return gCtx.Err()
 				case task := <-ch:
 					//TODO: ensure version multi store is on context
-					abortCh := make(chan *Abort)
+					abortCh := make(chan Abort)
 					resp := s.deliverTx(ctx, task.Request)
 
 					if _, ok := <-abortCh; ok {

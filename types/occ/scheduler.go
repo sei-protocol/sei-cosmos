@@ -83,11 +83,8 @@ func (s *scheduler) ExecuteAll(ctx sdk.Context, tasks []*Task) (*Result, error) 
 				select {
 				case <-gCtx.Done():
 					return gCtx.Err()
-				case task, ok := <-ch:
-					if !ok {
-						return nil
-					}
-
+				case task := <-ch:
+	
 					//TODO: putting abort channel on the context for now
 					//I'm not yet sure how this should get to the mkv store
 					task.abort = nil

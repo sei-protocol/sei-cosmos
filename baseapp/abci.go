@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/types/occ"
 	"os"
 	"sort"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"

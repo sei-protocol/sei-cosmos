@@ -2,7 +2,6 @@ package types
 
 import (
 	"context"
-	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -27,7 +26,6 @@ and standard additions here would be better just to add to the Context struct
 type Context struct {
 	ctx           context.Context
 	ms            MultiStore
-	mvs           multiversion.MultiVersionStore
 	header        tmproto.Header
 	headerHash    tmbytes.HexBytes
 	chainID       string
@@ -60,10 +58,6 @@ type Request = Context
 // Read-only accessors
 func (c Context) Context() context.Context {
 	return c.ctx
-}
-
-func (c Context) MultiVersionStore() multiversion.MultiVersionStore {
-	return c.mvs
 }
 
 func (c Context) MultiStore() MultiStore {
@@ -203,12 +197,6 @@ func (c Context) WithContext(ctx context.Context) Context {
 // WithMultiStore returns a Context with an updated MultiStore.
 func (c Context) WithMultiStore(ms MultiStore) Context {
 	c.ms = ms
-	return c
-}
-
-// WithMultiVersionStore returns a Context with an updated MultiVersionStore.
-func (c Context) WithMultiVersionStore(mvs multiversion.MultiVersionStore) Context {
-	c.mvs = mvs
 	return c
 }
 

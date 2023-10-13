@@ -1,8 +1,9 @@
-package occ
+package tasks
 
 import (
 	"context"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/abci/types"
 	"testing"
 )
@@ -13,34 +14,30 @@ func (f mockDeliverTxFunc) DeliverTx(ctx sdk.Context, req types.RequestDeliverTx
 	return f(ctx, req)
 }
 
-func createTasks(n int) []*Task {
-	tasks := make([]*Task, n)
+func requestList(n int) []types.RequestDeliverTx {
+	tasks := make([]types.RequestDeliverTx, n)
 	for i := 0; i < n; i++ {
-		tasks[i] = NewTask(types.RequestDeliverTx{}, i)
+		tasks[i] = types.RequestDeliverTx{}
 	}
 	return tasks
 }
 
 func TestProcessAll(t *testing.T) {
 	tests := []struct {
-		name           string
-		workers        int
-		tasks          []*Task
-		deliverTxFunc  mockDeliverTxFunc
-		expectedStatus TaskStatus
-		expectedErr    error
-		expectedInc    int
+		name          string
+		workers       int
+		requests      []types.RequestDeliverTx
+		deliverTxFunc mockDeliverTxFunc
+		expectedErr   error
 	}{
 		{
-			name:    "All tasks processed without aborts",
-			workers: 2,
-			tasks:   createTasks(5),
+			name:     "All tasks processed without aborts",
+			workers:  2,
+			requests: requestList(5),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				return types.ResponseDeliverTx{}
 			},
-			expectedStatus: TaskStatusValidated,
-			expectedErr:    nil,
-			expectedInc:    0,
+			expectedErr: nil,
 		},
 		//TODO: Add more test cases
 	}
@@ -50,18 +47,12 @@ func TestProcessAll(t *testing.T) {
 			s := NewScheduler(tt.workers, tt.deliverTxFunc.DeliverTx)
 			ctx := sdk.Context{}.WithContext(context.Background())
 
-			err := s.ProcessAll(ctx, tt.tasks)
+			res, err := s.ProcessAll(ctx, tt.requests)
 			if err != tt.expectedErr {
 				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
-			}
-
-			for _, task := range tt.tasks {
-				if task.Status != tt.expectedStatus {
-					t.Errorf("Expected task status to be %s, got %s", tt.expectedStatus, task.Status)
-				}
-				if task.Incarnation != tt.expectedInc {
-					t.Errorf("Expected task incarnation to be %d, got %d", tt.expectedInc, task.Incarnation)
-				}
+			} else {
+				// response for each request exists
+				assert.Len(t, res, len(tt.requests))
 			}
 		})
 	}

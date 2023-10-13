@@ -35,7 +35,6 @@ type scheduler struct {
 
 // NewScheduler creates a new scheduler
 func NewScheduler(workers int, deliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)) Scheduler {
-	go func() { go func() {}() }()
 	return &scheduler{
 		workers:   workers,
 		deliverTx: deliverTxFunc,

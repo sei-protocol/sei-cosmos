@@ -89,6 +89,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 		for _, t := range toExecute {
 			t.Incarnation++
 			t.Status = statusPending
+			t.Response = nil
 			//TODO: reset anything that needs resetting
 		}
 	}
@@ -147,10 +148,13 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						return nil
 					}
 					//TODO: ensure version multi store is on context
-					//abortCh := make(chan Abort)
+					// buffered so it doesn't block on write
+					// abortCh := make(chan occ.Abort, 1)
 
 					//TODO: consume from abort in non-blocking way (give it a length)
 					resp := s.deliverTx(ctx, task.Request)
+
+					// close(abortCh)
 
 					//if _, ok := <-abortCh; ok {
 					//	tasks.status = TaskStatusAborted

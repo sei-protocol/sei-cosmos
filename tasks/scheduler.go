@@ -9,9 +9,17 @@ import (
 type status string
 
 const (
-	statusPending   status = "pending"
-	statusExecuted  status = "executed"
-	statusAborted   status = "aborted"
+	// statusPending tasks are ready for execution
+	// all executing tasks are in pending state
+	statusPending status = "pending"
+	// statusExecuted tasks are ready for validation
+	// these tasks did not abort during execution
+	statusExecuted status = "executed"
+	// statusAborted means the task has been aborted
+	// these tasks transition to pending upon next execution
+	statusAborted status = "aborted"
+	// statusValidated means the task has been validated
+	// tasks in this status can be reset if an earlier task fails validation
 	statusValidated status = "validated"
 )
 
@@ -91,14 +99,24 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 // TODO: return list of tasks that are invalid
 func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	var res []*deliverTxTask
-	for _, t := range tasks {
+
+	// find first non-validated entry
+	var startIdx int
+	for idx, t := range tasks {
+		if t.Status != statusValidated {
+			startIdx = idx
+			break
+		}
+	}
+
+	for i := startIdx; i < len(tasks); i++ {
 		// any aborted tx is known to be suspect here
-		if t.Status == statusAborted {
-			res = append(res, t)
+		if tasks[i].Status == statusAborted {
+			res = append(res, tasks[i])
 		} else {
 			//TODO: validate the tasks and add it if invalid
 			//TODO: create and handle abort for validation
-			t.Status = statusValidated
+			tasks[i].Status = statusValidated
 		}
 	}
 	return res, nil

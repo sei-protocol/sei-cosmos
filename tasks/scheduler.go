@@ -50,7 +50,6 @@ type Scheduler interface {
 type scheduler struct {
 	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)
 	workers            int
-	cms                sdk.CacheMultiStore
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 }
 

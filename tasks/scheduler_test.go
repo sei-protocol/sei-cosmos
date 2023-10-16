@@ -2,9 +2,13 @@ package tasks
 
 import (
 	"context"
+	"github.com/cosmos/cosmos-sdk/store/cachekv"
+	"github.com/cosmos/cosmos-sdk/store/cachemulti"
+	"github.com/cosmos/cosmos-sdk/store/dbadapter"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/abci/types"
+	dbm "github.com/tendermint/tm-db"
 	"testing"
 )
 
@@ -46,6 +50,15 @@ func TestProcessAll(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewScheduler(tt.workers, tt.deliverTxFunc.DeliverTx)
 			ctx := sdk.Context{}.WithContext(context.Background())
+
+			db := dbm.NewMemDB()
+			storeKey := sdk.NewKVStoreKey("mock")
+			mem := dbadapter.Store{DB: db}
+			stores := make(map[sdk.StoreKey]sdk.CacheWrapper)
+			stores[storeKey] = cachekv.NewStore(mem, storeKey, 1000)
+			keys := make(map[string]sdk.StoreKey)
+			store := cachemulti.NewStore(db, stores, keys, nil, nil, nil)
+			ctx = ctx.WithMultiStore(store)
 
 			res, err := s.ProcessAll(ctx, tt.requests)
 			if err != tt.expectedErr {

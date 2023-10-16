@@ -86,6 +86,15 @@ func newCacheMultiStoreFromCMS(cms Store) Store {
 	return NewFromKVStore(cms.db, stores, nil, cms.traceWriter, cms.traceContext, nil)
 }
 
+// SetKVStores sets the underlying KVStores via a handler for each key
+func (cms Store) SetKVStores(handler func(sk types.StoreKey, s types.KVStore) types.CacheWrapper) types.MultiStore {
+	stores := make(map[types.StoreKey]types.CacheWrapper)
+	for k, s := range cms.stores {
+		stores[k] = handler(k, s.(types.KVStore))
+	}
+	return NewFromKVStore(cms.db, stores, nil, cms.traceWriter, cms.traceContext, nil)
+}
+
 // SetTracer sets the tracer for the MultiStore that the underlying
 // stores will utilize to trace operations. A MultiStore is returned.
 func (cms Store) SetTracer(w io.Writer) types.MultiStore {
@@ -176,6 +185,15 @@ func (cms Store) CacheWrapWithListeners(storeKey types.StoreKey, _ []types.Write
 // Implements MultiStore.
 func (cms Store) CacheMultiStore() types.CacheMultiStore {
 	return newCacheMultiStoreFromCMS(cms)
+}
+
+// StoreKeys returns a list of all store keys
+func (cms Store) StoreKeys() []types.StoreKey {
+	keys := make([]types.StoreKey, 0, len(cms.stores))
+	for key := range cms.stores {
+		keys = append(keys, key)
+	}
+	return keys
 }
 
 // CacheMultiStoreWithVersion implements the MultiStore interface. It will panic

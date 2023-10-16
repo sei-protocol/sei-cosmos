@@ -17,6 +17,16 @@ type multiStore struct {
 	kv map[sdk.StoreKey]kvStore
 }
 
+func (ms multiStore) SetKVStores(handler func(key store.StoreKey, s sdk.KVStore) store.CacheWrapper) store.MultiStore {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ms multiStore) StoreKeys() []sdk.StoreKey {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (ms multiStore) RollbackToVersion(version int64) error {
 	panic("not implemented")
 }

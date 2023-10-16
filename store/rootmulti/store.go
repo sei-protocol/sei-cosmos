@@ -72,6 +72,18 @@ type Store struct {
 	listeners map[types.StoreKey][]types.WriteListener
 }
 
+func (rs *Store) SetKVStores(handler func(key types.StoreKey, s types.KVStore) types.CacheWrapper) types.MultiStore {
+	panic("SetKVStores is not implemented for rootmulti")
+}
+
+func (rs *Store) StoreKeys() []types.StoreKey {
+	res := make([]types.StoreKey, len(rs.stores))
+	for sk := range rs.stores {
+		res = append(res, sk)
+	}
+	return res
+}
+
 var (
 	_ types.CommitMultiStore = (*Store)(nil)
 	_ types.Queryable        = (*Store)(nil)

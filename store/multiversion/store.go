@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	scheduler "github.com/cosmos/cosmos-sdk/types/occ"
 	"sort"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ type MultiVersionStore interface {
 	SetReadset(index int, readset ReadSet)
 	GetReadset(index int) ReadSet
 	ValidateTransactionState(index int) []int
+	VersionedIndexedStore(incarnation int, transactionIndex int, abortChannel chan scheduler.Abort) *VersionIndexedStore
 }
 
 type WriteSet map[string][]byte
@@ -48,6 +50,10 @@ func NewMultiVersionStore(parentStore types.KVStore) *Store {
 		txReadSets:      make(map[int]ReadSet),
 		parentStore:     parentStore,
 	}
+}
+
+func (s *Store) VersionedIndexedStore(incarnation int, transactionIndex int, abortChannel chan scheduler.Abort) *VersionIndexedStore {
+	return NewVersionIndexedStore(s.parentStore, s, transactionIndex, incarnation, abortChannel)
 }
 
 // GetLatest implements MultiVersionStore.

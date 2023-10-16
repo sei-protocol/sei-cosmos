@@ -1,7 +1,10 @@
 package tasks
 
 import (
+	"github.com/cosmos/cosmos-sdk/store/multiversion"
+	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/tendermint/tendermint/abci/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -25,10 +28,18 @@ const (
 
 type deliverTxTask struct {
 	Status      status
+	Abort       *occ.Abort
 	Index       int
 	Incarnation int
 	Request     types.RequestDeliverTx
 	Response    *types.ResponseDeliverTx
+}
+
+func (dt *deliverTxTask) Increment() {
+	dt.Incarnation++
+	dt.Status = statusPending
+	dt.Response = nil
+	dt.Abort = nil
 }
 
 // Scheduler processes tasks concurrently
@@ -37,8 +48,10 @@ type Scheduler interface {
 }
 
 type scheduler struct {
-	deliverTx func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)
-	workers   int
+	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)
+	workers            int
+	cms                sdk.CacheMultiStore
+	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 }
 
 // NewScheduler creates a new scheduler
@@ -69,7 +82,17 @@ func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
 	return res
 }
 
+func (s *scheduler) initMultiVersionStore(ctx sdk.Context) {
+	mvs := make(map[sdk.StoreKey]multiversion.MultiVersionStore)
+	keys := ctx.MultiStore().StoreKeys()
+	for _, sk := range keys {
+		mvs[sk] = multiversion.NewMultiVersionStore(ctx.MultiStore().GetKVStore(sk))
+	}
+	s.multiVersionStores = mvs
+}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error) {
+	s.initMultiVersionStore(ctx)
 	tasks := toTasks(reqs)
 	toExecute := tasks
 	for len(toExecute) > 0 {
@@ -87,10 +110,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 			return nil, err
 		}
 		for _, t := range toExecute {
-			t.Incarnation++
-			t.Status = statusPending
-			t.Response = nil
-			//TODO: reset anything that needs resetting
+			t.Increment()
 		}
 	}
 	return collectResponses(tasks), nil
@@ -147,19 +167,23 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					if !ok {
 						return nil
 					}
-					//TODO: ensure version multi store is on context
-					// buffered so it doesn't block on write
-					// abortCh := make(chan occ.Abort, 1)
 
-					//TODO: consume from abort in non-blocking way (give it a length)
+					// non-blocking
+					abortCh := make(chan occ.Abort, len(s.multiVersionStores))
+					cms := ctx.MultiStore().CacheMultiStore()
+					ms := cms.SetKVStores(func(k store.StoreKey, kvs sdk.KVStore) store.CacheWrapper {
+						return s.multiVersionStores[k].VersionedIndexedStore(task.Incarnation, task.Index, abortCh)
+					})
+					ctx = ctx.WithMultiStore(ms)
+
 					resp := s.deliverTx(ctx, task.Request)
+					close(abortCh)
 
-					// close(abortCh)
-
-					//if _, ok := <-abortCh; ok {
-					//	tasks.status = TaskStatusAborted
-					//	continue
-					//}
+					if abt, ok := <-abortCh; ok {
+						task.Status = statusAborted
+						task.Abort = &abt
+						continue
+					}
 
 					task.Status = statusExecuted
 					task.Response = &resp

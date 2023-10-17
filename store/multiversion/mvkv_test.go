@@ -300,7 +300,7 @@ func TestVersionIndexedStoreValidation(t *testing.T) {
 func TestIterator(t *testing.T) {
 	mem := dbadapter.Store{DB: dbm.NewMemDB()}
 	parentKVStore := cachekv.NewStore(mem, types.NewKVStoreKey("mock"), 1000)
-	mvs := multiversion.NewMultiVersionStore()
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
 	// initialize a new VersionIndexedStore
 	abortC := make(chan scheduler.Abort)
 	vis := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 2, 2, abortC)

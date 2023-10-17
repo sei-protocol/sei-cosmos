@@ -28,12 +28,13 @@ const (
 )
 
 type deliverTxTask struct {
-	Status      status
-	Abort       *occ.Abort
-	Index       int
-	Incarnation int
-	Request     types.RequestDeliverTx
-	Response    *types.ResponseDeliverTx
+	Status        status
+	Abort         *occ.Abort
+	Index         int
+	Incarnation   int
+	Request       types.RequestDeliverTx
+	Response      *types.ResponseDeliverTx
+	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
 }
 
 func (dt *deliverTxTask) Increment() {
@@ -41,6 +42,7 @@ func (dt *deliverTxTask) Increment() {
 	dt.Status = statusPending
 	dt.Response = nil
 	dt.Abort = nil
+	dt.VersionStores = nil
 }
 
 // Scheduler processes tasks concurrently
@@ -105,7 +107,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
-		toExecute, err = s.validateAll(ctx, tasks)
+		toExecute, err = s.validateAll(tasks)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +120,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 
 // TODO: validate each tasks
 // TODO: return list of tasks that are invalid
-func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
+func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	var res []*deliverTxTask
 
 	// find first non-validated entry
@@ -135,9 +137,16 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 		if tasks[i].Status == statusAborted {
 			res = append(res, tasks[i])
 		} else {
-			//TODO: validate the tasks and add it if invalid
-			//TODO: create and handle abort for validation
-			tasks[i].Status = statusValidated
+			for _, mv := range s.multiVersionStores {
+				conflicts := mv.ValidateTransactionState(tasks[i].Index)
+				if len(conflicts) == 0 {
+					tasks[i].Status = statusValidated
+				} else {
+					//TODO: should one do anything with the conflicts?
+					mv.InvalidateWriteset(tasks[i].Index, tasks[i].Incarnation)
+					tasks[i].Increment()
+				}
+			}
 		}
 	}
 	return res, nil
@@ -171,9 +180,17 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					// non-blocking
 					abortCh := make(chan occ.Abort, len(s.multiVersionStores))
 					cms := ctx.MultiStore().CacheMultiStore()
+
+					// init version stores by store key
+					vs := make(map[store.StoreKey]*multiversion.VersionIndexedStore)
+					for k, v := range s.multiVersionStores {
+						vs[k] = v.VersionedIndexedStore(task.Incarnation, task.Index, abortCh)
+					}
+					task.VersionStores = vs
 					ms := cms.SetKVStores(func(k store.StoreKey, kvs sdk.KVStore) store.CacheWrapper {
-						return s.multiVersionStores[k].VersionedIndexedStore(task.Incarnation, task.Index, abortCh)
+						return vs[k]
 					})
+
 					ctx = ctx.WithMultiStore(ms)
 
 					resp := s.deliverTx(ctx, task.Request)
@@ -183,6 +200,11 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						task.Status = statusAborted
 						task.Abort = &abt
 						continue
+					}
+
+					// write to multiversion stores so they're available to other tasks
+					for _, v := range vs {
+						v.WriteToMultiVersionStore()
 					}
 
 					task.Status = statusExecuted

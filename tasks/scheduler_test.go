@@ -19,6 +19,7 @@ import (
 type mockDeliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx
 
 var testStoreKey = sdk.NewKVStoreKey("mock")
+var itemKey = []byte("key")
 
 func (f mockDeliverTxFunc) DeliverTx(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 	return f(ctx, req)
@@ -41,6 +42,7 @@ func initTestCtx() sdk.Context {
 	stores := make(map[sdk.StoreKey]sdk.CacheWrapper)
 	stores[testStoreKey] = cachekv.NewStore(mem, testStoreKey, 1000)
 	keys := make(map[string]sdk.StoreKey)
+	keys[testStoreKey.Name()] = testStoreKey
 	store := cachemulti.NewStore(db, stores, keys, nil, nil, nil)
 	ctx = ctx.WithMultiStore(store)
 	return ctx
@@ -55,10 +57,14 @@ func TestProcessAll(t *testing.T) {
 		expectedErr   error
 	}{
 		{
-			name:     "All tasks processed without aborts",
-			workers:  2,
+			name:     "Try a conflict",
+			workers:  5,
 			requests: requestList(5),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+				val := kv.Get(itemKey)
+				t.Logf("%s:%v", string(req.Tx), string(val))
+				kv.Set(itemKey, req.Tx)
 				return types.ResponseDeliverTx{}
 			},
 			expectedErr: nil,
@@ -70,7 +76,6 @@ func TestProcessAll(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewScheduler(tt.workers, tt.deliverTxFunc.DeliverTx)
 			ctx := initTestCtx()
-
 			res, err := s.ProcessAll(ctx, tt.requests)
 			if !errors.Is(err, tt.expectedErr) {
 				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)

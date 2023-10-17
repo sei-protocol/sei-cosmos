@@ -48,6 +48,7 @@ func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersion
 		transactionIndex:  transactionIndex,
 		incarnation:       incarnation,
 		abortChannel:      abortChannel,
+		mtx:               sync.Mutex{},
 	}
 }
 
@@ -288,6 +289,7 @@ func (store *VersionIndexedStore) WriteToMultiVersionStore() {
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
 	store.multiVersionStore.SetWriteset(store.transactionIndex, store.incarnation, store.writeset)
+	store.multiVersionStore.SetReadset(store.transactionIndex, store.readset)
 }
 
 func (store *VersionIndexedStore) WriteEstimatesToMultiVersionStore() {

@@ -208,13 +208,14 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						vs[k] = v.VersionedIndexedStore(task.Incarnation, task.Index, abortCh)
 					}
 					task.VersionStores = vs
-					ms := cms.SetKVStores(func(k store.StoreKey, kvs sdk.KVStore) store.CacheWrapper {
+					cms = cms.SetKVStores(func(k store.StoreKey, kvs sdk.KVStore) store.CacheWrapper {
 						return vs[k]
-					})
+					}).(sdk.CacheMultiStore)
 
-					ctx = ctx.WithMultiStore(ms)
+					ctx = ctx.WithMultiStore(cms)
 
 					resp := s.deliverTx(ctx, task.Request)
+
 					close(abortCh)
 
 					if abt, ok := <-abortCh; ok {
@@ -222,6 +223,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						task.Abort = &abt
 						continue
 					}
+					cms.Write()
 
 					// write to multiversion stores so they're available to other tasks
 					for _, v := range vs {

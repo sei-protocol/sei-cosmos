@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/tasks"
+
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -255,13 +257,23 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // DeliverTxBatch executes multiple txs
 // TODO: support occ logic with scheduling
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
-	// TODO: replace with actual scheduler logic
-	// This is stubbed so that it does something sensible
-	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
+	//TODO: inject multiversion store without import cycle (figure out right place for this)
+	// ctx = ctx.WithMultiVersionStore(multiversion.NewMultiVersionStore())
+
+	reqList := make([]abci.RequestDeliverTx, 0, len(req.TxEntries))
 	for _, tx := range req.TxEntries {
-		responses = append(responses, &sdk.DeliverTxResult{
-			Response: app.DeliverTx(ctx, tx.Request),
-		})
+		reqList = append(reqList, tx.Request)
+	}
+
+	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.DeliverTx)
+	txRes, err := scheduler.ProcessAll(ctx, reqList)
+	if err != nil {
+		//TODO: handle error
+	}
+
+	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
+	for _, tx := range txRes {
+		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
 	}
 	return sdk.DeliverTxBatchResponse{Results: responses}
 }

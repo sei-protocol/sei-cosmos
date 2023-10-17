@@ -3,6 +3,7 @@ package tasks
 import (
 	"github.com/tendermint/tendermint/abci/types"
 	"golang.org/x/sync/errgroup"
+	"sort"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
@@ -62,6 +63,30 @@ func NewScheduler(workers int, deliverTxFunc func(ctx sdk.Context, req types.Req
 		workers:   workers,
 		deliverTx: deliverTxFunc,
 	}
+}
+
+func (s *scheduler) invalidateTask(task *deliverTxTask) {
+	for _, mv := range s.multiVersionStores {
+		mv.InvalidateWriteset(task.Index, task.Incarnation)
+	}
+}
+
+func (s *scheduler) findConflicts(task *deliverTxTask) []int {
+	var conflicts []int
+	uniq := make(map[int]struct{})
+	for _, mv := range s.multiVersionStores {
+		mvConflicts := mv.ValidateTransactionState(task.Index)
+		for _, c := range mvConflicts {
+			if _, ok := uniq[c]; !ok {
+				conflicts = append(conflicts, c)
+				uniq[c] = struct{}{}
+			}
+		}
+	}
+	sort.Slice(conflicts, func(i, j int) bool {
+		return conflicts[i] < conflicts[j]
+	})
+	return conflicts
 }
 
 func toTasks(reqs []types.RequestDeliverTx) []*deliverTxTask {
@@ -138,16 +163,9 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 			res = append(res, tasks[i])
 			continue
 		}
-
-		for _, mv := range s.multiVersionStores {
-			conflicts := mv.ValidateTransactionState(tasks[i].Index)
-			if len(conflicts) == 0 {
-				tasks[i].Status = statusValidated
-				continue
-			}
-			//TODO: should one do anything with the conflicts?
-			// Conflicts exist, invalidate the writeset
-			mv.InvalidateWriteset(tasks[i].Index, tasks[i].Incarnation)
+		conflicts := s.findConflicts(tasks[i])
+		if len(conflicts) > 0 {
+			s.invalidateTask(tasks[i])
 			tasks[i].Increment()
 			res = append(res, tasks[i])
 		}

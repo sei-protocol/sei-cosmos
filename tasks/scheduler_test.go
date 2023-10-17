@@ -2,6 +2,8 @@ package tasks
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,6 +18,8 @@ import (
 
 type mockDeliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx
 
+var testStoreKey = sdk.NewKVStoreKey("mock")
+
 func (f mockDeliverTxFunc) DeliverTx(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 	return f(ctx, req)
 }
@@ -23,9 +27,23 @@ func (f mockDeliverTxFunc) DeliverTx(ctx sdk.Context, req types.RequestDeliverTx
 func requestList(n int) []types.RequestDeliverTx {
 	tasks := make([]types.RequestDeliverTx, n)
 	for i := 0; i < n; i++ {
-		tasks[i] = types.RequestDeliverTx{}
+		tasks[i] = types.RequestDeliverTx{
+			Tx: []byte(fmt.Sprintf("%d", i)),
+		}
 	}
 	return tasks
+}
+
+func initTestCtx() sdk.Context {
+	ctx := sdk.Context{}.WithContext(context.Background())
+	db := dbm.NewMemDB()
+	mem := dbadapter.Store{DB: db}
+	stores := make(map[sdk.StoreKey]sdk.CacheWrapper)
+	stores[testStoreKey] = cachekv.NewStore(mem, testStoreKey, 1000)
+	keys := make(map[string]sdk.StoreKey)
+	store := cachemulti.NewStore(db, stores, keys, nil, nil, nil)
+	ctx = ctx.WithMultiStore(store)
+	return ctx
 }
 
 func TestProcessAll(t *testing.T) {
@@ -51,19 +69,10 @@ func TestProcessAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewScheduler(tt.workers, tt.deliverTxFunc.DeliverTx)
-			ctx := sdk.Context{}.WithContext(context.Background())
-
-			db := dbm.NewMemDB()
-			storeKey := sdk.NewKVStoreKey("mock")
-			mem := dbadapter.Store{DB: db}
-			stores := make(map[sdk.StoreKey]sdk.CacheWrapper)
-			stores[storeKey] = cachekv.NewStore(mem, storeKey, 1000)
-			keys := make(map[string]sdk.StoreKey)
-			store := cachemulti.NewStore(db, stores, keys, nil, nil, nil)
-			ctx = ctx.WithMultiStore(store)
+			ctx := initTestCtx()
 
 			res, err := s.ProcessAll(ctx, tt.requests)
-			if err != tt.expectedErr {
+			if !errors.Is(err, tt.expectedErr) {
 				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
 			} else {
 				// response for each request exists

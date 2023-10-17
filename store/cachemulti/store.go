@@ -190,7 +190,7 @@ func (cms Store) CacheMultiStore() types.CacheMultiStore {
 // StoreKeys returns a list of all store keys
 func (cms Store) StoreKeys() []types.StoreKey {
 	keys := make([]types.StoreKey, 0, len(cms.stores))
-	for key := range cms.stores {
+	for _, key := range cms.keys {
 		keys = append(keys, key)
 	}
 	return keys

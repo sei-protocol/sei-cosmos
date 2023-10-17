@@ -136,17 +136,20 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 		// any aborted tx is known to be suspect here
 		if tasks[i].Status == statusAborted {
 			res = append(res, tasks[i])
-		} else {
-			for _, mv := range s.multiVersionStores {
-				conflicts := mv.ValidateTransactionState(tasks[i].Index)
-				if len(conflicts) == 0 {
-					tasks[i].Status = statusValidated
-				} else {
-					//TODO: should one do anything with the conflicts?
-					mv.InvalidateWriteset(tasks[i].Index, tasks[i].Incarnation)
-					tasks[i].Increment()
-				}
+			continue
+		}
+
+		for _, mv := range s.multiVersionStores {
+			conflicts := mv.ValidateTransactionState(tasks[i].Index)
+			if len(conflicts) == 0 {
+				tasks[i].Status = statusValidated
+				continue
 			}
+			//TODO: should one do anything with the conflicts?
+			// Conflicts exist, invalidate the writeset
+			mv.InvalidateWriteset(tasks[i].Index, tasks[i].Incarnation)
+			tasks[i].Increment()
+			res = append(res, tasks[i])
 		}
 	}
 	return res, nil

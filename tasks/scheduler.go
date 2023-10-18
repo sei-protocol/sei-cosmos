@@ -1,9 +1,10 @@
 package tasks
 
 import (
+	"sort"
+
 	"github.com/tendermint/tendermint/abci/types"
 	"golang.org/x/sync/errgroup"
-	"sort"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"

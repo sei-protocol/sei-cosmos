@@ -119,7 +119,6 @@ func TestProcessAll(t *testing.T) {
 		//TODO: Add more test cases
 	}
 
-	//TODO: remove logs once we figure out why this fails
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for i := 0; i < 100; i++ {

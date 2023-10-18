@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/tendermint/tendermint/abci/types"
@@ -112,9 +111,6 @@ func toTasks(reqs []types.RequestDeliverTx) []*deliverTxTask {
 func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
 	for _, t := range tasks {
-		if t.Incarnation > 2 {
-			fmt.Printf("%d -> %d\n", t.Index, t.Incarnation)
-		}
 		res = append(res, *t.Response)
 	}
 	return res

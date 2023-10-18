@@ -191,7 +191,8 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 			// aborted means it can be re-run immediately
 			res = append(res, tasks[i])
 
-		case statusExecuted:
+		// validated tasks can become unvalidated if an earlier re-run task now conflicts
+		case statusExecuted, statusValidated:
 			conflicts := s.findConflicts(tasks[i])
 
 			if len(conflicts) > 0 {

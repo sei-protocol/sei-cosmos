@@ -2,13 +2,13 @@ package multiversion
 
 import (
 	"bytes"
-	"github.com/cosmos/cosmos-sdk/types/occ"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/cosmos/cosmos-sdk/types/occ"
 )
 
 type MultiVersionStore interface {

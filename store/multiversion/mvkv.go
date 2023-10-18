@@ -37,16 +37,19 @@ type VersionIndexedStore struct {
 	abortChannel chan scheduler.Abort
 }
 
+// Write implements types.CacheWrap so this store can exist on the cache multi store
 func (store *VersionIndexedStore) Write() {
 	//TODO implement me
 	panic("implement me")
 }
 
+// GetEvents implements types.CacheWrap so this store can exist on the cache multi store
 func (store *VersionIndexedStore) GetEvents() []abci.Event {
 	//TODO implement me
 	panic("implement me")
 }
 
+// ResetEvents implements types.CacheWrap so this store can exist on the cache multi store
 func (store *VersionIndexedStore) ResetEvents() {
 	//TODO implement me
 	panic("implement me")

@@ -17,7 +17,7 @@ type multiStore struct {
 	kv map[sdk.StoreKey]kvStore
 }
 
-func (ms multiStore) SetKVStores(handler func(key store.StoreKey, s sdk.KVStore) store.CacheWrapper) store.MultiStore {
+func (ms multiStore) SetKVStores(handler func(key store.StoreKey, s sdk.KVStore) store.CacheWrap) store.MultiStore {
 	//TODO implement me
 	panic("implement me")
 }

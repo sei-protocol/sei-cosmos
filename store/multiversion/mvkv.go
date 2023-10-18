@@ -1,11 +1,12 @@
 package multiversion
 
 import (
-	abci "github.com/tendermint/tendermint/abci/types"
 	"io"
 	"sort"
 	"sync"
 	"time"
+
+	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"

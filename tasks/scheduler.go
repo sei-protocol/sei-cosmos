@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/tendermint/tendermint/abci/types"
@@ -27,6 +28,8 @@ const (
 	// statusValidated means the task has been validated
 	// tasks in this status can be reset if an earlier task fails validation
 	statusValidated status = "validated"
+	// statusWaiting tasks are waiting for another tx to complete
+	statusWaiting status = "waiting"
 )
 
 type deliverTxTask struct {
@@ -34,6 +37,7 @@ type deliverTxTask struct {
 	AbortCh chan occ.Abort
 
 	Status        status
+	Conflicts     []int
 	Abort         *occ.Abort
 	Index         int
 	Incarnation   int
@@ -47,6 +51,8 @@ func (dt *deliverTxTask) Increment() {
 	dt.Status = statusPending
 	dt.Response = nil
 	dt.Abort = nil
+	dt.AbortCh = nil
+	dt.Conflicts = nil
 	dt.VersionStores = nil
 }
 
@@ -106,6 +112,9 @@ func toTasks(reqs []types.RequestDeliverTx) []*deliverTxTask {
 func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
 	for _, t := range tasks {
+		if t.Incarnation > 2 {
+			fmt.Printf("%d -> %d\n", t.Index, t.Incarnation)
+		}
 		res = append(res, *t.Response)
 	}
 	return res
@@ -120,7 +129,7 @@ func (s *scheduler) initMultiVersionStore(ctx sdk.Context) {
 	s.multiVersionStores = mvs
 }
 
-func doneAtIndices(tasks []*deliverTxTask, idx []int) bool {
+func indexesValidated(tasks []*deliverTxTask, idx []int) bool {
 	for _, i := range idx {
 		if tasks[i].Status != statusValidated {
 			return false
@@ -129,7 +138,7 @@ func doneAtIndices(tasks []*deliverTxTask, idx []int) bool {
 	return true
 }
 
-func done(tasks []*deliverTxTask) bool {
+func allValidated(tasks []*deliverTxTask) bool {
 	for _, t := range tasks {
 		if t.Status != statusValidated {
 			return false
@@ -142,7 +151,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 	s.initMultiVersionStore(ctx)
 	tasks := toTasks(reqs)
 	toExecute := tasks
-	for !done(tasks) {
+	for !allValidated(tasks) {
 		var err error
 
 		// execute sets statuses of tasks to either executed or aborted
@@ -162,44 +171,56 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 		for _, t := range toExecute {
 			t.Increment()
 		}
+		//TODO: if incarnation exceeds some threshold, perhaps we should go to single-worker
 	}
 	return collectResponses(tasks), nil
 }
 
-// TODO: validate each tasks
-// TODO: return list of tasks that are invalid
+// validateAll validates all tasks and returns any that are ready to be re-executed
 func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	var res []*deliverTxTask
 
-	// TODO: add this logic back after we fix the basic scenarios
 	// find first non-validated entry
-	//var startIdx int
-	//for idx, t := range tasks {
-	//	if t.Status != statusValidated {
-	//		startIdx = idx
-	//		break
-	//	}
-	//}
-
-	for i := 0; i < len(tasks); i++ {
-		// any aborted tx is known to be suspect here
-		if tasks[i].Status == statusAborted {
-			res = append(res, tasks[i])
-			continue
+	var startIdx int
+	for idx, t := range tasks {
+		if t.Status != statusValidated {
+			startIdx = idx
+			break
 		}
-		conflicts := s.findConflicts(tasks[i])
+	}
 
-		if len(conflicts) > 0 {
-			s.invalidateTask(tasks[i])
+	for i := startIdx; i < len(tasks); i++ {
+		switch tasks[i].Status {
+		case statusAborted:
+			// aborted means it can be re-run immediately
 			res = append(res, tasks[i])
-			continue
+
+		case statusExecuted:
+			conflicts := s.findConflicts(tasks[i])
+
+			if len(conflicts) > 0 {
+				// apply the abort to the multiversion stores
+				s.invalidateTask(tasks[i])
+
+				// if the conflicts are now validated, then rerun this task
+				if indexesValidated(tasks, conflicts) {
+					res = append(res, tasks[i])
+				} else {
+					// otherwise, wait for completion
+					tasks[i].Conflicts = conflicts
+					tasks[i].Status = statusWaiting
+				}
+			} else {
+				// no conflicts means this task is validated
+				tasks[i].Status = statusValidated
+			}
+
+		case statusWaiting:
+			// if conflicts are done, then this task is ready to run again
+			if indexesValidated(tasks, tasks[i].Conflicts) {
+				res = append(res, tasks[i])
+			}
 		}
-
-		//TODO: add logic for waiting on dependent tasks
-		//TODO: add waiting status
-
-		// validated is not permanent, can be unset
-		tasks[i].Status = statusValidated
 	}
 	return res, nil
 }

@@ -43,7 +43,7 @@ func (store *VersionIndexedStore) newMemIterator(
 	return &memIterator{
 		Iterator:     iter,
 		mvStore:      store.multiVersionStore,
-		index:        store.transactionIndex,
+		index:        store.TransactionIndex,
 		abortChannel: store.abortChannel,
 		writeset:     store.GetWriteset(),
 	}

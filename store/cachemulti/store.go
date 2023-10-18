@@ -87,12 +87,11 @@ func newCacheMultiStoreFromCMS(cms Store) Store {
 }
 
 // SetKVStores sets the underlying KVStores via a handler for each key
-func (cms Store) SetKVStores(handler func(sk types.StoreKey, s types.KVStore) types.CacheWrapper) types.MultiStore {
-	stores := make(map[types.StoreKey]types.CacheWrapper)
+func (cms Store) SetKVStores(handler func(sk types.StoreKey, s types.KVStore) types.CacheWrap) types.MultiStore {
 	for k, s := range cms.stores {
-		stores[k] = handler(k, s.(types.KVStore))
+		cms.stores[k] = handler(k, s.(types.KVStore))
 	}
-	return NewFromKVStore(cms.db, stores, nil, cms.traceWriter, cms.traceContext, nil)
+	return cms
 }
 
 // SetTracer sets the tracer for the MultiStore that the underlying

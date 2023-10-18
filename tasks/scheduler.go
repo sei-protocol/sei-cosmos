@@ -29,6 +29,9 @@ const (
 )
 
 type deliverTxTask struct {
+	Ctx     sdk.Context
+	AbortCh chan occ.Abort
+
 	Status        status
 	Abort         *occ.Abort
 	Index         int
@@ -83,9 +86,7 @@ func (s *scheduler) findConflicts(task *deliverTxTask) []int {
 			}
 		}
 	}
-	sort.Slice(conflicts, func(i, j int) bool {
-		return conflicts[i] < conflicts[j]
-	})
+	sort.Ints(conflicts)
 	return conflicts
 }
 
@@ -118,16 +119,37 @@ func (s *scheduler) initMultiVersionStore(ctx sdk.Context) {
 	s.multiVersionStores = mvs
 }
 
+func doneAtIndices(tasks []*deliverTxTask, idx []int) bool {
+	for _, i := range idx {
+		if tasks[i].Status != statusValidated {
+			return false
+		}
+	}
+	return true
+}
+
+func done(tasks []*deliverTxTask) bool {
+	for _, t := range tasks {
+		if t.Status != statusValidated {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error) {
 	s.initMultiVersionStore(ctx)
 	tasks := toTasks(reqs)
 	toExecute := tasks
-	for len(toExecute) > 0 {
+	for !done(tasks) {
+		var err error
 
 		// execute sets statuses of tasks to either executed or aborted
-		err := s.executeAll(ctx, toExecute)
-		if err != nil {
-			return nil, err
+		if len(toExecute) > 0 {
+			err = s.executeAll(ctx, toExecute)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		// validate returns any that should be re-executed
@@ -148,34 +170,41 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	var res []*deliverTxTask
 
+	// TODO: add this logic back after we fix the basic scenarios
 	// find first non-validated entry
-	var startIdx int
-	for idx, t := range tasks {
-		if t.Status != statusValidated {
-			startIdx = idx
-			break
-		}
-	}
+	//var startIdx int
+	//for idx, t := range tasks {
+	//	if t.Status != statusValidated {
+	//		startIdx = idx
+	//		break
+	//	}
+	//}
 
-	for i := startIdx; i < len(tasks); i++ {
+	for i := 0; i < len(tasks); i++ {
 		// any aborted tx is known to be suspect here
 		if tasks[i].Status == statusAborted {
 			res = append(res, tasks[i])
 			continue
 		}
 		conflicts := s.findConflicts(tasks[i])
+
 		if len(conflicts) > 0 {
 			s.invalidateTask(tasks[i])
-			tasks[i].Increment()
 			res = append(res, tasks[i])
+			continue
 		}
+
+		//TODO: add logic for waiting on dependent tasks
+		//TODO: add waiting status
+
+		// validated is not permanent, can be unset
+		tasks[i].Status = statusValidated
 	}
 	return res, nil
 }
 
 // ExecuteAll executes all tasks concurrently
 // Tasks are updated with their status
-// TODO: retries on aborted tasks
 // TODO: error scenarios
 func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	ch := make(chan *deliverTxTask, len(tasks))
@@ -198,35 +227,18 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						return nil
 					}
 
-					// non-blocking
-					abortCh := make(chan occ.Abort, len(s.multiVersionStores))
-					cms := ctx.MultiStore().CacheMultiStore()
+					resp := s.deliverTx(task.Ctx, task.Request)
 
-					// init version stores by store key
-					vs := make(map[store.StoreKey]*multiversion.VersionIndexedStore)
-					for k, v := range s.multiVersionStores {
-						vs[k] = v.VersionedIndexedStore(task.Incarnation, task.Index, abortCh)
-					}
-					task.VersionStores = vs
-					cms = cms.SetKVStores(func(k store.StoreKey, kvs sdk.KVStore) store.CacheWrapper {
-						return vs[k]
-					}).(sdk.CacheMultiStore)
+					close(task.AbortCh)
 
-					ctx = ctx.WithMultiStore(cms)
-
-					resp := s.deliverTx(ctx, task.Request)
-
-					close(abortCh)
-
-					if abt, ok := <-abortCh; ok {
+					if abt, ok := <-task.AbortCh; ok {
 						task.Status = statusAborted
 						task.Abort = &abt
 						continue
 					}
-					cms.Write()
 
-					// write to multiversion stores so they're available to other tasks
-					for _, v := range vs {
+					// write from version store to multiversion stores
+					for _, v := range task.VersionStores {
 						v.WriteToMultiVersionStore()
 					}
 
@@ -239,6 +251,30 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	grp.Go(func() error {
 		defer close(ch)
 		for _, task := range tasks {
+			// initialize the context
+			ctx = ctx.WithTxIndex(task.Index)
+
+			// non-blocking
+			cms := ctx.MultiStore().CacheMultiStore()
+			abortCh := make(chan occ.Abort, len(s.multiVersionStores))
+
+			// init version stores by store key
+			vs := make(map[store.StoreKey]*multiversion.VersionIndexedStore)
+			for storeKey, mvs := range s.multiVersionStores {
+				vs[storeKey] = mvs.VersionedIndexedStore(task.Incarnation, task.Index, abortCh)
+			}
+
+			// save off version store so we can ask it things later
+			task.VersionStores = vs
+			ms := cms.SetKVStores(func(k store.StoreKey, kvs sdk.KVStore) store.CacheWrap {
+				return vs[k]
+			})
+
+			ctx = ctx.WithMultiStore(ms)
+
+			task.AbortCh = abortCh
+			task.Ctx = ctx
+
 			select {
 			case <-gCtx.Done():
 				return gCtx.Err()

@@ -1,6 +1,7 @@
 package multiversion
 
 import (
+	abci "github.com/tendermint/tendermint/abci/types"
 	"io"
 	"sort"
 	"sync"
@@ -29,10 +30,25 @@ type VersionIndexedStore struct {
 	multiVersionStore MultiVersionStore
 	parent            types.KVStore
 	// transaction metadata for versioned operations
-	transactionIndex int
+	TransactionIndex int
 	incarnation      int
 	// have abort channel here for aborting transactions
 	abortChannel chan scheduler.Abort
+}
+
+func (store *VersionIndexedStore) Write() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (store *VersionIndexedStore) GetEvents() []abci.Event {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (store *VersionIndexedStore) ResetEvents() {
+	//TODO implement me
+	panic("implement me")
 }
 
 var _ types.KVStore = (*VersionIndexedStore)(nil)
@@ -45,7 +61,7 @@ func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersion
 		sortedStore:       dbm.NewMemDB(),
 		parent:            parent,
 		multiVersionStore: multiVersionStore,
-		transactionIndex:  transactionIndex,
+		TransactionIndex:  transactionIndex,
 		incarnation:       incarnation,
 		abortChannel:      abortChannel,
 		mtx:               sync.Mutex{},
@@ -86,7 +102,7 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	}
 
 	// if we didn't find it, then we want to check the multivalue store + add to readset if applicable
-	mvsValue := store.multiVersionStore.GetLatestBeforeIndex(store.transactionIndex, key)
+	mvsValue := store.multiVersionStore.GetLatestBeforeIndex(store.TransactionIndex, key)
 	if mvsValue != nil {
 		if mvsValue.IsEstimate() {
 			store.abortChannel <- scheduler.NewEstimateAbort(mvsValue.Index())
@@ -129,7 +145,7 @@ func (store *VersionIndexedStore) ValidateReadset() bool {
 	for _, strKey := range readsetKeys {
 		key := []byte(strKey)
 		value := store.readset[strKey]
-		mvsValue := store.multiVersionStore.GetLatestBeforeIndex(store.transactionIndex, key)
+		mvsValue := store.multiVersionStore.GetLatestBeforeIndex(store.TransactionIndex, key)
 		if mvsValue != nil {
 			if mvsValue.IsEstimate() {
 				// if we see an estimate, that means that we need to abort and rerun
@@ -212,7 +228,7 @@ func (store *VersionIndexedStore) iterator(start []byte, end []byte, ascending b
 	// TODO: ideally we take advantage of mvs keys already being sorted
 	// get the multiversion store sorted keys
 	writesetMap := store.multiVersionStore.GetAllWritesetKeys()
-	for i := 0; i < store.transactionIndex; i++ {
+	for i := 0; i < store.TransactionIndex; i++ {
 		// add all the writesets keys up until current index
 		for _, key := range writesetMap[i] {
 			keysToIterate[key] = struct{}{}
@@ -288,15 +304,15 @@ func (store *VersionIndexedStore) WriteToMultiVersionStore() {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
-	store.multiVersionStore.SetWriteset(store.transactionIndex, store.incarnation, store.writeset)
-	store.multiVersionStore.SetReadset(store.transactionIndex, store.readset)
+	store.multiVersionStore.SetWriteset(store.TransactionIndex, store.incarnation, store.writeset)
+	store.multiVersionStore.SetReadset(store.TransactionIndex, store.readset)
 }
 
 func (store *VersionIndexedStore) WriteEstimatesToMultiVersionStore() {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
-	store.multiVersionStore.SetEstimatedWriteset(store.transactionIndex, store.incarnation, store.writeset)
+	store.multiVersionStore.SetEstimatedWriteset(store.TransactionIndex, store.incarnation, store.writeset)
 }
 
 func (store *VersionIndexedStore) updateReadSet(key []byte, value []byte) {

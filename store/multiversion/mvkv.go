@@ -1,6 +1,7 @@
 package multiversion
 
 import (
+	abci "github.com/tendermint/tendermint/abci/types"
 	"io"
 	"sort"
 	"sync"
@@ -288,6 +289,7 @@ func (store *VersionIndexedStore) WriteToMultiVersionStore() {
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
 	store.multiVersionStore.SetWriteset(store.transactionIndex, store.incarnation, store.writeset)
+	store.multiVersionStore.SetReadset(store.transactionIndex, store.readset)
 }
 
 func (store *VersionIndexedStore) WriteEstimatesToMultiVersionStore() {
@@ -303,4 +305,22 @@ func (store *VersionIndexedStore) updateReadSet(key []byte, value []byte) {
 	store.readset[keyStr] = value
 	// add to dirty set
 	store.dirtySet[keyStr] = struct{}{}
+}
+
+// Write implements types.CacheWrap so this store can exist on the cache multi store
+func (store *VersionIndexedStore) Write() {
+	//TODO implement me
+	panic("implement me")
+}
+
+// GetEvents implements types.CacheWrap so this store can exist on the cache multi store
+func (store *VersionIndexedStore) GetEvents() []abci.Event {
+	//TODO implement me
+	panic("implement me")
+}
+
+// ResetEvents implements types.CacheWrap so this store can exist on the cache multi store
+func (store *VersionIndexedStore) ResetEvents() {
+	//TODO implement me
+	panic("implement me")
 }

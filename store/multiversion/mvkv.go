@@ -65,7 +65,6 @@ func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersion
 		transactionIndex:  transactionIndex,
 		incarnation:       incarnation,
 		abortChannel:      abortChannel,
-		mtx:               sync.Mutex{},
 	}
 }
 

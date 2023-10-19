@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	occtypes "github.com/cosmos/cosmos-sdk/types/occ"
+	scheduler "github.com/cosmos/cosmos-sdk/types/occ"
 )
 
 // Iterates over iterKVCache items.
@@ -14,15 +15,17 @@ type memIterator struct {
 	types.Iterator
 
 	mvStore      MultiVersionStore
-	writeset     map[string][]byte
+	writeset     WriteSet
 	index        int
 	abortChannel chan occtypes.Abort
+	ReadsetHandler
 }
 
 func (store *VersionIndexedStore) newMemIterator(
 	start, end []byte,
 	items *dbm.MemDB,
 	ascending bool,
+	readsetHandler ReadsetHandler,
 ) *memIterator {
 	var iter types.Iterator
 	var err error
@@ -41,11 +44,12 @@ func (store *VersionIndexedStore) newMemIterator(
 	}
 
 	return &memIterator{
-		Iterator:     iter,
-		mvStore:      store.multiVersionStore,
-		index:        store.transactionIndex,
-		abortChannel: store.abortChannel,
-		writeset:     store.GetWriteset(),
+		Iterator:       iter,
+		mvStore:        store.multiVersionStore,
+		index:          store.transactionIndex,
+		abortChannel:   store.abortChannel,
+		writeset:       store.GetWriteset(),
+		ReadsetHandler: readsetHandler,
 	}
 }
 
@@ -66,9 +70,47 @@ func (mi *memIterator) Value() []byte {
 		mi.abortChannel <- occtypes.NewEstimateAbort(val.Index())
 	}
 
+	// need to update readset
 	// if we have a deleted value, return nil
 	if val.IsDeleted() {
+		mi.ReadsetHandler.UpdateReadSet(key, nil)
 		return nil
 	}
+	mi.ReadsetHandler.UpdateReadSet(key, val.Value())
 	return val.Value()
+}
+
+func (store *Store) newMVSValidationIterator(
+	index int,
+	start, end []byte,
+	items *dbm.MemDB,
+	ascending bool,
+	writeset WriteSet,
+) (iterator *memIterator, abortChannel chan scheduler.Abort) {
+	var iter types.Iterator
+	var err error
+
+	if ascending {
+		iter, err = items.Iterator(start, end)
+	} else {
+		iter, err = items.ReverseIterator(start, end)
+	}
+
+	if err != nil {
+		if iter != nil {
+			iter.Close()
+		}
+		panic(err)
+	}
+
+	abortChannel = make(chan scheduler.Abort, 1)
+
+	return &memIterator{
+		Iterator:       iter,
+		mvStore:        store,
+		index:          index,
+		abortChannel:   abortChannel,
+		ReadsetHandler: NoOpHandler{},
+		writeset:       writeset,
+	}, abortChannel
 }

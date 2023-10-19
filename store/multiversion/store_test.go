@@ -191,11 +191,13 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 	mvs.SetReadset(5, readset)
 
 	// assert no readset is valid
-	conflicts := mvs.ValidateTransactionState(4)
+	valid, conflicts := mvs.ValidateTransactionState(4)
+	require.True(t, valid)
 	require.Empty(t, conflicts)
 
 	// assert readset index 5 is valid
-	conflicts = mvs.ValidateTransactionState(5)
+	valid, conflicts = mvs.ValidateTransactionState(5)
+	require.True(t, valid)
 	require.Empty(t, conflicts)
 
 	// introduce conflict
@@ -204,8 +206,9 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 	})
 
 	// expect index 2 to be returned
-	conflicts = mvs.ValidateTransactionState(5)
-	require.Equal(t, []int{2}, conflicts)
+	valid, conflicts = mvs.ValidateTransactionState(5)
+	require.False(t, valid)
+	require.Empty(t, conflicts)
 
 	// add a conflict due to deletion
 	mvs.SetWriteset(3, 1, map[string][]byte{
@@ -213,8 +216,9 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 	})
 
 	// expect indices 2 and 3 to be returned
-	conflicts = mvs.ValidateTransactionState(5)
-	require.Equal(t, []int{2, 3}, conflicts)
+	valid, conflicts = mvs.ValidateTransactionState(5)
+	require.False(t, valid)
+	require.Empty(t, conflicts)
 
 	// add a conflict due to estimate
 	mvs.SetEstimatedWriteset(4, 1, map[string][]byte{
@@ -222,10 +226,297 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 	})
 
 	// expect indices 2, 3, and 4to be returned
-	conflicts = mvs.ValidateTransactionState(5)
-	require.Equal(t, []int{2, 3, 4}, conflicts)
+	valid, conflicts = mvs.ValidateTransactionState(5)
+	require.False(t, valid)
+	require.Equal(t, []int{4}, conflicts)
 
 	// assert panic for parent store mismatch
 	parentKVStore.Set([]byte("key5"), []byte("value6"))
 	require.Panics(t, func() { mvs.ValidateTransactionState(5) })
+}
+
+func TestMVSIteratorValidation(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	// test basic iteration
+	iterationTracker := multiversion.NewIterationTracker([]byte("key1"), []byte("key6"), true, make(multiversion.WriteSet))
+	iterationTracker.AddKey([]byte("key1"))
+	iterationTracker.AddKey([]byte("key2"))
+	iterationTracker.AddKey([]byte("key4"))
+	iterationTracker.AddKey([]byte("key5"))
+
+	mvs.SetIterateset(5, multiversion.Iterateset{*iterationTracker})
+	// should be valid
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.True(t, valid)
+	require.Empty(t, conflicts)
+}
+
+func TestMVSIteratorValidationWithEstimate(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	writeset2 := make(multiversion.WriteSet)
+	writeset2["key2"] = []byte("value2")
+	mvs.SetEstimatedWriteset(2, 2, writeset2)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	iterationTracker := multiversion.NewIterationTracker([]byte("key1"), []byte("key6"), true, make(multiversion.WriteSet))
+	iterationTracker.AddKey([]byte("key1"))
+	iterationTracker.AddKey([]byte("key2"))
+	iterationTracker.AddKey([]byte("key4"))
+	iterationTracker.AddKey([]byte("key5"))
+
+	mvs.SetIterateset(5, multiversion.Iterateset{*iterationTracker})
+	// should be invalid
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.False(t, valid)
+	require.Equal(t, []int{2}, conflicts)
+}
+
+func TestMVSIteratorValidationWithKeySwitch(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	iterationTracker := multiversion.NewIterationTracker([]byte("key1"), []byte("key6"), true, make(multiversion.WriteSet))
+	iterationTracker.AddKey([]byte("key1"))
+	iterationTracker.AddKey([]byte("key2"))
+	iterationTracker.AddKey([]byte("key4"))
+	iterationTracker.AddKey([]byte("key5"))
+
+	// deletion of 2 and introduction of 3
+	writeset2 := make(multiversion.WriteSet)
+	writeset2["key2"] = nil
+	writeset2["key3"] = []byte("valueX")
+	mvs.SetWriteset(2, 2, writeset2)
+
+	mvs.SetIterateset(5, multiversion.Iterateset{*iterationTracker})
+	// should be invalid
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.False(t, valid)
+	require.Empty(t, conflicts)
+}
+
+func TestMVSIteratorValidationWithKeyAdded(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	iterationTracker := multiversion.NewIterationTracker([]byte("key1"), []byte("key7"), true, make(multiversion.WriteSet))
+	iterationTracker.AddKey([]byte("key1"))
+	iterationTracker.AddKey([]byte("key2"))
+	iterationTracker.AddKey([]byte("key4"))
+	iterationTracker.AddKey([]byte("key5"))
+
+	// addition of key6
+	writeset2 := make(multiversion.WriteSet)
+	writeset2["key6"] = []byte("value6")
+	mvs.SetWriteset(2, 2, writeset2)
+
+	mvs.SetIterateset(5, multiversion.Iterateset{*iterationTracker})
+	// should be invalid
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.False(t, valid)
+	require.Empty(t, conflicts)
+}
+
+func TestMVSIteratorValidationWithWritesetValues(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	// addition of key6 IN the transaction - but BEFORE the iteration occurred
+	writeset2 := make(multiversion.WriteSet)
+	writeset2["key6"] = []byte("value6")
+	mvs.SetWriteset(5, 2, writeset2)
+
+	iterationTracker := multiversion.NewIterationTracker([]byte("key1"), []byte("key7"), true, writeset2)
+	iterationTracker.AddKey([]byte("key1"))
+	iterationTracker.AddKey([]byte("key2"))
+	iterationTracker.AddKey([]byte("key4"))
+	iterationTracker.AddKey([]byte("key5"))
+	iterationTracker.AddKey([]byte("key6"))
+
+	mvs.SetIterateset(5, multiversion.Iterateset{*iterationTracker})
+	// should be valid
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.True(t, valid)
+	require.Empty(t, conflicts)
+}
+
+func TestMVSIteratorValidationWithWritesetValuesSetAfterIteration(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	// addition of key6 IN the transaction - but BEFORE the iteration occurred
+	writeset2 := make(multiversion.WriteSet)
+	writeset2["key6"] = []byte("value6")
+	mvs.SetWriteset(5, 2, writeset2)
+
+	iterationTracker := multiversion.NewIterationTracker([]byte("key1"), []byte("key7"), true, make(multiversion.WriteSet))
+	iterationTracker.AddKey([]byte("key1"))
+	iterationTracker.AddKey([]byte("key2"))
+	iterationTracker.AddKey([]byte("key4"))
+	iterationTracker.AddKey([]byte("key5"))
+	// no key6 because the iteration was performed BEFORE the write
+
+	mvs.SetIterateset(5, multiversion.Iterateset{*iterationTracker})
+	// should be valid
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.True(t, valid)
+	require.Empty(t, conflicts)
+}
+
+func TestMVSIteratorValidationReverse(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	// addition of key6 IN the transaction - but BEFORE the iteration occurred
+	writeset2 := make(multiversion.WriteSet)
+	writeset2["key6"] = []byte("value6")
+	mvs.SetWriteset(5, 2, writeset2)
+
+	iterationTracker := multiversion.NewIterationTracker([]byte("key1"), []byte("key7"), false, writeset2)
+	iterationTracker.AddKey([]byte("key6"))
+	iterationTracker.AddKey([]byte("key5"))
+	iterationTracker.AddKey([]byte("key4"))
+	iterationTracker.AddKey([]byte("key2"))
+	iterationTracker.AddKey([]byte("key1"))
+
+	mvs.SetIterateset(5, multiversion.Iterateset{*iterationTracker})
+	// should be valid
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.True(t, valid)
+	require.Empty(t, conflicts)
 }

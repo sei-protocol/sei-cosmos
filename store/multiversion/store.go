@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	db "github.com/tendermint/tm-db"
 )
 
 type MultiVersionStore interface {
@@ -19,13 +20,17 @@ type MultiVersionStore interface {
 	InvalidateWriteset(index int, incarnation int)
 	SetEstimatedWriteset(index int, incarnation int, writeset WriteSet)
 	GetAllWritesetKeys() map[int][]string
+	CollectIteratorItems(index int) *db.MemDB
 	SetReadset(index int, readset ReadSet)
 	GetReadset(index int) ReadSet
-	ValidateTransactionState(index int) []int
+	SetIterateset(index int, iterateset Iterateset)
+	GetIterateset(index int) Iterateset
+	ValidateTransactionState(index int) (bool, []int)
 }
 
 type WriteSet map[string][]byte
 type ReadSet map[string][]byte
+type Iterateset []iterationTracker
 
 var _ MultiVersionStore = (*Store)(nil)
 
@@ -37,6 +42,7 @@ type Store struct {
 
 	txWritesetKeys map[int][]string // map of tx index -> writeset keys
 	txReadSets     map[int]ReadSet
+	txIterateSets  map[int]Iterateset
 
 	parentStore types.KVStore
 }
@@ -46,6 +52,7 @@ func NewMultiVersionStore(parentStore types.KVStore) *Store {
 		multiVersionMap: make(map[string]MultiVersionValue),
 		txWritesetKeys:  make(map[int][]string),
 		txReadSets:      make(map[int]ReadSet),
+		txIterateSets:   make(map[int]Iterateset),
 		parentStore:     parentStore,
 	}
 }
@@ -212,9 +219,108 @@ func (s *Store) GetReadset(index int) ReadSet {
 	return s.txReadSets[index]
 }
 
-func (s *Store) ValidateTransactionState(index int) []int {
+func (s *Store) SetIterateset(index int, iterateset Iterateset) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
+	s.txIterateSets[index] = iterateset
+}
+
+func (s *Store) GetIterateset(index int) Iterateset {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+
+	return s.txIterateSets[index]
+}
+
+// CollectIteratorItems implements MultiVersionStore. It will return a memDB containing all of the keys present in the multiversion store within the iteration range prior to (exclusive of) the index.
+func (s *Store) CollectIteratorItems(index int) *db.MemDB {
+	sortedItems := db.NewMemDB()
+
+	// get all writeset keys prior to index
+	keys := s.GetAllWritesetKeys()
+	for i := 0; i < index; i++ {
+		indexedWriteset := keys[i]
+		// TODO: do we want to exclude keys out of the range or just let the iterator handle it?
+		for _, key := range indexedWriteset {
+			// TODO: inefficient because (logn) for each key + rebalancing? maybe theres a better way to add to a tree to reduce rebalancing overhead
+			sortedItems.Set([]byte(key), []byte{})
+		}
+	}
+	return sortedItems
+}
+
+func (s *Store) validateIterator(index int, iterationTracker iterationTracker) bool {
+	// TODO: what if we added a key LATER within the transaction AFTER iteration. in that case, it won't be in expected Keys, but would be in the iteration range, causing issue?
+	// collect items from multiversion store
+	sortedItems := s.CollectIteratorItems(index)
+	// add the iterationtracker writeset keys to the sorted items
+	for key, _ := range iterationTracker.writeset {
+		sortedItems.Set([]byte(key), []byte{})
+	}
+
+	var parentIter types.Iterator
+
+	iter, abortChannel := s.newMVSValidationIterator(index, iterationTracker.startKey, iterationTracker.endKey, sortedItems, iterationTracker.ascending, iterationTracker.writeset)
+	if iterationTracker.ascending {
+		parentIter = s.parentStore.Iterator(iterationTracker.startKey, iterationTracker.endKey)
+	} else {
+		parentIter = s.parentStore.ReverseIterator(iterationTracker.startKey, iterationTracker.endKey)
+	}
+	// create a new MVSMergeiterator
+	mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending, NoOpHandler{})
+	defer mergeIterator.Close()
+	keys := iterationTracker.iteratedKeys
+
+	validChan := make(chan bool, 1)
+
+	// listen for abort while iterating
+	go func(expectedKeys [][]byte, returnChan chan bool) {
+		for ; mergeIterator.Valid(); mergeIterator.Next() {
+			if len(expectedKeys) == 0 {
+				// if we have no more expected keys, then the iterator is invalid
+				returnChan <- false
+				return
+			}
+			key := mergeIterator.Key()
+			if !bytes.Equal(key, expectedKeys[0]) {
+				// if key isn't equal, that means that the iterator is invalid
+				returnChan <- false
+				return
+			}
+			expectedKeys = expectedKeys[1:]
+
+			// if our iterator key was the early stop, then we can break
+			if bytes.Equal(key, iterationTracker.earlyStopKey) {
+				returnChan <- true
+				return
+			}
+		}
+		returnChan <- !(len(expectedKeys) > 0)
+	}(keys, validChan)
+
+	select {
+	case <-abortChannel:
+		// if we get an abort, then we know that the iterator is invalid
+		return false
+	case valid := <-validChan:
+		return valid
+	}
+}
+
+// TODO: do we want to return bool + []int where bool indicates whether it was valid and then []int indicates only ones for which we need to wait due to estimates? - yes i think so?
+func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 	defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
 	conflictSet := map[int]struct{}{}
+	valid := true
+
+	// TODO: validate iterateset
+	// TODO: can we parallelize for all iterators?
+	iterateset := s.GetIterateset(index)
+	for _, iterationTracker := range iterateset {
+		iteratorValid := s.validateIterator(index, iterationTracker)
+		valid = valid && iteratorValid
+	}
 
 	// validate readset
 	readset := s.GetReadset(index)
@@ -235,14 +341,14 @@ func (s *Store) ValidateTransactionState(index int) []int {
 			} else if latestValue.IsDeleted() {
 				if value != nil {
 					// conflict
-					conflictSet[latestValue.Index()] = struct{}{}
+					// TODO: would we want to return early?
+					valid = false
 				}
 			} else if !bytes.Equal(latestValue.Value(), value) {
-				conflictSet[latestValue.Index()] = struct{}{}
+				valid = false
 			}
 		}
 	}
-	// TODO: validate iterateset
 
 	// convert conflictset into sorted indices
 	conflictIndices := make([]int, 0, len(conflictSet))
@@ -251,7 +357,7 @@ func (s *Store) ValidateTransactionState(index int) []int {
 	}
 
 	sort.Ints(conflictIndices)
-	return conflictIndices
+	return valid, conflictIndices
 }
 
 func (s *Store) WriteLatestToStore() {

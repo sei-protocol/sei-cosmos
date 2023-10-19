@@ -321,6 +321,12 @@ func TestIterator(t *testing.T) {
 
 	// iterate over the keys - exclusive on key5
 	iter := vis.Iterator([]byte("000"), []byte("key5"))
+
+	// verify domain is superset
+	start, end := iter.Domain()
+	require.Equal(t, []byte("000"), start)
+	require.Equal(t, []byte("key5"), end)
+
 	vals := []string{}
 	defer iter.Close()
 	for ; iter.Valid(); iter.Next() {

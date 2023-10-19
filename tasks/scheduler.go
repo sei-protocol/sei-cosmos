@@ -197,10 +197,7 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 
 		// validated tasks can become unvalidated if an earlier re-run task now conflicts
 		case statusExecuted, statusValidated:
-			valid, conflicts := s.findConflicts(tasks[i])
-
-			if !valid {
-				// apply the abort to the multiversion stores
+			if valid, conflicts := s.findConflicts(tasks[i]); !valid {
 				s.invalidateTask(tasks[i])
 
 				// if the conflicts are now validated, then rerun this task
@@ -211,8 +208,7 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 					tasks[i].Dependencies = conflicts
 					tasks[i].Status = statusWaiting
 				}
-			} else {
-				// no conflicts means this task is validated
+			} else if len(conflicts) == 0 {
 				tasks[i].Status = statusValidated
 			}
 

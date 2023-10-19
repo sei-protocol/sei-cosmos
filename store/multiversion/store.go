@@ -358,6 +358,7 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 	}
 
 	sort.Ints(conflictIndices)
+	// TODO: maybe we have an indicator for the case where all of the validations are valid EXCEPT for some estimates encountered, in which case we may not want to re-execute, simply revalidate once the ESTIMATES are cleared
 	return valid, conflictIndices
 }
 

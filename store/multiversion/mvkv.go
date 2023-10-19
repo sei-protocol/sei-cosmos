@@ -23,14 +23,14 @@ func (NoOpHandler) UpdateReadSet(key []byte, value []byte) {}
 
 // exposes a handler for adding items to iterateset, to be called upon iterator close
 type IterateSetHandler interface {
-	UpdateIterateSet(*iterationTracker)
+	UpdateIterateSet(iterationTracker)
 }
 
 type iterationTracker struct {
-	startKey     []byte   // start of the iteration range
-	endKey       []byte   // end of the iteration range
-	earlyStopKey []byte   // key that caused early stop
-	iteratedKeys [][]byte // list of keys that were iterated TODO: this is necessary over just a count because we ned to know if key A was removed and B added which would still have the same count, maybe not, because we add iterated keys to readset, maybe its fine?
+	startKey     []byte              // start of the iteration range
+	endKey       []byte              // end of the iteration range
+	earlyStopKey []byte              // key that caused early stop
+	iteratedKeys map[string]struct{} // TODO: is a map okay because the ordering will be enforced when we replay the iterator?
 	ascending    bool
 
 	writeset WriteSet
@@ -44,24 +44,24 @@ type iterationTracker struct {
 	// actually its simpler to just store a copy of the writeset at the time of iterator creation
 }
 
-func NewIterationTracker(startKey, endKey []byte, ascending bool, writeset WriteSet) *iterationTracker {
+func NewIterationTracker(startKey, endKey []byte, ascending bool, writeset WriteSet) iterationTracker {
 	copyWriteset := make(WriteSet, len(writeset))
 
 	for key, value := range writeset {
 		copyWriteset[key] = value
 	}
 
-	return &iterationTracker{
+	return iterationTracker{
 		startKey:     startKey,
 		endKey:       endKey,
-		iteratedKeys: [][]byte{},
+		iteratedKeys: make(map[string]struct{}),
 		ascending:    ascending,
 		writeset:     copyWriteset,
 	}
 }
 
 func (item *iterationTracker) AddKey(key []byte) {
-	item.iteratedKeys = append(item.iteratedKeys, key)
+	item.iteratedKeys[string(key)] = struct{}{}
 }
 
 func (item *iterationTracker) SetEarlyStopKey(key []byte) {
@@ -75,7 +75,7 @@ type VersionIndexedStore struct {
 	// TODO: does this need sync.Map?
 	readset    map[string][]byte // contains the key -> value mapping for all keys read from the store (not mvkv, underlying store)
 	writeset   map[string][]byte // contains the key -> value mapping for all keys written to the store
-	iterateset []*iterationTracker
+	iterateset Iterateset
 	// TODO: need to add iterateset here as well
 
 	// dirty keys that haven't been sorted yet for iteration
@@ -101,7 +101,7 @@ func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersion
 	return &VersionIndexedStore{
 		readset:           make(map[string][]byte),
 		writeset:          make(map[string][]byte),
-		iterateset:        []*iterationTracker{},
+		iterateset:        []iterationTracker{},
 		dirtySet:          make(map[string]struct{}),
 		sortedStore:       dbm.NewMemDB(),
 		parent:            parent,
@@ -336,6 +336,8 @@ func (store *VersionIndexedStore) WriteToMultiVersionStore() {
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
 	store.multiVersionStore.SetWriteset(store.transactionIndex, store.incarnation, store.writeset)
+	store.multiVersionStore.SetReadset(store.transactionIndex, store.readset)
+	store.multiVersionStore.SetIterateset(store.transactionIndex, store.iterateset)
 }
 
 func (store *VersionIndexedStore) WriteEstimatesToMultiVersionStore() {
@@ -343,6 +345,7 @@ func (store *VersionIndexedStore) WriteEstimatesToMultiVersionStore() {
 	defer store.mtx.Unlock()
 	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
 	store.multiVersionStore.SetEstimatedWriteset(store.transactionIndex, store.incarnation, store.writeset)
+	// TODO: do we need to write readset and iterateset in this case? I don't think so since if this is called it means we aren't doing validation
 }
 
 func (store *VersionIndexedStore) UpdateReadSet(key []byte, value []byte) {
@@ -353,7 +356,7 @@ func (store *VersionIndexedStore) UpdateReadSet(key []byte, value []byte) {
 	store.dirtySet[keyStr] = struct{}{}
 }
 
-func (store *VersionIndexedStore) UpdateIterateSet(iterationTracker *iterationTracker) {
+func (store *VersionIndexedStore) UpdateIterateSet(iterationTracker iterationTracker) {
 	// append to iterateset
 	store.iterateset = append(store.iterateset, iterationTracker)
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	occtypes "github.com/cosmos/cosmos-sdk/types/occ"
-	scheduler "github.com/cosmos/cosmos-sdk/types/occ"
 )
 
 // Iterates over iterKVCache items.
@@ -86,7 +85,7 @@ func (store *Store) newMVSValidationIterator(
 	items *dbm.MemDB,
 	ascending bool,
 	writeset WriteSet,
-) (iterator *memIterator, abortChannel chan scheduler.Abort) {
+) (iterator *memIterator, abortChannel chan occtypes.Abort) {
 	var iter types.Iterator
 	var err error
 
@@ -103,7 +102,7 @@ func (store *Store) newMVSValidationIterator(
 		panic(err)
 	}
 
-	abortChannel = make(chan scheduler.Abort, 1)
+	abortChannel = make(chan occtypes.Abort, 1)
 
 	return &memIterator{
 		Iterator:       iter,

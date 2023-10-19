@@ -255,7 +255,7 @@ func (s *Store) validateIterator(index int, iterationTracker iterationTracker) b
 	// collect items from multiversion store
 	sortedItems := s.CollectIteratorItems(index)
 	// add the iterationtracker writeset keys to the sorted items
-	for key, _ := range iterationTracker.writeset {
+	for key := range iterationTracker.writeset {
 		sortedItems.Set([]byte(key), []byte{})
 	}
 
@@ -275,7 +275,7 @@ func (s *Store) validateIterator(index int, iterationTracker iterationTracker) b
 	validChan := make(chan bool, 1)
 
 	// listen for abort while iterating
-	go func(expectedKeys [][]byte, returnChan chan bool) {
+	go func(expectedKeys map[string]struct{}, returnChan chan bool) {
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
 			if len(expectedKeys) == 0 {
 				// if we have no more expected keys, then the iterator is invalid
@@ -283,12 +283,13 @@ func (s *Store) validateIterator(index int, iterationTracker iterationTracker) b
 				return
 			}
 			key := mergeIterator.Key()
-			if !bytes.Equal(key, expectedKeys[0]) {
-				// if key isn't equal, that means that the iterator is invalid
+			if _, ok := expectedKeys[string(key)]; !ok {
+				// if key isn't found
 				returnChan <- false
 				return
 			}
-			expectedKeys = expectedKeys[1:]
+			//remove from expected keys
+			delete(expectedKeys, string(key))
 
 			// if our iterator key was the early stop, then we can break
 			if bytes.Equal(key, iterationTracker.earlyStopKey) {

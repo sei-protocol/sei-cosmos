@@ -6,13 +6,13 @@ import "github.com/cosmos/cosmos-sdk/store/types"
 type trackedIterator struct {
 	types.Iterator
 
-	iterateset *iterationTracker
+	iterateset iterationTracker
 	IterateSetHandler
 }
 
 // TODO: test
 
-func NewTrackedIterator(iter types.Iterator, iterationTracker *iterationTracker, iterateSetHandler IterateSetHandler) *trackedIterator {
+func NewTrackedIterator(iter types.Iterator, iterationTracker iterationTracker, iterateSetHandler IterateSetHandler) *trackedIterator {
 	return &trackedIterator{
 		Iterator:          iter,
 		iterateset:        iterationTracker,
@@ -38,4 +38,20 @@ func (ti *trackedIterator) Key() []byte {
 	// add key to the tracker
 	ti.iterateset.AddKey(key)
 	return key
+}
+
+// Value calls the iterator.Key() and adds the key to the iterateset, then returns the value from the iterator
+func (ti *trackedIterator) Value() []byte {
+	key := ti.Iterator.Key()
+	// add key to the tracker
+	ti.iterateset.AddKey(key)
+	return ti.Iterator.Value()
+}
+
+func (ti *trackedIterator) Next() {
+	// add current key to the tracker
+	key := ti.Iterator.Key()
+	ti.iterateset.AddKey(key)
+	// call next
+	ti.Iterator.Next()
 }

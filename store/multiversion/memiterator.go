@@ -72,10 +72,10 @@ func (mi *memIterator) Value() []byte {
 	// need to update readset
 	// if we have a deleted value, return nil
 	if val.IsDeleted() {
-		mi.ReadsetHandler.UpdateReadSet(key, nil)
+		defer mi.ReadsetHandler.UpdateReadSet(key, nil)
 		return nil
 	}
-	mi.ReadsetHandler.UpdateReadSet(key, val.Value())
+	defer mi.ReadsetHandler.UpdateReadSet(key, val.Value())
 	return val.Value()
 }
 

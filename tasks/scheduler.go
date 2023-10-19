@@ -79,20 +79,23 @@ func (s *scheduler) invalidateTask(task *deliverTxTask) {
 	}
 }
 
-func (s *scheduler) findConflicts(task *deliverTxTask) []int {
+func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	var conflicts []int
 	uniq := make(map[int]struct{})
+	valid := true
 	for _, mv := range s.multiVersionStores {
-		mvConflicts := mv.ValidateTransactionState(task.Index)
+		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
 		for _, c := range mvConflicts {
 			if _, ok := uniq[c]; !ok {
 				conflicts = append(conflicts, c)
 				uniq[c] = struct{}{}
 			}
 		}
+		// any non-ok value makes valid false
+		valid = ok && valid
 	}
 	sort.Ints(conflicts)
-	return conflicts
+	return valid, conflicts
 }
 
 func toTasks(reqs []types.RequestDeliverTx) []*deliverTxTask {
@@ -193,9 +196,9 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 
 		// validated tasks can become unvalidated if an earlier re-run task now conflicts
 		case statusExecuted, statusValidated:
-			conflicts := s.findConflicts(tasks[i])
+			valid, conflicts := s.findConflicts(tasks[i])
 
-			if len(conflicts) > 0 {
+			if !valid {
 				// apply the abort to the multiversion stores
 				s.invalidateTask(tasks[i])
 
@@ -280,7 +283,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 			// init version stores by store key
 			vs := make(map[store.StoreKey]*multiversion.VersionIndexedStore)
 			for storeKey, mvs := range s.multiVersionStores {
-				vs[storeKey] = mvs.VersionedIndexedStore(task.Incarnation, task.Index, abortCh)
+				vs[storeKey] = mvs.VersionedIndexedStore(task.Index, task.Incarnation, abortCh)
 			}
 
 			// save off version store so we can ask it things later

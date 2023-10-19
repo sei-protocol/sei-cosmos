@@ -231,11 +231,9 @@ func NewCommitMultiStore() sdk.CommitMultiStore {
 }
 
 func (ms multiStore) SetKVStores(handler func(key store.StoreKey, s sdk.KVStore) store.CacheWrap) store.MultiStore {
-	//TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }
 
 func (ms multiStore) StoreKeys() []sdk.StoreKey {
-	//TODO implement me
-	panic("implement me")
+	panic("not implemented")
 }

@@ -1,10 +1,9 @@
 package tasks
 
 import (
-	"sort"
-
 	"github.com/tendermint/tendermint/abci/types"
 	"golang.org/x/sync/errgroup"
+	"sort"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
@@ -36,7 +35,7 @@ type deliverTxTask struct {
 	AbortCh chan occ.Abort
 
 	Status        status
-	Conflicts     []int
+	Dependencies  []int
 	Abort         *occ.Abort
 	Index         int
 	Incarnation   int
@@ -51,7 +50,7 @@ func (dt *deliverTxTask) Increment() {
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
-	dt.Conflicts = nil
+	dt.Dependencies = nil
 	dt.VersionStores = nil
 }
 
@@ -167,12 +166,13 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 		for _, t := range toExecute {
 			t.Increment()
 		}
-		//TODO: if incarnation exceeds some threshold, perhaps we should go to single-worker
+	}
+	for _, mv := range s.multiVersionStores {
+		mv.WriteLatestToStore()
 	}
 	return collectResponses(tasks), nil
 }
 
-// validateAll validates all tasks and returns any that are ready to be re-executed
 func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	var res []*deliverTxTask
 
@@ -204,7 +204,7 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 					res = append(res, tasks[i])
 				} else {
 					// otherwise, wait for completion
-					tasks[i].Conflicts = conflicts
+					tasks[i].Dependencies = conflicts
 					tasks[i].Status = statusWaiting
 				}
 			} else {
@@ -214,7 +214,7 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 
 		case statusWaiting:
 			// if conflicts are done, then this task is ready to run again
-			if indexesValidated(tasks, tasks[i].Conflicts) {
+			if indexesValidated(tasks, tasks[i].Dependencies) {
 				res = append(res, tasks[i])
 			}
 		}

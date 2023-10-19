@@ -95,6 +95,9 @@ func TestProcessAll(t *testing.T) {
 							require.Equal(t, fmt.Sprintf("%d", idx-1), response.Info)
 						}
 					}
+					// confirm last write made it to the parent store
+					res := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
+					require.Equal(t, []byte(fmt.Sprintf("%d", len(tt.requests)-1)), res)
 				}
 			}
 		})

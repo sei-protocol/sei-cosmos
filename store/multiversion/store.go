@@ -335,9 +335,8 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 				panic("there shouldn't be readset conflicts with parent kv store, since it shouldn't change")
 			}
 		} else {
-			// if estimate, mark as conflict index
+			// if estimate, mark as conflict index - but don't invalidate
 			if latestValue.IsEstimate() {
-				valid = false
 				conflictSet[latestValue.Index()] = struct{}{}
 			} else if latestValue.IsDeleted() {
 				if value != nil {

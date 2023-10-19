@@ -207,7 +207,7 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 		"key3": []byte("value6"),
 	})
 
-	// expect index 2 to be returned
+	// expect failure with empty conflicts
 	valid, conflicts = mvs.ValidateTransactionState(5)
 	require.False(t, valid)
 	require.Empty(t, conflicts)
@@ -217,7 +217,7 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 		"key1": nil,
 	})
 
-	// expect indices 2 and 3 to be returned
+	// expect failure with empty conflicts
 	valid, conflicts = mvs.ValidateTransactionState(5)
 	require.False(t, valid)
 	require.Empty(t, conflicts)
@@ -227,7 +227,7 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 		"key2": []byte("test"),
 	})
 
-	// expect indices 2, 3, and 4to be returned
+	// expect index 4 to be returned
 	valid, conflicts = mvs.ValidateTransactionState(5)
 	require.False(t, valid)
 	require.Equal(t, []int{4}, conflicts)
@@ -235,6 +235,40 @@ func TestMultiVersionStoreValidateState(t *testing.T) {
 	// assert panic for parent store mismatch
 	parentKVStore.Set([]byte("key5"), []byte("value6"))
 	require.Panics(t, func() { mvs.ValidateTransactionState(5) })
+}
+
+func TestMVSValidationWithOnlyEstimate(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	parentKVStore.Set([]byte("key2"), []byte("value0"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+	parentKVStore.Set([]byte("key4"), []byte("value4"))
+	parentKVStore.Set([]byte("key5"), []byte("value5"))
+
+	writeset := make(multiversion.WriteSet)
+	writeset["key1"] = []byte("value1")
+	writeset["key2"] = []byte("value2")
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 2, writeset)
+
+	readset := make(multiversion.ReadSet)
+	readset["key1"] = []byte("value1")
+	readset["key2"] = []byte("value2")
+	readset["key3"] = nil
+	readset["key4"] = []byte("value4")
+	readset["key5"] = []byte("value5")
+	mvs.SetReadset(5, readset)
+
+	// add a conflict due to estimate
+	mvs.SetEstimatedWriteset(4, 1, map[string][]byte{
+		"key2": []byte("test"),
+	})
+
+	valid, conflicts := mvs.ValidateTransactionState(5)
+	require.True(t, valid)
+	require.Equal(t, []int{4}, conflicts)
+
 }
 
 func TestMVSIteratorValidation(t *testing.T) {

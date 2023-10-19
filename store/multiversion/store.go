@@ -241,7 +241,10 @@ func (s *Store) CollectIteratorItems(index int) *db.MemDB {
 	// get all writeset keys prior to index
 	keys := s.GetAllWritesetKeys()
 	for i := 0; i < index; i++ {
-		indexedWriteset := keys[i]
+		indexedWriteset, ok := keys[i]
+		if !ok {
+			continue
+		}
 		// TODO: do we want to exclude keys out of the range or just let the iterator handle it?
 		for _, key := range indexedWriteset {
 			// TODO: inefficient because (logn) for each key + rebalancing? maybe theres a better way to add to a tree to reduce rebalancing overhead

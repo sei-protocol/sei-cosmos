@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	occtypes "github.com/cosmos/cosmos-sdk/types/occ"
 	db "github.com/tendermint/tm-db"
 )
 
@@ -250,32 +251,29 @@ func (s *Store) CollectIteratorItems(index int) *db.MemDB {
 	return sortedItems
 }
 
-func (s *Store) validateIterator(index int, iterationTracker iterationTracker) bool {
-	// TODO: what if we added a key LATER within the transaction AFTER iteration. in that case, it won't be in expected Keys, but would be in the iteration range, causing issue?
+func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 	// collect items from multiversion store
 	sortedItems := s.CollectIteratorItems(index)
 	// add the iterationtracker writeset keys to the sorted items
-	for key := range iterationTracker.writeset {
+	for key := range tracker.writeset {
 		sortedItems.Set([]byte(key), []byte{})
 	}
-
-	var parentIter types.Iterator
-
-	iter, abortChannel := s.newMVSValidationIterator(index, iterationTracker.startKey, iterationTracker.endKey, sortedItems, iterationTracker.ascending, iterationTracker.writeset)
-	if iterationTracker.ascending {
-		parentIter = s.parentStore.Iterator(iterationTracker.startKey, iterationTracker.endKey)
-	} else {
-		parentIter = s.parentStore.ReverseIterator(iterationTracker.startKey, iterationTracker.endKey)
-	}
-	// create a new MVSMergeiterator
-	mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending, NoOpHandler{})
-	defer mergeIterator.Close()
-	keys := iterationTracker.iteratedKeys
-
-	validChan := make(chan bool, 1)
+	validChannel := make(chan bool, 1)
+	abortChannel := make(chan occtypes.Abort, 1)
 
 	// listen for abort while iterating
-	go func(expectedKeys map[string]struct{}, returnChan chan bool) {
+	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort) {
+		var parentIter types.Iterator
+		expectedKeys := iterationTracker.iteratedKeys
+		iter := s.newMVSValidationIterator(index, iterationTracker.startKey, iterationTracker.endKey, items, iterationTracker.ascending, iterationTracker.writeset, abortChan)
+		if iterationTracker.ascending {
+			parentIter = s.parentStore.Iterator(iterationTracker.startKey, iterationTracker.endKey)
+		} else {
+			parentIter = s.parentStore.ReverseIterator(iterationTracker.startKey, iterationTracker.endKey)
+		}
+		// create a new MVSMergeiterator
+		mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending, NoOpHandler{})
+		defer mergeIterator.Close()
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
 			if len(expectedKeys) == 0 {
 				// if we have no more expected keys, then the iterator is invalid
@@ -288,7 +286,7 @@ func (s *Store) validateIterator(index int, iterationTracker iterationTracker) b
 				returnChan <- false
 				return
 			}
-			//remove from expected keys
+			// remove from expected keys
 			delete(expectedKeys, string(key))
 
 			// if our iterator key was the early stop, then we can break
@@ -298,13 +296,12 @@ func (s *Store) validateIterator(index int, iterationTracker iterationTracker) b
 			}
 		}
 		returnChan <- !(len(expectedKeys) > 0)
-	}(keys, validChan)
-
+	}(tracker, sortedItems, validChannel, abortChannel)
 	select {
 	case <-abortChannel:
 		// if we get an abort, then we know that the iterator is invalid
 		return false
-	case valid := <-validChan:
+	case valid := <-validChannel:
 		return valid
 	}
 }
@@ -315,7 +312,6 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 	conflictSet := map[int]struct{}{}
 	valid := true
 
-	// TODO: validate iterateset
 	// TODO: can we parallelize for all iterators?
 	iterateset := s.GetIterateset(index)
 	for _, iterationTracker := range iterateset {
@@ -338,6 +334,7 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 		} else {
 			// if estimate, mark as conflict index
 			if latestValue.IsEstimate() {
+				valid = false
 				conflictSet[latestValue.Index()] = struct{}{}
 			} else if latestValue.IsDeleted() {
 				if value != nil {

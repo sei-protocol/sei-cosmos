@@ -85,7 +85,8 @@ func (store *Store) newMVSValidationIterator(
 	items *dbm.MemDB,
 	ascending bool,
 	writeset WriteSet,
-) (iterator *memIterator, abortChannel chan occtypes.Abort) {
+	abortChannel chan occtypes.Abort,
+) *memIterator {
 	var iter types.Iterator
 	var err error
 
@@ -102,8 +103,6 @@ func (store *Store) newMVSValidationIterator(
 		panic(err)
 	}
 
-	abortChannel = make(chan occtypes.Abort, 1)
-
 	return &memIterator{
 		Iterator:       iter,
 		mvStore:        store,
@@ -111,5 +110,5 @@ func (store *Store) newMVSValidationIterator(
 		abortChannel:   abortChannel,
 		ReadsetHandler: NoOpHandler{},
 		writeset:       writeset,
-	}, abortChannel
+	}
 }

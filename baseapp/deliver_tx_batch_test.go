@@ -131,7 +131,6 @@ func TestDeliverTxBatch(t *testing.T) {
 
 		for idx, deliverTxRes := range responses.Results {
 			res := deliverTxRes.Response
-			fmt.Printf("%d: %d\n", idx, res.GasUsed)
 			require.Equal(t, abci.CodeTypeOK, res.Code)
 			requireAttribute(t, res.Events, "tx-id", fmt.Sprintf("%d", idx))
 			requireAttribute(t, res.Events, "tx-val", fmt.Sprintf("%d", blockN+1))

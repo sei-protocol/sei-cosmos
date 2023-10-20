@@ -32,6 +32,7 @@ const (
 )
 
 type deliverTxTask struct {
+	BaseCtx sdk.Context
 	Ctx     sdk.Context
 	AbortCh chan occ.Abort
 
@@ -106,7 +107,7 @@ func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 			Request: r.Request,
 			Index:   idx,
 			Status:  statusPending,
-			Ctx:     r.Context,
+			BaseCtx: r.Context,
 		})
 	}
 	return res
@@ -276,7 +277,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 		defer close(ch)
 		for _, task := range tasks {
 			// initialize the context
-			ctx := task.Ctx.WithTxIndex(task.Index)
+			ctx := task.BaseCtx.WithTxIndex(task.Index)
 			abortCh := make(chan occ.Abort, len(s.multiVersionStores))
 
 			// if there are no stores, don't try to wrap, because there's nothing to wrap
@@ -296,7 +297,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					return vs[k]
 				})
 
-				ctx = task.Ctx.WithMultiStore(ms)
+				ctx = ctx.WithMultiStore(ms)
 			}
 
 			task.AbortCh = abortCh

@@ -123,6 +123,7 @@ func TestDeliverTxBatch(t *testing.T) {
 			require.NoError(t, err)
 			requests = append(requests, &sdk.DeliverTxEntry{
 				Request: abci.RequestDeliverTx{Tx: txBytes},
+				Context: app.deliverState.ctx.WithTxIndex(i),
 			})
 		}
 

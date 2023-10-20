@@ -6,6 +6,7 @@ import abci "github.com/tendermint/tendermint/abci/types"
 // This can be extended to include tx-level tracing or metadata
 type DeliverTxEntry struct {
 	Request abci.RequestDeliverTx
+	Context Context
 }
 
 // DeliverTxBatchRequest represents a request object for a batch of transactions.

@@ -57,7 +57,7 @@ func (dt *deliverTxTask) Increment() {
 
 // Scheduler processes tasks concurrently
 type Scheduler interface {
-	ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error)
+	ProcessAll(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (sdk.DeliverTxBatchResponse, error)
 }
 
 type scheduler struct {
@@ -99,22 +99,25 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	return valid, conflicts
 }
 
-func toTasks(reqs []types.RequestDeliverTx) []*deliverTxTask {
+func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 	res := make([]*deliverTxTask, 0, len(reqs))
 	for idx, r := range reqs {
 		res = append(res, &deliverTxTask{
-			Request: r,
+			Request: r.Request,
 			Index:   idx,
 			Status:  statusPending,
+			Ctx:     r.Context,
 		})
 	}
 	return res
 }
 
-func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
-	res := make([]types.ResponseDeliverTx, 0, len(tasks))
+func collectResponses(tasks []*deliverTxTask) []*sdk.DeliverTxResult {
+	res := make([]*sdk.DeliverTxResult, 0, len(tasks))
 	for _, t := range tasks {
-		res = append(res, *t.Response)
+		res = append(res, &sdk.DeliverTxResult{
+			Response: *t.Response,
+		})
 	}
 	return res
 }
@@ -146,9 +149,9 @@ func allValidated(tasks []*deliverTxTask) bool {
 	return true
 }
 
-func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error) {
+func (s *scheduler) ProcessAll(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (sdk.DeliverTxBatchResponse, error) {
 	s.initMultiVersionStore(ctx)
-	tasks := toTasks(reqs)
+	tasks := toTasks(req.TxEntries)
 	toExecute := tasks
 	for !allValidated(tasks) {
 		var err error
@@ -157,7 +160,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 		if len(toExecute) > 0 {
 			err = s.executeAll(ctx, toExecute)
 			if err != nil {
-				return nil, err
+				return sdk.DeliverTxBatchResponse{}, err
 			}
 		}
 
@@ -165,7 +168,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 		// note this processes ALL tasks, not just those recently executed
 		toExecute, err = s.validateAll(tasks)
 		if err != nil {
-			return nil, err
+			return sdk.DeliverTxBatchResponse{}, err
 		}
 		for _, t := range toExecute {
 			t.Increment()
@@ -174,7 +177,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) (
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
-	return collectResponses(tasks), nil
+	return sdk.DeliverTxBatchResponse{
+		Results: collectResponses(tasks),
+	}, nil
 }
 
 func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error) {
@@ -271,7 +276,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 		defer close(ch)
 		for _, task := range tasks {
 			// initialize the context
-			ctx = ctx.WithTxIndex(task.Index)
+			ctx := task.Ctx.WithTxIndex(task.Index)
 			abortCh := make(chan occ.Abort, len(s.multiVersionStores))
 
 			// if there are no stores, don't try to wrap, because there's nothing to wrap
@@ -291,7 +296,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					return vs[k]
 				})
 
-				ctx = ctx.WithMultiStore(ms)
+				ctx = task.Ctx.WithMultiStore(ms)
 			}
 
 			task.AbortCh = abortCh

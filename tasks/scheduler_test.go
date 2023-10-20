@@ -21,14 +21,19 @@ type mockDeliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) types.R
 var testStoreKey = sdk.NewKVStoreKey("mock")
 var itemKey = []byte("key")
 
-func requestList(n int) []types.RequestDeliverTx {
-	tasks := make([]types.RequestDeliverTx, n)
+func requestList(n int, addStores bool) sdk.DeliverTxBatchRequest {
+	tasks := make([]*sdk.DeliverTxEntry, n)
 	for i := 0; i < n; i++ {
-		tasks[i] = types.RequestDeliverTx{
-			Tx: []byte(fmt.Sprintf("%d", i)),
+		tasks[i] = &sdk.DeliverTxEntry{
+			Request: types.RequestDeliverTx{
+				Tx: []byte(fmt.Sprintf("%d", i)),
+			},
+			Context: initTestCtx(addStores),
 		}
 	}
-	return tasks
+	return sdk.DeliverTxBatchRequest{
+		TxEntries: tasks,
+	}
 }
 
 func initTestCtx(injectStores bool) sdk.Context {
@@ -51,18 +56,18 @@ func TestProcessAll(t *testing.T) {
 		name          string
 		workers       int
 		runs          int
-		requests      []types.RequestDeliverTx
-		deliverTxFunc mockDeliverTxFunc
+		transactions  int
 		addStores     bool
+		deliverTxFunc mockDeliverTxFunc
 		expectedErr   error
-		assertions    func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx)
+		assertions    func(t *testing.T, ctx sdk.Context, res sdk.DeliverTxBatchResponse)
 	}{
 		{
-			name:      "Test every tx accesses same key",
-			workers:   50,
-			runs:      25,
-			addStores: true,
-			requests:  requestList(50),
+			name:         "Test every tx accesses same key",
+			workers:      50,
+			runs:         25,
+			transactions: 50,
+			addStores:    true,
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
@@ -76,8 +81,9 @@ func TestProcessAll(t *testing.T) {
 					Info: val,
 				}
 			},
-			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
-				for idx, response := range res {
+			assertions: func(t *testing.T, ctx sdk.Context, res sdk.DeliverTxBatchResponse) {
+				for idx, resp := range res.Results {
+					response := resp.Response
 					if idx == 0 {
 						require.Equal(t, "", response.Info)
 					} else {
@@ -93,19 +99,19 @@ func TestProcessAll(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name:      "Test no stores on context should not panic",
-			workers:   50,
-			runs:      1,
-			addStores: false,
-			requests:  requestList(50),
+			name:         "Test no stores on context should not panic",
+			workers:      50,
+			runs:         1,
+			transactions: 50,
+			addStores:    false,
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				return types.ResponseDeliverTx{
 					Info: fmt.Sprintf("%d", ctx.TxIndex()),
 				}
 			},
-			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
-				for idx, response := range res {
-					require.Equal(t, fmt.Sprintf("%d", idx), response.Info)
+			assertions: func(t *testing.T, ctx sdk.Context, res sdk.DeliverTxBatchResponse) {
+				for idx, response := range res.Results {
+					require.Equal(t, fmt.Sprintf("%d", idx), response.Response.Info)
 				}
 			},
 			expectedErr: nil,
@@ -115,11 +121,13 @@ func TestProcessAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for i := 0; i < tt.runs; i++ {
+				requests := requestList(tt.transactions, tt.addStores)
 				s := NewScheduler(tt.workers, tt.deliverTxFunc)
-				ctx := initTestCtx(tt.addStores)
+				// use first ctx
+				ctx := requests.TxEntries[0].Context
 
-				res, err := s.ProcessAll(ctx, tt.requests)
-				require.Len(t, res, len(tt.requests))
+				res, err := s.ProcessAll(ctx, requests)
+				require.Len(t, res.Results, len(requests.TxEntries))
 
 				if !errors.Is(err, tt.expectedErr) {
 					t.Errorf("Expected error %v, got %v", tt.expectedErr, err)

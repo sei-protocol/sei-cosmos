@@ -243,16 +243,12 @@ func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchReques
 	}
 
 	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.DeliverTx)
-	txRes, err := scheduler.ProcessAll(ctx, reqList)
+	resp, err := scheduler.ProcessAll(ctx, req)
 	if err != nil {
 		//TODO: handle error
 	}
 
-	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
-	for _, tx := range txRes {
-		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
-	}
-	return sdk.DeliverTxBatchResponse{Results: responses}
+	return resp
 }
 
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.

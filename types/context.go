@@ -34,6 +34,7 @@ type Context struct {
 	voteInfo      []abci.VoteInfo
 	gasMeter      GasMeter
 	blockGasMeter GasMeter
+	occEnabled    bool
 	checkTx       bool
 	recheckTx     bool // if recheckTx == true, then checkTx must also be true
 	minGasPrice   DecCoins
@@ -111,6 +112,10 @@ func (c Context) IsCheckTx() bool {
 
 func (c Context) IsReCheckTx() bool {
 	return c.recheckTx
+}
+
+func (c Context) IsOCCEnabled() bool {
+	return c.occEnabled
 }
 
 func (c Context) MinGasPrices() DecCoins {
@@ -311,6 +316,12 @@ func (c Context) WithBlockGasMeter(meter GasMeter) Context {
 // WithIsCheckTx enables or disables CheckTx value for verifying transactions and returns an updated Context
 func (c Context) WithIsCheckTx(isCheckTx bool) Context {
 	c.checkTx = isCheckTx
+	return c
+}
+
+// WithIsOCCEnabled enables or disables whether OCC is used as the concurrency algorithm
+func (c Context) WithIsOCCEnabled(isOCCEnabled bool) Context {
+	c.occEnabled = isOCCEnabled
 	return c
 }
 

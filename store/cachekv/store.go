@@ -2,6 +2,8 @@ package cachekv
 
 import (
 	"bytes"
+	"encoding/base64"
+	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -37,17 +39,29 @@ func (b mapCacheBackend) Len() int {
 }
 
 func (b mapCacheBackend) Delete(key string) {
+	fmt.Printf("delete key %s\n", base64.StdEncoding.EncodeToString([]byte(key)))
 	delete(b.m, key)
 }
 
 func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
 	// this is always called within a mutex so all operations below are atomic
 	keys := []string{}
+	fmt.Printf("klen: %d\n", len(b.m))
 	for k := range b.m {
 		keys = append(keys, k)
 	}
 	for _, key := range keys {
-		val, _ := b.Get(key)
+		val, ok := b.Get(key)
+		if !ok {
+			fmt.Printf("Keys: %d, len: %d, Len: %d\n", len(keys), len(b.m), b.Len())
+			if _, ok := b.m[key]; !ok {
+				panic(fmt.Sprintf("invalid key %s", base64.StdEncoding.EncodeToString([]byte(key))))
+			}
+			panic(fmt.Sprintf("Range is supposed to be atomic but is not when getting %s", key))
+		}
+		if val == nil {
+			panic(fmt.Sprintf("cache backend is not supposed to have nil values but got one for %s", key))
+		}
 		if !f(key, val) {
 			break
 		}
@@ -151,6 +165,7 @@ func (store *Store) Delete(key []byte) {
 	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
 
 	types.AssertValidKey(key)
+	fmt.Println("store delete")
 	store.setCacheValue(key, nil, true, true)
 	store.eventManager.EmitResourceAccessWriteEvent("delete", store.storeKey, key, []byte{})
 }
@@ -165,6 +180,8 @@ func (store *Store) Write() {
 	// Not the best, but probably not a bottleneck depending.
 	keys := make([]string, 0, store.cache.Len())
 
+	cacheLen := store.cache.Len()
+	fmt.Printf("store %s has a cache size of %d\n", store.storeKey, cacheLen)
 	store.cache.Range(func(key string, dbValue *types.CValue) bool {
 		if dbValue.Dirty() {
 			keys = append(keys, key)
@@ -196,6 +213,7 @@ func (store *Store) Write() {
 	// Clear the cache using the map clearing idiom
 	// and not allocating fresh objects.
 	// Please see https://bencher.orijtech.com/perfclinic/mapclearing/
+	fmt.Printf("store %s delete all\n", store.storeKey)
 	store.cache.DeleteAll()
 	store.deleted.Range(func(key, value any) bool {
 		store.deleted.Delete(key)

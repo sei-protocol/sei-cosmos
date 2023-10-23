@@ -104,6 +104,11 @@ func (c Context) IsReCheckTx() bool {
 	return c.recheckTx
 }
 
+func (c Context) IsOCCEnabled() bool {
+	//TODO: implement flag for OCC
+	return true
+}
+
 func (c Context) MinGasPrices() DecCoins {
 	return c.minGasPrice
 }

@@ -24,24 +24,23 @@ but please do not over-use it. We try to keep all data structured
 and standard additions here would be better just to add to the Context struct
 */
 type Context struct {
-	ctx                 context.Context
-	ms                  MultiStore
-	header              tmproto.Header
-	headerHash          tmbytes.HexBytes
-	chainID             string
-	txBytes             []byte
-	logger              log.Logger
-	voteInfo            []abci.VoteInfo
-	gasMeter            GasMeter
-	blockGasMeter       GasMeter
-	occEnabled          bool
-	occPrefillEstimates bool
-	checkTx             bool
-	recheckTx           bool // if recheckTx == true, then checkTx must also be true
-	minGasPrice         DecCoins
-	consParams          *tmproto.ConsensusParams
-	eventManager        *EventManager
-	priority            int64 // The tx priority, only relevant in CheckTx
+	ctx           context.Context
+	ms            MultiStore
+	header        tmproto.Header
+	headerHash    tmbytes.HexBytes
+	chainID       string
+	txBytes       []byte
+	logger        log.Logger
+	voteInfo      []abci.VoteInfo
+	gasMeter      GasMeter
+	blockGasMeter GasMeter
+	occEnabled    bool
+	checkTx       bool
+	recheckTx     bool // if recheckTx == true, then checkTx must also be true
+	minGasPrice   DecCoins
+	consParams    *tmproto.ConsensusParams
+	eventManager  *EventManager
+	priority      int64 // The tx priority, only relevant in CheckTx
 
 	txBlockingChannels   acltypes.MessageAccessOpsChannelMapping
 	txCompletionChannels acltypes.MessageAccessOpsChannelMapping
@@ -108,10 +107,6 @@ func (c Context) IsReCheckTx() bool {
 
 func (c Context) IsOCCEnabled() bool {
 	return c.occEnabled
-}
-
-func (c Context) OCCPrefillEstimates() bool {
-	return c.occPrefillEstimates
 }
 
 func (c Context) MinGasPrices() DecCoins {
@@ -294,12 +289,6 @@ func (c Context) WithIsCheckTx(isCheckTx bool) Context {
 // WithIsOCCEnabled enables or disables whether OCC is used as the concurrency algorithm
 func (c Context) WithIsOCCEnabled(isOCCEnabled bool) Context {
 	c.occEnabled = isOCCEnabled
-	return c
-}
-
-// WithOCCPrefillEstimates enables or disables whether we should prefill estimates for resource usages
-func (c Context) WithOCCPrefillEstimates(prefillEstimates bool) Context {
-	c.occPrefillEstimates = prefillEstimates
 	return c
 }
 

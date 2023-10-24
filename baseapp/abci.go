@@ -246,11 +246,9 @@ func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchReques
 	}
 
 	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.DeliverTx)
+	// This will basically no-op the actual prefill if the metadata for the txs is empty
+	scheduler.PrefillEstimates(ctx, txMetadatas)
 
-	// if enabled, we want to initialize the MVS and then prefill estimates
-	if ctx.OCCPrefillEstimates() {
-		scheduler.PrefillEstimates(ctx, txMetadatas)
-	}
 	// process all txs, this will also initializes the MVS if prefill estimates was disabled
 	txRes, err := scheduler.ProcessAll(ctx, reqList)
 	if err != nil {

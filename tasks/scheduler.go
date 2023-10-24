@@ -57,6 +57,7 @@ func (dt *deliverTxTask) Increment() {
 
 // Scheduler processes tasks concurrently
 type Scheduler interface {
+	PrefillEstimates(ctx sdk.Context, metadatas []sdk.DeliverTxMetadata)
 	ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error)
 }
 
@@ -119,7 +120,10 @@ func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
 	return res
 }
 
-func (s *scheduler) initMultiVersionStore(ctx sdk.Context) {
+func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
+	if s.multiVersionStores != nil {
+		return
+	}
 	mvs := make(map[sdk.StoreKey]multiversion.MultiVersionStore)
 	keys := ctx.MultiStore().StoreKeys()
 	for _, sk := range keys {
@@ -146,8 +150,22 @@ func allValidated(tasks []*deliverTxTask) bool {
 	return true
 }
 
+func (s *scheduler) PrefillEstimates(ctx sdk.Context, metadatas []sdk.DeliverTxMetadata) {
+	// initialize mutli-version stores if they haven't been initialized yet
+	s.tryInitMultiVersionStore(ctx)
+	// iterate over TXs, update estimated writesets where applicable
+	for i, metadata := range metadatas {
+		// order shouldnt matter for storeKeys because each storeKey partitioned MVS is independent
+		for storeKey, writeset := range metadata.EstimatedWritesets {
+			// we use `-1` to indicate a prefill incarnation
+			s.multiVersionStores[storeKey].SetEstimatedWriteset(i, -1, writeset)
+		}
+	}
+}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error) {
-	s.initMultiVersionStore(ctx)
+	// initialize mutli-version stores if they haven't been initialized yet
+	s.tryInitMultiVersionStore(ctx)
 	tasks := toTasks(reqs)
 	toExecute := tasks
 	for !allValidated(tasks) {

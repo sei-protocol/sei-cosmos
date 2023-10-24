@@ -1,11 +1,21 @@
 package types
 
-import abci "github.com/tendermint/tendermint/abci/types"
+import (
+	"github.com/cosmos/cosmos-sdk/store/multiversion"
+	abci "github.com/tendermint/tendermint/abci/types"
+)
 
 // DeliverTxEntry represents an individual transaction's request within a batch.
 // This can be extended to include tx-level tracing or metadata
 type DeliverTxEntry struct {
-	Request abci.RequestDeliverTx
+	Request  abci.RequestDeliverTx
+	Metadata DeliverTxMetadata
+}
+
+// DeliverTxMetadata represents metadata for a transaction. This include prefilled dependencies along with other useful fields
+type DeliverTxMetadata struct {
+	// EstimateWritesets is a map of store keys to their estimated writesets
+	EstimatedWritesets map[StoreKey]multiversion.WriteSet
 }
 
 // DeliverTxBatchRequest represents a request object for a batch of transactions.

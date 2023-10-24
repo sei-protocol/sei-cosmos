@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/tasks"
 	"os"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/tasks"
 
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
@@ -238,14 +239,22 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // DeliverTxBatch executes multiple txs
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
 	reqList := make([]abci.RequestDeliverTx, 0, len(req.TxEntries))
+	txMetadatas := make([]sdk.DeliverTxMetadata, 0, len(req.TxEntries))
 	for _, tx := range req.TxEntries {
 		reqList = append(reqList, tx.Request)
+		txMetadatas = append(txMetadatas, tx.Metadata)
 	}
 
 	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.DeliverTx)
+
+	// if enabled, we want to initialize the MVS and then prefill estimates
+	if ctx.OCCPrefillEstimates() {
+		scheduler.PrefillEstimates(ctx, txMetadatas)
+	}
+	// process all txs, this will also initializes the MVS if prefill estimates was disabled
 	txRes, err := scheduler.ProcessAll(ctx, reqList)
 	if err != nil {
-		//TODO: handle error
+		// TODO: handle error
 	}
 
 	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))

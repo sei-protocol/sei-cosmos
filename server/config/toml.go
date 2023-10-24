@@ -3,7 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
-	memiavlcfg "github.com/sei-protocol/sei-db/sc/memiavl/config"
+	seidb "github.com/sei-protocol/sei-db/config"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
@@ -237,7 +237,7 @@ snapshot-keep-recent = {{ .StateSync.SnapshotKeepRecent }}
 # default is emtpy which will then store under the app home directory same as before.
 snapshot-directory = "{{ .StateSync.SnapshotDirectory }}"
 
-` + memiavlcfg.DefaultConfigTemplate
+` + seidb.DefaultConfigTemplate
 
 var configTemplate *template.Template
 

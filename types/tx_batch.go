@@ -8,15 +8,12 @@ import (
 // DeliverTxEntry represents an individual transaction's request within a batch.
 // This can be extended to include tx-level tracing or metadata
 type DeliverTxEntry struct {
-	Request  abci.RequestDeliverTx
-	Metadata DeliverTxMetadata
+	Request            abci.RequestDeliverTx
+	EstimatedWritesets MappedWritesets
 }
 
-// DeliverTxMetadata represents metadata for a transaction. This include prefilled dependencies along with other useful fields
-type DeliverTxMetadata struct {
-	// EstimateWritesets is a map of store keys to their estimated writesets
-	EstimatedWritesets map[StoreKey]multiversion.WriteSet
-}
+// EstimatedWritesets represents an estimated writeset for a transaction mapped by storekey to the writeset estimate.
+type MappedWritesets map[StoreKey]multiversion.WriteSet
 
 // DeliverTxBatchRequest represents a request object for a batch of transactions.
 // This can be extended to include request-level tracing or metadata

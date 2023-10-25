@@ -2669,6 +2669,40 @@ func (suite *KeeperTestSuite) TestBuildSelectorOps_AccessOperationSelectorType_C
 	req.NoError(err)
 }
 
+func TestGenerateEstimatedDependencies(t *testing.T) {
+	app := simapp.Setup(false)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	accounts := simapp.AddTestAddrsIncremental(app, ctx, 2, sdk.NewInt(30000000))
+	// setup test txs
+	msgs := []sdk.Msg{
+		banktypes.NewMsgSend(accounts[0], accounts[1], sdk.NewCoins(sdk.NewCoin("usei", sdk.NewInt(1)))),
+	}
+	// set up testing mapping
+	app.AccessControlKeeper.ResourceTypeStoreKeyMapping = map[acltypes.ResourceType]string{
+		acltypes.ResourceType_KV_BANK_BALANCES: banktypes.StoreKey,
+	}
+
+	storeKeyMap := app.AccessControlKeeper.GetStoreKeyMap(ctx)
+
+	txBuilder := simapp.MakeTestEncodingConfig().TxConfig.NewTxBuilder()
+	err := txBuilder.SetMsgs(msgs...)
+	require.NoError(t, err)
+	bz, err := simapp.MakeTestEncodingConfig().TxConfig.TxEncoder()(txBuilder.GetTx())
+	require.NoError(t, err)
+
+	writesets, err := app.AccessControlKeeper.GenerateEstimatedWritesets(ctx, simapp.MakeTestEncodingConfig().TxConfig.TxDecoder(), app.GetAnteDepGenerator(), 0, bz)
+	require.NoError(t, err)
+
+	// check writesets
+	require.Equal(t, 1, len(writesets))
+	bankWritesets := writesets[storeKeyMap[banktypes.StoreKey]]
+	fmt.Println(bankWritesets)
+	// due to how the default dep gen works (doesnt generate proper store key, but that's ok)
+	require.Equal(t, 3, len(bankWritesets))
+
+}
+
 func TestKeeperTestSuite(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(KeeperTestSuite))

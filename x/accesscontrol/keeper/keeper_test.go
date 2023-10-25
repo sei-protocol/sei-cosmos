@@ -20,6 +20,7 @@ import (
 	aclkeeper "github.com/cosmos/cosmos-sdk/x/accesscontrol/keeper"
 	acltestutil "github.com/cosmos/cosmos-sdk/x/accesscontrol/testutil"
 	"github.com/cosmos/cosmos-sdk/x/accesscontrol/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -2680,7 +2681,8 @@ func TestGenerateEstimatedDependencies(t *testing.T) {
 	}
 	// set up testing mapping
 	app.AccessControlKeeper.ResourceTypeStoreKeyMapping = map[acltypes.ResourceType]string{
-		acltypes.ResourceType_KV_BANK_BALANCES: banktypes.StoreKey,
+		acltypes.ResourceType_KV_BANK_BALANCES:      banktypes.StoreKey,
+		acltypes.ResourceType_KV_AUTH_ADDRESS_STORE: authtypes.StoreKey,
 	}
 
 	storeKeyMap := app.AccessControlKeeper.GetStoreKeyMap(ctx)
@@ -2695,11 +2697,12 @@ func TestGenerateEstimatedDependencies(t *testing.T) {
 	require.NoError(t, err)
 
 	// check writesets
-	require.Equal(t, 1, len(writesets))
+	require.Equal(t, 2, len(writesets))
 	bankWritesets := writesets[storeKeyMap[banktypes.StoreKey]]
-	fmt.Println(bankWritesets)
-	// due to how the default dep gen works (doesnt generate proper store key, but that's ok)
 	require.Equal(t, 3, len(bankWritesets))
+
+	authWritesets := writesets[storeKeyMap[authtypes.StoreKey]]
+	require.Equal(t, 1, len(authWritesets))
 
 }
 

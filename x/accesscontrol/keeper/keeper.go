@@ -506,7 +506,6 @@ func (k Keeper) GetStoreKeyMap(ctx sdk.Context) storeKeyMap {
 }
 
 func (k Keeper) UpdateWritesetsWithAccessOps(accessOps []acltypes.AccessOperation, mappedWritesets sdk.MappedWritesets, storeKeyMap storeKeyMap) sdk.MappedWritesets {
-	fmt.Println(accessOps)
 	for _, accessOp := range accessOps {
 		// we only want writes and unknowns (assumed writes)
 		if accessOp.AccessType != acltypes.AccessType_WRITE && accessOp.AccessType != acltypes.AccessType_UNKNOWN {

@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/tendermint/tendermint/abci/types"
 	"golang.org/x/sync/errgroup"
@@ -12,55 +13,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/occ"
 )
 
-type status string
-
-const (
-	// statusPending tasks are ready for execution
-	// all executing tasks are in pending state
-	statusPending status = "pending"
-	// statusExecuted tasks are ready for validation
-	// these tasks did not abort during execution
-	statusExecuted status = "executed"
-	// statusAborted means the task has been aborted
-	// these tasks transition to pending upon next execution
-	statusAborted status = "aborted"
-	// statusValidated means the task has been validated
-	// tasks in this status can be reset if an earlier task fails validation
-	statusValidated status = "validated"
-	// statusWaiting tasks are waiting for another tx to complete
-	statusWaiting status = "waiting"
-)
-
-type deliverTxTask struct {
-	Ctx     sdk.Context
-	AbortCh chan occ.Abort
-
-	Status        status
-	Dependencies  []int
-	Abort         *occ.Abort
-	Index         int
-	Incarnation   int
-	Request       types.RequestDeliverTx
-	Response      *types.ResponseDeliverTx
-	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
-}
-
-func (dt *deliverTxTask) Increment() {
-	dt.Incarnation++
-	dt.Status = statusPending
-	dt.Response = nil
-	dt.Abort = nil
-	dt.AbortCh = nil
-	dt.Dependencies = nil
-	dt.VersionStores = nil
-}
-
 // Scheduler processes tasks concurrently
 type Scheduler interface {
 	ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
 }
 
 type scheduler struct {
+	mx                 sync.Mutex
 	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)
 	workers            int
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
@@ -74,13 +33,13 @@ func NewScheduler(workers int, deliverTxFunc func(ctx sdk.Context, req types.Req
 	}
 }
 
-func (s *scheduler) invalidateTask(task *deliverTxTask) {
+func (s *scheduler) invalidateTask(task *TxTask) {
 	for _, mv := range s.multiVersionStores {
 		mv.InvalidateWriteset(task.Index, task.Incarnation)
 	}
 }
 
-func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
+func (s *scheduler) findConflicts(task *TxTask) (bool, []int) {
 	var conflicts []int
 	uniq := make(map[int]struct{})
 	valid := true
@@ -99,6 +58,7 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	return valid, conflicts
 }
 
+<<<<<<< Updated upstream
 func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 	res := make([]*deliverTxTask, 0, len(reqs))
 	for idx, r := range reqs {
@@ -123,6 +83,9 @@ func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
 	if s.multiVersionStores != nil {
 		return
 	}
+=======
+func (s *scheduler) initMultiVersionStore(ctx sdk.Context) {
+>>>>>>> Stashed changes
 	mvs := make(map[sdk.StoreKey]multiversion.MultiVersionStore)
 	keys := ctx.MultiStore().StoreKeys()
 	for _, sk := range keys {
@@ -131,6 +94,7 @@ func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
 	s.multiVersionStores = mvs
 }
 
+<<<<<<< Updated upstream
 func indexesValidated(tasks []*deliverTxTask, idx []int) bool {
 	for _, i := range idx {
 		if tasks[i].Status != statusValidated {
@@ -167,6 +131,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// prefill estimates
 	s.PrefillEstimates(ctx, reqs)
 	tasks := toTasks(reqs)
+=======
+func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error) {
+	s.initMultiVersionStore(ctx)
+	tasks, _ := toTasks(reqs)
+>>>>>>> Stashed changes
 	toExecute := tasks
 	for !allValidated(tasks) {
 		var err error
@@ -195,26 +164,26 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	return collectResponses(tasks), nil
 }
 
-func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error) {
-	var res []*deliverTxTask
+func (s *scheduler) validateAll(tasks []*TxTask) ([]*TxTask, error) {
+	var res []*TxTask
 
 	// find first non-validated entry
 	var startIdx int
 	for idx, t := range tasks {
-		if t.Status != statusValidated {
+		if t.Status() != statusValid {
 			startIdx = idx
 			break
 		}
 	}
 
 	for i := startIdx; i < len(tasks); i++ {
-		switch tasks[i].Status {
+		switch tasks[i].Status() {
 		case statusAborted:
 			// aborted means it can be re-run immediately
 			res = append(res, tasks[i])
 
 		// validated tasks can become unvalidated if an earlier re-run task now conflicts
-		case statusExecuted, statusValidated:
+		case statusExecuted, statusValid:
 			if valid, conflicts := s.findConflicts(tasks[i]); !valid {
 				s.invalidateTask(tasks[i])
 
@@ -224,10 +193,10 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 				} else {
 					// otherwise, wait for completion
 					tasks[i].Dependencies = conflicts
-					tasks[i].Status = statusWaiting
+					tasks[i].SetStatus(statusWaiting)
 				}
 			} else if len(conflicts) == 0 {
-				tasks[i].Status = statusValidated
+				tasks[i].SetStatus(statusValid)
 			}
 
 		case statusWaiting:
@@ -243,8 +212,8 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 // ExecuteAll executes all tasks concurrently
 // Tasks are updated with their status
 // TODO: error scenarios
-func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
-	ch := make(chan *deliverTxTask, len(tasks))
+func (s *scheduler) executeAll(ctx sdk.Context, tasks []*TxTask) error {
+	ch := make(chan *TxTask, len(tasks))
 	grp, gCtx := errgroup.WithContext(ctx.Context())
 
 	// a workers value < 1 means no limit
@@ -269,7 +238,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					close(task.AbortCh)
 
 					if abt, ok := <-task.AbortCh; ok {
-						task.Status = statusAborted
+						task.SetStatus(statusAborted)
 						task.Abort = &abt
 						continue
 					}
@@ -279,7 +248,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						v.WriteToMultiVersionStore()
 					}
 
-					task.Status = statusExecuted
+					task.SetStatus(statusExecuted)
 					task.Response = &resp
 				}
 			}

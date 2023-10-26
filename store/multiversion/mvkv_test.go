@@ -12,6 +12,46 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
+func TestVersionIndexedStoreBlankAccess(t *testing.T) {
+	mem := dbadapter.Store{DB: dbm.NewMemDB()}
+	parentKVStore := cachekv.NewStore(mem, types.NewKVStoreKey("mock"), 1000)
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+
+	key := []byte("key")
+	value := []byte("value")
+
+	abt1 := make(chan scheduler.Abort)
+	abt2 := make(chan scheduler.Abort)
+
+	// initialize a new VersionIndexedStore
+	vis1 := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 1, 0, abt1)
+	vis2 := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 2, 0, abt2)
+
+	// tx1 read key that doesn't exist
+	val1 := vis1.Get(key)
+	require.Nil(t, val1)
+	require.False(t, vis1.Has(key))
+
+	// tx2 read key that doesn't exist
+	val2 := vis2.Get(key)
+	require.Nil(t, val2)
+	require.False(t, vis1.Has(key))
+
+	vis2.WriteToMultiVersionStore()
+	valid2, _ := mvs.ValidateTransactionState(2)
+
+	// tx1 set key (THIS MEANS TRANSACTION 2 IS WRONG)
+	vis1.Set(key, value)
+	vis1.WriteToMultiVersionStore()
+	valid1, _ := mvs.ValidateTransactionState(1)
+
+	require.True(t, valid1)
+	require.True(t, valid2)
+
+	valid2, _ = mvs.ValidateTransactionState(2)
+	require.False(t, valid2)
+}
+
 func TestVersionIndexedStoreGetters(t *testing.T) {
 	mem := dbadapter.Store{DB: dbm.NewMemDB()}
 	parentKVStore := cachekv.NewStore(mem, types.NewKVStoreKey("mock"), 1000)

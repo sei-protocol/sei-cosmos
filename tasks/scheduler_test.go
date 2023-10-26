@@ -17,8 +17,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type mockDeliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx
-
 var testStoreKey = sdk.NewKVStoreKey("mock")
 var itemKey = []byte("key")
 
@@ -55,8 +53,13 @@ func TestProcessAll(t *testing.T) {
 		name          string
 		workers       int
 		runs          int
+<<<<<<< Updated upstream
 		requests      []*sdk.DeliverTxEntry
 		deliverTxFunc mockDeliverTxFunc
+=======
+		requests      []types.RequestDeliverTx
+		deliverTxFunc deliverTxFunc
+>>>>>>> Stashed changes
 		addStores     bool
 		expectedErr   error
 		assertions    func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx)
@@ -64,7 +67,7 @@ func TestProcessAll(t *testing.T) {
 		{
 			name:      "Test every tx accesses same key",
 			workers:   50,
-			runs:      25,
+			runs:      50,
 			addStores: true,
 			requests:  requestList(50),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {

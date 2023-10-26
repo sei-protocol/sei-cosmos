@@ -152,9 +152,12 @@ func allValidated(tasks []*deliverTxTask) bool {
 func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) {
 	// iterate over TXs, update estimated writesets where applicable
 	for i, req := range reqs {
+		ctx.Logger().Info("Trying prefill for tx index", "index", i) // TODO: remove
 		mappedWritesets := req.EstimatedWritesets
 		// order shouldnt matter for storeKeys because each storeKey partitioned MVS is independent
 		for storeKey, writeset := range mappedWritesets {
+			// TODO: remove - log the mapped writesets
+			ctx.Logger().Info("Prefilling estimated writeset", "storeKey", storeKey.Name(), "writeset", writeset)
 			// we use `-1` to indicate a prefill incarnation
 			s.multiVersionStores[storeKey].SetEstimatedWriteset(i, -1, writeset)
 		}
@@ -273,7 +276,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						task.Abort = &abt
 						continue
 					}
-
+					ctx.Logger().Info("Writing mvkv to multiversion store", "txIndex", task.Index) // TODO: remove
 					// write from version store to multiversion stores
 					for _, v := range task.VersionStores {
 						v.WriteToMultiVersionStore()

@@ -276,7 +276,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 						task.Abort = &abt
 						continue
 					}
-					ctx.Logger().Info("Writing mvkv to multiversion store", "txIndex", task.Index) // TODO: remove
+					ctx.Logger().Info("Writing mvkv to multiversion store", "txIndex", task.Index, "taskReq", task.Request.Tx) // TODO: remove
 					// write from version store to multiversion stores
 					for _, v := range task.VersionStores {
 						v.WriteToMultiVersionStore()

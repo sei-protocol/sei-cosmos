@@ -365,8 +365,9 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			CacheSize:          v.GetInt("state-commit.cache-size"),
 		},
 		StateStore: seidb.StateStoreConfig{
-			Enable:  v.GetBool("state-store.enable"),
-			Backend: v.GetString("state-store.backend"),
+			Enable:     v.GetBool("state-store.enable"),
+			Backend:    v.GetString("state-store.backend"),
+			AsyncFlush: v.GetBool("state-store.async-flush"),
 		},
 	}, nil
 }

@@ -55,7 +55,17 @@ type Store struct {
 	logger log.Logger
 }
 
-func NewMultiVersionStore(parentStore types.KVStore, logger log.Logger) *Store {
+func NewMultiVersionStore(parentStore types.KVStore) *Store {
+	return &Store{
+		multiVersionMap: make(map[string]MultiVersionValue),
+		txWritesetKeys:  make(map[int][]string),
+		txReadSets:      make(map[int]ReadSet),
+		txIterateSets:   make(map[int]Iterateset),
+		parentStore:     parentStore,
+	}
+}
+
+func NewMultiVersionStoreWithLogger(parentStore types.KVStore, logger log.Logger) *Store {
 	return &Store{
 		multiVersionMap: make(map[string]MultiVersionValue),
 		txWritesetKeys:  make(map[int][]string),

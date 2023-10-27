@@ -192,7 +192,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			t.Increment()
 		}
 	}
-	for _, mv := range s.multiVersionStores {
+	for k, mv := range s.multiVersionStores {
+		ctx.Logger().Info("Writing latest to store", "storeKey", k.Name()) // TODO: remove
 		mv.WriteLatestToStore()
 	}
 	return collectResponses(tasks), nil

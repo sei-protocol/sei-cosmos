@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -415,10 +416,12 @@ func (s *Store) WriteLatestToStore() {
 			// be sure if the underlying store might do a save with the byteslice or
 			// not. Once we get confirmation that .Delete is guaranteed not to
 			// save the byteslice, then we can assume only a read-only copy is sufficient.
+			fmt.Println("Deleting from parent store: ", key) // TODO: remove
 			s.parentStore.Delete([]byte(key))
 			continue
 		}
 		if mvValue.Value() != nil {
+			fmt.Println("Writing to parent store: ", key, mvValue.Value()) // TODO: remove
 			s.parentStore.Set([]byte(key), mvValue.Value())
 		}
 	}

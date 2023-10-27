@@ -126,7 +126,7 @@ func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
 	mvs := make(map[sdk.StoreKey]multiversion.MultiVersionStore)
 	keys := ctx.MultiStore().StoreKeys()
 	for _, sk := range keys {
-		if sk.Name() == "dex_mem" { // TODO : remove
+		if sk.Name() == "mem_dex" { // TODO : remove
 			mvs[sk] = multiversion.NewMultiVersionStore(ctx.MultiStore().GetKVStore(sk))
 			continue
 		}

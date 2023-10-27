@@ -431,12 +431,16 @@ func (s *Store) WriteLatestToStore() {
 			// be sure if the underlying store might do a save with the byteslice or
 			// not. Once we get confirmation that .Delete is guaranteed not to
 			// save the byteslice, then we can assume only a read-only copy is sufficient.
-			s.logger.Info("Deleting from parent store: ", "key", hex.EncodeToString([]byte(key))) // TODO: remove
+			if s.logger != nil {
+				s.logger.Info("Deleting from parent store: ", "key", hex.EncodeToString([]byte(key))) // TODO: remove
+			}
 			s.parentStore.Delete([]byte(key))
 			continue
 		}
 		if mvValue.Value() != nil {
-			s.logger.Info("Writing to parent store: ", "key", hex.EncodeToString([]byte(key)), "value", hex.EncodeToString(mvValue.Value())) // TODO: remove
+			if s.logger != nil {
+				s.logger.Info("Writing to parent store: ", "key", hex.EncodeToString([]byte(key)), "value", hex.EncodeToString(mvValue.Value())) // TODO: remove
+			}
 			s.parentStore.Set([]byte(key), mvValue.Value())
 		}
 	}

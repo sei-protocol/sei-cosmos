@@ -184,7 +184,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
-		toExecute, err = s.validateAll(tasks)
+		toExecute, err = s.validateAll(ctx, tasks)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +198,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	return collectResponses(tasks), nil
 }
 
-func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error) {
+func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	var res []*deliverTxTask
 
 	// find first non-validated entry
@@ -211,6 +211,7 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 	}
 
 	for i := startIdx; i < len(tasks); i++ {
+		ctx.Logger().Info("validating for task index", "index", i)
 		switch tasks[i].Status {
 		case statusAborted:
 			// aborted means it can be re-run immediately
@@ -219,6 +220,7 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 		// validated tasks can become unvalidated if an earlier re-run task now conflicts
 		case statusExecuted, statusValidated:
 			if valid, conflicts := s.findConflicts(tasks[i]); !valid {
+				ctx.Logger().Info("validation found conflicts for task", "index", i, "conflicts", conflicts)
 				s.invalidateTask(tasks[i])
 
 				// if the conflicts are now validated, then rerun this task
@@ -230,8 +232,9 @@ func (s *scheduler) validateAll(tasks []*deliverTxTask) ([]*deliverTxTask, error
 					tasks[i].Status = statusWaiting
 				}
 			} else if len(conflicts) == 0 {
+				ctx.Logger().Info("validation succeeded for task", "index", i)
 				tasks[i].Status = statusValidated
-			}
+			} // TODO: do we need to have handling for conflicts existing here?
 
 		case statusWaiting:
 			// if conflicts are done, then this task is ready to run again
@@ -272,11 +275,12 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					close(task.AbortCh)
 
 					if abt, ok := <-task.AbortCh; ok {
+						ctx.Logger().Info("aborting execution for task", "txIndex", task.Index, "abort", abt)
 						task.Status = statusAborted
 						task.Abort = &abt
 						continue
 					}
-					ctx.Logger().Info("Writing mvkv to multiversion store", "txIndex", task.Index, "taskReq", task.Request.Tx) // TODO: remove
+					ctx.Logger().Info("Writing mvkv to multiversion store", "txIndex", task.Index) // TODO: remove
 					// write from version store to multiversion stores
 					for _, v := range task.VersionStores {
 						v.WriteToMultiVersionStore()

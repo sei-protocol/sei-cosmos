@@ -2,10 +2,12 @@ package multiversion
 
 import (
 	"bytes"
-	"fmt"
+	"encoding/hex"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -49,15 +51,18 @@ type Store struct {
 	txIterateSets  map[int]Iterateset
 
 	parentStore types.KVStore
+
+	logger log.Logger
 }
 
-func NewMultiVersionStore(parentStore types.KVStore) *Store {
+func NewMultiVersionStore(parentStore types.KVStore, logger log.Logger) *Store {
 	return &Store{
 		multiVersionMap: make(map[string]MultiVersionValue),
 		txWritesetKeys:  make(map[int][]string),
 		txReadSets:      make(map[int]ReadSet),
 		txIterateSets:   make(map[int]Iterateset),
 		parentStore:     parentStore,
+		logger:          logger.With("store", "mvs"),
 	}
 }
 
@@ -416,12 +421,12 @@ func (s *Store) WriteLatestToStore() {
 			// be sure if the underlying store might do a save with the byteslice or
 			// not. Once we get confirmation that .Delete is guaranteed not to
 			// save the byteslice, then we can assume only a read-only copy is sufficient.
-			fmt.Println("Deleting from parent store: ", key) // TODO: remove
+			s.logger.Info("Deleting from parent store: ", "key", hex.EncodeToString([]byte(key))) // TODO: remove
 			s.parentStore.Delete([]byte(key))
 			continue
 		}
 		if mvValue.Value() != nil {
-			fmt.Println("Writing to parent store: ", key, mvValue.Value()) // TODO: remove
+			s.logger.Info("Writing to parent store: ", "key", hex.EncodeToString([]byte(key)), "value", hex.EncodeToString(mvValue.Value())) // TODO: remove
 			s.parentStore.Set([]byte(key), mvValue.Value())
 		}
 	}

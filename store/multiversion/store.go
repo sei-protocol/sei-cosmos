@@ -319,21 +319,27 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 	}
 }
 
-// TODO: do we want to return bool + []int where bool indicates whether it was valid and then []int indicates only ones for which we need to wait due to estimates? - yes i think so?
-func (s *Store) ValidateTransactionState(index int) (bool, []int) {
-	defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
-	conflictSet := map[int]struct{}{}
-	valid := true
+func (s *Store) checkIteratorAtIndex(index int) bool {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 
-	// TODO: can we parallelize for all iterators?
-	iterateset := s.GetIterateset(index)
+	valid := true
+	iterateset := s.txIterateSets[index]
 	for _, iterationTracker := range iterateset {
 		iteratorValid := s.validateIterator(index, iterationTracker)
 		valid = valid && iteratorValid
 	}
+	return valid
+}
 
-	// validate readset
-	readset := s.GetReadset(index)
+func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+
+	conflictSet := make(map[int]struct{})
+	readset := s.txReadSets[index]
+	valid := true
+
 	// iterate over readset and check if the value is the same as the latest value relateive to txIndex in the multiversion store
 	for key, value := range readset {
 		// get the latest value from the multiversion store
@@ -360,14 +366,26 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 		}
 	}
 
-	// convert conflictset into sorted indices
 	conflictIndices := make([]int, 0, len(conflictSet))
 	for index := range conflictSet {
 		conflictIndices = append(conflictIndices, index)
 	}
 
 	sort.Ints(conflictIndices)
+
 	return valid, conflictIndices
+}
+
+// TODO: do we want to return bool + []int where bool indicates whether it was valid and then []int indicates only ones for which we need to wait due to estimates? - yes i think so?
+func (s *Store) ValidateTransactionState(index int) (bool, []int) {
+	defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
+
+	// TODO: can we parallelize for all iterators?
+	iteratorValid := s.checkIteratorAtIndex(index)
+
+	readsetValid, conflictIndices := s.checkReadsetAtIndex(index)
+
+	return iteratorValid && readsetValid, conflictIndices
 }
 
 func (s *Store) WriteLatestToStore() {

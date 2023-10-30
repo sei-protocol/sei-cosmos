@@ -206,7 +206,7 @@ func (s *Store) SetEstimatedWriteset(index int, incarnation int, writeset WriteS
 	s.txWritesetKeys[index] = writeSetKeys
 }
 
-// GetWritesetKeys implements MultiVersionStore.
+// GetAllWritesetKeys implements MultiVersionStore.
 func (s *Store) GetAllWritesetKeys() map[int][]string {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
@@ -243,10 +243,13 @@ func (s *Store) GetIterateset(index int) Iterateset {
 
 // CollectIteratorItems implements MultiVersionStore. It will return a memDB containing all of the keys present in the multiversion store within the iteration range prior to (exclusive of) the index.
 func (s *Store) CollectIteratorItems(index int) *db.MemDB {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+
 	sortedItems := db.NewMemDB()
 
 	// get all writeset keys prior to index
-	keys := s.GetAllWritesetKeys()
+	keys := s.txWritesetKeys
 	for i := 0; i < index; i++ {
 		indexedWriteset, ok := keys[i]
 		if !ok {

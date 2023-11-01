@@ -657,7 +657,11 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 		return sdk.Context{}, err
 	}
 
-	lastBlockHeight := app.LastBlockHeight()
+	qms := app.qms
+	if qms == nil {
+		qms = app.cms.(sdk.MultiStore)
+	}
+	lastBlockHeight := app.qms.LatestVersion()
 	if height > lastBlockHeight {
 		return sdk.Context{},
 			sdkerrors.Wrap(

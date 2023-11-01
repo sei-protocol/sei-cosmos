@@ -145,6 +145,9 @@ type MultiStore interface {
 
 	// Resets the tracked event list
 	ResetEvents()
+
+	// LatestVersion returns the latest version in the store
+	LatestVersion() int64
 }
 
 // From MultiStore.CacheMultiStore()....

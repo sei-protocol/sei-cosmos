@@ -35,7 +35,7 @@ require (
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/rs/zerolog v1.30.0
 	github.com/savaki/jq v0.0.0-20161209013833-0e6baecebbf8
-	github.com/sei-protocol/sei-db v0.0.7
+	github.com/sei-protocol/sei-db v0.0.8
 	github.com/sei-protocol/sei-tm-db v0.0.5
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/cobra v1.6.1
@@ -144,6 +144,7 @@ replace (
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.1.7-0.20210622111912-ef00f8ac3d76
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
 	github.com/cosmos/iavl => github.com/sei-protocol/sei-iavl v0.1.8-0.20230726213826-031d03d26f2d
+	github.com/sei-protocol/sei-db => ../sei-db
 
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409

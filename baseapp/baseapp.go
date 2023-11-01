@@ -172,7 +172,7 @@ type BaseApp struct { //nolint: maligned
 type appStore struct {
 	db          dbm.DB               // common DB backend
 	cms         sdk.CommitMultiStore // Main (uncached) state
-	qms         sdk.MultiStore       // Optional alternative multistore for querying only
+	qms         sdk.QueryMultiStore  // Optional alternative multistore for querying only
 	storeLoader StoreLoader          // function to handle store loading, may be overridden with SetStoreLoader()
 
 	// an inter-block write-through cache provided to the context during deliverState
@@ -1177,7 +1177,7 @@ func (app *BaseApp) ReloadDB() error {
 	app.db = db
 	app.cms = store.NewCommitMultiStore(db)
 	if app.snapshotManager != nil {
-		app.snapshotManager.SetMultiStore(app.cms)
+		app.snapshotManager.SetStateCommitStore(app.cms)
 	}
 	return nil
 }

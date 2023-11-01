@@ -284,7 +284,7 @@ func (app *BaseApp) SetSnapshotStore(snapshotStore *snapshots.Store) {
 		app.snapshotManager = nil
 		return
 	}
-	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms, app.logger)
+	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms, app.qms, app.logger)
 }
 
 // SetSnapshotInterval sets the snapshot interval.
@@ -332,6 +332,6 @@ func (app *BaseApp) SetStreamingService(s StreamingService) {
 // SetQueryMultiStore set an alternative MultiStore implementation to support historical queries.
 //
 // Ref: https://github.com/cosmos/cosmos-sdk/issues/13317
-func (app *BaseApp) SetQueryMultiStore(ms sdk.MultiStore) {
+func (app *BaseApp) SetQueryMultiStore(ms sdk.QueryMultiStore) {
 	app.qms = ms
 }

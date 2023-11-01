@@ -50,7 +50,8 @@ type restoreDone struct {
 //     errors via io.Pipe.CloseWithError().
 type Manager struct {
 	store      *Store
-	multistore types.Snapshotter
+	scStore    types.Snapshotter
+	ssStore    types.Snapshotter
 	extensions map[string]types.ExtensionSnapshotter
 	logger     log.Logger
 
@@ -63,26 +64,32 @@ type Manager struct {
 }
 
 // NewManager creates a new manager.
-func NewManager(store *Store, multistore types.Snapshotter, logger log.Logger) *Manager {
+func NewManager(store *Store, scStore types.Snapshotter, ssStore types.Snapshotter, logger log.Logger) *Manager {
 	return &Manager{
 		store:      store,
-		multistore: multistore,
+		scStore:    scStore,
+		ssStore:    ssStore,
 		extensions: make(map[string]types.ExtensionSnapshotter),
 		logger:     logger,
 	}
 }
 
 // NewManagerWithExtensions creates a new manager.
-func NewManagerWithExtensions(store *Store, multistore types.Snapshotter, extensions map[string]types.ExtensionSnapshotter) *Manager {
+func NewManagerWithExtensions(store *Store, scStore types.Snapshotter, ssStore types.Snapshotter, extensions map[string]types.ExtensionSnapshotter) *Manager {
 	return &Manager{
 		store:      store,
-		multistore: multistore,
+		scStore:    scStore,
+		ssStore:    ssStore,
 		extensions: extensions,
 	}
 }
 
-func (m *Manager) SetMultiStore(s types.Snapshotter) {
-	m.multistore = s
+func (m *Manager) SetStateCommitStore(s types.Snapshotter) {
+	m.scStore = s
+}
+
+func (m *Manager) SetStateStore(s types.Snapshotter) {
+	m.ssStore = s
 }
 
 func (m *Manager) Close() error {
@@ -186,7 +193,7 @@ func (m *Manager) createSnapshot(height uint64, ch chan<- io.ReadCloser) {
 		return
 	}
 	defer streamWriter.Close()
-	if err := m.multistore.Snapshot(height, streamWriter); err != nil {
+	if err := m.scStore.Snapshot(height, streamWriter); err != nil {
 		m.logger.Error("Snapshot creation failed", "err", err)
 		streamWriter.CloseWithError(err)
 		return
@@ -302,7 +309,7 @@ func (m *Manager) restoreSnapshot(snapshot types.Snapshot, chChunks <-chan io.Re
 	}
 	defer streamReader.Close()
 
-	next, err := m.multistore.Restore(snapshot.Height, snapshot.Format, streamReader)
+	next, err := m.scStore.Restore(snapshot.Height, snapshot.Format, streamReader)
 	if err != nil {
 		return sdkerrors.Wrap(err, "multistore restore")
 	}

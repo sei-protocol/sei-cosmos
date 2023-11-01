@@ -19,9 +19,12 @@ type Store interface {
 
 // something that can persist to disk
 type Committer interface {
+	Pruner
 	Commit(bool) CommitID
 	LastCommitID() CommitID
+}
 
+type Pruner interface {
 	SetPruning(PruningOptions)
 	GetPruning() PruningOptions
 }
@@ -156,6 +159,13 @@ type CacheMultiStore interface {
 
 	// Writes operations to underlying KVStore
 	Write()
+}
+
+type QueryMultiStore interface {
+	MultiStore
+	Pruner
+
+	snapshottypes.Snapshotter
 }
 
 // CommitMultiStore is an interface for a MultiStore without cache capabilities.

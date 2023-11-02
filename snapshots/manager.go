@@ -21,7 +21,7 @@ const (
 	opPrune    operation = "prune"
 	opRestore  operation = "restore"
 
-	chunkBufferSize = 4
+	chunkBufferSize = 8
 
 	snapshotMaxItemSize = int(64e6) // SDK has no key/value size limit, so we set an arbitrary limit
 )
@@ -57,8 +57,10 @@ type Manager struct {
 
 	mtx                sync.Mutex
 	operation          operation
-	chRestore          chan<- io.ReadCloser
-	chRestoreDone      <-chan restoreDone
+	chSCRestore        chan<- io.ReadCloser
+	chSSRestore        chan<- io.ReadCloser
+	chSCRestoreDone    <-chan restoreDone
+	chSSRestoreDone    <-chan restoreDone
 	restoreChunkHashes [][]byte
 	restoreChunkIndex  uint32
 }
@@ -140,11 +142,16 @@ func (m *Manager) end() {
 // endLocked ends the current operation while already holding the mutex.
 func (m *Manager) endLocked() {
 	m.operation = opNone
-	if m.chRestore != nil {
-		close(m.chRestore)
-		m.chRestore = nil
+	if m.chSCRestore != nil {
+		close(m.chSCRestore)
+		m.chSCRestore = nil
 	}
-	m.chRestoreDone = nil
+	if m.chSSRestore != nil {
+		close(m.chSSRestore)
+		m.chSSRestore = nil
+	}
+	m.chSCRestoreDone = nil
+	m.chSSRestoreDone = nil
 	m.restoreChunkHashes = nil
 	m.restoreChunkIndex = 0
 }
@@ -282,36 +289,53 @@ func (m *Manager) Restore(snapshot types.Snapshot) error {
 	}
 
 	// Start an asynchronous snapshot restoration, passing chunks and completion status via channels.
-	chChunks := make(chan io.ReadCloser, chunkBufferSize)
-	chDone := make(chan restoreDone, 1)
-
+	chSCChunks := make(chan io.ReadCloser, chunkBufferSize)
+	chSCDone := make(chan restoreDone, 1)
 	go func() {
-		err := m.restoreSnapshot(snapshot, chChunks)
-		chDone <- restoreDone{
+		err := m.restoreSnapshot(snapshot, m.scStore, chSCChunks)
+		chSCDone <- restoreDone{
 			complete: err == nil,
 			err:      err,
 		}
-		close(chDone)
+		close(chSCDone)
 	}()
+	m.chSCRestore = chSCChunks
+	m.chSCRestoreDone = chSCDone
+	// Start another asynchronous snapshot restoration for ss store if it exists
+	if m.ssStore != nil {
+		chSSChunks := make(chan io.ReadCloser, chunkBufferSize)
+		chSSDone := make(chan restoreDone, 1)
+		go func() {
+			err := m.restoreSnapshot(snapshot, m.ssStore, chSSChunks)
+			chSSDone <- restoreDone{
+				complete: err == nil,
+				err:      err,
+			}
+			close(chSSDone)
+		}()
+		m.chSSRestore = chSSChunks
+		m.chSSRestoreDone = chSSDone
+	}
 
-	m.chRestore = chChunks
-	m.chRestoreDone = chDone
 	m.restoreChunkHashes = snapshot.Metadata.ChunkHashes
 	m.restoreChunkIndex = 0
 	return nil
 }
 
 // restoreSnapshot do the heavy work of snapshot restoration after preliminary checks on request have passed.
-func (m *Manager) restoreSnapshot(snapshot types.Snapshot, chChunks <-chan io.ReadCloser) error {
+func (m *Manager) restoreSnapshot(snapshot types.Snapshot, snapshotter types.Snapshotter, chChunks <-chan io.ReadCloser) error {
 	streamReader, err := NewStreamReader(chChunks)
 	if err != nil {
 		return err
 	}
 	defer streamReader.Close()
 
-	next, err := m.scStore.Restore(snapshot.Height, snapshot.Format, streamReader)
+	next, err := snapshotter.Restore(snapshot.Height, snapshot.Format, streamReader)
 	if err != nil {
 		return sdkerrors.Wrap(err, "multistore restore")
+	}
+	if snapshotter == m.ssStore {
+		return nil
 	}
 	for {
 		if next.Item == nil {
@@ -352,7 +376,7 @@ func (m *Manager) RestoreChunk(chunk []byte) (bool, error) {
 
 	// Check if any errors have occurred yet.
 	select {
-	case done := <-m.chRestoreDone:
+	case done := <-m.chSCRestoreDone:
 		m.endLocked()
 		if done.err != nil {
 			return false, done.err
@@ -370,18 +394,33 @@ func (m *Manager) RestoreChunk(chunk []byte) (bool, error) {
 	}
 
 	// Pass the chunk to the restore, and wait for completion if it was the final one.
-	m.chRestore <- ioutil.NopCloser(bytes.NewReader(chunk))
+	m.chSCRestore <- ioutil.NopCloser(bytes.NewReader(chunk))
+	if m.ssStore != nil && m.chSSRestore != nil {
+		m.chSSRestore <- ioutil.NopCloser(bytes.NewReader(chunk))
+	}
+
 	m.restoreChunkIndex++
 
 	if int(m.restoreChunkIndex) >= len(m.restoreChunkHashes) {
-		close(m.chRestore)
-		m.chRestore = nil
-		done := <-m.chRestoreDone
-		m.endLocked()
-		if done.err != nil {
-			return false, done.err
+		close(m.chSCRestore)
+		m.chSCRestore = nil
+		if m.chSSRestore != nil {
+			close(m.chSSRestore)
+			m.chSSRestore = nil
 		}
-		if !done.complete {
+		scDone := <-m.chSCRestoreDone
+		ssDone := scDone
+		if m.chSSRestoreDone != nil {
+			ssDone = <-m.chSSRestoreDone
+		}
+		m.endLocked()
+		if scDone.err != nil {
+			return false, scDone.err
+		}
+		if ssDone.err != nil {
+			return false, ssDone.err
+		}
+		if !scDone.complete || !ssDone.complete {
 			return false, sdkerrors.Wrap(sdkerrors.ErrLogic, "restore ended prematurely")
 		}
 		return true, nil

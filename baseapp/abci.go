@@ -593,7 +593,7 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 }
 
 func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQuery) abci.ResponseQuery {
-	ctx, err := app.createQueryContext(req.Height, req.Prove)
+	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
 	app.logger.Info("[COSMOS-DEBUG] Calling createQueryContext in handleQueryGRPC", "height", req.Height)
 	defer func() {
 		// We should close the multistore to avoid leaking resources.
@@ -604,6 +604,7 @@ func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQu
 			}
 		}
 	}()
+
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}
@@ -649,9 +650,9 @@ func checkNegativeHeight(height int64) error {
 	return nil
 }
 
-// createQueryContext creates a new sdk.Context for a query, taking as args
+// CreateQueryContext creates a new sdk.Context for a query, taking as args
 // the block height and whether the query needs a proof or not.
-func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, error) {
+func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, error) {
 	if err := checkNegativeHeight(height); err != nil {
 		return sdk.Context{}, err
 	}
@@ -893,7 +894,7 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 		return sdkerrors.QueryResultWithDebug(sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "no custom querier found for route %s", path[1]), app.trace)
 	}
 
-	ctx, err := app.createQueryContext(req.Height, req.Prove)
+	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
 	app.logger.Info("[COSMOS-DEBUG] Calling createQueryContext in handleQueryCustom", "height", req.Height)
 
 	defer func() {
@@ -906,7 +907,7 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 			}
 		}
 	}()
-	defer func() {}()
+
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}

@@ -404,6 +404,13 @@ func (app *BaseApp) CommitMultiStore() sdk.CommitMultiStore {
 	return app.cms
 }
 
+// QueryMultiStore returns the query multi-store.
+// App constructor can use this to access the `qms`.
+// UNSAFE: must not be used during the abci life cycle.
+func (app *BaseApp) QueryMultiStore() sdk.QueryMultiStore {
+	return app.qms
+}
+
 // SnapshotManager returns the snapshot manager.
 // application use this to register extra extension snapshotters.
 func (app *BaseApp) SnapshotManager() *snapshots.Manager {
@@ -851,7 +858,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}
 
 	// Wait for signals to complete before starting the transaction. This is needed before any of the
-	// resources are acceessed by the ante handlers and message handlers.
+	// resources are accessed by the ante handlers and message handlers.
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it

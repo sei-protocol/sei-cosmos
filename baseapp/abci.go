@@ -599,7 +599,6 @@ func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQu
 		// We should close the multistore to avoid leaking resources.
 		if closer, ok := ctx.MultiStore().(io.Closer); ok {
 			err := closer.Close()
-			app.logger.Info("[COSMOS-DEBUG] Closing cache multistore in handleQueryGRPC", "height", req.Height)
 			if err != nil {
 				app.logger.Error("failed to close Cache MultiStore", "err", err)
 			}
@@ -658,10 +657,12 @@ func (app *BaseApp) createQueryContext(height int64, prove bool) (sdk.Context, e
 	}
 
 	qms := app.qms
-	if qms == nil {
-		qms = app.cms.(sdk.QueryMultiStore)
+	if qms == nil || height == app.cms.LatestVersion() {
+		fmt.Println("[COSMOS-DEBUG] Using cms for query", "height", height)
+		qms = app.cms
 	}
-	lastBlockHeight := app.qms.LatestVersion()
+	lastBlockHeight := qms.LatestVersion()
+	fmt.Println("[COSMOS-DEBUG] QMS last block height", "height", lastBlockHeight)
 	if height > lastBlockHeight {
 		return sdk.Context{},
 			sdkerrors.Wrap(

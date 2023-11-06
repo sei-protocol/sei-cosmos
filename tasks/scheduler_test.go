@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/utils/tracing"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store/cachemulti"
@@ -119,7 +122,15 @@ func TestProcessAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for i := 0; i < tt.runs; i++ {
-				s := NewScheduler(tt.workers, tt.deliverTxFunc)
+				// set a tracer provider
+				tp := trace.NewNoopTracerProvider()
+				otel.SetTracerProvider(trace.NewNoopTracerProvider())
+				tr := tp.Tracer("scheduler-test")
+				ti := &tracing.Info{
+					Tracer: &tr,
+				}
+
+				s := NewScheduler(tt.workers, ti, tt.deliverTxFunc)
 				ctx := initTestCtx(tt.addStores)
 
 				res, err := s.ProcessAll(ctx, tt.requests)

@@ -308,6 +308,7 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 	abortCh := make(chan occ.Abort, len(s.multiVersionStores))
 	spanCtx, span := s.tracingInfo.StartWithContext("SchedulerExecute", ctx.TraceSpanContext())
 	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
+	span.SetAttributes(attribute.Int("txIndex", task.Index))
 	span.SetAttributes(attribute.Int("incarnation", task.Incarnation))
 	ctx = ctx.WithTraceSpanContext(spanCtx)
 

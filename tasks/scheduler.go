@@ -3,18 +3,18 @@ package tasks
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/utils/tracing"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"sort"
 
 	"github.com/tendermint/tendermint/abci/types"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/occ"
+	"github.com/cosmos/cosmos-sdk/utils/tracing"
 )
 
 type status string

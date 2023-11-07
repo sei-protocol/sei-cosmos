@@ -18,10 +18,7 @@ import (
 
 // SetPruning sets a pruning option on the multistore associated with the app
 func SetPruning(opts sdk.PruningOptions) func(*BaseApp) {
-	return func(bapp *BaseApp) {
-		bapp.cms.SetPruning(opts)
-		bapp.qms.SetPruning(opts)
-	}
+	return func(bapp *BaseApp) { bapp.cms.SetPruning(opts) }
 }
 
 // SetMinGasPrices returns an option that sets the minimum gas prices on the app.

@@ -160,9 +160,6 @@ type CacheMultiStore interface {
 type QueryMultiStore interface {
 	MultiStore
 	snapshottypes.Snapshotter
-
-	SetPruning(PruningOptions)
-	GetPruning() PruningOptions
 }
 
 // CommitMultiStore is an interface for a MultiStore without cache capabilities.

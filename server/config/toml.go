@@ -22,15 +22,20 @@ const DefaultConfigTemplate = `# This is a TOML config file.
 # specified in this config (e.g. 0.25token1;0.0001token2).
 minimum-gas-prices = "{{ .BaseConfig.MinGasPrices }}"
 
-# default: the last 100 states are kept in addition to every 500th state; pruning at 10 block intervals
+# default: Keep the recent 362880 blocks and prune is triggered every 10 blocks
 # nothing: all historic states will be saved, nothing will be deleted (i.e. archiving node)
-# everything: all saved states will be deleted, storing only the current and previous state; pruning at 10 block intervals
-# custom: allow pruning options to be manually specified through 'pruning-keep-recent', 'pruning-keep-every', and 'pruning-interval'
+# everything: all saved states will be deleted, storing only the recent 2 blocks; pruning at every block
+# custom: allow pruning options to be manually specified through 'pruning-keep-recent' and 'pruning-interval'
+# When seiDB is enabled, pruning will be applied for state store.
 pruning = "{{ .BaseConfig.Pruning }}"
 
 # These are applied if and only if the pruning strategy is custom.
 pruning-keep-recent = "{{ .BaseConfig.PruningKeepRecent }}"
+
+# Deprecated: this will not take effect any more with seiDB enabled.
 pruning-keep-every = "{{ .BaseConfig.PruningKeepEvery }}"
+
+# How often prune is triggered for SS store
 pruning-interval = "{{ .BaseConfig.PruningInterval }}"
 
 # HaltHeight contains a non-zero block height at which a node will gracefully

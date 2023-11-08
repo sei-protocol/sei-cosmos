@@ -365,9 +365,11 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			CacheSize:          v.GetInt("state-commit.cache-size"),
 		},
 		StateStore: seidb.StateStoreConfig{
-			Enable:           v.GetBool("state-store.enable"),
-			Backend:          v.GetString("state-store.backend"),
-			AsyncWriteBuffer: v.GetInt("state-store.async-write-buffer"),
+			Enable:               v.GetBool("state-store.enable"),
+			Backend:              v.GetString("state-store.backend"),
+			AsyncWriteBuffer:     v.GetInt("state-store.async-write-buffer"),
+			KeepRecent:           v.GetInt("state-store.keep-recent"),
+			PruneIntervalSeconds: v.GetInt("state-store.prune-interval-seconds"),
 		},
 	}, nil
 }

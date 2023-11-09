@@ -505,6 +505,10 @@ func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.R
 		if ok {
 			moduleStartTime := time.Now()
 			module.BeginBlock(ctx, req)
+			moduleLatency := time.Since(moduleStartTime).Microseconds()
+			if moduleLatency > 10 {
+				fmt.Printf("[Debug] Module %s took %d micros in begin block\n", moduleName, moduleLatency)
+			}
 			telemetry.ModuleMeasureSince(moduleName, moduleStartTime, "module", "begin_block")
 		}
 	}

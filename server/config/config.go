@@ -357,7 +357,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			SnapshotDirectory:  v.GetString("state-sync.snapshot-directory"),
 		},
 		StateCommit: seidb.StateCommitConfig{
-			Enable:             v.GetBool("state-commit.enable"),
+			Enable:             v.GetBool("state-commit.enable-sc"),
 			ZeroCopy:           v.GetBool("state-commit.zero-copy"),
 			AsyncCommitBuffer:  v.GetInt("state-commit.async-commit-buffer"),
 			SnapshotKeepRecent: v.GetUint32("state-commit.snapshot-keep-recent"),
@@ -365,7 +365,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			CacheSize:          v.GetInt("state-commit.cache-size"),
 		},
 		StateStore: seidb.StateStoreConfig{
-			Enable:               v.GetBool("state-store.enable"),
+			Enable:               v.GetBool("state-store.enable-ss"),
 			Backend:              v.GetString("state-store.backend"),
 			AsyncWriteBuffer:     v.GetInt("state-store.async-write-buffer"),
 			KeepRecent:           v.GetInt("state-store.keep-recent"),

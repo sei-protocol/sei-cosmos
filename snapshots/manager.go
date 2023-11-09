@@ -353,6 +353,7 @@ func (m *Manager) restoreSnapshot(snapshot types.Snapshot, snapshotter types.Sna
 		if !IsFormatSupported(extension, metadata.Format) {
 			return sdkerrors.Wrapf(types.ErrUnknownFormat, "format %v for extension %s", metadata.Format, metadata.Name)
 		}
+		fmt.Printf("[CosmosDebug] Restoring extension %s\n", metadata.Name)
 		next, err = extension.Restore(snapshot.Height, metadata.Format, streamReader)
 		if err != nil {
 			return sdkerrors.Wrapf(err, "extension %s restore", metadata.Name)

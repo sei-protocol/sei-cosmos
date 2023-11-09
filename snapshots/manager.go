@@ -21,7 +21,7 @@ const (
 	opPrune    operation = "prune"
 	opRestore  operation = "restore"
 
-	chunkBufferSize = 0
+	chunkBufferSize = 4
 
 	snapshotMaxItemSize = int(64e6) // SDK has no key/value size limit, so we set an arbitrary limit
 )

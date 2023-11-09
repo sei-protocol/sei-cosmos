@@ -506,7 +506,7 @@ func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.R
 			moduleStartTime := time.Now()
 			module.BeginBlock(ctx, req)
 			moduleLatency := time.Since(moduleStartTime).Microseconds()
-			if moduleLatency > 10 {
+			if moduleLatency > 1000 {
 				fmt.Printf("[Debug] Module %s took %d micros in begin block\n", moduleName, moduleLatency)
 			}
 			telemetry.ModuleMeasureSince(moduleName, moduleStartTime, "module", "begin_block")
@@ -552,6 +552,10 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 		}
 		moduleStartTime := time.Now()
 		moduleValUpdates := module.EndBlock(ctx, req)
+		moduleLatency := time.Since(moduleStartTime).Microseconds()
+		if moduleLatency > 1000 {
+			fmt.Printf("[Debug] Module %s took %d micros in end block\n", moduleName, moduleLatency)
+		}
 		telemetry.ModuleMeasureSince(moduleName, moduleStartTime, "module", "end_block")
 		// use these validator updates if provided, the module manager assumes
 		// only one module will update the validator set
@@ -559,7 +563,6 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 			if len(validatorUpdates) > 0 {
 				panic("validator EndBlock updates already set by a previous module")
 			}
-
 			validatorUpdates = moduleValUpdates
 		}
 

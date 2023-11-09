@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -348,7 +349,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 			// TODO: maybe we don't even do this check?
 			parentVal := s.parentStore.Get([]byte(key))
 			if !bytes.Equal(parentVal, value) {
-				panic("there shouldn't be readset conflicts with parent kv store, since it shouldn't change")
+				panic(fmt.Sprintf("there shouldn't be readset conflicts with parent kv store, since it shouldn't change, key: %X, val: %X, parentVal: %X", []byte(key), value, parentVal))
 			}
 		} else {
 			// if estimate, mark as conflict index - but don't invalidate

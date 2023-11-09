@@ -497,10 +497,6 @@ func (m Manager) RunMigrations(ctx sdk.Context, cfg Configurator, fromVM Version
 // child context with an event manager to aggregate events emitted from all
 // modules.
 func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	startTime := time.Now()
-	defer func() {
-		fmt.Printf("[DEBUG] BeginBlock latency: %d\n", time.Since(startTime).Microseconds())
-	}()
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 	defer telemetry.MeasureSince(time.Now(), "module", "total_begin_block")
@@ -509,7 +505,6 @@ func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.R
 		if ok {
 			moduleStartTime := time.Now()
 			module.BeginBlock(ctx, req)
-			fmt.Printf("[DEBUG] %s BeginBlock latency: %d\n", moduleName, time.Since(moduleStartTime).Microseconds())
 			telemetry.ModuleMeasureSince(moduleName, moduleStartTime, "module", "begin_block")
 		}
 	}
@@ -523,10 +518,6 @@ func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.R
 // child context with an event manager to aggregate events emitted from all
 // modules.
 func (m *Manager) MidBlock(ctx sdk.Context, height int64) []abci.Event {
-	startTime := time.Now()
-	defer func() {
-		fmt.Printf("[DEBUG] MidBlock latency: %d\n", time.Since(startTime).Microseconds())
-	}()
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 
 	defer telemetry.MeasureSince(time.Now(), "module", "total_mid_block")
@@ -547,10 +538,6 @@ func (m *Manager) MidBlock(ctx sdk.Context, height int64) []abci.Event {
 // child context with an event manager to aggregate events emitted from all
 // modules.
 func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
-	startTime := time.Now()
-	defer func() {
-		fmt.Printf("[DEBUG] EndBlock latency: %d\n", time.Since(startTime).Microseconds())
-	}()
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	validatorUpdates := []abci.ValidatorUpdate{}
 	defer telemetry.MeasureSince(time.Now(), "module", "total_end_block")
@@ -561,7 +548,6 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 		}
 		moduleStartTime := time.Now()
 		moduleValUpdates := module.EndBlock(ctx, req)
-		fmt.Printf("[DEBUG] %s EndBlock latency: %d\n", moduleName, time.Since(moduleStartTime).Microseconds())
 		telemetry.ModuleMeasureSince(moduleName, moduleStartTime, "module", "end_block")
 		// use these validator updates if provided, the module manager assumes
 		// only one module will update the validator set

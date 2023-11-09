@@ -360,8 +360,8 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			Enable:             v.GetBool("state-commit.enable-sc"),
 			ZeroCopy:           v.GetBool("state-commit.zero-copy"),
 			AsyncCommitBuffer:  v.GetInt("state-commit.async-commit-buffer"),
-			SnapshotKeepRecent: v.GetUint32("state-commit.snapshot-keep-recent"),
-			SnapshotInterval:   v.GetUint32("state-commit.snapshot-interval"),
+			SnapshotKeepRecent: v.GetUint32("state-commit.sc-keep-recent"),
+			SnapshotInterval:   v.GetUint32("state-commit.sc-snapshot-interval"),
 			CacheSize:          v.GetInt("state-commit.cache-size"),
 		},
 		StateStore: seidb.StateStoreConfig{

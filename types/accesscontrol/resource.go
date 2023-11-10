@@ -194,6 +194,8 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_DEX_MEM_ORDER:                     {ResourceType_KV_DEX, []ResourceType{}},
 	ResourceType_KV_DEX_MEM_CANCEL:                    {ResourceType_KV_DEX, []ResourceType{}},
 	ResourceType_KV_DEX_MEM_DEPOSIT:                   {ResourceType_KV_DEX, []ResourceType{}},
+	ResourceType_KV_DEX_MEM_CONTRACTS_TO_PROCESS:      {ResourceType_KV_DEX, []ResourceType{}},
+	ResourceType_KV_DEX_MEM_DOWNSTREAM_CONTRACTS:      {ResourceType_KV_DEX, []ResourceType{}},
 }
 
 // This returns a slice of all resource types that are dependent to a specific resource type

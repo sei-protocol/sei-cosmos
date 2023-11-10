@@ -105,6 +105,8 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_DEX_MEM_DEPOSIT,
 		ResourceType_KV_DEX_LONG_ORDER_COUNT,
 		ResourceType_KV_DEX_SHORT_ORDER_COUNT,
+		ResourceType_KV_DEX_MEM_CONTRACTS_TO_PROCESS,
+		ResourceType_KV_DEX_MEM_DOWNSTREAM_CONTRACTS,
 	}},
 	ResourceType_KV_DEX_CONTRACT_LONGBOOK:     {ResourceType_KV_DEX, []ResourceType{}},
 	ResourceType_KV_DEX_CONTRACT_SHORTBOOK:    {ResourceType_KV_DEX, []ResourceType{}},

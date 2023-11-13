@@ -9,6 +9,7 @@ import (
 	"math"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/snapshots/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -292,7 +293,9 @@ func (m *Manager) Restore(snapshot types.Snapshot) error {
 	chSCChunks := make(chan io.ReadCloser, chunkBufferSize)
 	chSCDone := make(chan restoreDone, 1)
 	go func() {
+		startTime := time.Now()
 		err := m.restoreSnapshot(snapshot, m.scStore, chSCChunks)
+		fmt.Printf("Restore SC snapshot took %d ms\n", time.Since(startTime).Milliseconds())
 		chSCDone <- restoreDone{
 			complete: err == nil,
 			err:      err,
@@ -306,7 +309,9 @@ func (m *Manager) Restore(snapshot types.Snapshot) error {
 		chSSChunks := make(chan io.ReadCloser, chunkBufferSize)
 		chSSDone := make(chan restoreDone, 1)
 		go func() {
+			startTime := time.Now()
 			err := m.restoreSnapshot(snapshot, m.ssStore, chSSChunks)
+			fmt.Printf("Restore SS snapshot took %d ms\n", time.Since(startTime).Milliseconds())
 			chSSDone <- restoreDone{
 				complete: err == nil,
 				err:      err,

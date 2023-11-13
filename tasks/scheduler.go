@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/tendermint/tendermint/abci/types"
 	"go.opentelemetry.io/otel/attribute"
@@ -193,9 +194,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		if err != nil {
 			return nil, err
 		}
-		for _, t := range toExecute {
-			t.Increment()
-		}
 	}
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
@@ -203,11 +201,49 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	return collectResponses(tasks), nil
 }
 
+func (s *scheduler) shouldRerun(tasks []*deliverTxTask, task *deliverTxTask) bool {
+	switch task.Status {
+	case statusAborted:
+		return true
+
+	// validated tasks can become unvalidated if an earlier re-run task now conflicts
+	case statusExecuted, statusValidated:
+		if valid, conflicts := s.findConflicts(task); !valid {
+			s.invalidateTask(task)
+
+			// if the conflicts are now validated, then rerun this task
+			if indexesValidated(tasks, conflicts) {
+				task.Dependencies = nil
+				return true
+			} else {
+				// otherwise, wait for completion
+				task.Dependencies = conflicts
+				task.Status = statusWaiting
+				return false
+			}
+		} else if len(conflicts) == 0 {
+			// mark as validated, which will avoid re-validating unless a lower-index re-validates
+			task.Status = statusValidated
+			return false
+		}
+		// conflicts and valid, so it'll validate next time
+		return false
+
+	case statusWaiting:
+		// if conflicts are done, then this task is ready to run again
+		if indexesValidated(tasks, task.Dependencies) {
+			return true
+		}
+	}
+	panic("unexpected status: " + task.Status)
+}
+
 func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	spanCtx, span := s.tracingInfo.StartWithContext("SchedulerValidate", ctx.TraceSpanContext())
 	ctx = ctx.WithTraceSpanContext(spanCtx)
 	defer span.End()
 
+	var mx sync.Mutex
 	var res []*deliverTxTask
 
 	// find first non-validated entry
@@ -218,37 +254,21 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 			break
 		}
 	}
-
+	wg := sync.WaitGroup{}
 	for i := startIdx; i < len(tasks); i++ {
-		switch tasks[i].Status {
-		case statusAborted:
-			// aborted means it can be re-run immediately
-			res = append(res, tasks[i])
-
-		// validated tasks can become unvalidated if an earlier re-run task now conflicts
-		case statusExecuted, statusValidated:
-			if valid, conflicts := s.findConflicts(tasks[i]); !valid {
-				s.invalidateTask(tasks[i])
-
-				// if the conflicts are now validated, then rerun this task
-				if indexesValidated(tasks, conflicts) {
-					res = append(res, tasks[i])
-				} else {
-					// otherwise, wait for completion
-					tasks[i].Dependencies = conflicts
-					tasks[i].Status = statusWaiting
-				}
-			} else if len(conflicts) == 0 {
-				tasks[i].Status = statusValidated
-			} // TODO: do we need to have handling for conflicts existing here?
-
-		case statusWaiting:
-			// if conflicts are done, then this task is ready to run again
-			if indexesValidated(tasks, tasks[i].Dependencies) {
-				res = append(res, tasks[i])
+		wg.Add(1)
+		go func(task *deliverTxTask) {
+			defer wg.Done()
+			if ok := s.shouldRerun(tasks, task); ok {
+				task.Increment()
+				mx.Lock()
+				res = append(res, task)
+				mx.Unlock()
 			}
-		}
+		}(tasks[i])
 	}
+	wg.Wait()
+
 	return res, nil
 }
 

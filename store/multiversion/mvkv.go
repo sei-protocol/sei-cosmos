@@ -133,7 +133,7 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	// TODO: remove?
 	// store.mtx.Lock()
 	// defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "get")
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "get")
 
 	types.AssertValidKey(key)
 	strKey := string(key)
@@ -230,7 +230,7 @@ func (store *VersionIndexedStore) Delete(key []byte) {
 	// TODO: remove?
 	// store.mtx.Lock()
 	// defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "delete")
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "delete")
 
 	types.AssertValidKey(key)
 	store.setValue(key, nil, true, true)
@@ -247,7 +247,7 @@ func (store *VersionIndexedStore) Set(key []byte, value []byte) {
 	// TODO: remove?
 	// store.mtx.Lock()
 	// defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "set")
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "set")
 
 	types.AssertValidKey(key)
 	store.setValue(key, value, false, true)

@@ -370,6 +370,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			AsyncWriteBuffer:     v.GetInt("state-store.async-write-buffer"),
 			KeepRecent:           v.GetInt("state-store.keep-recent"),
 			PruneIntervalSeconds: v.GetInt("state-store.prune-interval-seconds"),
+			ImportNumWorkers:     v.GetInt("state-store.import-num-workers"),
 		},
 	}, nil
 }

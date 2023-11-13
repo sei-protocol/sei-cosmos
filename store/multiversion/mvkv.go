@@ -3,12 +3,10 @@ package multiversion
 import (
 	"io"
 	"sort"
-	"time"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	scheduler "github.com/cosmos/cosmos-sdk/types/occ"
 	dbm "github.com/tendermint/tm-db"
 )
@@ -180,7 +178,7 @@ func (store *VersionIndexedStore) ValidateReadset() bool {
 	// TODO: remove?
 	// store.mtx.Lock()
 	// defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "validate_readset")
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "validate_readset")
 
 	// sort the readset keys - this is so we have consistent behavior when theres varying conflicts within the readset (eg. read conflict vs estimate)
 	readsetKeys := make([]string, 0, len(store.readset))
@@ -342,7 +340,7 @@ func (store *VersionIndexedStore) WriteToMultiVersionStore() {
 	// TODO: remove?
 	// store.mtx.Lock()
 	// defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
 	store.multiVersionStore.SetWriteset(store.transactionIndex, store.incarnation, store.writeset)
 	store.multiVersionStore.SetReadset(store.transactionIndex, store.readset)
 	store.multiVersionStore.SetIterateset(store.transactionIndex, store.iterateset)
@@ -352,7 +350,7 @@ func (store *VersionIndexedStore) WriteEstimatesToMultiVersionStore() {
 	// TODO: remove?
 	// store.mtx.Lock()
 	// defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "write_mvs")
 	store.multiVersionStore.SetEstimatedWriteset(store.transactionIndex, store.incarnation, store.writeset)
 	// TODO: do we need to write readset and iterateset in this case? I don't think so since if this is called it means we aren't doing validation
 }

@@ -56,7 +56,7 @@ func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
 type Store struct {
-	mtx           sync.Mutex
+	mtx           sync.RWMutex
 	cache         *types.BoundedCache
 	deleted       *sync.Map
 	unsortedCache map[string]struct{}
@@ -104,20 +104,33 @@ func (store *Store) GetStoreType() types.StoreType {
 	return store.parent.GetStoreType()
 }
 
-// Get implements types.KVStore.
-func (store *Store) Get(key []byte) (value []byte) {
+// getFromCache queries the write-through cache for a value by key.
+func (store *Store) getFromCache(key []byte) ([]byte, bool) {
+	store.mtx.RLock()
+	defer store.mtx.RUnlock()
+	if cv, ok := store.cache.Get(conv.UnsafeBytesToStr(key)); ok {
+		return cv.Value(), true
+	}
+	return nil, false
+}
+
+// getAndWriteToCache queries the underlying CommitKVStore and writes the result
+func (store *Store) getAndWriteToCache(key []byte) []byte {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
+	value := store.parent.Get(key)
+	store.setCacheValue(key, value, false, false)
+	return value
+}
 
+// Get implements types.KVStore.
+func (store *Store) Get(key []byte) (value []byte) {
 	types.AssertValidKey(key)
 
-	cacheValue, ok := store.cache.Get(conv.UnsafeBytesToStr(key))
+	value, ok := store.getFromCache(key)
 	if !ok {
 		// TODO: (occ) This is an example of when we fall through when we dont have a cache hit. Similarly, for mvkv, we'll try to serve reads from a local cache thats transient to the TX, and if its NOT present, then we read through AND mark the access (along with the value that was read) for validation
-		value = store.parent.Get(key)
-		store.setCacheValue(key, value, false, false)
-	} else {
-		value = cacheValue.Value()
+		value = store.getAndWriteToCache(key)
 	}
 	// TODO: (occ) This is an example of how we currently track accesses
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
@@ -140,8 +153,8 @@ func (store *Store) Set(key []byte, value []byte) {
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
 	value := store.Get(key)
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	store.mtx.RLock()
+	defer store.mtx.RUnlock()
 	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
 }

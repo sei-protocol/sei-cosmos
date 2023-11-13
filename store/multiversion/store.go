@@ -151,6 +151,7 @@ func (s *Store) removeOldWriteset(index int, newWriteSet WriteSet) {
 // SetWriteset sets a writeset for a transaction index, and also writes all of the multiversion items in the writeset to the multiversion store.
 // TODO: returns a list of NEW keys added
 func (s *Store) SetWriteset(index int, incarnation int, writeset WriteSet) {
+	// TODO: add telemetry spans
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -214,6 +215,7 @@ func (s *Store) GetAllWritesetKeys() map[int][]string {
 }
 
 func (s *Store) SetReadset(index int, readset ReadSet) {
+	// TODO: maybe sync.Map
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -228,6 +230,7 @@ func (s *Store) GetReadset(index int) ReadSet {
 }
 
 func (s *Store) SetIterateset(index int, iterateset Iterateset) {
+	// TODO: maybe sync.Map
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 

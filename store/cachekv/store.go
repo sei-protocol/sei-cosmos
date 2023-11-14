@@ -129,7 +129,6 @@ func (store *Store) Get(key []byte) []byte {
 	startTime := time.Now()
 	types.AssertValidKey(key)
 	value := store.getFromCache(key)
-	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 	TotalGetLatency.Add(time.Since(startTime).Nanoseconds())
 	return value
 }

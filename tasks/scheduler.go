@@ -39,7 +39,6 @@ const (
 
 type deliverTxTask struct {
 	Ctx     sdk.Context
-	Span    trace.Span
 	AbortCh chan occ.Abort
 
 	Status        status
@@ -236,8 +235,7 @@ func (s *scheduler) shouldRerun(tasks []*deliverTxTask, task *deliverTxTask) boo
 }
 
 func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
-	spanCtx, span := s.tracingInfo.StartWithContext("SchedulerValidate", ctx.TraceSpanContext())
-	ctx = ctx.WithTraceSpanContext(spanCtx)
+	ctx, span := s.traceSpan(ctx, "SchedulerValidateAll", nil)
 	defer span.End()
 
 	var mx sync.Mutex
@@ -255,6 +253,8 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 	for i := startIdx; i < len(tasks); i++ {
 		wg.Add(1)
 		go func(task *deliverTxTask) {
+			_, span := s.traceSpan(ctx, "SchedulerValidate", task)
+			defer span.End()
 			defer wg.Done()
 			if ok := s.shouldRerun(tasks, task); ok {
 				task.Increment()
@@ -292,7 +292,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					if !ok {
 						return nil
 					}
-					s.executeTask(task)
+					s.executeTask(ctx, task)
 				}
 			}
 		})
@@ -300,8 +300,6 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	grp.Go(func() error {
 		defer close(ch)
 		for _, task := range tasks {
-			s.prepareTask(ctx, task)
-
 			select {
 			case <-gCtx.Done():
 				return gCtx.Err()
@@ -318,16 +316,26 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	return nil
 }
 
+func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
+	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
+	if task != nil {
+		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
+		span.SetAttributes(attribute.Int("txIndex", task.Index))
+		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
+	}
+	ctx = ctx.WithTraceSpanContext(spanCtx)
+	return ctx, span
+}
+
 // prepareTask initializes the context and version stores for a task
 func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
-	// initialize the context
 	ctx = ctx.WithTxIndex(task.Index)
+
+	ctx, span := s.traceSpan(ctx, "SchedulerPrepare", task)
+	defer span.End()
+
+	// initialize the context
 	abortCh := make(chan occ.Abort, len(s.multiVersionStores))
-	spanCtx, span := s.tracingInfo.StartWithContext("SchedulerExecute", ctx.TraceSpanContext())
-	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
-	span.SetAttributes(attribute.Int("txIndex", task.Index))
-	span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
-	ctx = ctx.WithTraceSpanContext(spanCtx)
 
 	// if there are no stores, don't try to wrap, because there's nothing to wrap
 	if len(s.multiVersionStores) > 0 {
@@ -351,14 +359,15 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 
 	task.AbortCh = abortCh
 	task.Ctx = ctx
-	task.Span = span
 }
 
 // executeTask executes a single task
-func (s *scheduler) executeTask(task *deliverTxTask) {
-	if task.Span != nil {
-		defer task.Span.End()
-	}
+func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
+	s.prepareTask(ctx, task)
+
+	ctx, span := s.traceSpan(ctx, "SchedulerExecute", task)
+	defer span.End()
+
 	resp := s.deliverTx(task.Ctx, task.Request)
 
 	close(task.AbortCh)

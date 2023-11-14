@@ -368,9 +368,8 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 	s.prepareTask(ctx, task)
 
-	ctx, span := s.traceSpan(ctx, "SchedulerExecute", task)
+	ctx, span := s.traceSpan(task.Ctx, "SchedulerExecute", task)
 	defer span.End()
-
 	task.Ctx = ctx
 
 	resp := s.deliverTx(task.Ctx, task.Request)

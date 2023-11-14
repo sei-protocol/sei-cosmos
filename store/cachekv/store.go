@@ -2,10 +2,10 @@ package cachekv
 
 import (
 	"bytes"
+	"encoding/hex"
 	"io"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/cosmos/cosmos-sdk/internal/conv"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
@@ -56,7 +56,10 @@ func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
 type Store struct {
-	mtx           sync.RWMutex
+	// mtx           sync.RWMutex
+	globalMtx *sync.RWMutex
+	mtxMap    *sync.Map // map[string]*sync.RWMutex
+
 	cache         *types.BoundedCache
 	deleted       *sync.Map
 	unsortedCache map[string]struct{}
@@ -80,6 +83,8 @@ func NewStore(parent types.KVStore, storeKey types.StoreKey, cacheSize int) *Sto
 		eventManager:  sdktypes.NewEventManager(),
 		storeKey:      storeKey,
 		cacheSize:     cacheSize,
+		globalMtx:     &sync.RWMutex{},
+		mtxMap:        &sync.Map{},
 	}
 }
 
@@ -92,10 +97,50 @@ func (store *Store) GetEvents() []abci.Event {
 	return store.eventManager.ABCIEvents()
 }
 
+func (store *Store) LockMutexByKey(key []byte) {
+	// acquire global mutex as read - non blocking
+	store.globalMtx.RLock()
+	defer store.globalMtx.RUnlock()
+
+	hexKey := hex.EncodeToString(key)
+	mtx, _ := store.mtxMap.LoadOrStore(hexKey, &sync.RWMutex{})
+	mtx.(*sync.RWMutex).Lock()
+}
+
+func (store *Store) UnlockMutexByKey(key []byte) {
+	// acquire global mutex as read - non blocking
+	store.globalMtx.RLock()
+	defer store.globalMtx.RUnlock()
+
+	hexKey := hex.EncodeToString(key)
+	mtx, _ := store.mtxMap.Load(hexKey) // dont initialize if not present
+	mtx.(*sync.RWMutex).Unlock()
+}
+
+func (store *Store) RLockMutexByKey(key []byte) {
+	// acquire global mutex as read - non blocking
+	store.globalMtx.RLock()
+	defer store.globalMtx.RUnlock()
+
+	hexKey := hex.EncodeToString(key)
+	mtx, _ := store.mtxMap.LoadOrStore(hexKey, &sync.RWMutex{})
+	mtx.(*sync.RWMutex).RLock()
+}
+
+func (store *Store) RUnlockMutexByKey(key []byte) {
+	// acquire global mutex as read - non blocking
+	store.globalMtx.RLock()
+	defer store.globalMtx.RUnlock()
+
+	hexKey := hex.EncodeToString(key)
+	mtx, _ := store.mtxMap.Load(hexKey) // dont initialize if not present
+	mtx.(*sync.RWMutex).RUnlock()
+}
+
 // Implements Store
 func (store *Store) ResetEvents() {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	// store.mtx.Lock()
+	// defer store.mtx.Unlock()
 	store.eventManager = sdktypes.NewEventManager()
 }
 
@@ -106,8 +151,10 @@ func (store *Store) GetStoreType() types.StoreType {
 
 // getFromCache queries the write-through cache for a value by key.
 func (store *Store) getFromCache(key []byte) ([]byte, bool) {
-	store.mtx.RLock()
-	defer store.mtx.RUnlock()
+	// store.mtx.RLock()
+	// defer store.mtx.RUnlock()
+	store.RLockMutexByKey(key)
+	defer store.RUnlockMutexByKey(key)
 	if cv, ok := store.cache.Get(conv.UnsafeBytesToStr(key)); ok {
 		return cv.Value(), true
 	}
@@ -116,8 +163,10 @@ func (store *Store) getFromCache(key []byte) ([]byte, bool) {
 
 // getAndWriteToCache queries the underlying CommitKVStore and writes the result
 func (store *Store) getAndWriteToCache(key []byte) []byte {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	// store.mtx.Lock()
+	// defer store.mtx.Unlock()
+	store.LockMutexByKey(key)
+	defer store.UnlockMutexByKey(key)
 	value := store.parent.Get(key)
 	store.setCacheValue(key, value, false, false)
 	return value
@@ -140,8 +189,10 @@ func (store *Store) Get(key []byte) (value []byte) {
 
 // Set implements types.KVStore.
 func (store *Store) Set(key []byte, value []byte) {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	// store.mtx.Lock()
+	// defer store.mtx.Unlock()
+	store.LockMutexByKey(key)
+	defer store.UnlockMutexByKey(key)
 
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
@@ -153,17 +204,21 @@ func (store *Store) Set(key []byte, value []byte) {
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
 	value := store.Get(key)
-	store.mtx.RLock()
-	defer store.mtx.RUnlock()
+	// store.mtx.RLock()
+	// defer store.mtx.RUnlock()
+	store.RLockMutexByKey(key)
+	defer store.RUnlockMutexByKey(key)
 	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
 }
 
 // Delete implements types.KVStore.
 func (store *Store) Delete(key []byte) {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
+	// store.mtx.Lock()
+	// defer store.mtx.Unlock()
+	store.LockMutexByKey(key)
+	defer store.UnlockMutexByKey(key)
+	// defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
 
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
@@ -172,8 +227,11 @@ func (store *Store) Delete(key []byte) {
 
 // Implements Cachetypes.KVStore.
 func (store *Store) Write() {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	// store.mtx.Lock()
+	// defer store.mtx.Unlock()
+	// acquire global mutex
+	store.globalMtx.Lock()
+	defer store.globalMtx.Unlock()
 	// defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
 
 	// We need a copy of all of the keys.
@@ -251,8 +309,11 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
+	// store.mtx.Lock()
+	// defer store.mtx.Unlock()
+	// acquire global mutex
+	store.globalMtx.Lock()
+	defer store.globalMtx.Unlock()
 
 	// TODO: (occ) Note that for iterators, we'll need to have special handling (discussed in RFC) to ensure proper validation
 

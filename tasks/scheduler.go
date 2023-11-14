@@ -213,7 +213,6 @@ func (s *scheduler) shouldRerun(tasks []*deliverTxTask, task *deliverTxTask) boo
 
 			// if the conflicts are now validated, then rerun this task
 			if indexesValidated(tasks, conflicts) {
-				task.Dependencies = nil
 				return true
 			} else {
 				// otherwise, wait for completion
@@ -231,9 +230,7 @@ func (s *scheduler) shouldRerun(tasks []*deliverTxTask, task *deliverTxTask) boo
 
 	case statusWaiting:
 		// if conflicts are done, then this task is ready to run again
-		if indexesValidated(tasks, task.Dependencies) {
-			return true
-		}
+		return indexesValidated(tasks, task.Dependencies)
 	}
 	panic("unexpected status: " + task.Status)
 }

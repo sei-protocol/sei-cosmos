@@ -366,11 +366,15 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 
 // executeTask executes a single task
 func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
-	s.prepareTask(ctx, task)
+	eCtx, eSpan := s.traceSpan(ctx, "SchedulerExecute", task)
+	defer eSpan.End()
+	task.Ctx = eCtx
 
-	ctx, span := s.traceSpan(task.Ctx, "SchedulerExecute", task)
-	defer span.End()
-	task.Ctx = ctx
+	s.prepareTask(task.Ctx, task)
+
+	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
+	defer dSpan.End()
+	task.Ctx = dCtx
 
 	resp := s.deliverTx(task.Ctx, task.Request)
 

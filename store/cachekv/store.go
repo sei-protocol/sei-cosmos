@@ -141,14 +141,12 @@ func (store *Store) Set(key []byte, value []byte) {
 	store.mtx.Lock()
 	store.setCacheValue(key, value, false, true)
 	store.mtx.Unlock()
-	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
 	TotalSetLatency.Add(time.Since(startTime).Nanoseconds())
 }
 
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
 	value := store.Get(key)
-	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
 }
 
@@ -160,7 +158,6 @@ func (store *Store) Delete(key []byte) {
 
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
-	store.eventManager.EmitResourceAccessWriteEvent("delete", store.storeKey, key, []byte{})
 }
 
 // Implements Cachetypes.KVStore.

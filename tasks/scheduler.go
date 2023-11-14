@@ -334,7 +334,7 @@ func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask)
 func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 	ctx = ctx.WithTxIndex(task.Index)
 
-	ctx, span := s.traceSpan(ctx, "SchedulerPrepare", task)
+	_, span := s.traceSpan(ctx, "SchedulerPrepare", task)
 	defer span.End()
 
 	// initialize the context
@@ -370,6 +370,8 @@ func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	ctx, span := s.traceSpan(ctx, "SchedulerExecute", task)
 	defer span.End()
+
+	task.Ctx = ctx
 
 	resp := s.deliverTx(task.Ctx, task.Request)
 

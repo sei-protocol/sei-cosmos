@@ -14,7 +14,19 @@ import (
 	"io"
 	"sort"
 	"sync"
+	"sync/atomic"
+	"time"
 )
+
+var TotalGetLatency = atomic.Int64{}
+var TotalSetLatency = atomic.Int64{}
+var TotalWriteLatency = atomic.Int64{}
+var TotalIteratorLatency = atomic.Int64{}
+var TotalFindStartLatency = atomic.Int64{}
+var TotalFindEndLatency = atomic.Int64{}
+var TotalDirtyItemsLatency = atomic.Int64{}
+var TotalClearUnsortedLatency = atomic.Int64{}
+var TotalSetCachedValueLatency = atomic.Int64{}
 
 type mapCacheBackend struct {
 	m map[string]*types.CValue
@@ -124,24 +136,27 @@ func (store *Store) getAndWriteToCache(key []byte) []byte {
 
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
+	startTime := time.Now()
 	types.AssertValidKey(key)
 	value, ok := store.getFromCache(key)
 	if !ok {
 		value = store.getAndWriteToCache(key)
 	}
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
-
+	TotalGetLatency.Add(time.Since(startTime).Nanoseconds())
 	return value
 }
 
 // Set implements types.KVStore.
 func (store *Store) Set(key []byte, value []byte) {
+	startTime := time.Now()
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	store.mtx.Lock()
 	store.setCacheValue(key, value, false, true)
 	store.mtx.Unlock()
 	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
+	TotalSetLatency.Add(time.Since(startTime).Nanoseconds())
 }
 
 // Has implements types.KVStore.
@@ -164,6 +179,10 @@ func (store *Store) Delete(key []byte) {
 
 // Implements Cachetypes.KVStore.
 func (store *Store) Write() {
+	startTime := time.Now()
+	defer func() {
+		TotalWriteLatency.Add(time.Since(startTime).Nanoseconds())
+	}()
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 	//defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
@@ -243,6 +262,10 @@ func (store *Store) ReverseIterator(start, end []byte) types.Iterator {
 }
 
 func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
+	startTime := time.Now()
+	defer func() {
+		TotalIteratorLatency.Add(time.Since(startTime).Nanoseconds())
+	}()
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 
@@ -268,6 +291,10 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 }
 
 func findStartIndex(strL []string, startQ string) int {
+	startTime := time.Now()
+	defer func() {
+		TotalFindStartLatency.Add(time.Since(startTime).Nanoseconds())
+	}()
 	// Modified binary search to find the very first element in >=startQ.
 	if len(strL) == 0 {
 		return -1
@@ -302,6 +329,10 @@ func findStartIndex(strL []string, startQ string) int {
 }
 
 func findEndIndex(strL []string, endQ string) int {
+	startTime := time.Now()
+	defer func() {
+		TotalFindEndLatency.Add(time.Since(startTime).Nanoseconds())
+	}()
 	if len(strL) == 0 {
 		return -1
 	}
@@ -351,6 +382,10 @@ const minSortSize = 1024
 
 // Constructs a slice of dirty items, to use w/ memIterator.
 func (store *Store) dirtyItems(start, end []byte) {
+	startTime := time.Now()
+	defer func() {
+		TotalDirtyItemsLatency.Add(time.Since(startTime).Nanoseconds())
+	}()
 	startStr, endStr := conv.UnsafeBytesToStr(start), conv.UnsafeBytesToStr(end)
 	if end != nil && startStr > endStr {
 		// Nothing to do here.
@@ -431,6 +466,11 @@ func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {
 }
 
 func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sortState) {
+	startTime := time.Now()
+	defer func() {
+		TotalClearUnsortedLatency.Add(time.Since(startTime).Nanoseconds())
+	}()
+
 	store.deleteKeysFromUnsortedCache(unsorted)
 
 	if sortState == stateUnsorted {
@@ -475,6 +515,10 @@ func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
 
 // Only entrypoint to mutate store.cache.
 func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
+	startTime := time.Now()
+	defer func() {
+		TotalSetCachedValueLatency.Add(time.Since(startTime).Nanoseconds())
+	}()
 	types.AssertValidKey(key)
 
 	keyStr := conv.UnsafeBytesToStr(key)

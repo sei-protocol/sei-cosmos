@@ -273,6 +273,9 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 // Tasks are updated with their status
 // TODO: error scenarios
 func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
+	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
+	defer span.End()
+
 	ch := make(chan *deliverTxTask, len(tasks))
 	grp, gCtx := errgroup.WithContext(ctx.Context())
 

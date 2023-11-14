@@ -114,31 +114,21 @@ func (store *Store) GetStoreType() types.StoreType {
 }
 
 // getFromCache queries the write-through cache for a value by key.
-func (store *Store) getFromCache(key []byte) ([]byte, bool) {
+func (store *Store) getFromCache(key []byte) []byte {
 	store.mtx.RLock()
 	defer store.mtx.RUnlock()
 	if cv, ok := store.cache.Get(conv.UnsafeBytesToStr(key)); ok {
-		return cv.Value(), true
+		return cv.Value()
+	} else {
+		return store.parent.Get(key)
 	}
-	return nil, false
-}
-
-// getAndWriteToCache queries the underlying CommitKVStore and writes the result
-func (store *Store) getAndWriteToCache(key []byte) []byte {
-	store.mtx.RLock()
-	value := store.parent.Get(key)
-	store.mtx.RUnlock()
-	return value
 }
 
 // Get implements types.KVStore.
-func (store *Store) Get(key []byte) (value []byte) {
+func (store *Store) Get(key []byte) []byte {
 	startTime := time.Now()
 	types.AssertValidKey(key)
-	value, ok := store.getFromCache(key)
-	if !ok {
-		value = store.getAndWriteToCache(key)
-	}
+	value := store.getFromCache(key)
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 	TotalGetLatency.Add(time.Since(startTime).Nanoseconds())
 	return value

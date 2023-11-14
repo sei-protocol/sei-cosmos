@@ -128,9 +128,6 @@ func (store *Store) getAndWriteToCache(key []byte) []byte {
 	store.mtx.RLock()
 	value := store.parent.Get(key)
 	store.mtx.RUnlock()
-	store.mtx.Lock()
-	store.setCacheValue(key, value, false, false)
-	store.mtx.Unlock()
 	return value
 }
 

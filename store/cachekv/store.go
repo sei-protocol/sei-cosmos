@@ -174,7 +174,7 @@ func (store *Store) Delete(key []byte) {
 func (store *Store) Write() {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
+	// defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.

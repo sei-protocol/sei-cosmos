@@ -2,21 +2,18 @@ package cachekv
 
 import (
 	"bytes"
-	"io"
-	"sort"
-	"sync"
-	"time"
-
 	"github.com/cosmos/cosmos-sdk/internal/conv"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/kv"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/math"
 	dbm "github.com/tendermint/tm-db"
+	"io"
+	"sort"
+	"sync"
 )
 
 type mapCacheBackend struct {
@@ -56,7 +53,7 @@ func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
 type Store struct {
-	mtx           sync.Mutex
+	mtx           sync.RWMutex
 	cache         *types.BoundedCache
 	deleted       *sync.Map
 	unsortedCache map[string]struct{}
@@ -104,19 +101,33 @@ func (store *Store) GetStoreType() types.StoreType {
 	return store.parent.GetStoreType()
 }
 
+// getFromCache queries the write-through cache for a value by key.
+func (store *Store) getFromCache(key []byte) ([]byte, bool) {
+	store.mtx.RLock()
+	defer store.mtx.RUnlock()
+	if cv, ok := store.cache.Get(conv.UnsafeBytesToStr(key)); ok {
+		return cv.Value(), true
+	}
+	return nil, false
+}
+
+// getAndWriteToCache queries the underlying CommitKVStore and writes the result
+func (store *Store) getAndWriteToCache(key []byte) []byte {
+	store.mtx.RLock()
+	value := store.parent.Get(key)
+	store.mtx.RUnlock()
+	store.mtx.Lock()
+	store.setCacheValue(key, value, false, false)
+	store.mtx.Unlock()
+	return value
+}
+
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
-
 	types.AssertValidKey(key)
-
-	cacheValue, ok := store.cache.Get(conv.UnsafeBytesToStr(key))
+	value, ok := store.getFromCache(key)
 	if !ok {
-		value = store.parent.Get(key)
-		store.setCacheValue(key, value, false, false)
-	} else {
-		value = cacheValue.Value()
+		value = store.getAndWriteToCache(key)
 	}
 	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 
@@ -125,21 +136,17 @@ func (store *Store) Get(key []byte) (value []byte) {
 
 // Set implements types.KVStore.
 func (store *Store) Set(key []byte, value []byte) {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
-
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
-
+	store.mtx.Lock()
 	store.setCacheValue(key, value, false, true)
+	store.mtx.Unlock()
 	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
 }
 
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
 	value := store.Get(key)
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
 	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
 }
@@ -148,7 +155,7 @@ func (store *Store) Has(key []byte) bool {
 func (store *Store) Delete(key []byte) {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
+	//defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
 
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
@@ -159,7 +166,7 @@ func (store *Store) Delete(key []byte) {
 func (store *Store) Write() {
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
-	defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
+	//defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
@@ -404,8 +411,8 @@ func (store *Store) dirtyItems(start, end []byte) {
 }
 
 func (store *Store) emitUnsortedCacheSizeMetric() {
-	n := len(store.unsortedCache)
-	telemetry.SetGauge(float32(n), "sei", "cosmos", "unsorted", "cache", "size")
+	//n := len(store.unsortedCache)
+	//telemetry.SetGauge(float32(n), "sei", "cosmos", "unsorted", "cache", "size")
 }
 
 func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {

@@ -94,7 +94,7 @@ func TestProcessAll(t *testing.T) {
 				}
 				// confirm last write made it to the parent store
 				latest := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
-				require.Equal(t, []byte("49"), latest)
+				require.Equal(t, []byte(fmt.Sprintf("%d", len(res)-1)), latest)
 			},
 			expectedErr: nil,
 		},

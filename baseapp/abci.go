@@ -239,6 +239,10 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 
 // DeliverTxBatch executes multiple txs
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Debug] DeliverTxBatch of %d txs for block height %d took %s", len(req.TxEntries), app.LastBlockHeight(), time.Since(startTime))
+	}()
 	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
 	// This will basically no-op the actual prefill if the metadata for the txs is empty
 

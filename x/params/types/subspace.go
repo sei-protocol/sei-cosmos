@@ -2,13 +2,10 @@ package types
 
 import (
 	"fmt"
-	"reflect"
-	"sync/atomic"
-	"time"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"reflect"
 )
 
 const (
@@ -99,8 +96,6 @@ func (s Subspace) Validate(ctx sdk.Context, key []byte, value interface{}) error
 	return nil
 }
 
-var TotalUnmarshalLatency = atomic.Int64{}
-
 // Get queries for a parameter by key from the Subspace's KVStore and sets the
 // value to the provided pointer. If the value does not exist, it will panic.
 func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
@@ -109,10 +104,6 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	store := s.kvStore(ctx)
 	bz := store.Get(key)
 
-	startTime := time.Now()
-	defer func() {
-		TotalUnmarshalLatency.Add(time.Since(startTime).Nanoseconds())
-	}()
 	if err := s.legacyAmino.UnmarshalJSON(bz, ptr); err != nil {
 		panic(err)
 	}

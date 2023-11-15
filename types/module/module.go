@@ -32,7 +32,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
-	"github.com/cosmos/cosmos-sdk/x/params/types"
 	"sort"
 	"time"
 
@@ -569,7 +568,7 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 		}
 	}
 	fmt.Printf("[CosmosDebug] TotalGetLatency: %d, TotalSetLatency: %d, TotalWriteLatency: %d, TotalIteratorLatency: %d, TotalUnmarshalLatency: %d\n",
-		cachekv.TotalGetLatency.Load(), cachekv.TotalSetLatency.Load(), cachekv.TotalWriteLatency.Load(), cachekv.TotalIteratorLatency.Load(), types.TotalUnmarshalLatency.Load())
+		cachekv.TotalGetLatency.Load(), cachekv.TotalSetLatency.Load(), cachekv.TotalWriteLatency.Load(), cachekv.TotalIteratorLatency.Load())
 
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,

@@ -85,6 +85,7 @@ func (store *Store) Get(key []byte) []byte {
 	types.AssertValidKey(key)
 	value := store.getFromCache(key)
 	TotalGetLatency.Add(time.Since(startTime).Nanoseconds())
+	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 	return value
 }
 
@@ -94,7 +95,9 @@ func (store *Store) Set(key []byte, value []byte) {
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	store.setCacheValue(key, value, false, true)
+	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
 	TotalSetLatency.Add(time.Since(startTime).Nanoseconds())
+
 }
 
 // Has implements types.KVStore.
@@ -107,6 +110,7 @@ func (store *Store) Has(key []byte) bool {
 func (store *Store) Delete(key []byte) {
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
+	store.eventManager.EmitResourceAccessWriteEvent("delete", store.storeKey, key, []byte{})
 }
 
 // Implements Cachetypes.KVStore.
@@ -117,7 +121,6 @@ func (store *Store) Write() {
 	}()
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
-	//defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "write")
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
@@ -323,7 +326,6 @@ func (store *Store) dirtyItems(start, end []byte) {
 	// O(N^2) overhead.
 	// Even without that, too many range checks eventually becomes more expensive
 	// than just not having the cache.
-	store.emitUnsortedCacheSizeMetric()
 
 	store.unsortedCache.Range(func(key, value any) bool {
 		cKey := key.(string)
@@ -335,11 +337,6 @@ func (store *Store) dirtyItems(start, end []byte) {
 	})
 	store.clearUnsortedCacheSubset(unsorted, stateUnsorted)
 	return
-}
-
-func (store *Store) emitUnsortedCacheSizeMetric() {
-	//n := len(store.unsortedCache)
-	//telemetry.SetGauge(float32(n), "sei", "cosmos", "unsorted", "cache", "size")
 }
 
 func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {

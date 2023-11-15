@@ -49,6 +49,7 @@ type deliverTxTask struct {
 	Request       types.RequestDeliverTx
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
+	ValidateCh    chan struct{}
 }
 
 func (dt *deliverTxTask) Increment() {
@@ -59,6 +60,7 @@ func (dt *deliverTxTask) Increment() {
 	dt.AbortCh = nil
 	dt.Dependencies = nil
 	dt.VersionStores = nil
+	dt.ValidateCh = make(chan struct{}, 1)
 }
 
 // Scheduler processes tasks concurrently
@@ -112,9 +114,10 @@ func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 	res := make([]*deliverTxTask, 0, len(reqs))
 	for idx, r := range reqs {
 		res = append(res, &deliverTxTask{
-			Request: r.Request,
-			Index:   idx,
-			Status:  statusPending,
+			Request:    r.Request,
+			Index:      idx,
+			Status:     statusPending,
+			ValidateCh: make(chan struct{}, 1),
 		})
 	}
 	return res
@@ -288,6 +291,8 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 		workers = len(tasks)
 	}
 
+	wg := &sync.WaitGroup{}
+
 	for i := 0; i < workers; i++ {
 		grp.Go(func() error {
 			for {
@@ -298,7 +303,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					if !ok {
 						return nil
 					}
-					s.executeTask(ctx, task)
+					s.prepareAndRunTask(wg, ctx, task)
 				}
 			}
 		})
@@ -318,8 +323,27 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	if err := grp.Wait(); err != nil {
 		return err
 	}
+	wg.Wait()
 
 	return nil
+}
+
+func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task *deliverTxTask) {
+	eCtx, eSpan := s.traceSpan(ctx, "SchedulerExecute", task)
+	defer eSpan.End()
+	task.Ctx = eCtx
+
+	wg.Add(1)
+	s.executeTask(task.Ctx, task)
+	go func() {
+		defer wg.Done()
+		defer close(task.ValidateCh)
+		if task.Index > 0 {
+			<-s.allTasks[task.Index-1].ValidateCh
+		}
+		s.validateTask(ctx, task)
+		task.ValidateCh <- struct{}{}
+	}()
 }
 
 func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
@@ -369,11 +393,8 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 
 // executeTask executes a single task
 func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
-	eCtx, eSpan := s.traceSpan(ctx, "SchedulerExecute", task)
-	defer eSpan.End()
-	task.Ctx = eCtx
 
-	s.prepareTask(task.Ctx, task)
+	s.prepareTask(ctx, task)
 
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
 	defer dSpan.End()
@@ -396,6 +417,4 @@ func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	task.Status = statusExecuted
 	task.Response = &resp
-
-	s.validateTask(task.Ctx, task)
 }

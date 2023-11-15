@@ -23,7 +23,7 @@ func BenchmarkLargeUnsortedMisses(b *testing.B) {
 }
 
 func generateStore() *Store {
-	cache := types.NewBoundedCache(mapCacheBackend{make(map[string]*types.CValue)}, types.DefaultCacheSizeLimit)
+	cache := types.NewBoundedCache(newMapCacheBackend(), types.DefaultCacheSizeLimit)
 	unsorted := map[string]struct{}{}
 	for i := 0; i < 5000; i++ {
 		key := "A" + strconv.Itoa(i)

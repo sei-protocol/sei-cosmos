@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/armon/go-metrics"
+	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
@@ -59,7 +60,8 @@ const (
 	FlagArchivalArweaveIndexDBFullPath = "archival-arweave-index-db-full-path"
 	FlagArchivalArweaveNodeURL         = "archival-arweave-node-url"
 
-	FlagChainID = "chain-id"
+	FlagChainID            = "chain-id"
+	FlagConcurrencyWorkers = "concurrency-workers"
 )
 
 var (
@@ -167,6 +169,8 @@ type BaseApp struct { //nolint: maligned
 	TmConfig *tmcfg.Config
 
 	TracingInfo *tracing.Info
+
+	concurrencyWorkers int
 }
 
 type appStore struct {
@@ -291,6 +295,16 @@ func NewBaseApp(
 	}
 	app.startCompactionRoutine(db)
 
+	// if no option overrode already, initialize to the flags value
+	// this avoids forcing every implementation to pass an option, but allows it
+	if app.concurrencyWorkers == 0 {
+		app.concurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
+	}
+	// safely default this to the default value if 0
+	if app.concurrencyWorkers == 0 {
+		app.concurrencyWorkers = config.DefaultConcurrencyWorkers
+	}
+
 	return app
 }
 
@@ -302,6 +316,11 @@ func (app *BaseApp) Name() string {
 // AppVersion returns the application's protocol version.
 func (app *BaseApp) AppVersion() uint64 {
 	return app.appVersion
+}
+
+// ConcurrencyWorkers returns the number of concurrent workers for the BaseApp.
+func (app *BaseApp) ConcurrencyWorkers() int {
+	return app.concurrencyWorkers
 }
 
 // Version returns the application's version string.
@@ -817,6 +836,7 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 
 // cacheTxContext returns a new context based off of the provided context with
 // a branched multi-store.
+// TODO: (occ) This is an example of where we wrap the multistore with a cache multistore, and then return a modified context using that multistore
 func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
 	ms := ctx.MultiStore()
 	// TODO: https://github.com/cosmos/cosmos-sdk/issues/2824
@@ -843,13 +863,13 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 
-	defer telemetry.MeasureThroughputSinceWithLabels(
-		telemetry.TxCount,
-		[]metrics.Label{
-			telemetry.NewLabel("mode", modeKeyToString[mode]),
-		},
-		time.Now(),
-	)
+	// defer telemetry.MeasureThroughputSinceWithLabels(
+	// 	telemetry.TxCount,
+	// 	[]metrics.Label{
+	// 		telemetry.NewLabel("mode", modeKeyToString[mode]),
+	// 	},
+	// 	time.Now(),
+	// )
 
 	// Reset events after each checkTx or simulateTx or recheckTx
 	// DeliverTx is garbage collected after FinalizeBlocker
@@ -970,6 +990,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps := ctx.TxMsgAccessOps()[acltypes.ANTE_MSG_INDEX]
 
+			// TODO: (occ) This is an example of where we do our current validation. Note that this validation operates on the declared dependencies for a TX / antehandler + the utilized dependencies, whereas the validation
 			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
 				for op := range missingAccessOps {
@@ -1114,6 +1135,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		storeAccessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[i]
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+		// TODO: (occ) This is where we are currently validating our per message dependencies,
+		// whereas validation will be done holistically based on the mvkv for OCC approach
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {
 				ctx.Logger().Info((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))

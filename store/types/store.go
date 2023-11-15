@@ -147,6 +147,11 @@ type MultiStore interface {
 
 	// LatestVersion returns the latest version in the store
 	LatestVersion() int64
+	// SetKVStores is a generalized wrapper method
+	SetKVStores(handler func(key StoreKey, s KVStore) CacheWrap) MultiStore
+
+	// StoreKeys returns a list of store keys
+	StoreKeys() []StoreKey
 }
 
 // From MultiStore.CacheMultiStore()....

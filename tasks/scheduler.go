@@ -71,6 +71,7 @@ type scheduler struct {
 	workers            int
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 	tracingInfo        *tracing.Info
+	allTasks           []*deliverTxTask
 }
 
 // NewScheduler creates a new scheduler
@@ -175,6 +176,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// prefill estimates
 	s.PrefillEstimates(ctx, reqs)
 	tasks := toTasks(reqs)
+	s.allTasks = tasks
 	toExecute := tasks
 	for !allValidated(tasks) {
 		var err error
@@ -200,9 +202,10 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	return collectResponses(tasks), nil
 }
 
-func (s *scheduler) shouldRerun(tasks []*deliverTxTask, task *deliverTxTask) bool {
+func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 	switch task.Status {
-	case statusAborted:
+
+	case statusAborted, statusPending:
 		return true
 
 	// validated tasks can become unvalidated if an earlier re-run task now conflicts
@@ -211,7 +214,7 @@ func (s *scheduler) shouldRerun(tasks []*deliverTxTask, task *deliverTxTask) boo
 			s.invalidateTask(task)
 
 			// if the conflicts are now validated, then rerun this task
-			if indexesValidated(tasks, conflicts) {
+			if indexesValidated(s.allTasks, conflicts) {
 				return true
 			} else {
 				// otherwise, wait for completion
@@ -229,9 +232,20 @@ func (s *scheduler) shouldRerun(tasks []*deliverTxTask, task *deliverTxTask) boo
 
 	case statusWaiting:
 		// if conflicts are done, then this task is ready to run again
-		return indexesValidated(tasks, task.Dependencies)
+		return indexesValidated(s.allTasks, task.Dependencies)
 	}
 	panic("unexpected status: " + task.Status)
+}
+
+func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
+	_, span := s.traceSpan(ctx, "SchedulerValidate", task)
+	defer span.End()
+
+	if ok := s.shouldRerun(task); ok {
+		task.Increment()
+		return false
+	}
+	return true
 }
 
 func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
@@ -241,23 +255,12 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 	var mx sync.Mutex
 	var res []*deliverTxTask
 
-	// find first non-validated entry
-	var startIdx int
-	for idx, t := range tasks {
-		if t.Status != statusValidated {
-			startIdx = idx
-			break
-		}
-	}
 	wg := sync.WaitGroup{}
-	for i := startIdx; i < len(tasks); i++ {
+	for i := 0; i < len(tasks); i++ {
 		wg.Add(1)
 		go func(task *deliverTxTask) {
-			_, span := s.traceSpan(ctx, "SchedulerValidate", task)
-			defer span.End()
 			defer wg.Done()
-			if ok := s.shouldRerun(tasks, task); ok {
-				task.Increment()
+			if ok := s.validateTask(ctx, task); !ok {
 				mx.Lock()
 				res = append(res, task)
 				mx.Unlock()
@@ -393,4 +396,6 @@ func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	task.Status = statusExecuted
 	task.Response = &resp
+
+	s.validateTask(task.Ctx, task)
 }

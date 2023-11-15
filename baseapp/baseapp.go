@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
 	"reflect"
 	"strings"
 	"sync"
@@ -862,10 +861,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it
-	spanCtx, span := app.TracingInfo.StartWithContext("RunTx", ctx.TraceSpanContext())
-	defer span.End()
-	ctx = ctx.WithTraceSpanContext(spanCtx)
-	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas

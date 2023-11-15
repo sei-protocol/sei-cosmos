@@ -20,44 +20,38 @@ import (
 )
 
 type mapCacheBackend struct {
-	m sync.Map
+	m map[string]*types.CValue
 }
 
-func (b *mapCacheBackend) Get(key string) (val *types.CValue, ok bool) {
-	v, ok := b.m.Load(key)
-	if ok {
-		val = v.(*types.CValue)
-	}
+func (b mapCacheBackend) Get(key string) (val *types.CValue, ok bool) {
+	val, ok = b.m[key]
 	return
 }
 
-func (b *mapCacheBackend) Set(key string, val *types.CValue) {
-	b.m.Store(key, val)
+func (b mapCacheBackend) Set(key string, val *types.CValue) {
+	b.m[key] = val
 }
 
-func (b *mapCacheBackend) Len() int {
-	length := 0
-	b.m.Range(func(_, _ interface{}) bool {
-		length++
-		return true
-	})
-	return length
+func (b mapCacheBackend) Len() int {
+	return len(b.m)
 }
 
-func (b *mapCacheBackend) Delete(key string) {
-	b.m.Delete(key)
+func (b mapCacheBackend) Delete(key string) {
+	delete(b.m, key)
 }
 
-func (b *mapCacheBackend) Range(f func(string, *types.CValue) bool) {
-	b.m.Range(func(k, v interface{}) bool {
-		key := k.(string)
-		val := v.(*types.CValue)
-		return f(key, val)
-	})
-}
-
-func newMapCacheBackend() *mapCacheBackend {
-	return &mapCacheBackend{sync.Map{}}
+func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
+	// this is always called within a mutex so all operations below are atomic
+	keys := []string{}
+	for k := range b.m {
+		keys = append(keys, k)
+	}
+	for _, key := range keys {
+		val, _ := b.Get(key)
+		if !f(key, val) {
+			break
+		}
+	}
 }
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
@@ -78,7 +72,7 @@ var _ types.CacheKVStore = (*Store)(nil)
 // NewStore creates a new Store object
 func NewStore(parent types.KVStore, storeKey types.StoreKey, cacheSize int) *Store {
 	return &Store{
-		cache:         types.NewBoundedCache(newMapCacheBackend(), cacheSize),
+		cache:         types.NewBoundedCache(mapCacheBackend{make(map[string]*types.CValue)}, cacheSize),
 		deleted:       &sync.Map{},
 		unsortedCache: make(map[string]struct{}),
 		sortedCache:   dbm.NewMemDB(),

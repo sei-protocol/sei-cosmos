@@ -59,11 +59,11 @@ func (dt *deliverTxTask) Reset() {
 	dt.AbortCh = nil
 	dt.Dependencies = nil
 	dt.VersionStores = nil
-	dt.ValidateCh = make(chan struct{}, 1)
 }
 
 func (dt *deliverTxTask) Increment() {
 	dt.Incarnation++
+	dt.ValidateCh = make(chan struct{}, 1)
 }
 
 // Scheduler processes tasks concurrently
@@ -248,7 +248,6 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
 	defer span.End()
 
 	if s.shouldRerun(task) {
-		task.Reset()
 		return false
 	}
 	return true
@@ -276,6 +275,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 		go func(task *deliverTxTask) {
 			defer wg.Done()
 			if !s.validateTask(ctx, task) {
+				task.Reset()
 				task.Increment()
 				mx.Lock()
 				res = append(res, task)
@@ -308,6 +308,11 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	// validations happen in separate goroutines in order to wait on previous index
 	validationWg := &sync.WaitGroup{}
 	validationWg.Add(len(tasks))
+	grp.Go(func() error {
+		validationWg.Wait()
+		return nil
+	})
+
 	for i := 0; i < workers; i++ {
 		grp.Go(func() error {
 			for {
@@ -332,7 +337,6 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	if err := grp.Wait(); err != nil {
 		return err
 	}
-	validationWg.Wait()
 
 	return nil
 }
@@ -350,7 +354,9 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 		if task.Index > 0 {
 			<-s.allTasks[task.Index-1].ValidateCh
 		}
-		s.validateTask(task.Ctx, task)
+		if !s.validateTask(task.Ctx, task) {
+			task.Reset()
+		}
 		task.ValidateCh <- struct{}{}
 	}()
 }

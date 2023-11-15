@@ -85,7 +85,6 @@ func (store *Store) Get(key []byte) []byte {
 	types.AssertValidKey(key)
 	value := store.getFromCache(key)
 	TotalGetLatency.Add(time.Since(startTime).Nanoseconds())
-	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 	return value
 }
 
@@ -95,7 +94,6 @@ func (store *Store) Set(key []byte, value []byte) {
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	store.setCacheValue(key, value, false, true)
-	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
 	TotalSetLatency.Add(time.Since(startTime).Nanoseconds())
 
 }
@@ -110,7 +108,6 @@ func (store *Store) Has(key []byte) bool {
 func (store *Store) Delete(key []byte) {
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
-	store.eventManager.EmitResourceAccessWriteEvent("delete", store.storeKey, key, []byte{})
 }
 
 // Implements Cachetypes.KVStore.
@@ -119,6 +116,7 @@ func (store *Store) Write() {
 	defer func() {
 		TotalWriteLatency.Add(time.Since(startTime).Nanoseconds())
 	}()
+
 	store.mtx.Lock()
 	defer store.mtx.Unlock()
 

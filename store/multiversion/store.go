@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	occtypes "github.com/cosmos/cosmos-sdk/types/occ"
 	db "github.com/tendermint/tm-db"
@@ -367,7 +365,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 
 // TODO: do we want to return bool + []int where bool indicates whether it was valid and then []int indicates only ones for which we need to wait due to estimates? - yes i think so?
 func (s *Store) ValidateTransactionState(index int) (bool, []int) {
-	defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
 
 	// TODO: can we parallelize for all iterators?
 	iteratorValid := s.checkIteratorAtIndex(index)

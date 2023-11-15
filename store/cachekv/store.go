@@ -406,7 +406,8 @@ func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sort
 
 func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
 	for _, kv := range unsorted {
-		store.unsortedCache.Delete(kv.Key)
+		keyStr := conv.UnsafeBytesToStr(kv.Key)
+		store.unsortedCache.Delete(keyStr)
 	}
 }
 

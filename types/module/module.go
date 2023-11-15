@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
+	"github.com/cosmos/cosmos-sdk/x/params/types"
 	"sort"
 	"time"
 
@@ -567,8 +568,8 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 			validatorUpdates = moduleValUpdates
 		}
 	}
-	fmt.Printf("[CosmosDebug] TotalGetLatency: %d, TotalSetLatency: %d, TotalWriteLatency: %d, TotalIteratorLatency: %d, TotalFindStartLatency: %d, TotalFindEndLatency: %d, TotalDirtyItemsLatency: %d, TotalClearUnsortedLatency: %d, TotalSetCachedValueLatency: %d \n",
-		cachekv.TotalGetLatency.Load(), cachekv.TotalSetLatency.Load(), cachekv.TotalWriteLatency.Load(), cachekv.TotalIteratorLatency.Load(), cachekv.TotalFindStartLatency.Load(), cachekv.TotalFindEndLatency.Load(), cachekv.TotalDirtyItemsLatency.Load(), cachekv.TotalClearUnsortedLatency.Load(), cachekv.TotalSetCachedValueLatency.Load())
+	fmt.Printf("[CosmosDebug] TotalGetLatency: %d, TotalSetLatency: %d, TotalWriteLatency: %d, TotalIteratorLatency: %d, TotalUnmarshalLatency: %d\n",
+		cachekv.TotalGetLatency.Load(), cachekv.TotalSetLatency.Load(), cachekv.TotalWriteLatency.Load(), cachekv.TotalIteratorLatency.Load(), types.TotalUnmarshalLatency.Load())
 
 	return abci.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,

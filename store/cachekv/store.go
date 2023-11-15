@@ -21,11 +21,6 @@ var TotalGetLatency = atomic.Int64{}
 var TotalSetLatency = atomic.Int64{}
 var TotalWriteLatency = atomic.Int64{}
 var TotalIteratorLatency = atomic.Int64{}
-var TotalFindStartLatency = atomic.Int64{}
-var TotalFindEndLatency = atomic.Int64{}
-var TotalDirtyItemsLatency = atomic.Int64{}
-var TotalClearUnsortedLatency = atomic.Int64{}
-var TotalSetCachedValueLatency = atomic.Int64{}
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
 type Store struct {
@@ -232,10 +227,6 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 }
 
 func findStartIndex(strL []string, startQ string) int {
-	startTime := time.Now()
-	defer func() {
-		TotalFindStartLatency.Add(time.Since(startTime).Nanoseconds())
-	}()
 	// Modified binary search to find the very first element in >=startQ.
 	if len(strL) == 0 {
 		return -1
@@ -270,10 +261,6 @@ func findStartIndex(strL []string, startQ string) int {
 }
 
 func findEndIndex(strL []string, endQ string) int {
-	startTime := time.Now()
-	defer func() {
-		TotalFindEndLatency.Add(time.Since(startTime).Nanoseconds())
-	}()
 	if len(strL) == 0 {
 		return -1
 	}
@@ -323,10 +310,6 @@ const minSortSize = 1024
 
 // Constructs a slice of dirty items, to use w/ memIterator.
 func (store *Store) dirtyItems(start, end []byte) {
-	startTime := time.Now()
-	defer func() {
-		TotalDirtyItemsLatency.Add(time.Since(startTime).Nanoseconds())
-	}()
 	startStr, endStr := conv.UnsafeBytesToStr(start), conv.UnsafeBytesToStr(end)
 	if end != nil && startStr > endStr {
 		// Nothing to do here.
@@ -375,10 +358,6 @@ func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {
 }
 
 func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sortState) {
-	startTime := time.Now()
-	defer func() {
-		TotalClearUnsortedLatency.Add(time.Since(startTime).Nanoseconds())
-	}()
 
 	store.deleteKeysFromUnsortedCache(unsorted)
 
@@ -416,10 +395,6 @@ func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
 
 // Only entrypoint to mutate store.cache.
 func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
-	startTime := time.Now()
-	defer func() {
-		TotalSetCachedValueLatency.Add(time.Since(startTime).Nanoseconds())
-	}()
 	types.AssertValidKey(key)
 
 	keyStr := conv.UnsafeBytesToStr(key)

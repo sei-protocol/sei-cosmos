@@ -251,6 +251,15 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
 	return true
 }
 
+func (s *scheduler) findFirstNonValidated() (int, bool) {
+	for i, t := range s.allTasks {
+		if t.Status != statusValidated {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
 	ctx, span := s.traceSpan(ctx, "SchedulerValidateAll", nil)
 	defer span.End()
@@ -341,7 +350,7 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 		if task.Index > 0 {
 			<-s.allTasks[task.Index-1].ValidateCh
 		}
-		s.validateTask(ctx, task)
+		s.validateTask(task.Ctx, task)
 		task.ValidateCh <- struct{}{}
 	}()
 }

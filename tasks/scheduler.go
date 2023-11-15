@@ -52,8 +52,7 @@ type deliverTxTask struct {
 	ValidateCh    chan struct{}
 }
 
-func (dt *deliverTxTask) Increment() {
-	dt.Incarnation++
+func (dt *deliverTxTask) Reset() {
 	dt.Status = statusPending
 	dt.Response = nil
 	dt.Abort = nil
@@ -61,6 +60,10 @@ func (dt *deliverTxTask) Increment() {
 	dt.Dependencies = nil
 	dt.VersionStores = nil
 	dt.ValidateCh = make(chan struct{}, 1)
+}
+
+func (dt *deliverTxTask) Increment() {
+	dt.Incarnation++
 }
 
 // Scheduler processes tasks concurrently
@@ -244,8 +247,8 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
 	_, span := s.traceSpan(ctx, "SchedulerValidate", task)
 	defer span.End()
 
-	if ok := s.shouldRerun(task); ok {
-		task.Increment()
+	if s.shouldRerun(task) {
+		task.Reset()
 		return false
 	}
 	return true
@@ -272,7 +275,8 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 		wg.Add(1)
 		go func(task *deliverTxTask) {
 			defer wg.Done()
-			if ok := s.validateTask(ctx, task); !ok {
+			if !s.validateTask(ctx, task) {
+				task.Increment()
 				mx.Lock()
 				res = append(res, task)
 				mx.Unlock()
@@ -300,9 +304,10 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 		workers = len(tasks)
 	}
 
-	wg := &sync.WaitGroup{}
-
-	wg.Add(len(tasks))
+	// validationWg waits for all validations to complete
+	// validations happen in separate goroutines in order to wait on previous index
+	validationWg := &sync.WaitGroup{}
+	validationWg.Add(len(tasks))
 	for i := 0; i < workers; i++ {
 		grp.Go(func() error {
 			for {
@@ -313,27 +318,21 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					if !ok {
 						return nil
 					}
-					s.prepareAndRunTask(wg, ctx, task)
+					s.prepareAndRunTask(validationWg, ctx, task)
 				}
 			}
 		})
 	}
-	grp.Go(func() error {
-		defer close(ch)
-		for _, task := range tasks {
-			select {
-			case <-gCtx.Done():
-				return gCtx.Err()
-			case ch <- task:
-			}
-		}
-		return nil
-	})
+
+	for _, task := range tasks {
+		ch <- task
+	}
+	close(ch)
 
 	if err := grp.Wait(); err != nil {
 		return err
 	}
-	wg.Wait()
+	validationWg.Wait()
 
 	return nil
 }
@@ -347,6 +346,7 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 	go func() {
 		defer wg.Done()
 		defer close(task.ValidateCh)
+		// wait on previous task to finish validation
 		if task.Index > 0 {
 			<-s.allTasks[task.Index-1].ValidateCh
 		}

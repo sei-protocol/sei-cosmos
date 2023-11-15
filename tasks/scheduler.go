@@ -302,6 +302,7 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 
 	wg := &sync.WaitGroup{}
 
+	wg.Add(len(tasks))
 	for i := 0; i < workers; i++ {
 		grp.Go(func() error {
 			for {
@@ -342,7 +343,6 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 	defer eSpan.End()
 	task.Ctx = eCtx
 
-	wg.Add(1)
 	s.executeTask(task.Ctx, task)
 	go func() {
 		defer wg.Done()

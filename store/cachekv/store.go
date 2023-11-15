@@ -182,7 +182,7 @@ func (store *Store) Get(key []byte) (value []byte) {
 		value = store.getAndWriteToCache(key)
 	}
 	// TODO: (occ) This is an example of how we currently track accesses
-	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
+	// store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 
 	return value
 }
@@ -198,7 +198,7 @@ func (store *Store) Set(key []byte, value []byte) {
 	types.AssertValidValue(value)
 
 	store.setCacheValue(key, value, false, true)
-	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
+	// store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
 }
 
 // Has implements types.KVStore.
@@ -208,7 +208,7 @@ func (store *Store) Has(key []byte) bool {
 	// defer store.mtx.RUnlock()
 	store.RLockMutexByKey(key)
 	defer store.RUnlockMutexByKey(key)
-	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
+	// store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
 }
 
@@ -222,7 +222,7 @@ func (store *Store) Delete(key []byte) {
 
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
-	store.eventManager.EmitResourceAccessWriteEvent("delete", store.storeKey, key, []byte{})
+	// store.eventManager.EmitResourceAccessWriteEvent("delete", store.storeKey, key, []byte{})
 }
 
 // Implements Cachetypes.KVStore.
@@ -436,7 +436,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 	// O(N^2) overhead.
 	// Even without that, too many range checks eventually becomes more expensive
 	// than just not having the cache.
-	store.emitUnsortedCacheSizeMetric()
+	// store.emitUnsortedCacheSizeMetric()
 	if n < minSortSize {
 		for key := range store.unsortedCache {
 			if dbm.IsKeyInDomain(conv.UnsafeStrToBytes(key), start, end) {
@@ -478,7 +478,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 
 	// kvL was already sorted so pass it in as is.
 	store.clearUnsortedCacheSubset(kvL, stateAlreadySorted)
-	store.emitUnsortedCacheSizeMetric()
+	// store.emitUnsortedCacheSizeMetric()
 }
 
 func (store *Store) emitUnsortedCacheSizeMetric() {
@@ -528,7 +528,7 @@ func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sort
 
 func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
 	n := len(store.unsortedCache)
-	store.emitUnsortedCacheSizeMetric()
+	// store.emitUnsortedCacheSizeMetric()
 	if len(unsorted) == n { // This pattern allows the Go compiler to emit the map clearing idiom for the entire map.
 		for key := range store.unsortedCache {
 			delete(store.unsortedCache, key)
@@ -538,7 +538,7 @@ func (store *Store) deleteKeysFromUnsortedCache(unsorted []*kv.Pair) {
 			delete(store.unsortedCache, conv.UnsafeBytesToStr(kv.Key))
 		}
 	}
-	defer store.emitUnsortedCacheSizeMetric()
+	// defer store.emitUnsortedCacheSizeMetric()
 }
 
 //----------------------------------------

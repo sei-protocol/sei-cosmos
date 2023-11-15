@@ -28,45 +28,10 @@ var TotalDirtyItemsLatency = atomic.Int64{}
 var TotalClearUnsortedLatency = atomic.Int64{}
 var TotalSetCachedValueLatency = atomic.Int64{}
 
-type mapCacheBackend struct {
-	m map[string]*types.CValue
-}
-
-func (b mapCacheBackend) Get(key string) (val *types.CValue, ok bool) {
-	val, ok = b.m[key]
-	return
-}
-
-func (b mapCacheBackend) Set(key string, val *types.CValue) {
-	b.m[key] = val
-}
-
-func (b mapCacheBackend) Len() int {
-	return len(b.m)
-}
-
-func (b mapCacheBackend) Delete(key string) {
-	delete(b.m, key)
-}
-
-func (b mapCacheBackend) Range(f func(string, *types.CValue) bool) {
-	// this is always called within a mutex so all operations below are atomic
-	keys := []string{}
-	for k := range b.m {
-		keys = append(keys, k)
-	}
-	for _, key := range keys {
-		val, _ := b.Get(key)
-		if !f(key, val) {
-			break
-		}
-	}
-}
-
 // Store wraps an in-memory cache around an underlying types.KVStore.
 type Store struct {
 	mtx           sync.RWMutex
-	cache         *types.BoundedCache
+	cache         *sync.Map
 	deleted       *sync.Map
 	unsortedCache map[string]struct{}
 	sortedCache   *dbm.MemDB // always ascending sorted
@@ -81,7 +46,7 @@ var _ types.CacheKVStore = (*Store)(nil)
 // NewStore creates a new Store object
 func NewStore(parent types.KVStore, storeKey types.StoreKey, cacheSize int) *Store {
 	return &Store{
-		cache:         types.NewBoundedCache(mapCacheBackend{make(map[string]*types.CValue)}, cacheSize),
+		cache:         &sync.Map{},
 		deleted:       &sync.Map{},
 		unsortedCache: make(map[string]struct{}),
 		sortedCache:   dbm.NewMemDB(),
@@ -103,8 +68,6 @@ func (store *Store) GetEvents() []abci.Event {
 
 // Implements Store
 func (store *Store) ResetEvents() {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
 	store.eventManager = sdktypes.NewEventManager()
 }
 
@@ -115,10 +78,8 @@ func (store *Store) GetStoreType() types.StoreType {
 
 // getFromCache queries the write-through cache for a value by key.
 func (store *Store) getFromCache(key []byte) []byte {
-	store.mtx.RLock()
-	defer store.mtx.RUnlock()
-	if cv, ok := store.cache.Get(conv.UnsafeBytesToStr(key)); ok {
-		return cv.Value()
+	if cv, ok := store.cache.Load(conv.UnsafeBytesToStr(key)); ok {
+		return cv.(*types.CValue).Value()
 	} else {
 		return store.parent.Get(key)
 	}
@@ -138,9 +99,7 @@ func (store *Store) Set(key []byte, value []byte) {
 	startTime := time.Now()
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
-	store.mtx.Lock()
 	store.setCacheValue(key, value, false, true)
-	store.mtx.Unlock()
 	TotalSetLatency.Add(time.Since(startTime).Nanoseconds())
 }
 
@@ -152,10 +111,6 @@ func (store *Store) Has(key []byte) bool {
 
 // Delete implements types.KVStore.
 func (store *Store) Delete(key []byte) {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
-	//defer telemetry.MeasureSince(time.Now(), "store", "cachekv", "delete")
-
 	types.AssertValidKey(key)
 	store.setCacheValue(key, nil, true, true)
 }
@@ -172,11 +127,11 @@ func (store *Store) Write() {
 
 	// We need a copy of all of the keys.
 	// Not the best, but probably not a bottleneck depending.
-	keys := make([]string, 0, store.cache.Len())
+	keys := []string{}
 
-	store.cache.Range(func(key string, dbValue *types.CValue) bool {
-		if dbValue.Dirty() {
-			keys = append(keys, key)
+	store.cache.Range(func(key, value any) bool {
+		if value.(*types.CValue).Dirty() {
+			keys = append(keys, key.(string))
 		}
 		return true
 	})
@@ -195,17 +150,20 @@ func (store *Store) Write() {
 			continue
 		}
 
-		cacheValue, _ := store.cache.Get(key)
-		if cacheValue.Value() != nil {
+		cacheValue, _ := store.cache.Load(key)
+		if cacheValue.(*types.CValue).Value() != nil {
 			// It already exists in the parent, hence delete it.
-			store.parent.Set([]byte(key), cacheValue.Value())
+			store.parent.Set([]byte(key), cacheValue.(*types.CValue).Value())
 		}
 	}
 
 	// Clear the cache using the map clearing idiom
 	// and not allocating fresh objects.
 	// Please see https://bencher.orijtech.com/perfclinic/mapclearing/
-	store.cache.DeleteAll()
+	store.cache.Range(func(key, value any) bool {
+		store.cache.Delete(key)
+		return true
+	})
 	store.deleted.Range(func(key, value any) bool {
 		store.deleted.Delete(key)
 		return true
@@ -387,8 +345,8 @@ func (store *Store) dirtyItems(start, end []byte) {
 	if n < minSortSize {
 		for key := range store.unsortedCache {
 			if dbm.IsKeyInDomain(conv.UnsafeStrToBytes(key), start, end) {
-				cacheValue, _ := store.cache.Get(key)
-				unsorted = append(unsorted, &kv.Pair{Key: []byte(key), Value: cacheValue.Value()})
+				cacheValue, _ := store.cache.Load(key)
+				unsorted = append(unsorted, &kv.Pair{Key: []byte(key), Value: cacheValue.(*types.CValue).Value()})
 			}
 		}
 		store.clearUnsortedCacheSubset(unsorted, stateUnsorted)
@@ -419,8 +377,8 @@ func (store *Store) dirtyItems(start, end []byte) {
 	kvL := make([]*kv.Pair, 0, 1+endIndex-startIndex)
 	for i := startIndex; i <= endIndex; i++ {
 		key := strL[i]
-		cacheValue, _ := store.cache.Get(key)
-		kvL = append(kvL, &kv.Pair{Key: []byte(key), Value: cacheValue.Value()})
+		cacheValue, _ := store.cache.Load(key)
+		kvL = append(kvL, &kv.Pair{Key: []byte(key), Value: cacheValue.(*types.CValue).Value()})
 	}
 
 	// kvL was already sorted so pass it in as is.
@@ -505,7 +463,7 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 	types.AssertValidKey(key)
 
 	keyStr := conv.UnsafeBytesToStr(key)
-	store.cache.Set(keyStr, types.NewCValue(value, dirty))
+	store.cache.Store(keyStr, types.NewCValue(value, dirty))
 	if deleted {
 		store.deleted.Store(keyStr, struct{}{})
 	} else {

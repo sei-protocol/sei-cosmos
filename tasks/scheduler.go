@@ -101,7 +101,7 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	for sk, mv := range s.multiVersionStores {
 		ok, mvConflicts := mv.ValidateTransactionStateLogger(task.Index, task.Ctx.Logger())
 		if !ok {
-			task.Ctx.Logger().Info("Validating MVS", "idx", task.Index, "storeKey", sk.Name(), "conflicts", mvConflicts, "readset", mv.GetReadset(task.Index),
+			task.Ctx.Logger().Info("Validated MVS", "idx", task.Index, "storeKey", sk.Name(), "conflicts", mvConflicts, "readset", mv.GetReadset(task.Index),
 				"writesetKeys",
 				mv.GetAllWritesetKeys(),
 				"iterateset",
@@ -282,7 +282,13 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 		wg.Add(1)
 		go func(task *deliverTxTask) {
 			defer wg.Done()
+			if task.Index == 11 {
+				ctx.Logger().Info("Validation as part of validateAll", "index", task.Index)
+			}
 			if !s.validateTask(ctx, task) {
+				if task.Index == 11 {
+					ctx.Logger().Info("Validation as part of validateAll INVALID", "index", task.Index)
+				}
 				task.Reset()
 				task.Increment()
 				mx.Lock()
@@ -362,7 +368,13 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 		if task.Index > 0 {
 			<-s.allTasks[task.Index-1].ValidateCh
 		}
+		if task.Index == 11 {
+			ctx.Logger().Info("Validation as part of Execute", "index", task.Index)
+		}
 		if !s.validateTask(task.Ctx, task) {
+			if task.Index == 11 {
+				ctx.Logger().Info("Validation as part of execute INVALID", "index", task.Index)
+			}
 			task.Reset()
 		}
 		task.ValidateCh <- struct{}{}

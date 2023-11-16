@@ -1,14 +1,10 @@
 package tasks
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/tendermint/tendermint/abci/types"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
@@ -241,8 +237,8 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 }
 
 func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
-	_, span := s.traceSpan(ctx, "SchedulerValidate", task)
-	defer span.End()
+	//_, span := s.traceSpan(ctx, "SchedulerValidate", task)
+	//defer span.End()
 
 	if ok := s.shouldRerun(task); ok {
 		task.Increment()
@@ -261,8 +257,8 @@ func (s *scheduler) findFirstNonValidated() (int, bool) {
 }
 
 func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
-	ctx, span := s.traceSpan(ctx, "SchedulerValidateAll", nil)
-	defer span.End()
+	//ctx, span := s.traceSpan(ctx, "SchedulerValidateAll", nil)
+	//defer span.End()
 
 	var mx sync.Mutex
 	var res []*deliverTxTask
@@ -288,8 +284,8 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 // Tasks are updated with their status
 // TODO: error scenarios
 func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
-	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
-	defer span.End()
+	//ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
+	//defer span.End()
 
 	ch := make(chan *deliverTxTask, len(tasks))
 	grp, gCtx := errgroup.WithContext(ctx.Context())
@@ -338,9 +334,9 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 }
 
 func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task *deliverTxTask) {
-	eCtx, eSpan := s.traceSpan(ctx, "SchedulerExecute", task)
-	defer eSpan.End()
-	task.Ctx = eCtx
+	//eCtx, eSpan := s.traceSpan(ctx, "SchedulerExecute", task)
+	//defer eSpan.End()
+	//task.Ctx = eCtx
 
 	wg.Add(1)
 	s.executeTask(task.Ctx, task)
@@ -355,23 +351,23 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 	}()
 }
 
-func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
-	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
-	if task != nil {
-		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
-		span.SetAttributes(attribute.Int("txIndex", task.Index))
-		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
-	}
-	ctx = ctx.WithTraceSpanContext(spanCtx)
-	return ctx, span
-}
+//func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
+//	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
+//	if task != nil {
+//		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
+//		span.SetAttributes(attribute.Int("txIndex", task.Index))
+//		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
+//	}
+//	ctx = ctx.WithTraceSpanContext(spanCtx)
+//	return ctx, span
+//}
 
 // prepareTask initializes the context and version stores for a task
 func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 	ctx = ctx.WithTxIndex(task.Index)
 
-	_, span := s.traceSpan(ctx, "SchedulerPrepare", task)
-	defer span.End()
+	//_, span := s.traceSpan(ctx, "SchedulerPrepare", task)
+	//defer span.End()
 
 	// initialize the context
 	abortCh := make(chan occ.Abort, len(s.multiVersionStores))
@@ -405,9 +401,9 @@ func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	s.prepareTask(ctx, task)
 
-	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
-	defer dSpan.End()
-	task.Ctx = dCtx
+	//dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
+	//defer dSpan.End()
+	//task.Ctx = dCtx
 
 	resp := s.deliverTx(task.Ctx, task.Request)
 

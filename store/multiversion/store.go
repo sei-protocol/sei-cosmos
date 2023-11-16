@@ -268,7 +268,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker, logger log
 	validChannel := make(chan bool, 1)
 	abortChannel := make(chan occtypes.Abort, 1)
 
-	logger.Info("iterator tracker", "tracker", tracker)
+	logger.Info("iterator tracker", "start", tracker.startKey, "end", tracker.endKey, "earlystop", tracker.earlyStopKey, "ascending", tracker.ascending)
 
 	// listen for abort while iterating
 	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort, logger log.Logger) {

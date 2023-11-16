@@ -268,7 +268,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker, logger log
 	validChannel := make(chan bool, 1)
 	abortChannel := make(chan occtypes.Abort, 1)
 
-	logger.Info("iterator tracker", "start", tracker.startKey, "end", tracker.endKey, "earlystop", tracker.earlyStopKey, "ascending", tracker.ascending)
+	logger.Info("iterator tracker", "index", index, "start", tracker.startKey, "end", tracker.endKey, "earlystop", tracker.earlyStopKey, "ascending", tracker.ascending)
 
 	// listen for abort while iterating
 	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort, logger log.Logger) {
@@ -286,13 +286,13 @@ func (s *Store) validateIterator(index int, tracker iterationTracker, logger log
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
 			if len(expectedKeys) == 0 {
 				// if we have no more expected keys, then the iterator is invalid
-				logger.Info("more keys than expected", "key", mergeIterator.Key())
+				logger.Info("more keys than expected", "index", index, "key", mergeIterator.Key())
 				returnChan <- false
 				return
 			}
 			key := mergeIterator.Key()
 			if _, ok := expectedKeys[string(key)]; !ok {
-				logger.Info("key not found in expected", "key", key)
+				logger.Info("key not found in expected", "index", index, "key", key)
 				// if key isn't found
 				returnChan <- false
 				return
@@ -306,7 +306,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker, logger log
 				return
 			}
 		}
-		logger.Info("returning with len keys", "len", len(expectedKeys))
+		logger.Info("returning with len keys", "index", index, "len", len(expectedKeys))
 		returnChan <- !(len(expectedKeys) > 0)
 	}(tracker, sortedItems, validChannel, abortChannel, logger)
 	select {

@@ -296,6 +296,11 @@ func (s *Store) validateIterator(index int, tracker iterationTracker, logger log
 		var parentIter types.Iterator
 		expectedKeys := iterationTracker.iteratedKeys
 		iter := s.newMVSValidationIterator(index, iterationTracker.startKey, iterationTracker.endKey, items, iterationTracker.ascending, iterationTracker.writeset, abortChan)
+		// log parent iter
+		logIter := s.parentStore.Iterator(iterationTracker.startKey, iterationTracker.endKey)
+		for ; logIter.Valid(); logIter.Next() {
+			logger.Info("parent iter", "index", index, "key", logIter.Key())
+		}
 		if iterationTracker.ascending {
 			parentIter = s.parentStore.Iterator(iterationTracker.startKey, iterationTracker.endKey)
 		} else {

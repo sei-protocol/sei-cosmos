@@ -160,6 +160,7 @@ type CacheMultiStore interface {
 type QueryMultiStore interface {
 	MultiStore
 	snapshottypes.Snapshotter
+	io.Closer
 }
 
 // CommitMultiStore is an interface for a MultiStore without cache capabilities.

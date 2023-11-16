@@ -1170,6 +1170,9 @@ func (app *BaseApp) Close() error {
 	if err := app.appStore.db.Close(); err != nil {
 		return err
 	}
+	if err := app.qms.Close(); err != nil {
+		return err
+	}
 	return app.snapshotManager.Close()
 }
 

@@ -23,9 +23,11 @@ type MultiVersionStore interface {
 	CollectIteratorItems(index int) *db.MemDB
 	SetReadset(index int, readset ReadSet)
 	GetReadset(index int) ReadSet
+	ClearReadset(index int)
 	VersionedIndexedStore(index int, incarnation int, abortChannel chan occ.Abort) *VersionIndexedStore
 	SetIterateset(index int, iterateset Iterateset)
 	GetIterateset(index int) Iterateset
+	ClearIterateset(index int)
 	ValidateTransactionState(index int) (bool, []int)
 }
 
@@ -227,6 +229,14 @@ func (s *Store) GetIterateset(index int) Iterateset {
 		return nil
 	}
 	return iteratesetAny.(Iterateset)
+}
+
+func (s *Store) ClearReadset(index int) {
+	s.txReadSets.Delete(index)
+}
+
+func (s *Store) ClearIterateset(index int) {
+	s.txReadSets.Delete(index)
 }
 
 // CollectIteratorItems implements MultiVersionStore. It will return a memDB containing all of the keys present in the multiversion store within the iteration range prior to (exclusive of) the index.

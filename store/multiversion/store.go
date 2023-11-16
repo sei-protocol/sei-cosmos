@@ -258,7 +258,7 @@ func (s *Store) CollectIteratorItems(index int) *db.MemDB {
 	return sortedItems
 }
 
-func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
+func (s *Store) validateIterator(index int, tracker iterationTracker, logger log.Logger) bool {
 	// collect items from multiversion store
 	sortedItems := s.CollectIteratorItems(index)
 	// add the iterationtracker writeset keys to the sorted items
@@ -269,7 +269,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 	abortChannel := make(chan occtypes.Abort, 1)
 
 	// listen for abort while iterating
-	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort) {
+	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort, logger log.Logger) {
 		var parentIter types.Iterator
 		expectedKeys := iterationTracker.iteratedKeys
 		iter := s.newMVSValidationIterator(index, iterationTracker.startKey, iterationTracker.endKey, items, iterationTracker.ascending, iterationTracker.writeset, abortChan)
@@ -284,11 +284,13 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
 			if len(expectedKeys) == 0 {
 				// if we have no more expected keys, then the iterator is invalid
+				logger.Info("more keys than expected", "key", mergeIterator.Key())
 				returnChan <- false
 				return
 			}
 			key := mergeIterator.Key()
 			if _, ok := expectedKeys[string(key)]; !ok {
+				logger.Info("key not found in expected", "key", key)
 				// if key isn't found
 				returnChan <- false
 				return
@@ -302,18 +304,20 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 				return
 			}
 		}
+		logger.Info("returning with len keys", "len", len(expectedKeys))
 		returnChan <- !(len(expectedKeys) > 0)
-	}(tracker, sortedItems, validChannel, abortChannel)
+	}(tracker, sortedItems, validChannel, abortChannel, logger)
 	select {
 	case <-abortChannel:
 		// if we get an abort, then we know that the iterator is invalid
+		logger.Info("abort from iterator")
 		return false
 	case valid := <-validChannel:
 		return valid
 	}
 }
 
-func (s *Store) checkIteratorAtIndex(index int) bool {
+func (s *Store) checkIteratorAtIndex(index int, logger log.Logger) bool {
 	valid := true
 	iterateSetAny, found := s.txIterateSets.Load(index)
 	if !found {
@@ -321,7 +325,7 @@ func (s *Store) checkIteratorAtIndex(index int) bool {
 	}
 	iterateset := iterateSetAny.(Iterateset)
 	for _, iterationTracker := range iterateset {
-		iteratorValid := s.validateIterator(index, iterationTracker)
+		iteratorValid := s.validateIterator(index, iterationTracker, logger)
 		valid = valid && iteratorValid
 	}
 	return valid
@@ -377,7 +381,7 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 	// defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
 
 	// TODO: can we parallelize for all iterators?
-	iteratorValid := s.checkIteratorAtIndex(index)
+	iteratorValid := s.checkIteratorAtIndex(index, nil)
 
 	readsetValid, conflictIndices := s.checkReadsetAtIndex(index)
 
@@ -388,7 +392,7 @@ func (s *Store) ValidateTransactionStateLogger(index int, logger log.Logger) (bo
 	// defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
 
 	// TODO: can we parallelize for all iterators?
-	iteratorValid := s.checkIteratorAtIndex(index)
+	iteratorValid := s.checkIteratorAtIndex(index, logger)
 	readsetValid, conflictIndices := s.checkReadsetAtIndex(index)
 	if !iteratorValid || !readsetValid {
 		logger.Info("validity", "index", index, "iterator_valid", iteratorValid, "readset_valid", readsetValid)

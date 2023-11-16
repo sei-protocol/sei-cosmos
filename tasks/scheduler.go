@@ -410,6 +410,7 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	s.prepareTask(ctx, task)
+	ctx.Logger().Info("Executing task", "index", task.Index, "incarnation", task.Incarnation)
 
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
 	defer dSpan.End()

@@ -99,7 +99,7 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	uniq := make(map[int]struct{})
 	valid := true
 	for sk, mv := range s.multiVersionStores {
-		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
+		ok, mvConflicts := mv.ValidateTransactionStateLogger(task.Index, task.Ctx.Logger())
 		if !ok {
 			task.Ctx.Logger().Info("Validating MVS", "idx", task.Index, "storeKey", sk.Name(), "conflicts", mvConflicts, "readset", mv.GetReadset(task.Index),
 				"writesetKeys",

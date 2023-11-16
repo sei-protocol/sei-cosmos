@@ -5,6 +5,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	occtypes "github.com/cosmos/cosmos-sdk/types/occ"
@@ -27,6 +29,7 @@ type MultiVersionStore interface {
 	SetIterateset(index int, iterateset Iterateset)
 	GetIterateset(index int) Iterateset
 	ValidateTransactionState(index int) (bool, []int)
+	ValidateTransactionStateLogger(index int, logger log.Logger) (bool, []int)
 }
 
 type WriteSet map[string][]byte
@@ -378,6 +381,17 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 
 	readsetValid, conflictIndices := s.checkReadsetAtIndex(index)
 
+	return iteratorValid && readsetValid, conflictIndices
+}
+
+func (s *Store) ValidateTransactionStateLogger(index int, logger log.Logger) (bool, []int) {
+	// defer telemetry.MeasureSince(time.Now(), "store", "mvs", "validate")
+
+	// TODO: can we parallelize for all iterators?
+	iteratorValid := s.checkIteratorAtIndex(index)
+	logger.Info("iterator valid", "index", index, "valid", iteratorValid)
+	readsetValid, conflictIndices := s.checkReadsetAtIndex(index)
+	logger.Info("readsetValid valid", "index", index, "valid", readsetValid)
 	return iteratorValid && readsetValid, conflictIndices
 }
 

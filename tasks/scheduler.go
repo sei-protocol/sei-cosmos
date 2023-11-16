@@ -48,14 +48,17 @@ type deliverTxTask struct {
 	ValidateCh    chan struct{}
 }
 
-func (dt *deliverTxTask) Increment() {
-	dt.Incarnation++
+func (dt *deliverTxTask) Reset() {
 	dt.Status = statusPending
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
 	dt.Dependencies = nil
 	dt.VersionStores = nil
+}
+
+func (dt *deliverTxTask) Increment() {
+	dt.Incarnation++
 	dt.ValidateCh = make(chan struct{}, 1)
 }
 
@@ -91,8 +94,16 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	var conflicts []int
 	uniq := make(map[int]struct{})
 	valid := true
-	for _, mv := range s.multiVersionStores {
-		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
+	for sk, mv := range s.multiVersionStores {
+		ok, mvConflicts := mv.ValidateTransactionStateLogger(task.Index, task.Ctx.Logger())
+		if !ok {
+			task.Ctx.Logger().Info("Validating MVS", "idx", task.Index, "storeKey", sk.Name(), "conflicts", mvConflicts, "readset", mv.GetReadset(task.Index),
+				"writesetKeys",
+				mv.GetAllWritesetKeys(),
+				"iterateset",
+				mv.GetIterateset(task.Index),
+			)
+		}
 		for _, c := range mvConflicts {
 			if _, ok := uniq[c]; !ok {
 				conflicts = append(conflicts, c)
@@ -240,8 +251,7 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
 	//_, span := s.traceSpan(ctx, "SchedulerValidate", task)
 	//defer span.End()
 
-	if ok := s.shouldRerun(task); ok {
-		task.Increment()
+	if s.shouldRerun(task) {
 		return false
 	}
 	return true
@@ -268,7 +278,9 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 		wg.Add(1)
 		go func(task *deliverTxTask) {
 			defer wg.Done()
-			if ok := s.validateTask(ctx, task); !ok {
+			if !s.validateTask(ctx, task) {
+				task.Reset()
+				task.Increment()
 				mx.Lock()
 				res = append(res, task)
 				mx.Unlock()
@@ -296,7 +308,14 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 		workers = len(tasks)
 	}
 
-	wg := &sync.WaitGroup{}
+	// validationWg waits for all validations to complete
+	// validations happen in separate goroutines in order to wait on previous index
+	validationWg := &sync.WaitGroup{}
+	validationWg.Add(len(tasks))
+	grp.Go(func() error {
+		validationWg.Wait()
+		return nil
+	})
 
 	for i := 0; i < workers; i++ {
 		grp.Go(func() error {
@@ -308,27 +327,20 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 					if !ok {
 						return nil
 					}
-					s.prepareAndRunTask(wg, ctx, task)
+					s.prepareAndRunTask(validationWg, ctx, task)
 				}
 			}
 		})
 	}
-	grp.Go(func() error {
-		defer close(ch)
-		for _, task := range tasks {
-			select {
-			case <-gCtx.Done():
-				return gCtx.Err()
-			case ch <- task:
-			}
-		}
-		return nil
-	})
+
+	for _, task := range tasks {
+		ch <- task
+	}
+	close(ch)
 
 	if err := grp.Wait(); err != nil {
 		return err
 	}
-	wg.Wait()
 
 	return nil
 }
@@ -338,15 +350,17 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 	//defer eSpan.End()
 	task.Ctx = ctx
 
-	wg.Add(1)
 	s.executeTask(task.Ctx, task)
 	go func() {
 		defer wg.Done()
 		defer close(task.ValidateCh)
+		// wait on previous task to finish validation
 		if task.Index > 0 {
 			<-s.allTasks[task.Index-1].ValidateCh
 		}
-		s.validateTask(task.Ctx, task)
+		if !s.validateTask(task.Ctx, task) {
+			task.Reset()
+		}
 		task.ValidateCh <- struct{}{}
 	}()
 }
@@ -400,6 +414,7 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	s.prepareTask(ctx, task)
+	ctx.Logger().Info("Executing task", "index", task.Index, "incarnation", task.Incarnation)
 
 	//dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
 	//defer dSpan.End()

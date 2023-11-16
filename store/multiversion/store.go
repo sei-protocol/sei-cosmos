@@ -239,7 +239,26 @@ func (s *Store) GetIterateset(index int) Iterateset {
 }
 
 // CollectIteratorItems implements MultiVersionStore. It will return a memDB containing all of the keys present in the multiversion store within the iteration range prior to (exclusive of) the index.
-func (s *Store) CollectIteratorItems(index int, logger log.Logger) *db.MemDB {
+func (s *Store) CollectIteratorItems(index int) *db.MemDB {
+	sortedItems := db.NewMemDB()
+
+	// get all writeset keys prior to index
+	for i := 0; i < index; i++ {
+		writesetAny, found := s.txWritesetKeys.Load(i)
+		if !found {
+			continue
+		}
+		indexedWriteset := writesetAny.([]string)
+		// TODO: do we want to exclude keys out of the range or just let the iterator handle it?
+		for _, key := range indexedWriteset {
+			// TODO: inefficient because (logn) for each key + rebalancing? maybe theres a better way to add to a tree to reduce rebalancing overhead
+			sortedItems.Set([]byte(key), []byte{})
+		}
+	}
+	return sortedItems
+}
+
+func (s *Store) CollectIteratorItemsLogged(index int, logger log.Logger) *db.MemDB {
 	sortedItems := db.NewMemDB()
 
 	// get all writeset keys prior to index
@@ -261,7 +280,7 @@ func (s *Store) CollectIteratorItems(index int, logger log.Logger) *db.MemDB {
 
 func (s *Store) validateIterator(index int, tracker iterationTracker, logger log.Logger) bool {
 	// collect items from multiversion store
-	sortedItems := s.CollectIteratorItems(index, logger)
+	sortedItems := s.CollectIteratorItemsLogged(index, logger)
 	// add the iterationtracker writeset keys to the sorted items
 	for key := range tracker.writeset {
 		sortedItems.Set([]byte(key), []byte{})

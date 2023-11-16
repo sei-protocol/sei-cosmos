@@ -98,8 +98,9 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	var conflicts []int
 	uniq := make(map[int]struct{})
 	valid := true
-	for _, mv := range s.multiVersionStores {
+	for sk, mv := range s.multiVersionStores {
 		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
+		task.Ctx.Logger().Info("Validating MVS", "storeKey", sk.Name(), "ok", ok, "conflicts", mvConflicts)
 		for _, c := range mvConflicts {
 			if _, ok := uniq[c]; !ok {
 				conflicts = append(conflicts, c)
@@ -217,7 +218,6 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 	// validated tasks can become unvalidated if an earlier re-run task now conflicts
 	case statusExecuted, statusValidated:
 		if valid, conflicts := s.findConflicts(task); !valid {
-			task.Ctx.Logger().Info("Task invalid", "index", task.Index, "incarnation", task.Incarnation, "conflicts", conflicts)
 			s.invalidateTask(task)
 
 			// if the conflicts are now validated, then rerun this task

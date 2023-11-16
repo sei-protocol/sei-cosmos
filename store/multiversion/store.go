@@ -143,18 +143,24 @@ func (s *Store) SetWriteset(index int, incarnation int, writeset WriteSet) {
 	s.removeOldWriteset(index, writeset)
 
 	writeSetKeys := make([]string, 0, len(writeset))
+	wg := sync.WaitGroup{}
 	for key, value := range writeset {
 		writeSetKeys = append(writeSetKeys, key)
-		loadVal, _ := s.multiVersionMap.LoadOrStore(key, NewMultiVersionItem()) // init if necessary
-		mvVal := loadVal.(MultiVersionValue)
-		if value == nil {
-			// delete if nil value
-			// TODO: sync map
-			mvVal.Delete(index, incarnation)
-		} else {
-			mvVal.Set(index, incarnation, value)
-		}
+		wg.Add(1)
+		go func(k string, v []byte) {
+			defer wg.Done()
+			loadVal, _ := s.multiVersionMap.LoadOrStore(k, NewMultiVersionItem()) // init if necessary
+			mvVal := loadVal.(MultiVersionValue)
+			if v == nil {
+				// delete if nil value
+				// TODO: sync map
+				mvVal.Delete(index, incarnation)
+			} else {
+				mvVal.Set(index, incarnation, v)
+			}
+		}(key, value)
 	}
+	wg.Wait()
 	sort.Strings(writeSetKeys) // TODO: if we're sorting here anyways, maybe we just put it into a btree instead of a slice
 	s.txWritesetKeys.Store(index, writeSetKeys)
 }

@@ -326,7 +326,9 @@ func (s *Store) checkIteratorAtIndex(index int, logger log.Logger) bool {
 		return true
 	}
 	iterateset := iterateSetAny.(Iterateset)
-	logger.Info("validating iterators", "length", len(iterateset))
+	if len(iterateset) > 0 {
+		logger.Info("validating iterators", "index", index, "length", len(iterateset))
+	}
 	for _, iterationTracker := range iterateset {
 		iteratorValid := s.validateIterator(index, iterationTracker, logger)
 		valid = valid && iteratorValid

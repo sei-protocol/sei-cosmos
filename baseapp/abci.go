@@ -657,13 +657,11 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 		return sdk.Context{}, err
 	}
 
-	qms := app.qms
+	var qms sdk.MultiStore = app.qms
 	if qms == nil || height == app.cms.LatestVersion() {
-		fmt.Println("[COSMOS-DEBUG] Using cms for query", "height", height)
 		qms = app.cms
 	}
 	lastBlockHeight := qms.LatestVersion()
-	fmt.Println("[COSMOS-DEBUG] QMS last block height", "height", lastBlockHeight)
 	if height > lastBlockHeight {
 		return sdk.Context{},
 			sdkerrors.Wrap(

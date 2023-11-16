@@ -594,7 +594,6 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 
 func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQuery) abci.ResponseQuery {
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
-	app.logger.Info("[COSMOS-DEBUG] Calling createQueryContext in handleQueryGRPC", "height", req.Height)
 	defer func() {
 		// We should close the multistore to avoid leaking resources.
 		if closer, ok := ctx.MultiStore().(io.Closer); ok {
@@ -683,7 +682,6 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	app.logger.Info("[COSMOS-DEBUG] Calling CacheMultiStoreWithVersion in createQueryContext", "height", height)
 	cacheMS, err := qms.CacheMultiStoreWithVersion(height)
 	if err != nil {
 		return sdk.Context{},
@@ -893,13 +891,11 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 	}
 
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
-	app.logger.Info("[COSMOS-DEBUG] Calling createQueryContext in handleQueryCustom", "height", req.Height)
 
 	defer func() {
 		// We should close the multistore to avoid leaking resources.
 		if closer, ok := ctx.MultiStore().(io.Closer); ok {
 			err := closer.Close()
-			app.logger.Info("[COSMOS-DEBUG] Closing CacheMultiStore in handleQueryCustom", "height", req.Height)
 			if err != nil {
 				app.logger.Error("failed to close Cache MultiStore", "err", err)
 			}

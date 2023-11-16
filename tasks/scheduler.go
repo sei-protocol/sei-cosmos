@@ -217,6 +217,7 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 	// validated tasks can become unvalidated if an earlier re-run task now conflicts
 	case statusExecuted, statusValidated:
 		if valid, conflicts := s.findConflicts(task); !valid {
+			task.Ctx.Logger().Info("Task invalid", "index", task.Index, "incarnation", task.Incarnation, "conflicts", conflicts)
 			s.invalidateTask(task)
 
 			// if the conflicts are now validated, then rerun this task

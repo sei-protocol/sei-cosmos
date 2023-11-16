@@ -282,6 +282,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker, logger log
 	// collect items from multiversion store
 	sortedItems := s.CollectIteratorItemsLogged(index, logger)
 	// add the iterationtracker writeset keys to the sorted items
+	logger.Info("Adding keys for sorted items from iterator tracker", "index", index, "length", len(tracker.writeset), "writeset", tracker.writeset)
 	for key := range tracker.writeset {
 		sortedItems.Set([]byte(key), []byte{})
 	}

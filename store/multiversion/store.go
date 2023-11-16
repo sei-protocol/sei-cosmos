@@ -389,9 +389,10 @@ func (s *Store) ValidateTransactionStateLogger(index int, logger log.Logger) (bo
 
 	// TODO: can we parallelize for all iterators?
 	iteratorValid := s.checkIteratorAtIndex(index)
-	logger.Info("iterator valid", "index", index, "valid", iteratorValid)
 	readsetValid, conflictIndices := s.checkReadsetAtIndex(index)
-	logger.Info("readsetValid valid", "index", index, "valid", readsetValid)
+	if !iteratorValid || !readsetValid {
+		logger.Info("validity", "index", index, "iterator_valid", iteratorValid, "readset_valid", readsetValid)
+	}
 	return iteratorValid && readsetValid, conflictIndices
 }
 

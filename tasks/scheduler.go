@@ -100,16 +100,8 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	var conflicts []int
 	uniq := make(map[int]struct{})
 	valid := true
-	for sk, mv := range s.multiVersionStores {
-		ok, mvConflicts := mv.ValidateTransactionStateLogger(task.Index, task.Ctx.Logger())
-		if !ok {
-			task.Ctx.Logger().Info("Validated MVS", "idx", task.Index, "storeKey", sk.Name(), "conflicts", mvConflicts, "readset", mv.GetReadset(task.Index),
-				"writesetKeys",
-				mv.GetAllWritesetKeys(),
-				"iterateset",
-				mv.GetIterateset(task.Index),
-			)
-		}
+	for _, mv := range s.multiVersionStores {
+		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
 		for _, c := range mvConflicts {
 			if _, ok := uniq[c]; !ok {
 				conflicts = append(conflicts, c)
@@ -284,13 +276,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 		wg.Add(1)
 		go func(task *deliverTxTask) {
 			defer wg.Done()
-			if task.Index == 11 {
-				ctx.Logger().Info("Validation as part of validateAll", "index", task.Index)
-			}
 			if !s.validateTask(ctx, task) {
-				if task.Index == 11 {
-					ctx.Logger().Info("Validation as part of validateAll INVALID", "index", task.Index)
-				}
 				task.Reset()
 				task.Increment()
 				mx.Lock()
@@ -370,13 +356,7 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 		if task.Index > 0 {
 			<-s.allTasks[task.Index-1].ValidateCh
 		}
-		if task.Index == 11 {
-			ctx.Logger().Info("Validation as part of Execute", "index", task.Index)
-		}
 		if !s.validateTask(task.Ctx, task) {
-			if task.Index == 11 {
-				ctx.Logger().Info("Validation as part of execute INVALID", "index", task.Index)
-			}
 			task.Reset()
 		}
 		task.ValidateCh <- struct{}{}
@@ -432,7 +412,6 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	s.prepareTask(ctx, task)
-	ctx.Logger().Info("Executing task", "index", task.Index, "incarnation", task.Incarnation)
 
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
 	defer dSpan.End()

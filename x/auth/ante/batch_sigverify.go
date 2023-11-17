@@ -131,7 +131,8 @@ func (v *SR25519BatchVerifier) VerifyTxs(ctx sdk.Context, txs []sdk.Tx) {
 			}
 
 			sig := sigsList[i][j]
-			if sig.Sequence != seqNum && !ctx.ConsensusParams().Abci.GetDisableSeqnoCheck() {
+			params := v.ak.GetParams(ctx)
+			if sig.Sequence != seqNum && !params.GetDisableSeqnoCheck() {
 				v.errors[i] = sdkerrors.Wrapf(
 					sdkerrors.ErrWrongSequence,
 					"account sequence mismatch, expected %d, got %d", acc.GetSequence(), sig.Sequence,

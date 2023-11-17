@@ -267,7 +267,7 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 		}
 
 		// Check account sequence number.
-		if sig.Sequence != acc.GetSequence() {
+		if sig.Sequence != acc.GetSequence() && !ctx.ConsensusParams().Abci.GetDisableSeqnoCheck() {
 			return ctx, sdkerrors.Wrapf(
 				sdkerrors.ErrWrongSequence,
 				"account sequence mismatch, expected %d, got %d", acc.GetSequence(), sig.Sequence,

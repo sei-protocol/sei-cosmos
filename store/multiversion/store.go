@@ -273,6 +273,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort) {
 		var parentIter types.Iterator
 		expectedKeys := iterationTracker.iteratedKeys
+		foundKeys := 0
 		iter := s.newMVSValidationIterator(index, iterationTracker.startKey, iterationTracker.endKey, items, iterationTracker.ascending, iterationTracker.writeset, abortChan)
 		if iterationTracker.ascending {
 			parentIter = s.parentStore.Iterator(iterationTracker.startKey, iterationTracker.endKey)
@@ -283,19 +284,21 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 		mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending, NoOpHandler{})
 		defer mergeIterator.Close()
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
-			if len(expectedKeys) == 0 {
+			if (len(expectedKeys) - foundKeys) == 0 {
 				// if we have no more expected keys, then the iterator is invalid
 				returnChan <- false
 				return
 			}
 			key := mergeIterator.Key()
+			// TODO: is this ok to not delete the key since we shouldnt have duplicate keys?
 			if _, ok := expectedKeys[string(key)]; !ok {
 				// if key isn't found
 				returnChan <- false
 				return
 			}
 			// remove from expected keys
-			delete(expectedKeys, string(key))
+			foundKeys += 1
+			// delete(expectedKeys, string(key))
 
 			// if our iterator key was the early stop, then we can break
 			if bytes.Equal(key, iterationTracker.earlyStopKey) {
@@ -303,7 +306,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 				return
 			}
 		}
-		returnChan <- !(len(expectedKeys) > 0)
+		returnChan <- !((len(expectedKeys) - foundKeys) > 0)
 	}(tracker, sortedItems, validChannel, abortChannel)
 	select {
 	case <-abortChannel:

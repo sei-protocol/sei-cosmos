@@ -87,6 +87,8 @@ func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx
 func (s *scheduler) invalidateTask(task *deliverTxTask) {
 	for _, mv := range s.multiVersionStores {
 		mv.InvalidateWriteset(task.Index, task.Incarnation)
+		mv.ClearReadset(task.Index)
+		mv.ClearIterateset(task.Index)
 	}
 }
 
@@ -94,16 +96,8 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	var conflicts []int
 	uniq := make(map[int]struct{})
 	valid := true
-	for sk, mv := range s.multiVersionStores {
-		ok, mvConflicts := mv.ValidateTransactionStateLogger(task.Index, task.Ctx.Logger())
-		if !ok {
-			task.Ctx.Logger().Info("Validating MVS", "idx", task.Index, "storeKey", sk.Name(), "conflicts", mvConflicts, "readset", mv.GetReadset(task.Index),
-				"writesetKeys",
-				mv.GetAllWritesetKeys(),
-				"iterateset",
-				mv.GetIterateset(task.Index),
-			)
-		}
+	for _, mv := range s.multiVersionStores {
+		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
 		for _, c := range mvConflicts {
 			if _, ok := uniq[c]; !ok {
 				conflicts = append(conflicts, c)
@@ -414,7 +408,6 @@ func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
 func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 
 	s.prepareTask(ctx, task)
-	ctx.Logger().Info("Executing task", "index", task.Index, "incarnation", task.Incarnation)
 
 	//dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
 	//defer dSpan.End()

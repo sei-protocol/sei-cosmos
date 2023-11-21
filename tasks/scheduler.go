@@ -300,13 +300,8 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 	var mx sync.Mutex
 	var res []*deliverTxTask
 
-	startIndex, anyInvalid := s.findFirstNonValidated()
-	if !anyInvalid {
-		return nil, nil
-	}
-
 	wg := sync.WaitGroup{}
-	for i := startIndex; i < len(tasks); i++ {
+	for i := 0; i < len(tasks); i++ {
 		t := tasks[i]
 		wg.Add(1)
 		s.Do(func() {

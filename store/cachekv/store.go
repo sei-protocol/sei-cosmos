@@ -126,8 +126,8 @@ func (store *Store) Write() {
 			continue
 		}
 
-		cacheValue, _ := store.cache.Load(key)
-		if cacheValue.(*types.CValue).Value() != nil {
+		cacheValue, ok := store.cache.Load(key)
+		if ok && cacheValue.(*types.CValue).Value() != nil {
 			// It already exists in the parent, hence delete it.
 			store.parent.Set([]byte(key), cacheValue.(*types.CValue).Value())
 		}
@@ -297,7 +297,7 @@ func (store *Store) dirtyItems(start, end []byte) {
 
 	unsorted := make([]*kv.Pair, 0)
 	// If the unsortedCache is too big, its costs too much to determine
-	// whats in the subset we are concerned about.
+	// what's in the subset we are concerned about.
 	// If you are interleaving iterator calls with writes, this can easily become an
 	// O(N^2) overhead.
 	// Even without that, too many range checks eventually becomes more expensive
@@ -306,8 +306,10 @@ func (store *Store) dirtyItems(start, end []byte) {
 	store.unsortedCache.Range(func(key, value any) bool {
 		cKey := key.(string)
 		if dbm.IsKeyInDomain(conv.UnsafeStrToBytes(cKey), start, end) {
-			cacheValue, _ := store.cache.Load(key)
-			unsorted = append(unsorted, &kv.Pair{Key: []byte(cKey), Value: cacheValue.(*types.CValue).Value()})
+			cacheValue, ok := store.cache.Load(key)
+			if ok {
+				unsorted = append(unsorted, &kv.Pair{Key: []byte(cKey), Value: cacheValue.(*types.CValue).Value()})
+			}
 		}
 		return true
 	})

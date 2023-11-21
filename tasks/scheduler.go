@@ -1,17 +1,16 @@
 package tasks
 
 import (
+	"context"
 	"sort"
 	"sync"
-
-	"github.com/tendermint/tendermint/abci/types"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
+	"github.com/tendermint/tendermint/abci/types"
 )
 
 type status string
@@ -73,6 +72,7 @@ type scheduler struct {
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 	tracingInfo        *tracing.Info
 	allTasks           []*deliverTxTask
+	workCh             chan func()
 }
 
 // NewScheduler creates a new scheduler
@@ -90,6 +90,28 @@ func (s *scheduler) invalidateTask(task *deliverTxTask) {
 		mv.ClearReadset(task.Index)
 		mv.ClearIterateset(task.Index)
 	}
+}
+
+func (s *scheduler) Start(ctx context.Context, workers int) {
+	wg := sync.WaitGroup{}
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case work := <-s.workCh:
+					work()
+				}
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+func (s *scheduler) Do(work func()) {
+	s.workCh <- work
 }
 
 func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
@@ -181,6 +203,17 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	s.PrefillEstimates(ctx, reqs)
 	tasks := toTasks(reqs)
 	s.allTasks = tasks
+	s.workCh = make(chan func(), len(tasks))
+
+	workers := s.workers
+	if s.workers < 1 {
+		workers = len(tasks)
+	}
+
+	workerCtx, cancel := context.WithCancel(ctx.Context())
+	defer cancel()
+	go s.Start(workerCtx, workers)
+
 	toExecute := tasks
 	for !allValidated(tasks) {
 		var err error
@@ -274,17 +307,18 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 
 	wg := sync.WaitGroup{}
 	for i := startIndex; i < len(tasks); i++ {
+		t := tasks[i]
 		wg.Add(1)
-		go func(task *deliverTxTask) {
+		s.Do(func() {
 			defer wg.Done()
-			if !s.validateTask(ctx, task) {
-				task.Reset()
-				task.Increment()
+			if !s.validateTask(ctx, t) {
+				t.Reset()
+				t.Increment()
 				mx.Lock()
-				res = append(res, task)
+				res = append(res, t)
 				mx.Unlock()
 			}
-		}(tasks[i])
+		})
 	}
 	wg.Wait()
 
@@ -298,48 +332,19 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	//ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
 	//defer span.End()
 
-	ch := make(chan *deliverTxTask, len(tasks))
-	grp, gCtx := errgroup.WithContext(ctx.Context())
-
-	// a workers value < 1 means no limit
-	workers := s.workers
-	if s.workers < 1 {
-		workers = len(tasks)
-	}
-
 	// validationWg waits for all validations to complete
 	// validations happen in separate goroutines in order to wait on previous index
 	validationWg := &sync.WaitGroup{}
 	validationWg.Add(len(tasks))
-	grp.Go(func() error {
-		validationWg.Wait()
-		return nil
-	})
 
-	for i := 0; i < workers; i++ {
-		grp.Go(func() error {
-			for {
-				select {
-				case <-gCtx.Done():
-					return gCtx.Err()
-				case task, ok := <-ch:
-					if !ok {
-						return nil
-					}
-					s.prepareAndRunTask(validationWg, ctx, task)
-				}
-			}
+	for _, task := range tasks {
+		t := task
+		s.Do(func() {
+			s.prepareAndRunTask(validationWg, ctx, t)
 		})
 	}
 
-	for _, task := range tasks {
-		ch <- task
-	}
-	close(ch)
-
-	if err := grp.Wait(); err != nil {
-		return err
-	}
+	validationWg.Wait()
 
 	return nil
 }
@@ -350,7 +355,7 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 	task.Ctx = ctx
 
 	s.executeTask(task.Ctx, task)
-	go func() {
+	s.Do(func() {
 		defer wg.Done()
 		defer close(task.ValidateCh)
 		// wait on previous task to finish validation
@@ -361,7 +366,7 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 			task.Reset()
 		}
 		task.ValidateCh <- struct{}{}
-	}()
+	})
 }
 
 //func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {

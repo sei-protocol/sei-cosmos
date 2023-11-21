@@ -93,11 +93,8 @@ func (s *scheduler) invalidateTask(task *deliverTxTask) {
 }
 
 func (s *scheduler) Start(ctx context.Context, workers int) {
-	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			for {
 				select {
 				case <-ctx.Done():
@@ -108,7 +105,6 @@ func (s *scheduler) Start(ctx context.Context, workers int) {
 			}
 		}()
 	}
-	wg.Wait()
 }
 
 func (s *scheduler) Do(work func()) {
@@ -213,7 +209,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 	workerCtx, cancel := context.WithCancel(ctx.Context())
 	defer cancel()
-	go s.Start(workerCtx, workers)
+	s.Start(workerCtx, workers)
 
 	toExecute := tasks
 	for !allValidated(tasks) {

@@ -317,26 +317,6 @@ func (store *Store) dirtyItems(start, end []byte) {
 	return
 }
 
-func (store *Store) emitUnsortedCacheSizeMetric() {
-	// n := len(store.unsortedCache)
-	// telemetry.SetGauge(float32(n), "sei", "cosmos", "unsorted", "cache", "size")
-}
-
-func findStartEndIndex(strL []string, startStr, endStr string) (int, int) {
-	// Now find the values within the domain
-	//  [start, end)
-	startIndex := findStartIndex(strL, startStr)
-	endIndex := findEndIndex(strL, endStr)
-
-	if endIndex < 0 {
-		endIndex = len(strL) - 1
-	}
-	if startIndex < 0 {
-		startIndex = 0
-	}
-	return startIndex, endIndex
-}
-
 func (store *Store) clearUnsortedCacheSubset(unsorted []*kv.Pair, sortState sortState) {
 	store.deleteKeysFromUnsortedCache(unsorted)
 

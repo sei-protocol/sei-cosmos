@@ -2,7 +2,7 @@ package simapp
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"testing"
 
 	aclmodule "github.com/cosmos/cosmos-sdk/x/accesscontrol"

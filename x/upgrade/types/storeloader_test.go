@@ -2,7 +2,7 @@ package types
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"io/ioutil"
 	"os"
 	"path/filepath"

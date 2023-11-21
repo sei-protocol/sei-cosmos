@@ -1,9 +1,9 @@
 package ante_test
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"strings"
 	"testing"
 

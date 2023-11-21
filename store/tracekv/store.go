@@ -2,7 +2,7 @@ package tracekv
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"io"
 
 	"github.com/cosmos/cosmos-sdk/store/types"

@@ -1,7 +1,7 @@
 package types
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"

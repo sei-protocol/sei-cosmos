@@ -1,8 +1,8 @@
 package capability
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"math/rand"
 	"time"
 

@@ -1,8 +1,8 @@
 package module_test
 
 import (
-	"encoding/json"
 	"errors"
+	"github.com/goccy/go-json"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	"testing"
 

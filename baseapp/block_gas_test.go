@@ -2,8 +2,8 @@ package baseapp_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"math"
 	"testing"
 

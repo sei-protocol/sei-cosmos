@@ -2,7 +2,7 @@ package types
 
 import (
 	"bytes"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"sort"
 
 	"github.com/cosmos/cosmos-sdk/codec"

@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	json "encoding/json"
+	json "github.com/goccy/go-json"
 	reflect "reflect"
 
 	abci "github.com/tendermint/tendermint/abci/types"

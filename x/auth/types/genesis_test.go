@@ -1,7 +1,7 @@
 package types_test
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"testing"
 
 	proto "github.com/gogo/protobuf/proto"

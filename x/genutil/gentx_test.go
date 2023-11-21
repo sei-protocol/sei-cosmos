@@ -1,8 +1,8 @@
 package genutil_test
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"testing"
 
 	"github.com/stretchr/testify/suite"

@@ -1,7 +1,7 @@
 package network
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"io/ioutil"
 	"path/filepath"
 	"time"

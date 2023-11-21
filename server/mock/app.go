@@ -2,9 +2,9 @@ package mock
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"path/filepath"
 
 	abci "github.com/tendermint/tendermint/abci/types"

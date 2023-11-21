@@ -2,9 +2,9 @@ package codec
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"io"
 
 	amino "github.com/tendermint/go-amino"

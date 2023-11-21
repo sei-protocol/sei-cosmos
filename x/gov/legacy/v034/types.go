@@ -5,8 +5,8 @@
 package v034
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"

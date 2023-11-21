@@ -2,8 +2,8 @@ package distribution
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"math/rand"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"

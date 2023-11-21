@@ -1,8 +1,8 @@
 package version_test
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"runtime"
 	"testing"
 

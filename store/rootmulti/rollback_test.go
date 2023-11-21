@@ -2,8 +2,8 @@ package rootmulti_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/simapp"

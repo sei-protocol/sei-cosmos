@@ -1,8 +1,8 @@
 package simapp
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"io"
 	"io/ioutil"
 	"math/rand"

@@ -1,7 +1,7 @@
 package codec
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 
 	"github.com/gogo/protobuf/proto"
 	"gopkg.in/yaml.v2"

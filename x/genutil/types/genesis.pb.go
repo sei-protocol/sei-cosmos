@@ -4,7 +4,7 @@
 package types
 
 import (
-	encoding_json "encoding/json"
+	encoding_json "github.com/goccy/go-json"
 	fmt "fmt"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -27,7 +27,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 // GenesisState defines the raw genesis transaction in JSON.
 type GenesisState struct {
 	// gen_txs defines the genesis transactions.
-	GenTxs []encoding_json.RawMessage `protobuf:"bytes,1,rep,name=gen_txs,json=genTxs,proto3,casttype=encoding/json.RawMessage" json:"gentxs" yaml:"gentxs"`
+	GenTxs []encoding_json.RawMessage `protobuf:"bytes,1,rep,name=gen_txs,json=genTxs,proto3,casttype=github.com/goccy/go-json.RawMessage" json:"gentxs" yaml:"gentxs"`
 }
 
 func (m *GenesisState) Reset()         { *m = GenesisState{} }

@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 
 	"github.com/spf13/cobra"
 

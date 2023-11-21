@@ -1,9 +1,9 @@
 package cosmovisor
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"io/ioutil"
 	"net/url"
 	"os"

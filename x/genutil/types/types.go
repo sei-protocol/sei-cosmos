@@ -1,7 +1,7 @@
 package types
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"

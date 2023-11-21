@@ -1,6 +1,6 @@
 package v039
 
-import "encoding/json"
+import "github.com/goccy/go-json"
 
 const (
 	ModuleName = "genutil"

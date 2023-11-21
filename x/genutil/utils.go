@@ -2,8 +2,8 @@ package genutil
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"path/filepath"
 	"time"
 

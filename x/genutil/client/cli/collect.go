@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"path/filepath"
 
 	"github.com/pkg/errors"

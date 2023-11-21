@@ -2,7 +2,7 @@ package upgrade
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/goccy/go-json"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"

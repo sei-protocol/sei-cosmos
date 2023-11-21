@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"io/ioutil"
 
 	"github.com/cosmos/cosmos-sdk/codec"

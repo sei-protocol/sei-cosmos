@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 
 	"github.com/tendermint/tendermint/libs/log"
 

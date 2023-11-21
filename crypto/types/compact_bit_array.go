@@ -202,7 +202,7 @@ var bitArrayJSONRegexp = regexp.MustCompile(`\A"([_x]*)"\z`)
 func (bA *CompactBitArray) UnmarshalJSON(bz []byte) error {
 	b := string(bz)
 	if b == "null" {
-		// This is required e.g. for encoding/json when decoding
+		// This is required e.g. for github.com/goccy/go-json when decoding
 		// into a pointer with pre-allocated BitArray.
 		bA.ExtraBitsStored = 0
 		bA.Elems = nil

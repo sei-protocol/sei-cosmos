@@ -2,8 +2,8 @@ package keeper
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"strings"
 	"time"
 

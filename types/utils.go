@@ -2,8 +2,8 @@ package types
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"time"
 
 	dbm "github.com/tendermint/tm-db"

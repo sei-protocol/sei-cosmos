@@ -4,8 +4,8 @@ package gov
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"math/rand"
 
 	"github.com/gorilla/mux"

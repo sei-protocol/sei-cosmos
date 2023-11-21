@@ -1,8 +1,8 @@
 package types
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	"github.com/savaki/jq"

@@ -3354,8 +3354,8 @@ FEATURES
 
 IMPROVEMENTS
 
-* [x/bank] Now uses go-wire codec instead of 'encoding/json'
-* [x/auth] Now uses go-wire codec instead of 'encoding/json'
+* [x/bank] Now uses go-wire codec instead of 'github.com/goccy/go-json'
+* [x/auth] Now uses go-wire codec instead of 'github.com/goccy/go-json'
 * revised use of endblock and beginblock
 * [stake] module reorganized to include `types` and `keeper` package
 * [stake] keeper always loads the store (instead passing around which doesn't really boost efficiency)

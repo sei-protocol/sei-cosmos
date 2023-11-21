@@ -2,8 +2,8 @@ package types
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"reflect"
 	"sort"
 	"strings"

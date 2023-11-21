@@ -2,8 +2,8 @@ package cli
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 	"os"
 
 	"github.com/cosmos/go-bip39"

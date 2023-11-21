@@ -2,7 +2,7 @@ package authz
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"math/rand"
 
 	"github.com/gorilla/mux"

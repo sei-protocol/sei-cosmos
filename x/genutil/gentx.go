@@ -1,8 +1,8 @@
 package genutil
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/goccy/go-json"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 

@@ -1,7 +1,7 @@
 package genutil
 
 import (
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"os"
 	"path/filepath"
 	"testing"

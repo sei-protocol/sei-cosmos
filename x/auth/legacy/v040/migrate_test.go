@@ -241,12 +241,12 @@ func TestMigrate(t *testing.T) {
     }
   ],
   "params": {
+    "disable_seqno_check": false,
     "max_memo_characters": "10",
     "sig_verify_cost_ed25519": "40",
     "sig_verify_cost_secp256k1": "50",
     "tx_sig_limit": "20",
-    "tx_size_cost_per_byte": "30",
- 	"disable_seqno_check": false,
+    "tx_size_cost_per_byte": "30"
   }
 }`
 

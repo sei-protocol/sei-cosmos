@@ -312,11 +312,14 @@ func (store *Store) dirtyItems(start, end []byte) {
 	// Even without that, too many range checks eventually becomes more expensive
 	// than just not having the cache.
 	// store.emitUnsortedCacheSizeMetric()
+	// TODO: do we need to check the size of the unsortedCache?
 	store.unsortedCache.Range(func(key, value any) bool {
 		cKey := key.(string)
 		if dbm.IsKeyInDomain(conv.UnsafeStrToBytes(cKey), start, end) {
-			cacheValue, _ := store.cache.Load(key)
-			unsorted = append(unsorted, &kv.Pair{Key: []byte(cKey), Value: cacheValue.(*types.CValue).Value()})
+			cacheValue, found := store.cache.Load(key)
+			if found { //TODO: is this correct?
+				unsorted = append(unsorted, &kv.Pair{Key: []byte(cKey), Value: cacheValue.(*types.CValue).Value()})
+			}
 		}
 		return true
 	})

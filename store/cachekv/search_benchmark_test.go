@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
@@ -23,18 +24,18 @@ func BenchmarkLargeUnsortedMisses(b *testing.B) {
 }
 
 func generateStore() *Store {
-	cache := types.NewBoundedCache(mapCacheBackend{make(map[string]*types.CValue)}, types.DefaultCacheSizeLimit)
-	unsorted := map[string]struct{}{}
+	cache := &sync.Map{}
+	unsorted := &sync.Map{}
 	for i := 0; i < 5000; i++ {
 		key := "A" + strconv.Itoa(i)
-		unsorted[key] = struct{}{}
-		cache.CacheBackend.Set(key, &types.CValue{})
+		unsorted.Store(key, struct{}{})
+		cache.Store(key, &types.CValue{})
 	}
 
 	for i := 0; i < 5000; i++ {
 		key := "Z" + strconv.Itoa(i)
-		unsorted[key] = struct{}{}
-		cache.CacheBackend.Set(key, &types.CValue{})
+		unsorted.Store(key, struct{}{})
+		cache.Store(key, &types.CValue{})
 	}
 
 	return &Store{

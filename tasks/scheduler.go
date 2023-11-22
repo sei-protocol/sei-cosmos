@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"sort"
 	"sync"
 
@@ -15,6 +13,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/tendermint/tendermint/abci/types"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type status string

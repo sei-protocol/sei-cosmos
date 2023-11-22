@@ -98,24 +98,24 @@ func TestProcessAll(t *testing.T) {
 			},
 			expectedErr: nil,
 		},
-		//{
-		//	name:      "Test no stores on context should not panic",
-		//	workers:   50,
-		//	runs:      1,
-		//	addStores: false,
-		//	requests:  requestList(50),
-		//	deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
-		//		return types.ResponseDeliverTx{
-		//			Info: fmt.Sprintf("%d", ctx.TxIndex()),
-		//		}
-		//	},
-		//	assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
-		//		for idx, response := range res {
-		//			require.Equal(t, fmt.Sprintf("%d", idx), response.Info)
-		//		}
-		//	},
-		//	expectedErr: nil,
-		//},
+		{
+			name:      "Test no stores on context should not panic",
+			workers:   50,
+			runs:      1,
+			addStores: false,
+			requests:  requestList(50),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+				return types.ResponseDeliverTx{
+					Info: fmt.Sprintf("%d", ctx.TxIndex()),
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				for idx, response := range res {
+					require.Equal(t, fmt.Sprintf("%d", idx), response.Info)
+				}
+			},
+			expectedErr: nil,
+		},
 	}
 
 	for _, tt := range tests {

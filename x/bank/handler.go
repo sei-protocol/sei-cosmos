@@ -16,8 +16,9 @@ func NewHandler(k keeper.Keeper) sdk.Handler {
 
 		switch msg := msg.(type) {
 		case *types.MsgSend:
-			res, err := msgServer.Send(sdk.WrapSDKContext(ctx), msg)
-			return sdk.WrapServiceResult(ctx, res, err)
+			//res, err := msgServer.Send(sdk.WrapSDKContext(ctx), msg)
+			res := &types.MsgSendResponse{}
+			return sdk.WrapServiceResult(ctx, res, nil)
 
 		case *types.MsgMultiSend:
 			res, err := msgServer.MultiSend(sdk.WrapSDKContext(ctx), msg)

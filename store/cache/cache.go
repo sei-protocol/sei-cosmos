@@ -111,8 +111,8 @@ func (ckv *CommitKVStoreCache) getFromCache(key []byte) ([]byte, bool) {
 
 // getAndWriteToCache queries the underlying CommitKVStore and writes the result
 func (ckv *CommitKVStoreCache) getAndWriteToCache(key []byte) []byte {
-	ckv.mtx.Lock()
-	defer ckv.mtx.Unlock()
+	ckv.mtx.RLock()
+	defer ckv.mtx.RUnlock()
 	value := ckv.CommitKVStore.Get(key)
 	ckv.cache.Add(string(key), value)
 	return value

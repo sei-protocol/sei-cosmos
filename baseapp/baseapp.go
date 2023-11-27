@@ -914,6 +914,10 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 		defer consumeBlockGas()
 	}
 
+	if tx == nil {
+		return sdk.GasInfo{}, nil, nil, 0, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "tx decode error")
+	}
+
 	msgs := tx.GetMsgs()
 
 	if err := validateBasicTxMsgs(msgs); err != nil {

@@ -850,13 +850,13 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 	expireHandler abci.ExpireTxHandler,
 	err error,
 ) {
-	defer telemetry.MeasureThroughputSinceWithLabels(
-		telemetry.TxCount,
-		[]metrics.Label{
-			telemetry.NewLabel("mode", modeKeyToString[mode]),
-		},
-		time.Now(),
-	)
+	// defer telemetry.MeasureThroughputSinceWithLabels(
+	// 	telemetry.TxCount,
+	// 	[]metrics.Label{
+	// 		telemetry.NewLabel("mode", modeKeyToString[mode]),
+	// 	},
+	// 	time.Now(),
+	// )
 
 	// Reset events after each checkTx or simulateTx or recheckTx
 	// DeliverTx is garbage collected after FinalizeBlocker

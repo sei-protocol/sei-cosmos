@@ -1526,7 +1526,8 @@ func TestDeliverTx(t *testing.T) {
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
 
-			res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, tx, sha256.Sum256(txBytes))
+			decoded, _ := app.txDecoder(txBytes)
+			res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 			require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 			events := res.GetEvents()
 			require.Len(t, events, 3, "should contain ante handler, message type and counter events respectively")

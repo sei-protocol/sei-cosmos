@@ -53,13 +53,8 @@ func TestProcessAll(t *testing.T) {
 		name          string
 		workers       int
 		runs          int
-<<<<<<< Updated upstream
-		requests      []*sdk.DeliverTxEntry
-		deliverTxFunc mockDeliverTxFunc
-=======
 		requests      []types.RequestDeliverTx
 		deliverTxFunc deliverTxFunc
->>>>>>> Stashed changes
 		addStores     bool
 		expectedErr   error
 		assertions    func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx)

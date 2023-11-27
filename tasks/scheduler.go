@@ -15,7 +15,7 @@ import (
 
 // Scheduler processes tasks concurrently
 type Scheduler interface {
-	ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
+	ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error)
 }
 
 type scheduler struct {
@@ -58,34 +58,7 @@ func (s *scheduler) findConflicts(task *TxTask) (bool, []int) {
 	return valid, conflicts
 }
 
-<<<<<<< Updated upstream
-func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
-	res := make([]*deliverTxTask, 0, len(reqs))
-	for idx, r := range reqs {
-		res = append(res, &deliverTxTask{
-			Request: r.Request,
-			Index:   idx,
-			Status:  statusPending,
-		})
-	}
-	return res
-}
-
-func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
-	res := make([]types.ResponseDeliverTx, 0, len(tasks))
-	for _, t := range tasks {
-		res = append(res, *t.Response)
-	}
-	return res
-}
-
-func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
-	if s.multiVersionStores != nil {
-		return
-	}
-=======
 func (s *scheduler) initMultiVersionStore(ctx sdk.Context) {
->>>>>>> Stashed changes
 	mvs := make(map[sdk.StoreKey]multiversion.MultiVersionStore)
 	keys := ctx.MultiStore().StoreKeys()
 	for _, sk := range keys {
@@ -94,48 +67,9 @@ func (s *scheduler) initMultiVersionStore(ctx sdk.Context) {
 	s.multiVersionStores = mvs
 }
 
-<<<<<<< Updated upstream
-func indexesValidated(tasks []*deliverTxTask, idx []int) bool {
-	for _, i := range idx {
-		if tasks[i].Status != statusValidated {
-			return false
-		}
-	}
-	return true
-}
-
-func allValidated(tasks []*deliverTxTask) bool {
-	for _, t := range tasks {
-		if t.Status != statusValidated {
-			return false
-		}
-	}
-	return true
-}
-
-func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) {
-	// iterate over TXs, update estimated writesets where applicable
-	for i, req := range reqs {
-		mappedWritesets := req.EstimatedWritesets
-		// order shouldnt matter for storeKeys because each storeKey partitioned MVS is independent
-		for storeKey, writeset := range mappedWritesets {
-			// we use `-1` to indicate a prefill incarnation
-			s.multiVersionStores[storeKey].SetEstimatedWriteset(i, -1, writeset)
-		}
-	}
-}
-
-func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
-	// initialize mutli-version stores if they haven't been initialized yet
-	s.tryInitMultiVersionStore(ctx)
-	// prefill estimates
-	s.PrefillEstimates(ctx, reqs)
-	tasks := toTasks(reqs)
-=======
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error) {
 	s.initMultiVersionStore(ctx)
 	tasks, _ := toTasks(reqs)
->>>>>>> Stashed changes
 	toExecute := tasks
 	for !allValidated(tasks) {
 		var err error

@@ -68,10 +68,12 @@ func (sq *SchedulerQueue) AddToExecution(idx int, increment bool) {
 			sq.tasks[idx].Increment()
 		}
 		sq.taskMap[idx] = exists
+
+		fmt.Println(fmt.Sprintf("TASK(%d): -> PUSH (execute)", idx))
 		heap.Push(&sq.queue, idx)
 		sq.cond.Broadcast()
 	} else {
-		fmt.Printf("TASK(%d): (not executing (status=%s, type=%d/%d))\n", idx, sq.tasks[idx].Status(), sq.tasks[idx].TaskType)
+		fmt.Printf("TASK(%d): (not executing (status=%s, type=%d))\n", idx, sq.tasks[idx].Status(), sq.tasks[idx].TaskType)
 	}
 }
 
@@ -92,19 +94,21 @@ func (sq *SchedulerQueue) AddLaterTasksToValidation(after int) {
 	var anyAdded bool
 	for idx := after + 1; idx < len(sq.tasks); idx++ {
 		if sq.Exists(idx) || sq.tasks[idx].IsExecuting() {
+			fmt.Printf("TASK(%d): -> (after %d) NOT validating (status=%s)\n", idx, after, sq.tasks[idx].Status())
 			continue
 		}
 		sq.tasks[idx].Lock()
 
 		sq.taskMap[idx] = exists
-		fmt.Printf("TASK(%d): -> (after %d) VALIDATE\n", after, idx)
+		fmt.Printf("TASK(%d): -> (after %d) VALIDATE\n", idx, after)
 		sq.tasks[idx].TaskType = TypeValidation
 		sq.tasks[idx].SetStatus(statusValidating)
+
+		fmt.Println(fmt.Sprintf("TASK(%d): -> PUSH (validate after)", idx))
 		heap.Push(&sq.queue, idx)
 		anyAdded = true
 
 		sq.tasks[idx].Unlock()
-
 	}
 	if anyAdded {
 		sq.cond.Broadcast()
@@ -135,6 +139,8 @@ func (sq *SchedulerQueue) AddToValidation(idx int) {
 	fmt.Printf("TASK(%d): -> VALIDATE\n", idx)
 	sq.tasks[idx].TaskType = TypeValidation
 	sq.tasks[idx].SetStatus(statusValidating)
+
+	fmt.Println(fmt.Sprintf("TASK(%d): -> PUSH (validate)", idx))
 	heap.Push(&sq.queue, idx)
 	sq.cond.Broadcast()
 }
@@ -143,7 +149,7 @@ func (sq *SchedulerQueue) Complete(idx int) {
 	sq.Lock()
 	defer sq.Unlock()
 
-	//fmt.Println(fmt.Sprintf("TASK(%d): COMPLETE ", idx))
+	fmt.Println(fmt.Sprintf("TASK(%d): -> IDLE", idx))
 	sq.tasks[idx].TaskType = TypeIdle
 }
 
@@ -164,6 +170,7 @@ func (sq *SchedulerQueue) NextTask() (*TxTask, bool) {
 
 	idx := heap.Pop(&sq.queue).(int)
 	delete(sq.taskMap, idx)
+	fmt.Println(fmt.Sprintf("TASK(%d): -> POP (type=%d), len=%d", idx, sq.tasks[idx].TaskType, len(sq.queue)))
 	return sq.tasks[idx], true
 }
 

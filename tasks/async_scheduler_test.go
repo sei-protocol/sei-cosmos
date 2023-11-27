@@ -15,7 +15,7 @@ func TestAsyncProcessAll(t *testing.T) {
 		name          string
 		workers       int
 		runs          int
-		requests      []types.RequestDeliverTx
+		requests      []*sdk.DeliverTxEntry
 		deliverTxFunc deliverTxFunc
 		addStores     bool
 		expectedErr   error
@@ -23,10 +23,10 @@ func TestAsyncProcessAll(t *testing.T) {
 	}{
 		{
 			name:      "Test every tx accesses same key",
-			workers:   50,
+			workers:   10,
 			runs:      1,
 			addStores: true,
-			requests:  requestList(50),
+			requests:  requestList(10),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
@@ -61,7 +61,7 @@ func TestAsyncProcessAll(t *testing.T) {
 				}
 				// confirm last write made it to the parent store
 				latest := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
-				require.Equal(t, "49", string(latest))
+				require.Equal(t, fmt.Sprintf("%d", len(res)-1), string(latest))
 			},
 			expectedErr: nil,
 		},

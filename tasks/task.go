@@ -32,6 +32,8 @@ const (
 	statusInvalid status = "invalid"
 	// statusValidating means the task is being validated
 	statusValidating status = "validating"
+	// statusValidating means the task is being validated
+	statusValidated status = "validated"
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
 )
@@ -52,6 +54,21 @@ type TxTask struct {
 	Request       types.RequestDeliverTx
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
+	WaitCh        chan struct{}
+}
+
+func toTxTasks(reqs []*sdk.DeliverTxEntry) ([]*TxTask, *sync.WaitGroup) {
+	res := make([]*TxTask, 0, len(reqs))
+	wg := sync.WaitGroup{}
+	for idx, r := range reqs {
+		wg.Add(1)
+		res = append(res, &TxTask{
+			Request: r.Request,
+			Index:   idx,
+			status:  statusPending,
+		})
+	}
+	return res, &wg
 }
 
 func (dt *TxTask) RefreshCtx(ctx sdk.Context, mvsMap map[sdk.StoreKey]multiversion.MultiVersionStore) {
@@ -148,7 +165,7 @@ func (dt *TxTask) Status() status {
 	return dt.status
 }
 
-func collectResponses(tasks []*TxTask) []types.ResponseDeliverTx {
+func collectTaskResponses(tasks []*TxTask) []types.ResponseDeliverTx {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
 	for _, t := range tasks {
 		if t.Response == nil {
@@ -160,21 +177,7 @@ func collectResponses(tasks []*TxTask) []types.ResponseDeliverTx {
 	return res
 }
 
-func toTasks(reqs []types.RequestDeliverTx) ([]*TxTask, *sync.WaitGroup) {
-	res := make([]*TxTask, 0, len(reqs))
-	wg := sync.WaitGroup{}
-	for idx, r := range reqs {
-		wg.Add(1)
-		res = append(res, &TxTask{
-			Request: r,
-			Index:   idx,
-			status:  statusPending,
-		})
-	}
-	return res, &wg
-}
-
-func indexesValidated(tasks []*TxTask, idx []int) bool {
+func indexesTasksValidated(tasks []*TxTask, idx []int) bool {
 	for _, i := range idx {
 		if tasks[i].Status() != statusValid {
 			return false
@@ -183,10 +186,9 @@ func indexesValidated(tasks []*TxTask, idx []int) bool {
 	return true
 }
 
-func allValidated(tasks []*TxTask) bool {
+func allTasksValidated(tasks []*TxTask) bool {
 	for _, t := range tasks {
 		if t.Status() != statusValid {
-			//fmt.Println(fmt.Sprintf("TASK(%d): %s", t.Index, t.Status()))
 			return false
 		}
 	}

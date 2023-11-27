@@ -89,9 +89,9 @@ func waitWithMsg(msg string) context.CancelFunc {
 	return cancel
 }
 
-func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliverTx) ([]types.ResponseDeliverTx, error) {
+func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	s.initMultiVersionStore(ctx)
-	tasks, _ := toTasks(reqs)
+	tasks, _ := toTxTasks(reqs)
 
 	workers := s.workers
 	if len(tasks) < workers || s.workers < 1 {
@@ -121,7 +121,9 @@ func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliver
 					return
 				}
 
+				pl := waitWithMsg("PROCESS LOCK")
 				task.ProcessLock()
+				pl()
 
 				switch task.TaskType {
 				case TypeExecution:
@@ -130,10 +132,10 @@ func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliver
 					queue.Complete(task.Index)
 					switch status {
 					case statusExecuted:
-						fmt.Println(fmt.Sprintf("TASK(%d): EXECUTED", task.Index))
+						fmt.Println(fmt.Sprintf("W(%d) TASK(%d): EXECUTED", worker, task.Index))
 						queue.AddToValidation(task.Index)
 					case statusAborted:
-						fmt.Println(fmt.Sprintf("TASK(%d): ABORTED (type=%d)", task.Index, task.TaskType))
+						fmt.Println(fmt.Sprintf("W(%d) TASK(%d): ABORTED (type=%d)", worker, task.Index, task.TaskType))
 						queue.AddToExecution(task.Index, false)
 					default:
 						panic("unexpected status during execution")
@@ -143,25 +145,33 @@ func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliver
 					queue.Complete(task.Index)
 					switch status {
 					case statusInvalid:
-						fmt.Println(fmt.Sprintf("TASK(%d): INVALID", task.Index))
+						fmt.Println(fmt.Sprintf("W(%d) TASK(%d): INVALID", worker, task.Index))
 						final = false
 						queue.AddToExecution(task.Index, true)
 						queue.AddLaterTasksToValidation(task.Index)
 					case statusValid:
-						fmt.Println(fmt.Sprintf("TASK(%d): VALID", task.Index))
+						fmt.Println(fmt.Sprintf("W(%d) TASK(%d): VALID", worker, task.Index))
 						if !final {
 							queue.AddLaterTasksToValidation(task.Index)
 						}
+						nvw := waitWithMsg("NOTIFY VALID WAIT (valid)")
 						validSignal <- task.Index
+						nvw()
 					case statusWaiting:
-						fmt.Println(fmt.Sprintf("TASK(%d): WAITING", task.Index))
-						if indexesValidated(tasks, task.Dependencies) {
+						fmt.Println(fmt.Sprintf("W(%d) TASK(%d): WAITING", worker, task.Index))
+						if indexesTasksValidated(tasks, task.Dependencies) {
 							queue.AddToValidation(task.Index)
 						}
 					default:
-						panic(fmt.Sprintf("unexpected status during validation: %v", task.TaskType))
+						panic(fmt.Sprintf("W(%d) unexpected status during validation: %v", worker, task.TaskType))
 					}
-
+				case TypeIdle:
+					fmt.Println(fmt.Sprintf("W(%d) TASK(%d): FOUND IDLE (do nothing)", worker, task.Index))
+					if task.status == statusValid {
+						c := waitWithMsg("NOTIFY VALID WAIT (idle)")
+						validSignal <- task.Index
+						c()
+					}
 				default:
 					panic("unexpected task type")
 				}
@@ -173,6 +183,7 @@ func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliver
 	go func() {
 		wg.Add(1)
 		defer func() {
+			fmt.Println("TRYING TO CLOSE")
 			queue.Close()
 			wg.Done()
 		}()
@@ -181,13 +192,15 @@ func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliver
 			case <-ctx.Context().Done():
 				return
 			case <-validSignal:
-				if final && allValidated(tasks) && queue.Len() == 0 {
+				if final && allTasksValidated(tasks) && queue.Len() == 0 {
 					fmt.Println("ALL DONE")
 					return
-				} else if !final && allValidated(tasks) && queue.Len() == 0 {
+				} else if !final && allTasksValidated(tasks) && queue.Len() == 0 {
 					fmt.Println("ALL VALID")
 					final = true
 					queue.AddLaterTasksToValidation(-1)
+				} else if queue.Len() == 0 {
+					fmt.Printf("EMPTY QUEUE!!!!!!!!!!!!!! (valid=%v)", allTasksValidated(tasks))
 				}
 			}
 		}
@@ -203,7 +216,7 @@ func (s *asyncScheduler) ProcessAll(ctx sdk.Context, reqs []types.RequestDeliver
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
-	return collectResponses(tasks), nil
+	return collectTaskResponses(tasks), nil
 }
 
 func (s *asyncScheduler) validate(task *TxTask) status {

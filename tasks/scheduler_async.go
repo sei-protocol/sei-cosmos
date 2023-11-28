@@ -14,12 +14,12 @@ import (
 // TODO: remove after things work
 func TaskLog(task *deliverTxTask, msg string) {
 	// helpful for debugging state transitions
-	fmt.Println(fmt.Sprintf("Task(%d\t%s):\t%s", task.Index, task.Status, msg))
+	//fmt.Println(fmt.Sprintf("Task(%d\t%s):\t%s", task.Index, task.Status, msg))
 }
 
 // TODO: remove after things work
 // waitWithMsg prints a message every 1s, so we can tell what's hanging
-func waitWithMsg(msg string) context.CancelFunc {
+func waitWithMsg(msg string, handlers ...func()) context.CancelFunc {
 	goctx, cancel := context.WithCancel(context.Background())
 	tick := time.NewTicker(1 * time.Second)
 	go func() {
@@ -29,6 +29,9 @@ func waitWithMsg(msg string) context.CancelFunc {
 				return
 			case <-tick.C:
 				fmt.Println(msg)
+				for _, h := range handlers {
+					h()
+				}
 			}
 		}
 	}()
@@ -65,15 +68,20 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			defer wg.Done()
 
 			for {
-				nt := waitWithMsg(fmt.Sprintf("worker=%d: next task...(%d)", worker, active.Load()))
+				nt := waitWithMsg(fmt.Sprintf("worker=%d: next task...", worker), func() {
+					fmt.Println(fmt.Sprintf("worker=%d: active=%d", worker, active.Load()))
+				})
 				t, ok := queue.NextTask()
 				nt()
 				if !ok {
 					return
 				}
 				active.Add(1)
+
 				if s.processTask(t, ctx, queue, tasks) {
+					active.Add(-1)
 					ch <- t.Index
+					continue
 				} else {
 					final.Store(false)
 				}

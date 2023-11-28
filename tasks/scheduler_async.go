@@ -57,17 +57,37 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		queue.AddExecutionTask(t.Index)
 	}
 
-	ch := make(chan int, len(tasks))
 	active := atomic.Int32{}
 	wg := sync.WaitGroup{}
 	wg.Add(workers)
 	final := atomic.Bool{}
+	finisher := sync.Once{}
+	mx := sync.Mutex{}
 
 	for i := 0; i < workers; i++ {
 		go func(worker int) {
 			defer wg.Done()
 
 			for {
+
+				// check if all tasks are complete AND not running anything
+				mx.Lock()
+				if active.Load() == 0 && queue.IsCompleted() {
+					if final.Load() {
+						finisher.Do(func() {
+							queue.Close()
+						})
+					} else {
+						// try one more validation of everything at end
+						final.Store(true)
+						for i := 0; i < len(tasks); i++ {
+							queue.AddValidationTask(i)
+						}
+					}
+				}
+				mx.Unlock()
+
+				//TODO: remove once we feel good about this not hanging
 				nt := waitWithMsg(fmt.Sprintf("worker=%d: next task...", worker), func() {
 					fmt.Println(fmt.Sprintf("worker=%d: active=%d", worker, active.Load()))
 				})
@@ -77,12 +97,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					return
 				}
 				active.Add(1)
-
-				if s.processTask(t, ctx, queue, tasks) {
-					active.Add(-1)
-					ch <- t.Index
-					continue
-				} else {
+				if !s.processTask(t, ctx, queue, tasks) {
+					// if anything doesn't validate successfully, we will need a final re-sweep
 					final.Store(false)
 				}
 				active.Add(-1)
@@ -90,31 +106,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 		}(i)
 	}
-
-	wg.Add(1)
-	go func() {
-		defer close(ch)
-		defer wg.Done()
-		defer queue.Close()
-		for {
-			select {
-			case <-ctx.Context().Done():
-				return
-			case <-ch:
-				// if all tasks are completed AND there are no more tasks in the queue
-				if active.Load() == 0 && queue.IsCompleted() {
-					if final.Load() {
-						return
-					}
-					// try one more validation of everything
-					final.Store(true)
-					for i := 0; i < len(tasks); i++ {
-						queue.AddValidationTask(i)
-					}
-				}
-			}
-		}
-	}()
 
 	wg.Wait()
 

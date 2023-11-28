@@ -238,7 +238,7 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 
 // DeliverTxBatch executes multiple txs
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
-	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
+	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.MockDeliverTx)
 	// This will basically no-op the actual prefill if the metadata for the txs is empty
 
 	// process all txs, this will also initializes the MVS if prefill estimates was disabled
@@ -252,6 +252,16 @@ func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchReques
 		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
 	}
 	return sdk.DeliverTxBatchResponse{Results: responses}
+}
+
+func (app *BaseApp) MockDeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+	return abci.ResponseDeliverTx{
+		GasWanted: int64(5), // TODO: Should type accept unsigned ints?
+		GasUsed:   int64(5), // TODO: Should type accept unsigned ints?
+		Log:       "",
+		Data:      nil,
+		Events:    nil,
+	}
 }
 
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.

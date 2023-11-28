@@ -263,10 +263,6 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 			// mark as validated, which will avoid re-validating unless a lower-index re-validates
 			task.Status = statusValidated
 			return false
-		} else {
-			TaskLog(task, fmt.Sprintf("conflicts: %d", len(conflicts)))
-			task.Status = statusInvalid
-			return true
 		}
 		// conflicts and valid, so it'll validate next time
 		return false

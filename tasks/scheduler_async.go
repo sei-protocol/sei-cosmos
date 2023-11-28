@@ -11,12 +11,14 @@ import (
 	"github.com/tendermint/tendermint/abci/types"
 )
 
-// TODO: remove after we have a good sense this is working
+// TODO: remove after things work
 func TaskLog(task *deliverTxTask, msg string) {
 	// helpful for debugging state transitions
-	//fmt.Println(fmt.Sprintf("Task(%d\t%s):\t%s", task.Index, task.Status, msg))
+	fmt.Println(fmt.Sprintf("Task(%d\t%s):\t%s", task.Index, task.Status, msg))
 }
 
+// TODO: remove after things work
+// waitWithMsg prints a message every 1s, so we can tell what's hanging
 func waitWithMsg(msg string) context.CancelFunc {
 	goctx, cancel := context.WithCancel(context.Background())
 	tick := time.NewTicker(1 * time.Second)
@@ -70,9 +72,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					return
 				}
 				active.Add(1)
-				if t.Incarnation > 20 {
-					panic("too many incarnations")
-				}
 				if s.processTask(t, ctx, queue, tasks) {
 					ch <- t.Index
 				} else {
@@ -122,24 +121,25 @@ func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *Schedu
 	case TypeValidation:
 		TaskLog(t, "validate")
 		s.validateTask(ctx, t)
+
+		// check the outcome of validation and do things accordingly
 		switch t.Status {
 		case statusValidated:
+			// task is possibly finished (can be re-validated by others)
 			TaskLog(t, "VALIDATED")
 			queue.SetToIdle(t.Index)
 			return true
-		case statusWaiting:
+		case statusWaiting, statusExecuted:
+			// task should be re-validated (waiting on others)
 			queue.ReValidate(t.Index)
 		case statusInvalid:
+			// task should be re-executed along with all +1 tasks
 			queue.ReExecute(t.Index)
 			for i := t.Index + 1; i < len(tasks); i++ {
 				queue.AddValidationTask(i)
 			}
 		case statusAborted:
-			//if s.allTasks[t.Abort.DependentTxIdx].Status == statusValidated {
-			//	queue.ReExecute(t.Abort.DependentTxIdx)
-			//}
-			queue.ReExecute(t.Index)
-		case statusPending:
+			// task should be re-executed
 			queue.ReExecute(t.Index)
 		default:
 			TaskLog(t, "unexpected status")

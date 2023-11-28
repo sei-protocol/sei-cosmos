@@ -65,7 +65,7 @@ func TestProcessAll(t *testing.T) {
 	}{
 		{
 			name:      "Test every tx accesses same key",
-			workers:   5,
+			workers:   50,
 			runs:      50,
 			addStores: true,
 			requests:  requestList(100),
@@ -122,6 +122,7 @@ func TestProcessAll(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			for i := 0; i < tt.runs; i++ {
 				// set a tracer provider
+				fmt.Println("**************************** RUN ", i, "****************************")
 				tp := trace.NewNoopTracerProvider()
 				otel.SetTracerProvider(trace.NewNoopTracerProvider())
 				tr := tp.Tracer("scheduler-test")

@@ -33,6 +33,8 @@ const (
 	// statusValidated means the task has been validated
 	// tasks in this status can be reset if an earlier task fails validation
 	statusValidated status = "validated"
+	// statusInvalid means the task has been validated and is not valid
+	statusInvalid status = "invalid"
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
 )
@@ -41,6 +43,7 @@ type deliverTxTask struct {
 	Ctx     sdk.Context
 	AbortCh chan occ.Abort
 
+	Type          TaskType
 	Status        status
 	Dependencies  []int
 	Abort         *occ.Abort
@@ -52,6 +55,18 @@ type deliverTxTask struct {
 	ValidateCh    chan struct{}
 }
 
+func (dt *deliverTxTask) IsInvalid() bool {
+	return dt.Status == statusInvalid || dt.Status == statusAborted
+}
+
+func (dt *deliverTxTask) IsValid() bool {
+	return dt.Status == statusValidated
+}
+
+func (dt *deliverTxTask) IsWaiting() bool {
+	return dt.Status == statusWaiting
+}
+
 func (dt *deliverTxTask) Reset() {
 	dt.Status = statusPending
 	dt.Response = nil
@@ -61,6 +76,18 @@ func (dt *deliverTxTask) Reset() {
 	dt.VersionStores = nil
 }
 
+func (dt *deliverTxTask) ResetForExecution() {
+	dt.Status = statusPending
+	dt.Type = TypeExecution
+	dt.Response = nil
+	dt.Abort = nil
+	dt.AbortCh = nil
+	dt.Dependencies = nil
+	dt.VersionStores = nil
+	dt.Incarnation++
+	dt.ValidateCh = make(chan struct{}, 1)
+}
+
 func (dt *deliverTxTask) Increment() {
 	dt.Incarnation++
 	dt.ValidateCh = make(chan struct{}, 1)
@@ -68,6 +95,7 @@ func (dt *deliverTxTask) Increment() {
 
 // Scheduler processes tasks concurrently
 type Scheduler interface {
+	ProcessAllSync(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
 	ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
 }
 
@@ -178,7 +206,7 @@ func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry
 	}
 }
 
-func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+func (s *scheduler) ProcessAllSync(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
@@ -223,6 +251,7 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 
 			// if the conflicts are now validated, then rerun this task
 			if indexesValidated(s.allTasks, conflicts) {
+				task.Status = statusInvalid
 				return true
 			} else {
 				// otherwise, wait for completion
@@ -234,13 +263,21 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 			// mark as validated, which will avoid re-validating unless a lower-index re-validates
 			task.Status = statusValidated
 			return false
+		} else {
+			TaskLog(task, fmt.Sprintf("conflicts: %d", len(conflicts)))
+			task.Status = statusInvalid
+			return true
 		}
 		// conflicts and valid, so it'll validate next time
 		return false
 
 	case statusWaiting:
 		// if conflicts are done, then this task is ready to run again
-		return indexesValidated(s.allTasks, task.Dependencies)
+		if indexesValidated(s.allTasks, task.Dependencies) {
+			task.Status = statusPending
+			return true
+		}
+		return false
 	}
 	panic("unexpected status: " + task.Status)
 }

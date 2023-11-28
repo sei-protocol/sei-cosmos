@@ -58,7 +58,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	active := atomic.Int32{}
 	wg := sync.WaitGroup{}
 	wg.Add(workers)
-	var final bool
+	final := atomic.Bool{}
 
 	for i := 0; i < workers; i++ {
 		go func(worker int) {
@@ -75,7 +75,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 				if s.processTask(t, ctx, queue, tasks) {
 					ch <- t.Index
 				} else {
-					final = false
+					final.Store(false)
 				}
 				active.Add(-1)
 			}
@@ -95,11 +95,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			case <-ch:
 				// if all tasks are completed AND there are no more tasks in the queue
 				if active.Load() == 0 && queue.IsCompleted() {
-					if final {
+					if final.Load() {
 						return
 					}
 					// try one more validation of everything
-					final = true
+					final.Store(true)
 					for i := 0; i < len(tasks); i++ {
 						queue.AddValidationTask(i)
 					}

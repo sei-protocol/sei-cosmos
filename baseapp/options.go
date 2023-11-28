@@ -87,6 +87,10 @@ func SetSnapshotInterval(interval uint64) func(*BaseApp) {
 	return func(app *BaseApp) { app.SetSnapshotInterval(interval) }
 }
 
+func SetConcurrencyWorkers(workers int) func(*BaseApp) {
+	return func(app *BaseApp) { app.SetConcurrencyWorkers(workers) }
+}
+
 // SetSnapshotKeepRecent sets the recent snapshots to keep.
 func SetSnapshotKeepRecent(keepRecent uint32) func(*BaseApp) {
 	return func(app *BaseApp) { app.SetSnapshotKeepRecent(keepRecent) }
@@ -284,7 +288,7 @@ func (app *BaseApp) SetSnapshotStore(snapshotStore *snapshots.Store) {
 		app.snapshotManager = nil
 		return
 	}
-	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms)
+	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms, app.qms, app.logger)
 }
 
 // SetSnapshotInterval sets the snapshot interval.
@@ -293,6 +297,13 @@ func (app *BaseApp) SetSnapshotInterval(snapshotInterval uint64) {
 		panic("SetSnapshotInterval() on sealed BaseApp")
 	}
 	app.snapshotInterval = snapshotInterval
+}
+
+func (app *BaseApp) SetConcurrencyWorkers(workers int) {
+	if app.sealed {
+		panic("SetConcurrencyWorkers() on sealed BaseApp")
+	}
+	app.concurrencyWorkers = workers
 }
 
 // SetSnapshotKeepRecent sets the number of recent snapshots to keep.
@@ -327,4 +338,11 @@ func (app *BaseApp) SetStreamingService(s StreamingService) {
 	// register the StreamingService within the BaseApp
 	// BaseApp will pass BeginBlock, DeliverTx, and EndBlock requests and responses to the streaming services to update their ABCI context
 	app.abciListeners = append(app.abciListeners, s)
+}
+
+// SetQueryMultiStore set an alternative MultiStore implementation to support historical queries.
+//
+// Ref: https://github.com/cosmos/cosmos-sdk/issues/13317
+func (app *BaseApp) SetQueryMultiStore(ms sdk.QueryMultiStore) {
+	app.qms = ms
 }

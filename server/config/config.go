@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/spf13/viper"
-
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	seidb "github.com/sei-protocol/sei-db/config"
+	"github.com/spf13/viper"
 	tmcfg "github.com/tendermint/tendermint/config"
 )
 
@@ -21,6 +21,9 @@ const (
 
 	// DefaultGRPCWebAddress defines the default address to bind the gRPC-web server to.
 	DefaultGRPCWebAddress = "0.0.0.0:9091"
+
+	// DefaultConcurrencyWorkers defines the default workers to use for concurrent transactions
+	DefaultConcurrencyWorkers = 10
 )
 
 // BaseConfig defines the server's basic configuration
@@ -88,6 +91,10 @@ type BaseConfig struct {
 	SeparateOrphanVersionsToKeep int64  `mapstructure:"separate-orphan-versions-to-keep"`
 	NumOrphanPerFile             int    `mapstructure:"num-orphan-per-file"`
 	OrphanDirectory              string `mapstructure:"orphan-dir"`
+
+	// ConcurrencyWorkers defines the number of workers to use for concurrent
+	// transaction execution. A value of -1 means unlimited workers.  Default value is 10.
+	ConcurrencyWorkers int `mapstructure:"concurrency-workers"`
 }
 
 // APIConfig defines the API listener configuration.
@@ -185,12 +192,14 @@ type Config struct {
 	BaseConfig `mapstructure:",squash"`
 
 	// Telemetry defines the application telemetry configuration
-	Telemetry telemetry.Config `mapstructure:"telemetry"`
-	API       APIConfig        `mapstructure:"api"`
-	GRPC      GRPCConfig       `mapstructure:"grpc"`
-	Rosetta   RosettaConfig    `mapstructure:"rosetta"`
-	GRPCWeb   GRPCWebConfig    `mapstructure:"grpc-web"`
-	StateSync StateSyncConfig  `mapstructure:"state-sync"`
+	Telemetry   telemetry.Config        `mapstructure:"telemetry"`
+	API         APIConfig               `mapstructure:"api"`
+	GRPC        GRPCConfig              `mapstructure:"grpc"`
+	Rosetta     RosettaConfig           `mapstructure:"rosetta"`
+	GRPCWeb     GRPCWebConfig           `mapstructure:"grpc-web"`
+	StateSync   StateSyncConfig         `mapstructure:"state-sync"`
+	StateCommit seidb.StateCommitConfig `mapstructure:"state-commit"`
+	StateStore  seidb.StateStoreConfig  `mapstructure:"state-store"`
 }
 
 // SetMinGasPrices sets the validator's minimum gas prices.
@@ -236,6 +245,7 @@ func DefaultConfig() *Config {
 			IAVLDisableFastNode: true,
 			CompactionInterval:  0,
 			NoVersioning:        false,
+			ConcurrencyWorkers:  DefaultConcurrencyWorkers,
 		},
 		Telemetry: telemetry.Config{
 			Enabled:      false,
@@ -270,6 +280,8 @@ func DefaultConfig() *Config {
 			SnapshotKeepRecent: 2,
 			SnapshotDirectory:  "",
 		},
+		StateCommit: seidb.DefaultStateCommitConfig(),
+		StateStore:  seidb.DefaultStateStoreConfig(),
 	}
 }
 
@@ -310,6 +322,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			SeparateOrphanVersionsToKeep: v.GetInt64("separate-orphan-versions-to-keep"),
 			NumOrphanPerFile:             v.GetInt("num-orphan-per-file"),
 			OrphanDirectory:              v.GetString("orphan-dir"),
+			ConcurrencyWorkers:           v.GetInt("concurrency-workers"),
 		},
 		Telemetry: telemetry.Config{
 			ServiceName:             v.GetString("telemetry.service-name"),
@@ -351,6 +364,22 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			SnapshotInterval:   v.GetUint64("state-sync.snapshot-interval"),
 			SnapshotKeepRecent: v.GetUint32("state-sync.snapshot-keep-recent"),
 			SnapshotDirectory:  v.GetString("state-sync.snapshot-directory"),
+		},
+		StateCommit: seidb.StateCommitConfig{
+			Enable:             v.GetBool("state-commit.enable-sc"),
+			ZeroCopy:           v.GetBool("state-commit.zero-copy"),
+			AsyncCommitBuffer:  v.GetInt("state-commit.async-commit-buffer"),
+			SnapshotKeepRecent: v.GetUint32("state-commit.sc-keep-recent"),
+			SnapshotInterval:   v.GetUint32("state-commit.sc-snapshot-interval"),
+			CacheSize:          v.GetInt("state-commit.cache-size"),
+		},
+		StateStore: seidb.StateStoreConfig{
+			Enable:               v.GetBool("state-store.enable-ss"),
+			Backend:              v.GetString("state-store.ss-backend"),
+			AsyncWriteBuffer:     v.GetInt("state-store.async-write-buffer"),
+			KeepRecent:           v.GetInt("state-store.ss-keep-recent"),
+			PruneIntervalSeconds: v.GetInt("state-store.prune-interval-seconds"),
+			ImportNumWorkers:     v.GetInt("state-store.import-num-workers"),
 		},
 	}, nil
 }

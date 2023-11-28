@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/cosmos/cosmos-sdk/tasks"
 
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
@@ -234,11 +237,45 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	}, nil
 }
 
+// DeliverTxBatch executes multiple txs
+func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Debug] DeliverTxBatch of %d txs for block height %d took %s \n", len(req.TxEntries), app.LastBlockHeight(), time.Since(startTime))
+	}()
+	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.MockDeliverTx)
+	// This will basically no-op the actual prefill if the metadata for the txs is empty
+
+	// process all txs, this will also initializes the MVS if prefill estimates was disabled
+	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
+	if err != nil {
+		// TODO: handle error
+	}
+
+	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
+	for _, tx := range txRes {
+		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
+	}
+	return sdk.DeliverTxBatchResponse{Results: responses}
+}
+
+func (app *BaseApp) MockDeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+	return abci.ResponseDeliverTx{
+		GasWanted: int64(5), // TODO: Should type accept unsigned ints?
+		GasUsed:   int64(5), // TODO: Should type accept unsigned ints?
+		Log:       "",
+		Data:      nil,
+		Events:    nil,
+	}
+}
+
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.
 // State only gets persisted if all messages are valid and get executed successfully.
-// Otherwise, the ResponseDeliverTx will contain releveant error information.
+// Otherwise, the ResponseDeliverTx will contain relevant error information.
 // Regardless of tx execution outcome, the ResponseDeliverTx will contain relevant
 // gas execution context.
+// TODO: (occ) this is the function called from sei-chain to perform execution of a transaction.
+// We'd likely replace this with an execution tasks that is scheduled by the OCC scheduler
 func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
 	defer func() {
@@ -344,13 +381,17 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 		app.halt()
 	}
 
-	if app.snapshotInterval > 0 && uint64(header.Height)%app.snapshotInterval == 0 {
-		go app.snapshot(header.Height)
-	}
+	app.SnapshotIfApplicable(uint64(header.Height))
 
 	return &abci.ResponseCommit{
 		RetainHeight: retainHeight,
 	}, nil
+}
+
+func (app *BaseApp) SnapshotIfApplicable(height uint64) {
+	if app.snapshotInterval > 0 && height%app.snapshotInterval == 0 {
+		go app.Snapshot(int64(height))
+	}
 }
 
 // halt attempts to gracefully shutdown the node via SIGINT and SIGTERM falling
@@ -376,7 +417,7 @@ func (app *BaseApp) halt() {
 }
 
 // snapshot takes a snapshot of the current state and prunes any old snapshottypes.
-func (app *BaseApp) snapshot(height int64) {
+func (app *BaseApp) Snapshot(height int64) {
 	if app.snapshotManager == nil {
 		app.logger.Info("snapshot manager not configured")
 		return
@@ -589,6 +630,16 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 
 func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQuery) abci.ResponseQuery {
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
+	defer func() {
+		// We should close the multistore to avoid leaking resources.
+		if closer, ok := ctx.MultiStore().(io.Closer); ok {
+			err := closer.Close()
+			if err != nil {
+				app.logger.Error("failed to close Cache MultiStore", "err", err)
+			}
+		}
+	}()
+
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}
@@ -641,7 +692,11 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 		return sdk.Context{}, err
 	}
 
-	lastBlockHeight := app.LastBlockHeight()
+	qms := app.qms
+	if qms == nil || height == app.cms.LatestVersion() {
+		qms = app.cms
+	}
+	lastBlockHeight := qms.LatestVersion()
 	if height > lastBlockHeight {
 		return sdk.Context{},
 			sdkerrors.Wrap(
@@ -663,7 +718,7 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	cacheMS, err := app.cms.CacheMultiStoreWithVersion(height)
+	cacheMS, err := qms.CacheMultiStoreWithVersion(height)
 	if err != nil {
 		return sdk.Context{},
 			sdkerrors.Wrapf(
@@ -872,6 +927,17 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 	}
 
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
+
+	defer func() {
+		// We should close the multistore to avoid leaking resources.
+		if closer, ok := ctx.MultiStore().(io.Closer); ok {
+			err := closer.Close()
+			if err != nil {
+				app.logger.Error("failed to close Cache MultiStore", "err", err)
+			}
+		}
+	}()
+
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}

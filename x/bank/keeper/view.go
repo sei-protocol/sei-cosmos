@@ -229,6 +229,5 @@ func (k BaseViewKeeper) ValidateBalance(ctx sdk.Context, addr sdk.AccAddress) er
 // getAccountStore gets the account store of the given address.
 func (k BaseViewKeeper) getAccountStore(ctx sdk.Context, addr sdk.AccAddress) prefix.Store {
 	store := ctx.KVStore(k.storeKey)
-
 	return prefix.NewStore(store, types.CreateAccountBalancesPrefix(addr))
 }

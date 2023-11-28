@@ -21,7 +21,6 @@ type Store interface {
 type Committer interface {
 	Commit(bool) CommitID
 	LastCommitID() CommitID
-
 	SetPruning(PruningOptions)
 	GetPruning() PruningOptions
 }
@@ -145,6 +144,14 @@ type MultiStore interface {
 
 	// Resets the tracked event list
 	ResetEvents()
+
+	// LatestVersion returns the latest version in the store
+	LatestVersion() int64
+	// SetKVStores is a generalized wrapper method
+	SetKVStores(handler func(key StoreKey, s KVStore) CacheWrap) MultiStore
+
+	// StoreKeys returns a list of store keys
+	StoreKeys() []StoreKey
 }
 
 // From MultiStore.CacheMultiStore()....
@@ -153,6 +160,11 @@ type CacheMultiStore interface {
 
 	// Writes operations to underlying KVStore
 	Write()
+}
+
+type QueryMultiStore interface {
+	MultiStore
+	snapshottypes.Snapshotter
 }
 
 // CommitMultiStore is an interface for a MultiStore without cache capabilities.

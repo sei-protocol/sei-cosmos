@@ -130,6 +130,7 @@ enum ResourceType {
     KV_DEX_SHORT_ORDER_COUNT = 92; // child of KV_DEX
 
     KV_BANK_DEFERRED = 93; // child of KV
+    reserved 94;
     KV_BANK_DEFERRED_MODULE_TX_INDEX = 95; // child of KV_BANK_DEFERRED
 
     KV_EVM = 96; // child of KV

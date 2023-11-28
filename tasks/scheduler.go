@@ -33,6 +33,8 @@ const (
 	// statusValidated means the task has been validated
 	// tasks in this status can be reset if an earlier task fails validation
 	statusValidated status = "validated"
+	// statusInvalid means the task has been validated and is not valid
+	statusInvalid status = "invalid"
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
 )
@@ -40,8 +42,10 @@ const (
 type deliverTxTask struct {
 	Ctx     sdk.Context
 	AbortCh chan occ.Abort
+	mx      sync.RWMutex
 
-	Status        status
+	Type          TaskType
+	status        status
 	Dependencies  []int
 	Abort         *occ.Abort
 	Index         int
@@ -52,13 +56,59 @@ type deliverTxTask struct {
 	ValidateCh    chan struct{}
 }
 
+func (dt *deliverTxTask) SetStatus(s status) {
+	dt.mx.Lock()
+	defer dt.mx.Unlock()
+	dt.status = s
+}
+
+func (dt *deliverTxTask) Status() status {
+	dt.mx.RLock()
+	defer dt.mx.RUnlock()
+	return dt.status
+}
+
+func (dt *deliverTxTask) IsInvalid() bool {
+	dt.mx.RLock()
+	defer dt.mx.RUnlock()
+	return dt.status == statusInvalid || dt.status == statusAborted
+}
+
+func (dt *deliverTxTask) IsValid() bool {
+	dt.mx.RLock()
+	defer dt.mx.RUnlock()
+	return dt.status == statusValidated
+}
+
+func (dt *deliverTxTask) IsWaiting() bool {
+	dt.mx.RLock()
+	defer dt.mx.RUnlock()
+	return dt.status == statusWaiting
+}
+
 func (dt *deliverTxTask) Reset() {
-	dt.Status = statusPending
+	dt.mx.Lock()
+	defer dt.mx.Unlock()
+	dt.status = statusPending
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
 	dt.Dependencies = nil
 	dt.VersionStores = nil
+}
+
+func (dt *deliverTxTask) ResetForExecution() {
+	dt.mx.Lock()
+	defer dt.mx.Unlock()
+	dt.status = statusPending
+	dt.Type = TypeExecution
+	dt.Response = nil
+	dt.Abort = nil
+	dt.AbortCh = nil
+	dt.Dependencies = nil
+	dt.VersionStores = nil
+	dt.Incarnation++
+	dt.ValidateCh = make(chan struct{}, 1)
 }
 
 func (dt *deliverTxTask) Increment() {
@@ -68,6 +118,7 @@ func (dt *deliverTxTask) Increment() {
 
 // Scheduler processes tasks concurrently
 type Scheduler interface {
+	ProcessAllSync(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
 	ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
 }
 
@@ -121,7 +172,7 @@ func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 		res = append(res, &deliverTxTask{
 			Request:    r.Request,
 			Index:      idx,
-			Status:     statusPending,
+			status:     statusPending,
 			ValidateCh: make(chan struct{}, 1),
 		})
 	}
@@ -148,18 +199,9 @@ func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
 	s.multiVersionStores = mvs
 }
 
-func indexesValidated(tasks []*deliverTxTask, idx []int) bool {
-	for _, i := range idx {
-		if tasks[i].Status != statusValidated {
-			return false
-		}
-	}
-	return true
-}
-
 func allValidated(tasks []*deliverTxTask) bool {
 	for _, t := range tasks {
-		if t.Status != statusValidated {
+		if t.Status() != statusValidated {
 			return false
 		}
 	}
@@ -178,7 +220,7 @@ func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry
 	}
 }
 
-func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+func (s *scheduler) ProcessAllSync(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
@@ -211,7 +253,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 }
 
 func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
-	switch task.Status {
+	switch task.Status() {
 
 	case statusAborted, statusPending:
 		return true
@@ -220,29 +262,17 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 	case statusExecuted, statusValidated:
 		if valid, conflicts := s.findConflicts(task); !valid {
 			s.invalidateTask(task)
-
-			// if the conflicts are now validated, then rerun this task
-			if indexesValidated(s.allTasks, conflicts) {
-				return true
-			} else {
-				// otherwise, wait for completion
-				task.Dependencies = conflicts
-				task.Status = statusWaiting
-				return false
-			}
+			task.SetStatus(statusInvalid)
+			return true
 		} else if len(conflicts) == 0 {
 			// mark as validated, which will avoid re-validating unless a lower-index re-validates
-			task.Status = statusValidated
+			task.SetStatus(statusValidated)
 			return false
 		}
 		// conflicts and valid, so it'll validate next time
 		return false
-
-	case statusWaiting:
-		// if conflicts are done, then this task is ready to run again
-		return indexesValidated(s.allTasks, task.Dependencies)
 	}
-	panic("unexpected status: " + task.Status)
+	panic("unexpected status: " + task.Status())
 }
 
 func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
@@ -257,7 +287,7 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
 
 func (s *scheduler) findFirstNonValidated() (int, bool) {
 	for i, t := range s.allTasks {
-		if t.Status != statusValidated {
+		if t.Status() != statusValidated {
 			return i, true
 		}
 	}
@@ -422,7 +452,7 @@ func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 	close(task.AbortCh)
 
 	if abt, ok := <-task.AbortCh; ok {
-		task.Status = statusAborted
+		task.SetStatus(statusAborted)
 		task.Abort = &abt
 		return
 	}
@@ -432,6 +462,6 @@ func (s *scheduler) executeTask(ctx sdk.Context, task *deliverTxTask) {
 		v.WriteToMultiVersionStore()
 	}
 
-	task.Status = statusExecuted
+	task.SetStatus(statusExecuted)
 	task.Response = &resp
 }

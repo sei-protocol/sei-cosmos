@@ -64,11 +64,42 @@ func TestProcessAll(t *testing.T) {
 		assertions    func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx)
 	}{
 		{
+			name:      "Test no overlap txs",
+			workers:   50,
+			runs:      50,
+			addStores: true,
+			requests:  requestList(100),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+				// all txs read and write to the same key to maximize conflicts
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+
+				// write to the store with this tx's index
+				kv.Set(req.Tx, req.Tx)
+				val := string(kv.Get(req.Tx))
+
+				// return what was read from the store (final attempt should be index-1)
+				return types.ResponseDeliverTx{
+					Info: val,
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				for idx, response := range res {
+					require.Equal(t, fmt.Sprintf("%d", idx), response.Info)
+				}
+				store := ctx.MultiStore().GetKVStore(testStoreKey)
+				for i := 0; i < len(res); i++ {
+					val := store.Get([]byte(fmt.Sprintf("%d", i)))
+					require.Equal(t, []byte(fmt.Sprintf("%d", i)), val)
+				}
+			},
+			expectedErr: nil,
+		},
+		{
 			name:      "Test every tx accesses same key",
 			workers:   50,
 			runs:      50,
 			addStores: true,
-			requests:  requestList(50),
+			requests:  requestList(100),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)

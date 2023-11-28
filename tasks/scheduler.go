@@ -248,31 +248,14 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 	case statusExecuted, statusValidated:
 		if valid, conflicts := s.findConflicts(task); !valid {
 			s.invalidateTask(task)
-
-			// if the conflicts are now validated, then rerun this task
-			if indexesValidated(s.allTasks, conflicts) {
-				task.Status = statusInvalid
-				return true
-			} else {
-				// otherwise, wait for completion
-				task.Dependencies = conflicts
-				task.Status = statusWaiting
-				return false
-			}
+			task.Status = statusInvalid
+			return true
 		} else if len(conflicts) == 0 {
 			// mark as validated, which will avoid re-validating unless a lower-index re-validates
 			task.Status = statusValidated
 			return false
 		}
 		// conflicts and valid, so it'll validate next time
-		return false
-
-	case statusWaiting:
-		// if conflicts are done, then this task is ready to run again
-		if indexesValidated(s.allTasks, task.Dependencies) {
-			task.Status = statusPending
-			return true
-		}
 		return false
 	}
 	panic("unexpected status: " + task.Status)

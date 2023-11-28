@@ -2,8 +2,11 @@ package tasks
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
@@ -198,11 +201,16 @@ func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry
 	}
 }
 
+var TOTAL_PREPARE_LATENCY = atomic.Int64{}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+	startTime := time.Now()
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
+	prefillStart := time.Now()
 	s.PrefillEstimates(ctx, reqs)
+	prefillLatency := time.Since(prefillStart).Microseconds()
 	tasks := toTasks(reqs)
 	s.allTasks = tasks
 	s.executeCh = make(chan func(), len(tasks))
@@ -219,12 +227,16 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	start(workerCtx, s.validateCh, workers)
 
 	toExecute := tasks
+	var totalExecuteAllLatency = int64(0)
+	var totalValidateAllLatency = int64(0)
 	for !allValidated(tasks) {
 		var err error
 
 		// execute sets statuses of tasks to either executed or aborted
 		if len(toExecute) > 0 {
+			executeAllStartTime := time.Now()
 			err = s.executeAll(ctx, toExecute)
+			totalExecuteAllLatency += time.Since(executeAllStartTime).Microseconds()
 			if err != nil {
 				return nil, err
 			}
@@ -232,13 +244,21 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
+		validateAllStartTime := time.Now()
 		toExecute, err = s.validateAll(ctx, tasks)
+		totalValidateAllLatency += time.Since(validateAllStartTime).Microseconds()
 		if err != nil {
 			return nil, err
 		}
 	}
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
+	}
+	totalLatency := time.Since(startTime).Microseconds()
+	if len(reqs) > 0 {
+		fmt.Printf("[OCC-Debug] Num workers: %d, Total ProcessAll %d txs latency is: %dus, Prefill latency: %dus, ExecuteAll latency: %dus, ValidateAll latency: %dus\n", s.workers, len(reqs), totalLatency, prefillLatency, totalExecuteAllLatency, totalValidateAllLatency)
+		fmt.Printf("[OCC-Debug] Total prepareTask latency for %d txs: %dus\n", len(reqs), TOTAL_PREPARE_LATENCY.Load())
+		TOTAL_PREPARE_LATENCY.Store(0)
 	}
 	return collectResponses(tasks), nil
 }
@@ -381,6 +401,10 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 
 // prepareTask initializes the context and version stores for a task
 func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
+	startPrepareTime := time.Now()
+	defer func() {
+		TOTAL_PREPARE_LATENCY.Add(time.Since(startPrepareTime).Microseconds())
+	}()
 	ctx = ctx.WithTxIndex(task.Index)
 
 	//_, span := s.traceSpan(ctx, "SchedulerPrepare", task)

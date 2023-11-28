@@ -131,10 +131,10 @@ func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *Schedu
 		s.validateTask(ctx, t)
 
 		// check the outcome of validation and do things accordingly
-		switch t.Status {
+		switch t.Status() {
 		case statusValidated:
 			// task is possibly finished (can be re-validated by others)
-			TaskLog(t, "VALIDATED")
+			TaskLog(t, "VALIDATED (possibly finished)")
 			queue.SetToIdle(t.Index)
 			return true
 		case statusWaiting, statusExecuted:

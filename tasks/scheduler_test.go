@@ -122,7 +122,6 @@ func TestProcessAll(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			for i := 0; i < tt.runs; i++ {
 				// set a tracer provider
-				fmt.Println("**************************** RUN ", i, "****************************")
 				tp := trace.NewNoopTracerProvider()
 				otel.SetTracerProvider(trace.NewNoopTracerProvider())
 				tr := tp.Tracer("scheduler-test")

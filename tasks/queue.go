@@ -73,7 +73,7 @@ func (sq *SchedulerQueue) ReValidate(idx int) {
 
 	TaskLog(sq.tasks[idx], "-> re-validate")
 	sq.tasks[idx].Abort = nil
-	sq.tasks[idx].Status = statusExecuted
+	sq.tasks[idx].SetStatus(statusExecuted)
 	sq.pushTask(idx)
 }
 
@@ -117,7 +117,7 @@ func (sq *SchedulerQueue) AddValidationTask(idx int) {
 	}
 
 	TaskLog(sq.tasks[idx], "-> validate")
-	sq.tasks[idx].Status = statusExecuted
+	sq.tasks[idx].SetStatus(statusExecuted)
 	sq.tasks[idx].Type = TypeValidation
 	sq.pushTask(idx)
 }

@@ -204,6 +204,9 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_EVM_RECEIPT,
 		ResourceType_KV_EVM_S2E,
 		ResourceType_KV_EVM_E2S,
+		ResourceType_KV_EVM_CODE_HASH,
+		ResourceType_KV_EVM_CODE,
+		ResourceType_KV_EVM_CODE_SIZE,
 	}},
 	ResourceType_KV_EVM_BALANCE:           {ResourceType_KV_EVM, []ResourceType{}},
 	ResourceType_KV_EVM_TRANSIENT:         {ResourceType_KV_EVM, []ResourceType{}},
@@ -213,6 +216,9 @@ var ResourceTree = map[ResourceType]TreeNode{
 	ResourceType_KV_EVM_RECEIPT:           {ResourceType_KV_EVM, []ResourceType{}},
 	ResourceType_KV_EVM_S2E:               {ResourceType_KV_EVM, []ResourceType{}},
 	ResourceType_KV_EVM_E2S:               {ResourceType_KV_EVM, []ResourceType{}},
+	ResourceType_KV_EVM_CODE_HASH:         {ResourceType_KV_EVM, []ResourceType{}},
+	ResourceType_KV_EVM_CODE:              {ResourceType_KV_EVM, []ResourceType{}},
+	ResourceType_KV_EVM_CODE_SIZE:         {ResourceType_KV_EVM, []ResourceType{}},
 }
 
 // This returns a slice of all resource types that are dependent to a specific resource type

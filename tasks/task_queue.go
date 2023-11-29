@@ -67,13 +67,12 @@ func (sq *SchedulerQueue) ReValidate(idx int) {
 	sq.Lock()
 	defer sq.Unlock()
 
-	if sq.tasks[idx].TaskType() != TypeValidation {
+	if !sq.tasks[idx].IsTaskType(TypeValidation) {
 		panic("trying to re-validate a task not in validation state")
 	}
 
 	TaskLog(sq.tasks[idx], "-> re-validate")
 	sq.tasks[idx].Abort = nil
-	sq.tasks[idx].SetStatus(statusExecuted)
 	sq.pushTask(idx)
 }
 
@@ -110,20 +109,22 @@ func (sq *SchedulerQueue) ValidateExecutedTask(idx int) {
 	sq.pushTask(idx)
 }
 
-// AddValidationTask adds a task to the validation queue IF NOT ALREADY in a queue
-func (sq *SchedulerQueue) AddValidationTask(idx int) {
+func (sq *SchedulerQueue) ValidateTasksAfterIndex(afterIdx int) {
 	sq.Lock()
 	defer sq.Unlock()
 
-	// already active
-	if _, ok := sq.active.Load(idx); ok {
-		return
-	}
+	for idx := afterIdx + 1; idx < len(sq.tasks); idx++ {
+		// already active
 
-	TaskLog(sq.tasks[idx], "-> validate")
-	sq.tasks[idx].SetStatus(statusExecuted)
-	sq.tasks[idx].SetTaskType(TypeValidation)
-	sq.pushTask(idx)
+		if _, ok := sq.active.Load(idx); ok {
+			continue
+		}
+
+		TaskLog(sq.tasks[idx], "-> validate")
+		sq.tasks[idx].SetStatus(statusExecuted)
+		sq.tasks[idx].SetTaskType(TypeValidation)
+		sq.pushTask(idx)
+	}
 }
 
 func (sq *SchedulerQueue) pushTask(idx int) {
@@ -169,4 +170,22 @@ func (sq *SchedulerQueue) Close() {
 		sq.closed = true
 		sq.cond.Broadcast()
 	})
+}
+
+type taskHeap []int
+
+func (h taskHeap) Len() int           { return len(h) }
+func (h taskHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h taskHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *taskHeap) Push(x interface{}) {
+	*h = append(*h, x.(int))
+}
+
+func (h *taskHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
 }

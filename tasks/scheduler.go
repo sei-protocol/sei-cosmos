@@ -1,151 +1,19 @@
 package tasks
 
 import (
-	"context"
-	"crypto/sha256"
 	"fmt"
-	"sort"
 	"sync"
-
-	"github.com/tendermint/tendermint/abci/types"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
+	"sync/atomic"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
-	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
+	"github.com/tendermint/tendermint/abci/types"
 )
-
-type status string
-
-const (
-	// statusPending tasks are ready for execution
-	// all executing tasks are in pending state
-	statusPending status = "pending"
-	// statusExecuted tasks are ready for validation
-	// these tasks did not abort during execution
-	statusExecuted status = "executed"
-	// statusAborted means the task has been aborted
-	// these tasks transition to pending upon next execution
-	statusAborted status = "aborted"
-	// statusValidated means the task has been validated
-	// tasks in this status can be reset if an earlier task fails validation
-	statusValidated status = "validated"
-	// statusInvalid means the task has been invalidated
-	statusInvalid status = "invalid"
-	// statusWaiting tasks are waiting for another tx to complete
-	statusWaiting status = "waiting"
-)
-
-type deliverTxTask struct {
-	Ctx     sdk.Context
-	AbortCh chan occ.Abort
-	mx      sync.RWMutex
-
-	taskType      taskType
-	status        status
-	Dependencies  []int
-	Abort         *occ.Abort
-	Index         int
-	Incarnation   int
-	Request       types.RequestDeliverTx
-	Response      *types.ResponseDeliverTx
-	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
-	ValidateCh    chan status
-}
-
-func (dt *deliverTxTask) SetTaskType(t taskType) {
-	dt.mx.Lock()
-	defer dt.mx.Unlock()
-	dt.taskType = t
-}
-
-func (dt *deliverTxTask) IsIdle() bool {
-	return dt.IsTaskType(TypeIdle)
-}
-
-func (dt *deliverTxTask) IsTaskType(t taskType) bool {
-	dt.mx.RLock()
-	defer dt.mx.RUnlock()
-	return dt.taskType == t
-}
-
-func (dt *deliverTxTask) IsStatus(s status) bool {
-	dt.mx.RLock()
-	defer dt.mx.RUnlock()
-	return dt.status == s
-}
-
-func (dt *deliverTxTask) TaskType() taskType {
-	dt.mx.RLock()
-	defer dt.mx.RUnlock()
-	return dt.taskType
-}
-
-func (dt *deliverTxTask) SetStatus(s status) {
-	dt.mx.Lock()
-	defer dt.mx.Unlock()
-	dt.status = s
-}
-
-func (dt *deliverTxTask) Status() status {
-	dt.mx.RLock()
-	defer dt.mx.RUnlock()
-	return dt.status
-}
-
-func (dt *deliverTxTask) IsInvalid() bool {
-	dt.mx.RLock()
-	defer dt.mx.RUnlock()
-	return dt.status == statusInvalid || dt.status == statusAborted
-}
-
-func (dt *deliverTxTask) IsValid() bool {
-	dt.mx.RLock()
-	defer dt.mx.RUnlock()
-	return dt.status == statusValidated
-}
-
-func (dt *deliverTxTask) IsWaiting() bool {
-	dt.mx.RLock()
-	defer dt.mx.RUnlock()
-	return dt.status == statusWaiting
-}
-
-func (dt *deliverTxTask) Reset() {
-	dt.mx.Lock()
-	defer dt.mx.Unlock()
-	dt.status = statusPending
-	dt.Response = nil
-	dt.Abort = nil
-	dt.AbortCh = nil
-	dt.Dependencies = nil
-	dt.VersionStores = nil
-}
-
-func (dt *deliverTxTask) ResetForExecution() {
-	dt.mx.Lock()
-	defer dt.mx.Unlock()
-	dt.status = statusPending
-	dt.taskType = TypeExecution
-	dt.Response = nil
-	dt.Abort = nil
-	dt.AbortCh = nil
-	dt.Dependencies = nil
-	dt.VersionStores = nil
-}
-
-func (dt *deliverTxTask) Increment() {
-	dt.Incarnation++
-	dt.ValidateCh = make(chan status, 1)
-}
 
 // Scheduler processes tasks concurrently
 type Scheduler interface {
 	ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
-	ProcessAllSync(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
 }
 
 type scheduler struct {
@@ -167,359 +35,126 @@ func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx
 	}
 }
 
-func (s *scheduler) invalidateTask(task *deliverTxTask) {
-	for _, mv := range s.multiVersionStores {
-		mv.InvalidateWriteset(task.Index, task.Incarnation)
-		mv.ClearReadset(task.Index)
-		mv.ClearIterateset(task.Index)
-	}
-}
-
-func start(ctx context.Context, ch chan func(), workers int) {
-	for i := 0; i < workers; i++ {
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case work := <-ch:
-					work()
-				}
-			}
-		}()
-	}
-}
-
-func (s *scheduler) DoValidate(work func()) {
-	s.validateCh <- work
-}
-
-func (s *scheduler) DoExecute(work func()) {
-	s.executeCh <- work
-}
-
-func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
-	var conflicts []int
-	uniq := make(map[int]struct{})
-	valid := true
-	for _, mv := range s.multiVersionStores {
-		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
-		for _, c := range mvConflicts {
-			if _, ok := uniq[c]; !ok {
-				conflicts = append(conflicts, c)
-				uniq[c] = struct{}{}
-			}
-		}
-		// any non-ok value makes valid false
-		valid = ok && valid
-	}
-	sort.Ints(conflicts)
-	return valid, conflicts
-}
-
-func toTasks(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
-	res := make([]*deliverTxTask, 0, len(reqs))
-	for idx, r := range reqs {
-		res = append(res, &deliverTxTask{
-			Request:    r.Request,
-			Index:      idx,
-			Ctx:        ctx,
-			status:     statusPending,
-			ValidateCh: make(chan status, 1),
-		})
-	}
-	return res
-}
-
-func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
-	res := make([]types.ResponseDeliverTx, 0, len(tasks))
-	for _, t := range tasks {
-		res = append(res, *t.Response)
-	}
-	return res
-}
-
-func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
-	if s.multiVersionStores != nil {
-		return
-	}
-	mvs := make(map[sdk.StoreKey]multiversion.MultiVersionStore)
-	keys := ctx.MultiStore().StoreKeys()
-	for _, sk := range keys {
-		mvs[sk] = multiversion.NewMultiVersionStore(ctx.MultiStore().GetKVStore(sk))
-	}
-	s.multiVersionStores = mvs
-}
-
-func allValidated(tasks []*deliverTxTask) bool {
-	for _, t := range tasks {
-		if !t.IsStatus(statusValidated) {
-			return false
-		}
-	}
-	return true
-}
-
-func (s *scheduler) PrefillEstimates(reqs []*sdk.DeliverTxEntry) {
-	// iterate over TXs, update estimated writesets where applicable
-	for i, req := range reqs {
-		mappedWritesets := req.EstimatedWritesets
-		// order shouldnt matter for storeKeys because each storeKey partitioned MVS is independent
-		for storeKey, writeset := range mappedWritesets {
-			// we use `-1` to indicate a prefill incarnation
-			s.multiVersionStores[storeKey].SetEstimatedWriteset(i, -1, writeset)
-		}
-	}
-}
-
-func (s *scheduler) ProcessAllSync(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
-	// initialize mutli-version stores if they haven't been initialized yet
-	s.tryInitMultiVersionStore(ctx)
+func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+	// initialize mutli-version stores
+	s.initMultiVersionStore(ctx)
 	// prefill estimates
 	s.PrefillEstimates(reqs)
 	tasks := toTasks(ctx, reqs)
 	s.allTasks = tasks
-	s.executeCh = make(chan func(), len(tasks))
-	s.validateCh = make(chan func(), len(tasks))
 
-	// default to number of tasks if workers is negative or 0 by this point
 	workers := s.workers
 	if s.workers < 1 {
 		workers = len(tasks)
 	}
 
-	workerCtx, cancel := context.WithCancel(ctx.Context())
-	defer cancel()
-
-	// execution tasks are limited by workers
-	start(workerCtx, s.executeCh, workers)
-
-	// validation tasks uses length of tasks to avoid blocking on validation
-	start(workerCtx, s.validateCh, len(tasks))
-
-	toExecute := tasks
-	for !allValidated(tasks) {
-		var err error
-
-		// execute sets statuses of tasks to either executed or aborted
-		if len(toExecute) > 0 {
-			err = s.executeAll(ctx, toExecute)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// validate returns any that should be re-executed
-		// note this processes ALL tasks, not just those recently executed
-		toExecute, err = s.validateAll(ctx, tasks)
-		if err != nil {
-			return nil, err
-		}
+	// initialize scheduler queue
+	queue := NewSchedulerQueue(tasks, workers)
+	for _, t := range tasks {
+		queue.AddExecutionTask(t.Index)
 	}
+
+	active := atomic.Int32{}
+	wg := sync.WaitGroup{}
+	wg.Add(workers)
+	final := atomic.Bool{}
+	finisher := sync.Once{}
+	mx := sync.Mutex{}
+
+	for i := 0; i < workers; i++ {
+		go func(worker int) {
+			defer wg.Done()
+
+			for {
+
+				// check if all tasks are complete AND not running anything
+				mx.Lock()
+				if active.Load() == 0 && queue.IsCompleted() {
+					if final.Load() {
+						finisher.Do(func() {
+							queue.Close()
+						})
+					} else {
+						// try one more validation of everything at end
+						final.Store(true)
+						queue.ValidateTasksAfterIndex(-1)
+					}
+				}
+				mx.Unlock()
+
+				//TODO: remove once we feel good about this not hanging
+				nt := waitWithMsg(fmt.Sprintf("worker=%d: next task...", worker), func() {
+					fmt.Println(fmt.Sprintf("worker=%d: active=%d", worker, active.Load()))
+				})
+				t, ok := queue.NextTask()
+				nt()
+				if !ok {
+					return
+				}
+				active.Add(1)
+				if !s.processTask(t, ctx, queue, tasks) {
+					// if anything doesn't validate successfully, we will need a final re-sweep
+					final.Store(false)
+				}
+				active.Add(-1)
+			}
+
+		}(i)
+	}
+
+	wg.Wait()
+
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
 	return collectResponses(tasks), nil
 }
 
-func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
-	switch task.Status() {
+func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *SchedulerQueue, tasks []*deliverTxTask) bool {
+	switch t.TaskType() {
+	case TypeValidation, TypeIdle:
+		TaskLog(t, "validate")
+		s.validateTask(ctx, t)
 
-	case statusAborted, statusPending:
-		return true
-
-	// validated tasks can become unvalidated if an earlier re-run task now conflicts
-	case statusExecuted, statusValidated:
-		if valid, conflicts := s.findConflicts(task); !valid {
-			s.invalidateTask(task)
-			task.SetStatus(statusInvalid)
+		// check the outcome of validation and do things accordingly
+		switch t.Status() {
+		case statusValidated:
+			// task is possibly finished (can be re-validated by others)
+			TaskLog(t, "VALIDATED (possibly finished)")
+			queue.SetToIdle(t.Index)
 			return true
-		} else if len(conflicts) == 0 {
-			// mark as validated, which will avoid re-validating unless a lower-index re-validates
-			task.SetStatus(statusValidated)
-			return false
+		case statusWaiting, statusExecuted:
+			// task should be re-validated (waiting on others)
+			// how can we wait on dependencies?
+			queue.ReValidate(t.Index)
+		case statusInvalid:
+			// task should be re-executed along with all +1 tasks
+			queue.ReExecute(t.Index)
+			queue.ValidateTasksAfterIndex(t.Index)
+		default:
+			TaskLog(t, "unexpected status")
+			panic("unexpected status ")
 		}
-		// conflicts and valid, so it'll validate next time
-		return false
-	}
-	panic("unexpected status: " + task.Status())
-}
 
-func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
-	_, span := s.traceSpan(ctx, "SchedulerValidate", task)
-	defer span.End()
+	case TypeExecution:
+		TaskLog(t, "execute")
+		t.LockTask()
+		s.prepareTask(t)
+		s.executeTask(t)
 
-	if s.shouldRerun(task) {
-		return false
-	}
-	return true
-}
-
-func (s *scheduler) findFirstNonValidated() (int, bool) {
-	for i, t := range s.allTasks {
-		if t.Status() != statusValidated {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
-func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*deliverTxTask, error) {
-	ctx, span := s.traceSpan(ctx, "SchedulerValidateAll", nil)
-	defer span.End()
-
-	var mx sync.Mutex
-	var res []*deliverTxTask
-
-	startIdx, anyLeft := s.findFirstNonValidated()
-
-	if !anyLeft {
-		return nil, nil
-	}
-
-	wg := sync.WaitGroup{}
-	for i := startIdx; i < len(tasks); i++ {
-		t := tasks[i]
-		wg.Add(1)
-		s.DoValidate(func() {
-			defer wg.Done()
-			if !s.validateTask(ctx, t) {
-				t.Reset()
-				t.Increment()
-				mx.Lock()
-				res = append(res, t)
-				mx.Unlock()
+		if t.Status() == statusAborted {
+			queue.ReExecute(t.Index)
+		} else {
+			queue.ValidateExecutedTask(t.Index)
+			if t.Incarnation > 0 {
+				queue.ValidateTasksAfterIndex(t.Index)
 			}
-		})
-	}
-	wg.Wait()
-
-	return res, nil
-}
-
-// ExecuteAll executes all tasks concurrently
-func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
-	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
-	defer span.End()
-
-	// validationWg waits for all validations to complete
-	// validations happen in separate goroutines in order to wait on previous index
-	validationWg := &sync.WaitGroup{}
-	validationWg.Add(len(tasks))
-
-	for _, task := range tasks {
-		t := task
-		s.DoExecute(func() {
-			s.prepareAndRunTask(validationWg, ctx, t)
-		})
-	}
-
-	validationWg.Wait()
-
-	return nil
-}
-
-func (s *scheduler) waitOnPreviousAndValidate(wg *sync.WaitGroup, task *deliverTxTask) {
-	defer wg.Done()
-	defer close(task.ValidateCh)
-	// wait on previous task to finish validation
-	// if a previous task fails validation, then subsequent should fail too (cascade)
-	if task.Index > 0 {
-		res, ok := <-s.allTasks[task.Index-1].ValidateCh
-		if ok && res != statusValidated {
-			task.Reset()
-			task.ValidateCh <- task.Status()
-			return
 		}
+		t.UnlockTask()
+
+	default:
+		TaskLog(t, "unexpected type")
+		panic("unexpected type")
 	}
-	// if not validated, reset the task
-	if !s.validateTask(task.Ctx, task) {
-		task.Reset()
-	}
-
-	// notify next task of this one's status
-	task.ValidateCh <- task.Status()
-}
-
-func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task *deliverTxTask) {
-	eCtx, eSpan := s.traceSpan(ctx, "SchedulerExecute", task)
-	defer eSpan.End()
-	task.Ctx = eCtx
-
-	s.prepareTask(task)
-	s.executeTask(task)
-
-	s.DoValidate(func() {
-		s.waitOnPreviousAndValidate(wg, task)
-	})
-}
-
-func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
-	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
-	if task != nil {
-		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
-		span.SetAttributes(attribute.Int("txIndex", task.Index))
-		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
-	}
-	ctx = ctx.WithTraceSpanContext(spanCtx)
-	return ctx, span
-}
-
-// prepareTask initializes the context and version stores for a task
-func (s *scheduler) prepareTask(task *deliverTxTask) {
-	ctx := task.Ctx.WithTxIndex(task.Index)
-
-	_, span := s.traceSpan(ctx, "SchedulerPrepare", task)
-	defer span.End()
-
-	// initialize the context
-	abortCh := make(chan occ.Abort, len(s.multiVersionStores))
-
-	// if there are no stores, don't try to wrap, because there's nothing to wrap
-	if len(s.multiVersionStores) > 0 {
-		// non-blocking
-		cms := ctx.MultiStore().CacheMultiStore()
-
-		// init version stores by store key
-		vs := make(map[store.StoreKey]*multiversion.VersionIndexedStore)
-		for storeKey, mvs := range s.multiVersionStores {
-			vs[storeKey] = mvs.VersionedIndexedStore(task.Index, task.Incarnation, abortCh)
-		}
-
-		// save off version store so we can ask it things later
-		task.VersionStores = vs
-		ms := cms.SetKVStores(func(k store.StoreKey, kvs sdk.KVStore) store.CacheWrap {
-			return vs[k]
-		})
-
-		ctx = ctx.WithMultiStore(ms)
-	}
-
-	task.AbortCh = abortCh
-	task.Ctx = ctx
-}
-
-// executeTask executes a single task
-func (s *scheduler) executeTask(task *deliverTxTask) {
-	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
-	defer dSpan.End()
-	task.Ctx = dCtx
-
-	resp := s.deliverTx(task.Ctx, task.Request)
-
-	close(task.AbortCh)
-
-	if abt, ok := <-task.AbortCh; ok {
-		task.SetStatus(statusAborted)
-		task.Abort = &abt
-		return
-	}
-
-	// write from version store to multiversion stores
-	for _, v := range task.VersionStores {
-		v.WriteToMultiVersionStore()
-	}
-
-	task.SetStatus(statusExecuted)
-	task.Response = &resp
+	return false
 }

@@ -21,17 +21,6 @@ func TestNewSchedulerQueue(t *testing.T) {
 	}
 }
 
-func TestAddValidationTask(t *testing.T) {
-	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
-
-	sq.AddValidationTask(1)
-
-	if !sq.tasks[1].IsTaskType(TypeValidation) {
-		t.Errorf("Expected task type %d, but got %d", TypeValidation, sq.tasks[1].TaskType())
-	}
-}
-
 func TestAddExecutionTask(t *testing.T) {
 	tasks := generateTasks(10)
 	sq := NewSchedulerQueue(tasks, 5)
@@ -92,30 +81,5 @@ func TestNextTaskOrder(t *testing.T) {
 	task, _ := sq.NextTask()
 	if task != sq.tasks[1] {
 		t.Errorf("Expected task %v, but got %v", sq.tasks[1], task)
-	}
-}
-
-func TestAddValidationTaskWhenActive(t *testing.T) {
-	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
-
-	// Add task to execution queue
-	sq.AddExecutionTask(1)
-	// Try to add the same task to validation queue
-	sq.AddValidationTask(1)
-
-	// Verify that the task's type is still TypeExecution
-	if !sq.tasks[1].IsTaskType(TypeExecution) {
-		t.Errorf("Expected task type %d, but got %d", TypeExecution, sq.tasks[1].TaskType())
-	}
-
-	// Add task to validation queue
-	sq.AddValidationTask(2)
-	// Try to add the same task to validation queue again
-	sq.AddValidationTask(2)
-
-	// Verify that the task's type is still TypeValidation
-	if !sq.tasks[2].IsTaskType(TypeValidation) {
-		t.Errorf("Expected task type %d, but got %d", TypeValidation, sq.tasks[2].TaskType())
 	}
 }

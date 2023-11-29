@@ -21,22 +21,11 @@ func TestNewSchedulerQueue(t *testing.T) {
 	}
 }
 
-func TestAddExecutionTask(t *testing.T) {
-	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
-
-	sq.AddExecutionTask(1)
-
-	if !sq.tasks[1].IsTaskType(TypeExecution) {
-		t.Errorf("Expected task type %d, but got %d", TypeExecution, sq.tasks[1].TaskType())
-	}
-}
-
 func TestSetToIdle(t *testing.T) {
 	tasks := generateTasks(10)
 	sq := NewSchedulerQueue(tasks, 5)
 
-	sq.AddExecutionTask(1)
+	sq.AddAllTasksToExecutionQueue()
 	sq.SetToIdle(1)
 
 	if !sq.tasks[1].IsTaskType(TypeIdle) {
@@ -48,7 +37,7 @@ func TestNextTask(t *testing.T) {
 	tasks := generateTasks(10)
 	sq := NewSchedulerQueue(tasks, 5)
 
-	sq.AddExecutionTask(1)
+	sq.AddAllTasksToExecutionQueue()
 	task, _ := sq.NextTask()
 
 	if task != sq.tasks[1] {
@@ -72,10 +61,9 @@ func TestNextTaskOrder(t *testing.T) {
 	sq := NewSchedulerQueue(tasks, 5)
 
 	// Add tasks in non-sequential order
-	sq.AddExecutionTask(3)
-	sq.AddExecutionTask(1)
-	sq.AddExecutionTask(2)
-	sq.AddExecutionTask(4)
+	sq.AddAllTasksToExecutionQueue()
+	tsk, _ := sq.NextTask()
+	sq.ReExecute(tsk.Index)
 
 	// The task with the lowest index should be returned first
 	task, _ := sq.NextTask()

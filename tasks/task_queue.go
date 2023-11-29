@@ -18,11 +18,12 @@ type SchedulerQueue struct {
 	cond *sync.Cond
 	once sync.Once
 
-	active  sync.Map
-	tasks   []*deliverTxTask
-	queue   *taskHeap
-	workers int
-	closed  bool
+	executing sync.Map
+	active    sync.Map
+	tasks     []*deliverTxTask
+	queue     *taskHeap
+	workers   int
+	closed    bool
 }
 
 func NewSchedulerQueue(tasks []*deliverTxTask, workers int) *SchedulerQueue {
@@ -99,11 +100,10 @@ func (sq *SchedulerQueue) ValidateExecutedTask(idx int) {
 	sq.Lock()
 	defer sq.Unlock()
 
-	if !sq.tasks[idx].IsTaskType(TypeExecution) {
+	if _, ok := sq.active.Load(idx); !ok {
 		TaskLog(sq.tasks[idx], "not in execution")
 		panic("trying to validate a task not in execution")
 	}
-
 	TaskLog(sq.tasks[idx], "-> validate")
 	sq.tasks[idx].SetTaskType(TypeValidation)
 	sq.pushTask(idx)
@@ -133,18 +133,15 @@ func (sq *SchedulerQueue) pushTask(idx int) {
 	sq.cond.Broadcast()
 }
 
-func (sq *SchedulerQueue) AddExecutionTask(idx int) {
+func (sq *SchedulerQueue) AddAllTasksToExecutionQueue() {
 	sq.Lock()
 	defer sq.Unlock()
 
-	// already active
-	if _, ok := sq.active.Load(idx); ok {
-		return
+	for idx := range sq.tasks {
+		TaskLog(sq.tasks[idx], "-> execute")
+		sq.tasks[idx].SetTaskType(TypeExecution)
+		sq.pushTask(idx)
 	}
-
-	TaskLog(sq.tasks[idx], "-> execute")
-	sq.tasks[idx].SetTaskType(TypeExecution)
-	sq.pushTask(idx)
 }
 
 func (sq *SchedulerQueue) NextTask() (*deliverTxTask, bool) {

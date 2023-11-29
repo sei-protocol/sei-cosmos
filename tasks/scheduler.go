@@ -50,9 +50,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 	// initialize scheduler queue
 	queue := NewSchedulerQueue(tasks, workers)
-	for _, t := range tasks {
-		queue.AddExecutionTask(t.Index)
-	}
+	queue.AddAllTasksToExecutionQueue()
 
 	active := atomic.Int32{}
 	wg := sync.WaitGroup{}

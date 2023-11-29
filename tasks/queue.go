@@ -5,10 +5,10 @@ import (
 	"sync"
 )
 
-type TaskType int
+type taskType int
 
 const (
-	TypeIdle TaskType = iota
+	TypeIdle taskType = iota
 	TypeExecution
 	TypeValidation
 )
@@ -47,7 +47,7 @@ func (sq *SchedulerQueue) Unlock() {
 func (sq *SchedulerQueue) SetToIdle(idx int) {
 	sq.Lock()
 	defer sq.Unlock()
-	sq.tasks[idx].Type = TypeIdle
+	sq.tasks[idx].SetTaskType(TypeIdle)
 	sq.active.Delete(idx)
 }
 
@@ -67,7 +67,7 @@ func (sq *SchedulerQueue) ReValidate(idx int) {
 	sq.Lock()
 	defer sq.Unlock()
 
-	if sq.tasks[idx].Type != TypeValidation {
+	if sq.tasks[idx].TaskType() != TypeValidation {
 		panic("trying to re-validate a task not in validation state")
 	}
 
@@ -83,7 +83,7 @@ func (sq *SchedulerQueue) IsCompleted() bool {
 
 	if len(*sq.queue) == 0 {
 		for _, t := range sq.tasks {
-			if !t.IsValid() || t.Type != TypeIdle {
+			if !t.IsValid() || !t.IsIdle() {
 				TaskLog(t, "not valid or not idle")
 				return false
 			}
@@ -93,20 +93,24 @@ func (sq *SchedulerQueue) IsCompleted() bool {
 	return false
 }
 
+// ValidateExecutedTask adds a task to the validation queue IFF it just executed
+// this allows us to transition to validation without making it eligible for something else
+// to add it to validation
 func (sq *SchedulerQueue) ValidateExecutedTask(idx int) {
 	sq.Lock()
 	defer sq.Unlock()
 
-	if sq.tasks[idx].Type != TypeExecution {
+	if !sq.tasks[idx].IsTaskType(TypeExecution) {
 		TaskLog(sq.tasks[idx], "not in execution")
 		panic("trying to validate a task not in execution")
 	}
 
 	TaskLog(sq.tasks[idx], "-> validate")
-	sq.tasks[idx].Type = TypeValidation
+	sq.tasks[idx].SetTaskType(TypeValidation)
 	sq.pushTask(idx)
 }
 
+// AddValidationTask adds a task to the validation queue IF NOT ALREADY in a queue
 func (sq *SchedulerQueue) AddValidationTask(idx int) {
 	sq.Lock()
 	defer sq.Unlock()
@@ -118,7 +122,7 @@ func (sq *SchedulerQueue) AddValidationTask(idx int) {
 
 	TaskLog(sq.tasks[idx], "-> validate")
 	sq.tasks[idx].SetStatus(statusExecuted)
-	sq.tasks[idx].Type = TypeValidation
+	sq.tasks[idx].SetTaskType(TypeValidation)
 	sq.pushTask(idx)
 }
 
@@ -138,8 +142,7 @@ func (sq *SchedulerQueue) AddExecutionTask(idx int) {
 	}
 
 	TaskLog(sq.tasks[idx], "-> execute")
-
-	sq.tasks[idx].Type = TypeExecution
+	sq.tasks[idx].SetTaskType(TypeExecution)
 	sq.pushTask(idx)
 }
 

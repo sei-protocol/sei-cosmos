@@ -116,7 +116,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 }
 
 func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *SchedulerQueue, tasks []*deliverTxTask) bool {
-	switch t.Type {
+	switch t.TaskType() {
 	case TypeValidation:
 		TaskLog(t, "validate")
 		s.validateTask(ctx, t)
@@ -130,6 +130,7 @@ func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *Schedu
 			return true
 		case statusWaiting, statusExecuted:
 			// task should be re-validated (waiting on others)
+			// how can we wait on dependencies?
 			queue.ReValidate(t.Index)
 		case statusInvalid:
 			// task should be re-executed along with all +1 tasks
@@ -137,9 +138,6 @@ func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *Schedu
 			for i := t.Index + 1; i < len(tasks); i++ {
 				queue.AddValidationTask(i)
 			}
-		case statusAborted:
-			// task should be re-executed
-			queue.ReExecute(t.Index)
 		default:
 			TaskLog(t, "unexpected status")
 			panic("unexpected status ")
@@ -149,7 +147,13 @@ func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *Schedu
 		TaskLog(t, "execute")
 		s.prepareTask(t)
 		s.executeTask(t)
-		queue.ValidateExecutedTask(t.Index)
+
+		if t.Status() == statusAborted {
+			queue.ReExecute(t.Index)
+		} else {
+			queue.ValidateExecutedTask(t.Index)
+		}
+
 	default:
 		TaskLog(t, "unexpected type")
 		panic("unexpected type ")

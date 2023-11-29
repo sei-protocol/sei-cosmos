@@ -44,7 +44,7 @@ type deliverTxTask struct {
 	AbortCh chan occ.Abort
 	mx      sync.RWMutex
 
-	Type          TaskType
+	taskType      taskType
 	status        status
 	Dependencies  []int
 	Abort         *occ.Abort
@@ -54,6 +54,34 @@ type deliverTxTask struct {
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
 	ValidateCh    chan status
+}
+
+func (dt *deliverTxTask) SetTaskType(t taskType) {
+	dt.mx.Lock()
+	defer dt.mx.Unlock()
+	dt.taskType = t
+}
+
+func (dt *deliverTxTask) IsIdle() bool {
+	return dt.IsTaskType(TypeIdle)
+}
+
+func (dt *deliverTxTask) IsTaskType(t taskType) bool {
+	dt.mx.RLock()
+	defer dt.mx.RUnlock()
+	return dt.taskType == t
+}
+
+func (dt *deliverTxTask) IsStatus(s status) bool {
+	dt.mx.RLock()
+	defer dt.mx.RUnlock()
+	return dt.status == s
+}
+
+func (dt *deliverTxTask) TaskType() taskType {
+	dt.mx.RLock()
+	defer dt.mx.RUnlock()
+	return dt.taskType
 }
 
 func (dt *deliverTxTask) SetStatus(s status) {
@@ -101,7 +129,7 @@ func (dt *deliverTxTask) ResetForExecution() {
 	dt.mx.Lock()
 	defer dt.mx.Unlock()
 	dt.status = statusPending
-	dt.Type = TypeExecution
+	dt.taskType = TypeExecution
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
@@ -225,7 +253,7 @@ func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
 
 func allValidated(tasks []*deliverTxTask) bool {
 	for _, t := range tasks {
-		if t.Status() != statusValidated {
+		if !t.IsStatus(statusValidated) {
 			return false
 		}
 	}

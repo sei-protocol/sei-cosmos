@@ -27,8 +27,8 @@ func TestAddValidationTask(t *testing.T) {
 
 	sq.AddValidationTask(1)
 
-	if sq.tasks[1].Type != TypeValidation {
-		t.Errorf("Expected task type %d, but got %d", TypeValidation, sq.tasks[1].Type)
+	if !sq.tasks[1].IsTaskType(TypeValidation) {
+		t.Errorf("Expected task type %d, but got %d", TypeValidation, sq.tasks[1].TaskType())
 	}
 }
 
@@ -38,8 +38,8 @@ func TestAddExecutionTask(t *testing.T) {
 
 	sq.AddExecutionTask(1)
 
-	if sq.tasks[1].Type != TypeExecution {
-		t.Errorf("Expected task type %d, but got %d", TypeExecution, sq.tasks[1].Type)
+	if !sq.tasks[1].IsTaskType(TypeExecution) {
+		t.Errorf("Expected task type %d, but got %d", TypeExecution, sq.tasks[1].TaskType())
 	}
 }
 
@@ -50,8 +50,8 @@ func TestSetToIdle(t *testing.T) {
 	sq.AddExecutionTask(1)
 	sq.SetToIdle(1)
 
-	if sq.tasks[1].Type != TypeIdle {
-		t.Errorf("Expected task type %d, but got %d", TypeIdle, sq.tasks[1].Type)
+	if !sq.tasks[1].IsTaskType(TypeIdle) {
+		t.Errorf("Expected task type %d, but got %d", TypeIdle, sq.tasks[1].TaskType())
 	}
 }
 
@@ -105,8 +105,8 @@ func TestAddValidationTaskWhenActive(t *testing.T) {
 	sq.AddValidationTask(1)
 
 	// Verify that the task's type is still TypeExecution
-	if sq.tasks[1].Type != TypeExecution {
-		t.Errorf("Expected task type %d, but got %d", TypeExecution, sq.tasks[1].Type)
+	if !sq.tasks[1].IsTaskType(TypeExecution) {
+		t.Errorf("Expected task type %d, but got %d", TypeExecution, sq.tasks[1].TaskType())
 	}
 
 	// Add task to validation queue
@@ -115,7 +115,7 @@ func TestAddValidationTaskWhenActive(t *testing.T) {
 	sq.AddValidationTask(2)
 
 	// Verify that the task's type is still TypeValidation
-	if sq.tasks[2].Type != TypeValidation {
-		t.Errorf("Expected task type %d, but got %d", TypeValidation, sq.tasks[2].Type)
+	if !sq.tasks[2].IsTaskType(TypeValidation) {
+		t.Errorf("Expected task type %d, but got %d", TypeValidation, sq.tasks[2].TaskType())
 	}
 }

@@ -64,6 +64,31 @@ func TestProcessAll(t *testing.T) {
 		assertions    func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx)
 	}{
 		{
+			name:      "Test txs with no conflicts",
+			workers:   50,
+			runs:      50,
+			addStores: true,
+			requests:  requestList(100),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+
+				// read/write a unique key for each tx (no conflicts)
+				kv.Set(req.Tx, req.Tx)
+				val := string(kv.Get(req.Tx))
+				require.Equal(t, req.Tx, []byte(val))
+
+				return types.ResponseDeliverTx{
+					Info: string(req.Tx),
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				for idx, response := range res {
+					require.Equal(t, fmt.Sprintf("%d", idx), response.Info)
+				}
+			},
+			expectedErr: nil,
+		},
+		{
 			name:      "Test every tx accesses same key",
 			workers:   50,
 			runs:      50,

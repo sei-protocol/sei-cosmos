@@ -42,8 +42,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
-	s.PrefillEstimates(ctx, reqs)
-	tasks := toTasks(reqs)
+	s.PrefillEstimates(reqs)
+	tasks := toTasks(ctx, reqs)
 	s.allTasks = tasks
 
 	workers := s.workers
@@ -147,8 +147,8 @@ func (s *scheduler) processTask(t *deliverTxTask, ctx sdk.Context, queue *Schedu
 
 	case TypeExecution:
 		TaskLog(t, "execute")
-
-		s.executeTask(ctx, t)
+		s.prepareTask(t)
+		s.executeTask(t)
 		queue.ValidateExecutedTask(t.Index)
 	default:
 		TaskLog(t, "unexpected type")

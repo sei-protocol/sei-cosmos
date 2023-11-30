@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"container/heap"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -84,24 +83,4 @@ func TestSchedulerQueue(t *testing.T) {
 		}
 	}
 	assert.True(t, queue.IsCompleted())
-}
-
-func TestTaskHeap(t *testing.T) {
-	h := &taskHeap{}
-	heap.Init(h)
-
-	// Test Push
-	heap.Push(h, 3)
-	heap.Push(h, 1)
-	heap.Push(h, 2)
-	heap.Push(h, 1) // Duplicate, should not be added
-
-	assert.Equal(t, 3, h.Len(), "Heap should contain 3 items")
-
-	// Test Pop
-	assert.Equal(t, 1, heap.Pop(h), "First pop should return the smallest element")
-	assert.Equal(t, 2, heap.Pop(h), "Second pop should return the next smallest element")
-	assert.Equal(t, 3, heap.Pop(h), "Third pop should return the largest element")
-
-	assert.Equal(t, 0, h.Len(), "Heap should be empty after all elements are popped")
 }

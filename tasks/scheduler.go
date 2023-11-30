@@ -7,7 +7,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/tendermint/tendermint/abci/types"
 	"sync"
-	"sync/atomic"
 )
 
 // Scheduler processes tasks concurrently
@@ -46,7 +45,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	var results []types.ResponseDeliverTx
 	var err error
 	s.WithTimer("ProcessAll", func() {
-		pas := s.timer.Start("ProcessAll-Setup")
 		// initialize mutli-version stores
 		s.initMultiVersionStore(ctx)
 		// prefill estimates
@@ -67,47 +65,27 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 		wg := sync.WaitGroup{}
 		wg.Add(workers)
-		count := atomic.Int32{}
 
-		s.timer.End("ProcessAll-Setup", pas)
 		for i := 0; i < workers; i++ {
 			go func(worker int) {
 				defer wg.Done()
 
 				for {
+					if queue.IsCompleted() {
+						queue.Close()
+					}
 
-					s.WithTimer("IsCompleted()", func() {
-						if queue.IsCompleted() {
-							queue.Close()
-						}
-					})
-
-					var task *TxTask
-					var anyTasks bool
-					s.WithTimer("NextTask()", func() {
-						task, anyTasks = queue.NextTask()
-					})
+					task, anyTasks := queue.NextTask()
 					if !anyTasks {
 						return
 					}
 
-					s.WithTimer("IsCompleted()", func() {
-						task.LockTask()
-						var tt TaskType
-						var ok bool
-						s.WithTimer("PopTaskType()", func() {
-							tt, ok = task.PopTaskType()
-						})
-						if ok {
-							count.Add(1)
-							s.WithTimer("processTask()", func() {
-								s.processTask(ctx, tt, worker, task, queue)
-							})
-						} else {
-							TaskLog(task, "NONE FOUND...SKIPPING")
-						}
-						task.UnlockTask()
-					})
+					// removing this lock creates a lot more tasks
+					task.LockTask()
+					if tt, ok := task.PopTaskType(); ok {
+						s.processTask(ctx, tt, worker, task, queue)
+					}
+					task.UnlockTask()
 
 				}
 
@@ -115,8 +93,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		}
 
 		wg.Wait()
-
-		fmt.Println("count", count.Load())
 
 		for _, mv := range s.multiVersionStores {
 			mv.WriteLatestToStore()
@@ -133,51 +109,47 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 	var result bool
 	switch taskType {
 	case TypeValidation:
-		s.WithTimer("TypeValidation", func() {
-			TaskLog(t, fmt.Sprintf("TypeValidation (worker=%d)", w))
+		TaskLog(t, fmt.Sprintf("TypeValidation (worker=%d)", w))
 
-			s.validateTask(ctx, t)
+		s.validateTask(ctx, t)
 
-			// check the outcome of validation and do things accordingly
-			switch t.status {
-			case statusValidated:
-				// task is possibly finished (can be re-validated by others)
-				TaskLog(t, "*** VALIDATED ***")
-				// informs queue that it's complete (any subsequent submission for idx unsets this)
-				queue.FinishTask(t.Index)
-				result = true
-			case statusWaiting:
-				// task should be re-validated (waiting on others)
-				// how can we wait on dependencies?
-				TaskLog(t, "waiting/executed...revalidating")
-				if queue.DependenciesFinished(t.Index) {
-					queue.Execute(t.Index)
-				}
-			case statusInvalid:
-				TaskLog(t, "invalid (re-executing, re-validating > tx)")
+		// check the outcome of validation and do things accordingly
+		switch t.status {
+		case statusValidated:
+			// task is possibly finished (can be re-validated by others)
+			TaskLog(t, "*** VALIDATED ***")
+			// informs queue that it's complete (any subsequent submission for idx unsets this)
+			queue.FinishTask(t.Index)
+			result = true
+		case statusWaiting:
+			// task should be re-validated (waiting on others)
+			// how can we wait on dependencies?
+			TaskLog(t, "waiting/executed...revalidating")
+			if queue.DependenciesFinished(t.Index) {
 				queue.Execute(t.Index)
-			default:
-				TaskLog(t, "unexpected status")
-				panic("unexpected status ")
 			}
-		})
+		case statusInvalid:
+			TaskLog(t, "invalid (re-executing, re-validating > tx)")
+			queue.Execute(t.Index)
+		default:
+			TaskLog(t, "unexpected status")
+			panic("unexpected status ")
+		}
 
 	case TypeExecution:
-		s.WithTimer("TypeExecution", func() {
-			t.ResetForExecution()
-			TaskLog(t, fmt.Sprintf("TypeExecution (worker=%d)", w))
+		t.ResetForExecution()
+		TaskLog(t, fmt.Sprintf("TypeExecution (worker=%d)", w))
 
-			s.executeTask(t)
+		s.executeTask(t)
 
-			if t.IsStatus(statusAborted) {
-				queue.Execute(t.Index)
-			} else {
-				TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
-				queue.FinishExecute(t.Index)
-				//TODO: speed this up, too slow to do every time
-				queue.ValidateLaterTasks(t.Index)
-			}
-		})
+		if t.IsStatus(statusAborted) {
+			queue.Execute(t.Index)
+		} else {
+			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
+			queue.FinishExecute(t.Index)
+			//TODO: speed this up
+			queue.ValidateLaterTasks(t.Index)
+		}
 
 	default:
 		TaskLog(t, "unexpected type")

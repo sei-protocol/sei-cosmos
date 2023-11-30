@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 	"sync/atomic"
 )
@@ -51,16 +50,12 @@ type taskQueue struct {
 
 	out   chan int
 	tasks []*TxTask
-	queue *taskHeap
-	timer *Timer
 }
 
 func NewTaskQueue(tasks []*TxTask) Queue {
 	sq := &taskQueue{
 		tasks: tasks,
-		queue: &taskHeap{},
-		timer: NewTimer("Queue"),
-		out:   make(chan int, len(tasks)),
+		out:   make(chan int, len(tasks)*10),
 	}
 	sq.cond = sync.NewCond(&sq.condMx)
 
@@ -112,8 +107,6 @@ func (sq *taskQueue) isExecuting(idx int) bool {
 
 // FinishExecute marks a task as finished executing and transitions directly validation
 func (sq *taskQueue) FinishExecute(idx int) {
-	id := sq.timer.Start("FinishExecute")
-	defer sq.timer.End("FinishExecute", id)
 
 	TaskLog(sq.getTask(idx), "-> finish task execute")
 
@@ -133,9 +126,6 @@ func (sq *taskQueue) FinishTask(idx int) {
 		return
 	}
 
-	id := sq.timer.Start("FinishTask")
-	defer sq.timer.End("FinishTask", id)
-
 	TaskLog(sq.getTask(idx), "FinishTask -> task is FINISHED (for now)")
 	sq.finishedCount.Add(1)
 	sq.finished.Store(idx, struct{}{})
@@ -143,8 +133,6 @@ func (sq *taskQueue) FinishTask(idx int) {
 
 // ReValidate re-validates a task (back to queue from validation)
 func (sq *taskQueue) ReValidate(idx int) {
-	id := sq.timer.Start("ReValidate")
-	defer sq.timer.End("ReValidate", id)
 
 	if sq.isExecuting(idx) {
 		TaskLog(sq.getTask(idx), "task is executing (unexpected)")
@@ -155,10 +143,6 @@ func (sq *taskQueue) ReValidate(idx int) {
 }
 
 func (sq *taskQueue) Execute(idx int) {
-	id := sq.timer.Start("Execute")
-	defer sq.timer.End("Execute", id)
-
-	//TODO: might need lock here
 	task := sq.tasks[idx]
 	TaskLog(task, fmt.Sprintf("-> Execute (%d)", sq.getTask(idx).Incarnation))
 	task.Increment()
@@ -168,8 +152,6 @@ func (sq *taskQueue) Execute(idx int) {
 // ValidateLaterTasks marks all tasks after the given index as pending validation.
 // any executing tasks are skipped
 func (sq *taskQueue) ValidateLaterTasks(afterIdx int) {
-	id := sq.timer.Start("ValidateLaterTasks")
-	defer sq.timer.End("ValidateLaterTasks", id)
 
 	for idx := afterIdx + 1; idx < len(sq.tasks); idx++ {
 		sq.validate(idx)
@@ -177,16 +159,11 @@ func (sq *taskQueue) ValidateLaterTasks(afterIdx int) {
 }
 
 func (sq *taskQueue) isFinished(idx int) bool {
-	id := sq.timer.Start("isFinished")
-	defer sq.timer.End("isFinished", id)
-
 	_, ok := sq.finished.Load(idx)
 	return ok && sq.getTask(idx).IsStatus(statusValidated)
 }
 
 func (sq *taskQueue) DependenciesFinished(idx int) bool {
-	id := sq.timer.Start("DependenciesFinished")
-	defer sq.timer.End("DependenciesFinished", id)
 	for _, dep := range sq.getTask(idx).Dependencies {
 		if !sq.isFinished(dep) {
 			return false
@@ -197,24 +174,17 @@ func (sq *taskQueue) DependenciesFinished(idx int) bool {
 
 // IsCompleted returns true if all tasks are "finished"
 func (sq *taskQueue) IsCompleted() bool {
-	id := sq.timer.Start("IsCompleted")
-	defer sq.timer.End("IsCompleted", id)
 	fc := sq.finishedCount.Load()
 	return fc == int32(len(sq.tasks))
 }
 
 func (sq *taskQueue) pushTask(idx int, taskType TaskType) {
-	id := sq.timer.Start("pushTask")
-	defer sq.timer.End("pushTask", id)
 	TaskLog(sq.getTask(idx), fmt.Sprintf("-> PUSH task (%s/%d)", taskType, sq.getTask(idx).Incarnation))
 	sq.out <- idx
 }
 
 // ExecuteAll executes all tasks in the queue (called to start processing)
 func (sq *taskQueue) ExecuteAll() {
-	id := sq.timer.Start("ExecuteAll")
-	defer sq.timer.End("ExecuteAll", id)
-
 	for idx := range sq.tasks {
 		sq.lock()
 		sq.execute(idx)
@@ -239,33 +209,5 @@ func (sq *taskQueue) NextTask() (*TxTask, bool) {
 func (sq *taskQueue) Close() {
 	sq.once.Do(func() {
 		close(sq.out)
-		sq.timer.PrintReport()
 	})
-}
-
-type taskHeap []int
-
-func (h taskHeap) Len() int           { return len(h) }
-func (h taskHeap) Less(i, j int) bool { return h[i] < h[j] }
-func (h taskHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
-
-func (h *taskHeap) Push(x interface{}) {
-	// Check if the integer already exists in the heap
-	for _, item := range *h {
-		if item == x.(int) {
-			return
-		}
-	}
-	// If it doesn't exist, append it
-	*h = append(*h, x.(int))
-	// Sort the heap
-	sort.Ints(*h)
-}
-
-func (h *taskHeap) Pop() interface{} {
-	old := *h
-	n := len(old)
-	x := old[n-1]
-	*h = old[0 : n-1]
-	return x
 }

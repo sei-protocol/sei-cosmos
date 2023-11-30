@@ -107,7 +107,7 @@ func (sq *taskQueue) FinishExecute(idx int) {
 	sq.lock()
 	defer sq.unlock()
 
-	TaskLog(sq.tasks[idx], fmt.Sprintf("-> finish task execute (%d)", sq.tasks[idx].Incarnation))
+	TaskLog(sq.tasks[idx], "-> finish task execute")
 
 	if !sq.isExecuting(idx) {
 		TaskLog(sq.tasks[idx], "not executing, but trying to finish execute")

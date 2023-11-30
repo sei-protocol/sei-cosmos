@@ -16,8 +16,6 @@ type Scheduler interface {
 	ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error)
 }
 
-var aborts = atomic.Int32{}
-
 type scheduler struct {
 	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)
 	workers            int
@@ -157,15 +155,9 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		s.executeTask(t)
 
 		if t.IsStatus(statusAborted) {
-			aborts.Add(1)
-			if aborts.Load() > 50 {
-				TaskLog(t, fmt.Sprintf("too many aborts, depending on: index=%d", t.Abort.DependentTxIdx))
-				panic("too many aborts")
-			}
 			queue.ReExecute(t.Index)
 
 		} else {
-			aborts.Store(0)
 			queue.ValidateLaterTasks(t.Index)
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.Index)

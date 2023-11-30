@@ -70,15 +70,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 				// check if all tasks are complete AND not running anything
 				mx.Lock()
 				if active.Load() == 0 && queue.IsCompleted() {
-					if final.Load() {
-						finisher.Do(func() {
-							queue.Close()
-						})
-					} else {
-						// try one more validation of everything at end
-						final.Store(true)
-						queue.ValidateLaterTasks(-1)
-					}
+					finisher.Do(func() {
+						queue.Close()
+					})
 				}
 				mx.Unlock()
 

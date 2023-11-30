@@ -46,7 +46,7 @@ type taskQueue struct {
 	heapMx    sync.Mutex
 	cond      *sync.Cond
 	once      sync.Once
-	executing sync.Map
+	executing map[int]struct{}
 	queued    sync.Map
 	finished  sync.Map
 	tasks     []*TxTask
@@ -56,8 +56,9 @@ type taskQueue struct {
 
 func NewTaskQueue(tasks []*TxTask) Queue {
 	sq := &taskQueue{
-		tasks: tasks,
-		queue: &taskHeap{},
+		tasks:     tasks,
+		queue:     &taskHeap{},
+		executing: make(map[int]struct{}),
 	}
 	sq.cond = sync.NewCond(&sq.condMx)
 
@@ -76,7 +77,7 @@ func (sq *taskQueue) execute(idx int) {
 	if sq.tasks[idx].SetTaskType(TypeExecution) {
 		TaskLog(sq.tasks[idx], "-> execute")
 		sq.finished.Delete(idx)
-		sq.executing.Store(idx, struct{}{})
+		sq.executing[idx] = struct{}{}
 		sq.pushTask(idx, TypeExecution)
 	}
 }
@@ -98,7 +99,7 @@ func (sq *taskQueue) isQueued(idx int) bool {
 }
 
 func (sq *taskQueue) isExecuting(idx int) bool {
-	_, ok := sq.executing.Load(idx)
+	_, ok := sq.executing[idx]
 	return ok
 }
 
@@ -114,7 +115,7 @@ func (sq *taskQueue) FinishExecute(idx int) {
 		panic("not executing, but trying to finish execute")
 	}
 
-	sq.executing.Delete(idx)
+	delete(sq.executing, idx)
 	sq.validate(idx)
 }
 
@@ -200,9 +201,6 @@ func (sq *taskQueue) DependenciesFinished(idx int) bool {
 
 // IsCompleted returns true if all tasks are "finished"
 func (sq *taskQueue) IsCompleted() bool {
-	sq.lock()
-	defer sq.unlock()
-
 	if len(*sq.queue) == 0 {
 		for _, t := range sq.tasks {
 			if !sq.isFinished(t.Index) {

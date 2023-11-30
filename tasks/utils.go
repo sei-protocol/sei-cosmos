@@ -20,7 +20,7 @@ func TaskLog(task *TxTask, msg string) {
 }
 
 // TODO: remove after things work
-// waitWithMsg prints a message every 1s, so we can tell what's hanging
+// waitWithMsg prints a message every 1s if not cancelled (for hang situations)
 func waitWithMsg(msg string, handlers ...func()) context.CancelFunc {
 	goctx, cancel := context.WithCancel(context.Background())
 	tick := time.NewTicker(1 * time.Second)

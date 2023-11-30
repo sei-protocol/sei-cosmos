@@ -2,13 +2,12 @@ package tasks
 
 import (
 	"fmt"
-	"sync"
-	"sync/atomic"
-
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/tendermint/tendermint/abci/types"
+	"sync"
+	"sync/atomic"
 )
 
 // Scheduler processes tasks concurrently
@@ -54,12 +53,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// send all tasks to queue
 	queue.ExecuteAll()
 
-	active := atomic.Int32{}
 	wg := sync.WaitGroup{}
 	wg.Add(workers)
-	final := atomic.Bool{}
-	finisher := sync.Once{}
-	mx := sync.Mutex{}
+	count := atomic.Int32{}
 
 	for i := 0; i < workers; i++ {
 		go func(worker int) {
@@ -68,41 +64,31 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			for {
 
 				// check if all tasks are complete AND not running anything
-				mx.Lock()
-				if active.Load() == 0 && queue.IsCompleted() {
-					finisher.Do(func() {
-						queue.Close()
-					})
+				if queue.IsCompleted() {
+					queue.Close()
 				}
-				mx.Unlock()
 
-				//TODO: remove once we feel good about this not hanging
-				nt := waitWithMsg(fmt.Sprintf("worker=%d: next task...", worker), func() {
-					fmt.Println(fmt.Sprintf("worker=%d: active=%d, complete=%v", worker, active.Load(), queue.IsCompleted()))
-				})
 				task, anyTasks := queue.NextTask()
-				nt()
 				if !anyTasks {
 					return
 				}
-				active.Add(1)
 
 				task.LockTask()
-				if taskType, ok := task.PopTaskType(); ok {
-					if !s.processTask(ctx, taskType, worker, task, queue) {
-						final.Store(false)
-					}
+				if tt, ok := task.PopTaskType(); ok {
+					count.Add(1)
+					s.processTask(ctx, tt, worker, task, queue)
 				} else {
 					TaskLog(task, "NONE FOUND...SKIPPING")
 				}
 				task.UnlockTask()
-				active.Add(-1)
 			}
 
 		}(i)
 	}
 
 	wg.Wait()
+
+	fmt.Println("count", count.Load())
 
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
@@ -113,11 +99,12 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) bool {
 	switch taskType {
 	case TypeValidation:
-		TaskLog(t, "validate")
+		TaskLog(t, fmt.Sprintf("TypeValidation (worker=%d)", w))
+
 		s.validateTask(ctx, t)
 
 		// check the outcome of validation and do things accordingly
-		switch t.Status() {
+		switch t.status {
 		case statusValidated:
 			// task is possibly finished (can be re-validated by others)
 			TaskLog(t, "*** VALIDATED ***")
@@ -130,11 +117,8 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			TaskLog(t, "waiting/executed...revalidating")
 			if queue.DependenciesFinished(t.Index) {
 				queue.Execute(t.Index)
-			} else {
-				queue.ReValidate(t.Index)
 			}
 		case statusInvalid:
-			// task should be re-executed along with all +1 tasks
 			TaskLog(t, "invalid (re-executing, re-validating > tx)")
 			queue.Execute(t.Index)
 		default:
@@ -144,17 +128,17 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 
 	case TypeExecution:
 		t.ResetForExecution()
-		TaskLog(t, fmt.Sprintf("execute (worker=%d)", w))
+		TaskLog(t, fmt.Sprintf("TypeExecution (worker=%d)", w))
 
 		s.executeTask(t)
 
 		if t.IsStatus(statusAborted) {
 			queue.ReExecute(t.Index)
-
 		} else {
-			queue.ValidateLaterTasks(t.Index)
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.Index)
+			//TODO: speed this up, too slow to do every time
+			queue.ValidateLaterTasks(t.Index)
 		}
 
 	default:

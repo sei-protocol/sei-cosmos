@@ -1,73 +1,115 @@
 package tasks
 
 import (
+	"container/heap"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func generateTasks(count int) []*deliverTxTask {
-	var res []*deliverTxTask
+func generateTasks(count int) []*TxTask {
+	var res []*TxTask
 	for i := 0; i < count; i++ {
-		res = append(res, &deliverTxTask{Index: i})
+		res = append(res, &TxTask{Index: i})
 	}
 	return res
 }
 
-func TestNewSchedulerQueue(t *testing.T) {
-	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
+func assertExecuting(t *testing.T, task *TxTask) {
 
-	if len(sq.tasks) != len(tasks) {
-		t.Errorf("Expected tasks length %d, but got %d", len(tasks), len(sq.tasks))
-	}
+	assert.True(t, task.taskType == TypeExecution)
 }
 
-func TestSetToIdle(t *testing.T) {
-	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
-
-	sq.AddAllTasksToExecutionQueue()
-	sq.SetToIdle(1)
-
-	if !sq.tasks[1].IsTaskType(TypeIdle) {
-		t.Errorf("Expected task type %d, but got %d", TypeIdle, sq.tasks[1].TaskType())
-	}
+func assertValidating(t *testing.T, task *TxTask) {
+	assert.True(t, task.taskType == TypeValidation)
 }
 
-func TestNextTask(t *testing.T) {
+func testQueue() (Queue, []*TxTask) {
 	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
-
-	sq.AddAllTasksToExecutionQueue()
-	task, _ := sq.NextTask()
-
-	if task != sq.tasks[1] {
-		t.Errorf("Expected task %v, but got %v", sq.tasks[1], task)
-	}
+	return NewTaskQueue(tasks), tasks
 }
 
-func TestClose(t *testing.T) {
-	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
+func TestSchedulerQueue(t *testing.T) {
+	queue, tasks := testQueue()
 
-	sq.Close()
-
-	if sq.closed != true {
-		t.Errorf("Expected closed to be true, but got %v", sq.closed)
+	// Test ExecuteAll
+	queue.ExecuteAll()
+	for _, task := range tasks {
+		assertExecuting(t, task)
 	}
+
+	// Test NextTask
+	nextTask, ok := queue.NextTask()
+	assert.True(t, ok)
+	assert.Equal(t, tasks[0], nextTask)
+
+	// Test Close
+	queue.Close()
+	_, ok = queue.NextTask()
+	assert.False(t, ok)
+
+	// Test FinishExecute leads to Validation
+	queue, tasks = testQueue()
+	queue.ExecuteAll()
+	nextTask, ok = queue.NextTask()
+	assert.True(t, ok)
+	queue.FinishExecute(nextTask.Index)
+	assertValidating(t, nextTask)
+
+	// Test Execute->ReExecute leads to Execution
+	queue, tasks = testQueue()
+	queue.ExecuteAll()
+	nextTask, ok = queue.NextTask()
+	assert.True(t, ok)
+	queue.ReExecute(nextTask.Index)
+	assertExecuting(t, nextTask)
+
+	// Test that validation doesn't happen for executing task
+	queue, tasks = testQueue()
+	queue.ExecuteAll()
+	queue.ValidateLaterTasks(-1)
+	nextTask, ok = queue.NextTask()
+	assert.True(t, ok)
+	assertExecuting(t, nextTask) // still executing
+
+	// Test that validation happens for finished tasks
+	queue, tasks = testQueue()
+	queue.ExecuteAll()
+	queue.ValidateLaterTasks(-1)
+	nextTask, ok = queue.NextTask()
+	assert.True(t, ok)
+	assertExecuting(t, nextTask)
+
+	// Test IsCompleted
+	queue, tasks = testQueue()
+	queue.ExecuteAll()
+
+	for idx, task := range tasks {
+		task.SetStatus(statusValidated)
+		queue.NextTask()
+		queue.FinishTask(idx)
+		if idx == len(tasks)-1 {
+			queue.Close()
+		}
+	}
+	assert.True(t, queue.IsCompleted())
 }
 
-func TestNextTaskOrder(t *testing.T) {
-	tasks := generateTasks(10)
-	sq := NewSchedulerQueue(tasks, 5)
+func TestTaskHeap(t *testing.T) {
+	h := &taskHeap{}
+	heap.Init(h)
 
-	// Add tasks in non-sequential order
-	sq.AddAllTasksToExecutionQueue()
-	tsk, _ := sq.NextTask()
-	sq.ReExecute(tsk.Index)
+	// Test Push
+	heap.Push(h, 3)
+	heap.Push(h, 1)
+	heap.Push(h, 2)
+	heap.Push(h, 1) // Duplicate, should not be added
 
-	// The task with the lowest index should be returned first
-	task, _ := sq.NextTask()
-	if task != sq.tasks[1] {
-		t.Errorf("Expected task %v, but got %v", sq.tasks[1], task)
-	}
+	assert.Equal(t, 3, h.Len(), "Heap should contain 3 items")
+
+	// Test Pop
+	assert.Equal(t, 1, heap.Pop(h), "First pop should return the smallest element")
+	assert.Equal(t, 2, heap.Pop(h), "Second pop should return the next smallest element")
+	assert.Equal(t, 3, heap.Pop(h), "Third pop should return the largest element")
+
+	assert.Equal(t, 0, h.Len(), "Heap should be empty after all elements are popped")
 }

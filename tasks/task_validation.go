@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
+func (s *scheduler) findConflicts(task *TxTask) (bool, []int) {
 	var conflicts []int
 	uniq := make(map[int]struct{})
 	valid := true
@@ -24,7 +24,7 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	return valid, conflicts
 }
 
-func (s *scheduler) invalidateTask(task *deliverTxTask) {
+func (s *scheduler) invalidateTask(task *TxTask) {
 	for _, mv := range s.multiVersionStores {
 		mv.InvalidateWriteset(task.Index, task.Incarnation)
 		mv.ClearReadset(task.Index)
@@ -32,27 +32,28 @@ func (s *scheduler) invalidateTask(task *deliverTxTask) {
 	}
 }
 
-func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
-	// avoids validation races WITHIN a task
-	task.LockTask()
-	defer task.UnlockTask()
-
+func (s *scheduler) validateTask(ctx sdk.Context, task *TxTask) {
 	_, span := s.traceSpan(ctx, "SchedulerValidate", task)
 	defer span.End()
 
-	if valid, conflicts := s.findConflicts(task); !valid {
+	valid, conflicts := s.findConflicts(task)
+	task.Dependencies = conflicts
+
+	if !valid {
 		s.invalidateTask(task)
-		task.SetStatus(statusInvalid)
 		if len(conflicts) > 0 {
-			task.Dependencies = conflicts
+			task.SetStatus(statusWaiting)
+			return
 		}
-		return false
-	} else if len(conflicts) == 0 {
-		// mark as validated, which will avoid re-validating unless a lower-index re-validates
-		task.SetStatus(statusValidated)
-		return true
-	} else {
-		task.Dependencies = conflicts
+		task.SetStatus(statusInvalid)
+		return
 	}
-	return false
+
+	if len(conflicts) > 0 {
+		task.SetStatus(statusWaiting)
+		return
+	}
+
+	task.SetStatus(statusValidated)
+
 }

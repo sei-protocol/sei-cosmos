@@ -8,7 +8,7 @@ import (
 )
 
 // prepareTask initializes the context and version stores for a task
-func (s *scheduler) prepareTask(task *deliverTxTask) {
+func (s *scheduler) prepareTask(task *TxTask) {
 	ctx := task.Ctx.WithTxIndex(task.Index)
 
 	_, span := s.traceSpan(ctx, "SchedulerPrepare", task)
@@ -42,10 +42,12 @@ func (s *scheduler) prepareTask(task *deliverTxTask) {
 }
 
 // executeTask executes a single task
-func (s *scheduler) executeTask(task *deliverTxTask) {
-	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
+func (s *scheduler) executeTask(task *TxTask) {
+	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerExecuteTask", task)
 	defer dSpan.End()
 	task.Ctx = dCtx
+
+	s.prepareTask(task)
 
 	resp := s.deliverTx(task.Ctx, task.Request)
 

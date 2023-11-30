@@ -2,89 +2,211 @@ package tasks
 
 import (
 	"container/heap"
+	"fmt"
+	"sort"
 	"sync"
 )
 
-type taskType int
+type TaskType string
 
 const (
-	TypeIdle taskType = iota
-	TypeExecution
-	TypeValidation
+	TypeNone       TaskType = "NONE"
+	TypeExecution  TaskType = "EXECUTE"
+	TypeValidation TaskType = "VALIDATE"
 )
 
-type SchedulerQueue struct {
-	mx   sync.Mutex
-	cond *sync.Cond
-	once sync.Once
+type Queue interface {
+	// NextTask returns the next task to be executed, or nil if the queue is closed.
+	NextTask() (*TxTask, bool)
+	// Close closes the queue, causing NextTask to return false.
+	Close()
+	// ExecuteAll executes all tasks in the queue.
+	ExecuteAll()
+	// Execute executes a task
+	Execute(idx int)
+	// ReExecute re-executes a task that just executed
+	ReExecute(idx int)
+	// ReValidate re-validates a task.
+	ReValidate(idx int)
+	// FinishExecute marks a task as finished executing.
+	FinishExecute(idx int)
+	// FinishTask marks a task as finished (only upon valid).
+	FinishTask(idx int)
+	// ValidateLaterTasks marks all tasks after the given index as pending validation.
+	ValidateLaterTasks(afterIdx int)
+	// IsCompleted returns true if all tasks have been executed and validated.
+	IsCompleted() bool
+	// DependenciesFinished returns whether all dependencies are finished
+	DependenciesFinished(idx int) bool
+}
 
+type taskQueue struct {
+	mx        sync.Mutex
+	condMx    sync.Mutex
+	heapMx    sync.Mutex
+	cond      *sync.Cond
+	once      sync.Once
 	executing sync.Map
-	active    sync.Map
-	tasks     []*deliverTxTask
+	queued    sync.Map
+	finished  sync.Map
+	tasks     []*TxTask
 	queue     *taskHeap
-	workers   int
 	closed    bool
 }
 
-func NewSchedulerQueue(tasks []*deliverTxTask, workers int) *SchedulerQueue {
-	sq := &SchedulerQueue{
-		tasks:   tasks,
-		queue:   &taskHeap{},
-		workers: workers,
+func NewTaskQueue(tasks []*TxTask) Queue {
+	sq := &taskQueue{
+		tasks: tasks,
+		queue: &taskHeap{},
 	}
-	sq.cond = sync.NewCond(&sq.mx)
+	sq.cond = sync.NewCond(&sq.condMx)
 
 	return sq
 }
 
-func (sq *SchedulerQueue) Lock() {
+func (sq *taskQueue) lock() {
 	sq.mx.Lock()
 }
 
-func (sq *SchedulerQueue) Unlock() {
+func (sq *taskQueue) unlock() {
 	sq.mx.Unlock()
 }
 
-func (sq *SchedulerQueue) SetToIdle(idx int) {
-	sq.Lock()
-	defer sq.Unlock()
-	sq.tasks[idx].SetTaskType(TypeIdle)
-	sq.active.Delete(idx)
+func (sq *taskQueue) execute(idx int) {
+	if sq.tasks[idx].SetTaskType(TypeExecution) {
+		TaskLog(sq.tasks[idx], "-> execute")
+		sq.finished.Delete(idx)
+		sq.executing.Store(idx, struct{}{})
+		sq.pushTask(idx, TypeExecution)
+	}
 }
 
-func (sq *SchedulerQueue) ReExecute(idx int) {
-	sq.Lock()
-	defer sq.Unlock()
-
-	TaskLog(sq.tasks[idx], "-> re-execute")
-
-	sq.tasks[idx].ResetForExecution()
-	sq.pushTask(idx)
+func (sq *taskQueue) validate(idx int) {
+	if sq.isExecuting(idx) {
+		TaskLog(sq.tasks[idx], "(skip validating, executing...)")
+		return
+	}
+	if sq.tasks[idx].SetTaskType(TypeValidation) {
+		TaskLog(sq.tasks[idx], "-> validate")
+		sq.pushTask(idx, TypeValidation)
+	}
 }
 
-// ReValidate is a helper method that revalidates a task
-// without making it eligible for other workers to request it to validate
-func (sq *SchedulerQueue) ReValidate(idx int) {
-	sq.Lock()
-	defer sq.Unlock()
+func (sq *taskQueue) isQueued(idx int) bool {
+	_, ok := sq.queued.Load(idx)
+	return ok
+}
 
-	if !sq.tasks[idx].IsTaskType(TypeValidation) {
-		panic("trying to re-validate a task not in validation state")
+func (sq *taskQueue) isExecuting(idx int) bool {
+	_, ok := sq.executing.Load(idx)
+	return ok
+}
+
+// FinishExecute marks a task as finished executing and transitions directly validation
+func (sq *taskQueue) FinishExecute(idx int) {
+	sq.lock()
+	defer sq.unlock()
+
+	TaskLog(sq.tasks[idx], fmt.Sprintf("-> finish task execute (%d)", sq.tasks[idx].Incarnation))
+
+	if !sq.isExecuting(idx) {
+		TaskLog(sq.tasks[idx], "not executing, but trying to finish execute")
+		panic("not executing, but trying to finish execute")
 	}
 
-	TaskLog(sq.tasks[idx], "-> re-validate")
-	sq.tasks[idx].Abort = nil
-	sq.pushTask(idx)
+	sq.executing.Delete(idx)
+	sq.validate(idx)
 }
 
-func (sq *SchedulerQueue) IsCompleted() bool {
-	sq.Lock()
-	defer sq.Unlock()
+// FinishTask marks a task as finished if nothing else queued it
+// this drives whether the queue thinks everything is done processing
+func (sq *taskQueue) FinishTask(idx int) {
+	sq.lock()
+	defer sq.unlock()
+
+	TaskLog(sq.tasks[idx], "FinishTask -> task is FINISHED (for now)")
+
+	sq.finished.Store(idx, struct{}{})
+}
+
+// ReValidate re-validates a task (back to queue from validation)
+func (sq *taskQueue) ReValidate(idx int) {
+	sq.lock()
+	defer sq.unlock()
+
+	if sq.isExecuting(idx) {
+		TaskLog(sq.tasks[idx], "task is executing (unexpected)")
+		panic("cannot re-validate an executing task")
+	}
+
+	sq.validate(idx)
+}
+
+func (sq *taskQueue) Execute(idx int) {
+	sq.lock()
+	defer sq.unlock()
+
+	TaskLog(sq.tasks[idx], fmt.Sprintf("-> Execute (%d)", sq.tasks[idx].Incarnation))
+
+	if sq.isExecuting(idx) {
+		TaskLog(sq.tasks[idx], "task is executing (unexpected)")
+		panic("cannot execute an executing task")
+	}
+
+	sq.tasks[idx].Increment()
+	sq.execute(idx)
+}
+
+// ReExecute re-executes a task (back to queue from execution)
+func (sq *taskQueue) ReExecute(idx int) {
+	sq.lock()
+	defer sq.unlock()
+
+	TaskLog(sq.tasks[idx], fmt.Sprintf("-> RE-execute (%d)", sq.tasks[idx].Incarnation))
+
+	if !sq.isExecuting(idx) {
+		TaskLog(sq.tasks[idx], "task is not executing (unexpected)")
+		panic("cannot re-execute a non-executing task")
+	}
+
+	sq.tasks[idx].Increment()
+	sq.execute(idx)
+}
+
+// ValidateLaterTasks marks all tasks after the given index as pending validation.
+// any executing tasks are skipped
+func (sq *taskQueue) ValidateLaterTasks(afterIdx int) {
+	sq.lock()
+	defer sq.unlock()
+
+	for idx := afterIdx + 1; idx < len(sq.tasks); idx++ {
+		sq.validate(idx)
+	}
+}
+
+func (sq *taskQueue) isFinished(idx int) bool {
+	_, ok := sq.finished.Load(idx)
+	return ok && sq.tasks[idx].IsStatus(statusValidated)
+}
+
+func (sq *taskQueue) DependenciesFinished(idx int) bool {
+	for _, dep := range sq.tasks[idx].Dependencies {
+		if !sq.isFinished(dep) {
+			return false
+		}
+	}
+	return true
+}
+
+// IsCompleted returns true if all tasks are "finished"
+func (sq *taskQueue) IsCompleted() bool {
+	sq.lock()
+	defer sq.unlock()
 
 	if len(*sq.queue) == 0 {
 		for _, t := range sq.tasks {
-			if !t.IsValid() || !t.IsIdle() {
-				TaskLog(t, "not valid or not idle")
+			if !sq.isFinished(t.Index) {
+				TaskLog(t, "not finished yet")
 				return false
 			}
 		}
@@ -93,60 +215,31 @@ func (sq *SchedulerQueue) IsCompleted() bool {
 	return false
 }
 
-// ValidateExecutedTask adds a task to the validation queue IFF it just executed
-// this allows us to transition to validation without making it eligible for something else
-// to add it to validation
-func (sq *SchedulerQueue) ValidateExecutedTask(idx int) {
-	sq.Lock()
-	defer sq.Unlock()
-
-	if _, ok := sq.active.Load(idx); !ok {
-		TaskLog(sq.tasks[idx], "not in execution")
-		panic("trying to validate a task not in execution")
-	}
-	TaskLog(sq.tasks[idx], "-> validate")
-	sq.tasks[idx].SetTaskType(TypeValidation)
-	sq.pushTask(idx)
-}
-
-func (sq *SchedulerQueue) ValidateTasksAfterIndex(afterIdx int) {
-	sq.Lock()
-	defer sq.Unlock()
-
-	for idx := afterIdx + 1; idx < len(sq.tasks); idx++ {
-		// already active
-
-		if _, ok := sq.active.Load(idx); ok {
-			continue
-		}
-
-		TaskLog(sq.tasks[idx], "-> validate")
-		sq.tasks[idx].SetStatus(statusExecuted)
-		sq.tasks[idx].SetTaskType(TypeValidation)
-		sq.pushTask(idx)
-	}
-}
-
-func (sq *SchedulerQueue) pushTask(idx int) {
-	sq.active.Store(idx, struct{}{})
+func (sq *taskQueue) pushTask(idx int, taskType TaskType) {
+	sq.condMx.Lock()
+	defer sq.condMx.Unlock()
+	sq.queued.Store(idx, struct{}{})
+	TaskLog(sq.tasks[idx], fmt.Sprintf("-> PUSH task (%s/%d)", taskType, sq.tasks[idx].Incarnation))
 	heap.Push(sq.queue, idx)
 	sq.cond.Broadcast()
 }
 
-func (sq *SchedulerQueue) AddAllTasksToExecutionQueue() {
-	sq.Lock()
-	defer sq.Unlock()
+// ExecuteAll executes all tasks in the queue (called to start processing)
+func (sq *taskQueue) ExecuteAll() {
+	sq.lock()
+	defer sq.unlock()
 
 	for idx := range sq.tasks {
-		TaskLog(sq.tasks[idx], "-> execute")
-		sq.tasks[idx].SetTaskType(TypeExecution)
-		sq.pushTask(idx)
+		sq.execute(idx)
 	}
 }
 
-func (sq *SchedulerQueue) NextTask() (*deliverTxTask, bool) {
-	sq.Lock()
-	defer sq.Unlock()
+// NextTask returns the next task to be executed, or nil if the queue is closed.
+// this hangs if no tasks are ready because it's possible a new task might arrive
+// closing the queue causes NextTask to return false immediately
+func (sq *taskQueue) NextTask() (*TxTask, bool) {
+	sq.condMx.Lock()
+	defer sq.condMx.Unlock()
 
 	for len(*sq.queue) == 0 && !sq.closed {
 		sq.cond.Wait()
@@ -156,14 +249,24 @@ func (sq *SchedulerQueue) NextTask() (*deliverTxTask, bool) {
 		return nil, false
 	}
 
+	sq.heapMx.Lock()
 	idx := heap.Pop(sq.queue).(int)
-	return sq.tasks[idx], true
+	sq.heapMx.Unlock()
+
+	defer sq.queued.Delete(idx)
+
+	res := sq.tasks[idx]
+
+	TaskLog(res, fmt.Sprintf("<- POP task (%d)", res.Incarnation))
+
+	return res, true
 }
 
-func (sq *SchedulerQueue) Close() {
+// Close closes the queue, causing NextTask to return false.
+func (sq *taskQueue) Close() {
 	sq.once.Do(func() {
-		sq.Lock()
-		defer sq.Unlock()
+		sq.condMx.Lock()
+		defer sq.condMx.Unlock()
 		sq.closed = true
 		sq.cond.Broadcast()
 	})
@@ -176,7 +279,16 @@ func (h taskHeap) Less(i, j int) bool { return h[i] < h[j] }
 func (h taskHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
 
 func (h *taskHeap) Push(x interface{}) {
+	// Check if the integer already exists in the heap
+	for _, item := range *h {
+		if item == x.(int) {
+			return
+		}
+	}
+	// If it doesn't exist, append it
 	*h = append(*h, x.(int))
+	// Sort the heap
+	sort.Ints(*h)
 }
 
 func (h *taskHeap) Pop() interface{} {

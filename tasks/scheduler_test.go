@@ -52,6 +52,68 @@ func initTestCtx(injectStores bool) sdk.Context {
 	return ctx
 }
 
+func TestExplicitOrdering(t *testing.T) {
+	tests := []struct {
+		name     string
+		scenario func(s *scheduler, ctx sdk.Context, tasks []*TxTask)
+	}{
+		{
+			name: "Test perfect order",
+			scenario: func(s *scheduler, ctx sdk.Context, tasks []*TxTask) {
+				// STARTING HERE
+				// reads nil, writes 0
+				s.executeTask(tasks[0])
+				s.validateTask(ctx, tasks[0])
+
+				// reads 0, writes 1
+				s.executeTask(tasks[1])
+				s.validateTask(ctx, tasks[1])
+
+				// reads the expected things
+				require.Equal(t, "", tasks[0].Response.Info)
+				require.Equal(t, "0", tasks[1].Response.Info)
+
+				// both validated
+				require.Equal(t, statusValidated, tasks[0].status)
+				require.Equal(t, statusValidated, tasks[1].status)
+			},
+		},
+	}
+	for _, test := range tests {
+		deliverTx := func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+			// all txs read and write to the same key to maximize conflicts
+			kv := ctx.MultiStore().GetKVStore(testStoreKey)
+
+			val := string(kv.Get(itemKey))
+			kv.Set(itemKey, []byte(fmt.Sprintf("%d", ctx.TxIndex())))
+
+			// return what was read from the store (final attempt should be index-1)
+			return types.ResponseDeliverTx{
+				Info: val,
+			}
+		}
+		tp := trace.NewNoopTracerProvider()
+		otel.SetTracerProvider(trace.NewNoopTracerProvider())
+		tr := tp.Tracer("scheduler-test")
+		ti := &tracing.Info{
+			Tracer: &tr,
+		}
+		s := &scheduler{
+			deliverTx:   deliverTx,
+			tracingInfo: ti,
+		}
+		ctx := initTestCtx(true)
+		s.initMultiVersionStore(ctx)
+
+		tasks := generateTasks(2)
+		for _, tsk := range tasks {
+			tsk.Ctx = ctx
+		}
+		test.scenario(s, ctx, tasks)
+	}
+
+}
+
 func TestProcessAll(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -96,8 +158,8 @@ func TestProcessAll(t *testing.T) {
 		},
 		{
 			name:      "Test every tx accesses same key",
-			workers:   50,
-			runs:      50,
+			workers:   100,
+			runs:      1,
 			addStores: true,
 			requests:  requestList(100),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {

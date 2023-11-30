@@ -1,12 +1,11 @@
 package tasks
 
 import (
-	"sync"
-
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/tendermint/tendermint/abci/types"
+	"sync"
 )
 
 type status string
@@ -30,14 +29,14 @@ const (
 	statusWaiting status = "waiting"
 )
 
-type deliverTxTask struct {
-	Ctx     sdk.Context
-	AbortCh chan occ.Abort
-	rwMx    sync.RWMutex
-	mx      sync.Mutex
-
-	taskType      taskType
+type TxTask struct {
+	Ctx           sdk.Context
+	AbortCh       chan occ.Abort
+	rwMx          sync.RWMutex
+	mx            sync.Mutex
+	taskType      TaskType
 	status        status
+	ExecutionID   string
 	Dependencies  []int
 	Abort         *occ.Abort
 	Index         int
@@ -45,76 +44,81 @@ type deliverTxTask struct {
 	Request       types.RequestDeliverTx
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
-	ValidateCh    chan status
 }
 
-func (dt *deliverTxTask) LockTask() {
+func (dt *TxTask) LockTask() {
 	dt.mx.Lock()
 }
 
-func (dt *deliverTxTask) UnlockTask() {
+func (dt *TxTask) UnlockTask() {
 	dt.mx.Unlock()
 }
 
-func (dt *deliverTxTask) SetTaskType(t taskType) {
-	dt.rwMx.Lock()
-	defer dt.rwMx.Unlock()
-	dt.taskType = t
-}
-
-func (dt *deliverTxTask) IsIdle() bool {
-	return dt.IsTaskType(TypeIdle)
-}
-
-func (dt *deliverTxTask) IsTaskType(t taskType) bool {
-	dt.rwMx.RLock()
-	defer dt.rwMx.RUnlock()
-	return dt.taskType == t
-}
-
-func (dt *deliverTxTask) IsStatus(s status) bool {
+func (dt *TxTask) IsStatus(s status) bool {
 	dt.rwMx.RLock()
 	defer dt.rwMx.RUnlock()
 	return dt.status == s
 }
 
-func (dt *deliverTxTask) TaskType() taskType {
-	dt.rwMx.RLock()
-	defer dt.rwMx.RUnlock()
-	return dt.taskType
+func (dt *TxTask) SetTaskType(tt TaskType) bool {
+	dt.rwMx.Lock()
+	defer dt.rwMx.Unlock()
+	switch tt {
+	case TypeValidation:
+		if dt.taskType == TypeNone {
+			TaskLog(dt, "SCHEDULE task VALIDATION")
+			dt.taskType = tt
+			return true
+		}
+	case TypeExecution:
+		if dt.taskType != TypeExecution {
+			TaskLog(dt, "SCHEDULE task EXECUTION")
+			dt.taskType = tt
+			return true
+		}
+	}
+	return false
 }
 
-func (dt *deliverTxTask) SetStatus(s status) {
+func (dt *TxTask) PopTaskType() (TaskType, bool) {
+	dt.rwMx.Lock()
+	defer dt.rwMx.Unlock()
+	tt := dt.taskType
+	dt.taskType = TypeNone
+	return tt, tt != TypeNone
+}
+
+func (dt *TxTask) SetStatus(s status) {
 	dt.rwMx.Lock()
 	defer dt.rwMx.Unlock()
 	dt.status = s
 }
 
-func (dt *deliverTxTask) Status() status {
+func (dt *TxTask) Status() status {
 	dt.rwMx.RLock()
 	defer dt.rwMx.RUnlock()
 	return dt.status
 }
 
-func (dt *deliverTxTask) IsInvalid() bool {
+func (dt *TxTask) IsInvalid() bool {
 	dt.rwMx.RLock()
 	defer dt.rwMx.RUnlock()
 	return dt.status == statusInvalid || dt.status == statusAborted
 }
 
-func (dt *deliverTxTask) IsValid() bool {
+func (dt *TxTask) IsValid() bool {
 	dt.rwMx.RLock()
 	defer dt.rwMx.RUnlock()
 	return dt.status == statusValidated
 }
 
-func (dt *deliverTxTask) IsWaiting() bool {
+func (dt *TxTask) IsWaiting() bool {
 	dt.rwMx.RLock()
 	defer dt.rwMx.RUnlock()
 	return dt.status == statusWaiting
 }
 
-func (dt *deliverTxTask) Reset() {
+func (dt *TxTask) Reset() {
 	dt.rwMx.Lock()
 	defer dt.rwMx.Unlock()
 	dt.status = statusPending
@@ -125,11 +129,10 @@ func (dt *deliverTxTask) Reset() {
 	dt.VersionStores = nil
 }
 
-func (dt *deliverTxTask) ResetForExecution() {
+func (dt *TxTask) ResetForExecution() {
 	dt.rwMx.Lock()
 	defer dt.rwMx.Unlock()
 	dt.status = statusPending
-	dt.taskType = TypeExecution
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
@@ -137,7 +140,6 @@ func (dt *deliverTxTask) ResetForExecution() {
 	dt.VersionStores = nil
 }
 
-func (dt *deliverTxTask) Increment() {
+func (dt *TxTask) Increment() {
 	dt.Incarnation++
-	dt.ValidateCh = make(chan status, 1)
 }

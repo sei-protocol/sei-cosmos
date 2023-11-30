@@ -14,9 +14,9 @@ import (
 )
 
 // TODO: remove after things work
-func TaskLog(task *deliverTxTask, msg string) {
+func TaskLog(task *TxTask, msg string) {
 	// helpful for debugging state transitions
-	//fmt.Println(fmt.Sprintf("Task(%d\t%s):\t%s", task.Index, task.Status, msg))
+	//fmt.Println(fmt.Sprintf("%d: Task(%d/%s/%d):\t%s", time.Now().UnixMicro(), task.Index, task.status, task.Incarnation, msg))
 }
 
 // TODO: remove after things work
@@ -40,7 +40,7 @@ func waitWithMsg(msg string, handlers ...func()) context.CancelFunc {
 	return cancel
 }
 
-func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
+func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *TxTask) (sdk.Context, trace.Span) {
 	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
 	if task != nil {
 		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
@@ -51,21 +51,20 @@ func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask)
 	return ctx, span
 }
 
-func toTasks(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
-	res := make([]*deliverTxTask, 0, len(reqs))
+func toTasks(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) []*TxTask {
+	res := make([]*TxTask, 0, len(reqs))
 	for idx, r := range reqs {
-		res = append(res, &deliverTxTask{
-			Request:    r.Request,
-			Index:      idx,
-			Ctx:        ctx,
-			status:     statusPending,
-			ValidateCh: make(chan status, 1),
+		res = append(res, &TxTask{
+			Request: r.Request,
+			Index:   idx,
+			Ctx:     ctx,
+			status:  statusPending,
 		})
 	}
 	return res
 }
 
-func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
+func collectResponses(tasks []*TxTask) []types.ResponseDeliverTx {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
 	for _, t := range tasks {
 		res = append(res, *t.Response)

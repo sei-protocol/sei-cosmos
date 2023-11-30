@@ -129,7 +129,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	return results, err
 }
 
-func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) {
+func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) bool {
+	var result bool
 	switch taskType {
 	case TypeValidation:
 		s.WithTimer("TypeValidation", func() {
@@ -144,7 +145,7 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 				TaskLog(t, "*** VALIDATED ***")
 				// informs queue that it's complete (any subsequent submission for idx unsets this)
 				queue.FinishTask(t.Index)
-				return
+				result = true
 			case statusWaiting:
 				// task should be re-validated (waiting on others)
 				// how can we wait on dependencies?
@@ -182,4 +183,5 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		TaskLog(t, "unexpected type")
 		panic("unexpected type")
 	}
+	return result
 }

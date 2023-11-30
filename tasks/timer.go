@@ -100,6 +100,9 @@ func (t *Timer) PrintReport() {
 				maxDuration = d
 			}
 		}
+		if count == 0 {
+			continue
+		}
 		avg := sum / time.Duration(count)
 		lines = append(lines, fmt.Sprintf("%-15s: \tsum=%-15s\tavg=%-15s\tmin=%-15s\tmax=%-15s\tcount=%-15d %s", t.name, sum, avg, minDuration, maxDuration, count, rpt.name))
 	}

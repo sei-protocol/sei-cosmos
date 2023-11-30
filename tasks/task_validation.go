@@ -32,6 +32,10 @@ func (s *scheduler) invalidateTask(task *TxTask) {
 	}
 }
 
+func (s *scheduler) mockValidateTask(ctx sdk.Context, task *TxTask) {
+	task.SetStatus(statusValidated)
+}
+
 func (s *scheduler) validateTask(ctx sdk.Context, task *TxTask) {
 	_, span := s.traceSpan(ctx, "SchedulerValidate", task)
 	defer span.End()

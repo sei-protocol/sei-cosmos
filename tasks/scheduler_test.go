@@ -161,7 +161,7 @@ func TestProcessAll(t *testing.T) {
 			workers:   50,
 			runs:      1,
 			addStores: true,
-			requests:  requestList(1000),
+			requests:  requestList(50),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)

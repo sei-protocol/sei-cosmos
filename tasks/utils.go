@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
@@ -9,35 +8,12 @@ import (
 	"github.com/tendermint/tendermint/abci/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-
-	"time"
 )
 
 // TODO: remove after things work
 func TaskLog(task *TxTask, msg string) {
 	// helpful for debugging state transitions
 	//fmt.Println(fmt.Sprintf("%d: Task(%d/%s/%d):\t%s", time.Now().UnixMicro(), task.Index, task.status, task.Incarnation, msg))
-}
-
-// TODO: remove after things work
-// waitWithMsg prints a message every 1s if not cancelled (for hang situations)
-func waitWithMsg(msg string, handlers ...func()) context.CancelFunc {
-	goctx, cancel := context.WithCancel(context.Background())
-	tick := time.NewTicker(1 * time.Second)
-	go func() {
-		for {
-			select {
-			case <-goctx.Done():
-				return
-			case <-tick.C:
-				fmt.Println(msg)
-				for _, h := range handlers {
-					h()
-				}
-			}
-		}
-	}()
-	return cancel
 }
 
 func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *TxTask) (sdk.Context, trace.Span) {

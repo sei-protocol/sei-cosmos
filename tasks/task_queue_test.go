@@ -55,14 +55,6 @@ func TestSchedulerQueue(t *testing.T) {
 	queue.FinishExecute(nextTask.Index)
 	assertValidating(t, nextTask)
 
-	// Test Execute->ReExecute leads to Execution
-	queue, tasks = testQueue()
-	queue.ExecuteAll()
-	nextTask, ok = queue.NextTask()
-	assert.True(t, ok)
-	queue.ReExecute(nextTask.Index)
-	assertExecuting(t, nextTask)
-
 	// Test that validation doesn't happen for executing task
 	queue, tasks = testQueue()
 	queue.ExecuteAll()

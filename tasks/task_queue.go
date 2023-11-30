@@ -24,8 +24,6 @@ type Queue interface {
 	ExecuteAll()
 	// Execute executes a task
 	Execute(idx int)
-	// ReExecute re-executes a task that just executed
-	ReExecute(idx int)
 	// ReValidate re-validates a task.
 	ReValidate(idx int)
 	// FinishExecute marks a task as finished executing.
@@ -41,23 +39,25 @@ type Queue interface {
 }
 
 type taskQueue struct {
-	mx        sync.Mutex
-	condMx    sync.Mutex
-	heapMx    sync.Mutex
-	cond      *sync.Cond
-	once      sync.Once
-	executing map[int]struct{}
-	queued    sync.Map
-	finished  sync.Map
-	tasks     []*TxTask
-	queue     *taskHeap
-	closed    bool
+	lockTimerID string
+	mx          sync.Mutex
+	condMx      sync.Mutex
+	heapMx      sync.Mutex
+	cond        *sync.Cond
+	once        sync.Once
+	executing   map[int]struct{}
+	finished    sync.Map
+	tasks       []*TxTask
+	queue       *taskHeap
+	timer       *Timer
+	closed      bool
 }
 
 func NewTaskQueue(tasks []*TxTask) Queue {
 	sq := &taskQueue{
 		tasks:     tasks,
 		queue:     &taskHeap{},
+		timer:     NewTimer("Queue"),
 		executing: make(map[int]struct{}),
 	}
 	sq.cond = sync.NewCond(&sq.condMx)
@@ -93,11 +93,6 @@ func (sq *taskQueue) validate(idx int) {
 	}
 }
 
-func (sq *taskQueue) isQueued(idx int) bool {
-	_, ok := sq.queued.Load(idx)
-	return ok
-}
-
 func (sq *taskQueue) isExecuting(idx int) bool {
 	_, ok := sq.executing[idx]
 	return ok
@@ -105,8 +100,15 @@ func (sq *taskQueue) isExecuting(idx int) bool {
 
 // FinishExecute marks a task as finished executing and transitions directly validation
 func (sq *taskQueue) FinishExecute(idx int) {
+	id := sq.timer.Start("FinishExecute")
+	defer sq.timer.End("FinishExecute", id)
+
+	id2 := sq.timer.Start("FinishExecute-LOCK")
 	sq.lock()
-	defer sq.unlock()
+	defer func() {
+		sq.unlock()
+		sq.timer.End("FinishExecute-LOCK", id2)
+	}()
 
 	TaskLog(sq.tasks[idx], "-> finish task execute")
 
@@ -122,8 +124,14 @@ func (sq *taskQueue) FinishExecute(idx int) {
 // FinishTask marks a task as finished if nothing else queued it
 // this drives whether the queue thinks everything is done processing
 func (sq *taskQueue) FinishTask(idx int) {
+	id := sq.timer.Start("FinishTask")
+	defer sq.timer.End("FinishTask", id)
+	id2 := sq.timer.Start("FinishTask-LOCK")
 	sq.lock()
-	defer sq.unlock()
+	defer func() {
+		sq.unlock()
+		sq.timer.End("FinishTask-LOCK", id2)
+	}()
 
 	TaskLog(sq.tasks[idx], "FinishTask -> task is FINISHED (for now)")
 
@@ -132,6 +140,8 @@ func (sq *taskQueue) FinishTask(idx int) {
 
 // ReValidate re-validates a task (back to queue from validation)
 func (sq *taskQueue) ReValidate(idx int) {
+	id := sq.timer.Start("ReValidate")
+	defer sq.timer.End("ReValidate", id)
 	sq.lock()
 	defer sq.unlock()
 
@@ -144,31 +154,19 @@ func (sq *taskQueue) ReValidate(idx int) {
 }
 
 func (sq *taskQueue) Execute(idx int) {
+	id := sq.timer.Start("Execute-full")
+	defer sq.timer.End("Execute-full", id)
+	id3 := sq.timer.Start("Execute-LOCK")
 	sq.lock()
-	defer sq.unlock()
+	defer func() {
+		sq.unlock()
+		sq.timer.End("Execute-LOCK", id3)
+	}()
+
+	id2 := sq.timer.Start("Execute-logic")
+	defer sq.timer.End("Execute-logic", id2)
 
 	TaskLog(sq.tasks[idx], fmt.Sprintf("-> Execute (%d)", sq.tasks[idx].Incarnation))
-
-	if sq.isExecuting(idx) {
-		TaskLog(sq.tasks[idx], "task is executing (unexpected)")
-		panic("cannot execute an executing task")
-	}
-
-	sq.tasks[idx].Increment()
-	sq.execute(idx)
-}
-
-// ReExecute re-executes a task (back to queue from execution)
-func (sq *taskQueue) ReExecute(idx int) {
-	sq.lock()
-	defer sq.unlock()
-
-	TaskLog(sq.tasks[idx], fmt.Sprintf("-> RE-execute (%d)", sq.tasks[idx].Incarnation))
-
-	if !sq.isExecuting(idx) {
-		TaskLog(sq.tasks[idx], "task is not executing (unexpected)")
-		panic("cannot re-execute a non-executing task")
-	}
 
 	sq.tasks[idx].Increment()
 	sq.execute(idx)
@@ -177,20 +175,27 @@ func (sq *taskQueue) ReExecute(idx int) {
 // ValidateLaterTasks marks all tasks after the given index as pending validation.
 // any executing tasks are skipped
 func (sq *taskQueue) ValidateLaterTasks(afterIdx int) {
-	sq.lock()
-	defer sq.unlock()
+	id := sq.timer.Start("ValidateLaterTasks")
+	defer sq.timer.End("ValidateLaterTasks", id)
 
 	for idx := afterIdx + 1; idx < len(sq.tasks); idx++ {
+		sq.lock()
 		sq.validate(idx)
+		sq.unlock()
 	}
 }
 
 func (sq *taskQueue) isFinished(idx int) bool {
+	id := sq.timer.Start("isFinished")
+	defer sq.timer.End("isFinished", id)
+
 	_, ok := sq.finished.Load(idx)
 	return ok && sq.tasks[idx].IsStatus(statusValidated)
 }
 
 func (sq *taskQueue) DependenciesFinished(idx int) bool {
+	id := sq.timer.Start("DependenciesFinished")
+	defer sq.timer.End("DependenciesFinished", id)
 	for _, dep := range sq.tasks[idx].Dependencies {
 		if !sq.isFinished(dep) {
 			return false
@@ -201,6 +206,8 @@ func (sq *taskQueue) DependenciesFinished(idx int) bool {
 
 // IsCompleted returns true if all tasks are "finished"
 func (sq *taskQueue) IsCompleted() bool {
+	id := sq.timer.Start("IsCompleted")
+	defer sq.timer.End("IsCompleted", id)
 	if len(*sq.queue) == 0 {
 		for _, t := range sq.tasks {
 			if !sq.isFinished(t.Index) {
@@ -214,9 +221,10 @@ func (sq *taskQueue) IsCompleted() bool {
 }
 
 func (sq *taskQueue) pushTask(idx int, taskType TaskType) {
+	id := sq.timer.Start("pushTask")
+	defer sq.timer.End("pushTask", id)
 	sq.condMx.Lock()
 	defer sq.condMx.Unlock()
-	sq.queued.Store(idx, struct{}{})
 	TaskLog(sq.tasks[idx], fmt.Sprintf("-> PUSH task (%s/%d)", taskType, sq.tasks[idx].Incarnation))
 	heap.Push(sq.queue, idx)
 	sq.cond.Broadcast()
@@ -224,11 +232,13 @@ func (sq *taskQueue) pushTask(idx int, taskType TaskType) {
 
 // ExecuteAll executes all tasks in the queue (called to start processing)
 func (sq *taskQueue) ExecuteAll() {
-	sq.lock()
-	defer sq.unlock()
+	id := sq.timer.Start("ExecuteAll")
+	defer sq.timer.End("ExecuteAll", id)
 
 	for idx := range sq.tasks {
+		sq.lock()
 		sq.execute(idx)
+		sq.unlock()
 	}
 }
 
@@ -251,8 +261,6 @@ func (sq *taskQueue) NextTask() (*TxTask, bool) {
 	idx := heap.Pop(sq.queue).(int)
 	sq.heapMx.Unlock()
 
-	defer sq.queued.Delete(idx)
-
 	res := sq.tasks[idx]
 
 	TaskLog(res, fmt.Sprintf("<- POP task (%d)", res.Incarnation))
@@ -267,6 +275,7 @@ func (sq *taskQueue) Close() {
 		defer sq.condMx.Unlock()
 		sq.closed = true
 		sq.cond.Broadcast()
+		sq.timer.PrintReport()
 	})
 }
 

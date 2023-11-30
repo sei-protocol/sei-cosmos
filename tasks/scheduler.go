@@ -23,6 +23,7 @@ type scheduler struct {
 	allTasks           []*TxTask
 	executeCh          chan func()
 	validateCh         chan func()
+	timer              *Timer
 }
 
 // NewScheduler creates a new scheduler
@@ -31,119 +32,154 @@ func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx
 		workers:     workers,
 		deliverTx:   deliverTxFunc,
 		tracingInfo: tracingInfo,
+		timer:       NewTimer("Scheduler"),
 	}
+}
+
+func (s *scheduler) WithTimer(name string, work func()) {
+	id := s.timer.Start(name)
+	work()
+	s.timer.End(name, id)
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
-	// initialize mutli-version stores
-	s.initMultiVersionStore(ctx)
-	// prefill estimates
-	s.PrefillEstimates(reqs)
-	tasks := toTasks(ctx, reqs)
-	s.allTasks = tasks
+	var results []types.ResponseDeliverTx
+	var err error
+	s.WithTimer("ProcessAll", func() {
+		pas := s.timer.Start("ProcessAll-Setup")
+		// initialize mutli-version stores
+		s.initMultiVersionStore(ctx)
+		// prefill estimates
+		s.PrefillEstimates(reqs)
+		tasks := toTasks(ctx, reqs)
+		s.allTasks = tasks
 
-	workers := s.workers
-	if s.workers < 1 {
-		workers = len(tasks)
-	}
+		workers := s.workers
+		if s.workers < 1 {
+			workers = len(tasks)
+		}
 
-	// initialize scheduler queue
-	queue := NewTaskQueue(tasks)
+		// initialize scheduler queue
+		queue := NewTaskQueue(tasks)
 
-	// send all tasks to queue
-	queue.ExecuteAll()
+		// send all tasks to queue
+		go queue.ExecuteAll()
 
-	wg := sync.WaitGroup{}
-	wg.Add(workers)
-	count := atomic.Int32{}
+		wg := sync.WaitGroup{}
+		wg.Add(workers)
+		count := atomic.Int32{}
 
-	for i := 0; i < workers; i++ {
-		go func(worker int) {
-			defer wg.Done()
+		s.timer.End("ProcessAll-Setup", pas)
+		for i := 0; i < workers; i++ {
+			go func(worker int) {
+				defer wg.Done()
 
-			for {
+				for {
 
-				// check if all tasks are complete AND not running anything
-				if queue.IsCompleted() {
-					queue.Close()
+					s.WithTimer("IsCompleted()", func() {
+						if queue.IsCompleted() {
+							queue.Close()
+						}
+					})
+
+					var task *TxTask
+					var anyTasks bool
+					s.WithTimer("NextTask()", func() {
+						task, anyTasks = queue.NextTask()
+					})
+					if !anyTasks {
+						return
+					}
+
+					s.WithTimer("IsCompleted()", func() {
+						task.LockTask()
+						var tt TaskType
+						var ok bool
+						s.WithTimer("PopTaskType()", func() {
+							tt, ok = task.PopTaskType()
+						})
+						if ok {
+							count.Add(1)
+							s.WithTimer("processTask()", func() {
+								s.processTask(ctx, tt, worker, task, queue)
+							})
+						} else {
+							TaskLog(task, "NONE FOUND...SKIPPING")
+						}
+						task.UnlockTask()
+					})
+
 				}
 
-				task, anyTasks := queue.NextTask()
-				if !anyTasks {
-					return
-				}
+			}(i)
+		}
 
-				task.LockTask()
-				if tt, ok := task.PopTaskType(); ok {
-					count.Add(1)
-					s.processTask(ctx, tt, worker, task, queue)
-				} else {
-					TaskLog(task, "NONE FOUND...SKIPPING")
-				}
-				task.UnlockTask()
-			}
+		wg.Wait()
 
-		}(i)
-	}
+		fmt.Println("count", count.Load())
 
-	wg.Wait()
+		for _, mv := range s.multiVersionStores {
+			mv.WriteLatestToStore()
+		}
+		results = collectResponses(tasks)
+		err = nil
+	})
+	s.timer.PrintReport()
 
-	fmt.Println("count", count.Load())
-
-	for _, mv := range s.multiVersionStores {
-		mv.WriteLatestToStore()
-	}
-	return collectResponses(tasks), nil
+	return results, err
 }
 
-func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) bool {
+func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) {
 	switch taskType {
 	case TypeValidation:
-		TaskLog(t, fmt.Sprintf("TypeValidation (worker=%d)", w))
+		s.WithTimer("TypeValidation", func() {
+			TaskLog(t, fmt.Sprintf("TypeValidation (worker=%d)", w))
 
-		s.validateTask(ctx, t)
+			s.validateTask(ctx, t)
 
-		// check the outcome of validation and do things accordingly
-		switch t.status {
-		case statusValidated:
-			// task is possibly finished (can be re-validated by others)
-			TaskLog(t, "*** VALIDATED ***")
-			// informs queue that it's complete (any subsequent submission for idx unsets this)
-			queue.FinishTask(t.Index)
-			return true
-		case statusWaiting:
-			// task should be re-validated (waiting on others)
-			// how can we wait on dependencies?
-			TaskLog(t, "waiting/executed...revalidating")
-			if queue.DependenciesFinished(t.Index) {
+			// check the outcome of validation and do things accordingly
+			switch t.status {
+			case statusValidated:
+				// task is possibly finished (can be re-validated by others)
+				TaskLog(t, "*** VALIDATED ***")
+				// informs queue that it's complete (any subsequent submission for idx unsets this)
+				queue.FinishTask(t.Index)
+				return
+			case statusWaiting:
+				// task should be re-validated (waiting on others)
+				// how can we wait on dependencies?
+				TaskLog(t, "waiting/executed...revalidating")
+				if queue.DependenciesFinished(t.Index) {
+					queue.Execute(t.Index)
+				}
+			case statusInvalid:
+				TaskLog(t, "invalid (re-executing, re-validating > tx)")
 				queue.Execute(t.Index)
+			default:
+				TaskLog(t, "unexpected status")
+				panic("unexpected status ")
 			}
-		case statusInvalid:
-			TaskLog(t, "invalid (re-executing, re-validating > tx)")
-			queue.Execute(t.Index)
-		default:
-			TaskLog(t, "unexpected status")
-			panic("unexpected status ")
-		}
+		})
 
 	case TypeExecution:
-		t.ResetForExecution()
-		TaskLog(t, fmt.Sprintf("TypeExecution (worker=%d)", w))
+		s.WithTimer("TypeExecution", func() {
+			t.ResetForExecution()
+			TaskLog(t, fmt.Sprintf("TypeExecution (worker=%d)", w))
 
-		s.executeTask(t)
+			s.executeTask(t)
 
-		if t.IsStatus(statusAborted) {
-			queue.ReExecute(t.Index)
-		} else {
-			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
-			queue.FinishExecute(t.Index)
-			//TODO: speed this up, too slow to do every time
-			queue.ValidateLaterTasks(t.Index)
-		}
+			if t.IsStatus(statusAborted) {
+				queue.Execute(t.Index)
+			} else {
+				TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
+				queue.FinishExecute(t.Index)
+				//TODO: speed this up, too slow to do every time
+				queue.ValidateLaterTasks(t.Index)
+			}
+		})
 
 	default:
 		TaskLog(t, "unexpected type")
 		panic("unexpected type")
 	}
-	return false
 }

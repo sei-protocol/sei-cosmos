@@ -40,9 +40,6 @@ type Queue interface {
 type taskQueue struct {
 	lockTimerID   string
 	mx            sync.Mutex
-	condMx        sync.Mutex
-	heapMx        sync.Mutex
-	cond          *sync.Cond
 	once          sync.Once
 	executing     sync.Map
 	finished      sync.Map
@@ -55,10 +52,8 @@ type taskQueue struct {
 func NewTaskQueue(tasks []*TxTask) Queue {
 	sq := &taskQueue{
 		tasks: tasks,
-		out:   make(chan int, len(tasks)*10),
+		out:   make(chan int, len(tasks)*2),
 	}
-	sq.cond = sync.NewCond(&sq.condMx)
-
 	return sq
 }
 
@@ -90,10 +85,6 @@ func (sq *taskQueue) getTask(idx int) *TxTask {
 
 func (sq *taskQueue) validate(idx int) {
 	task := sq.getTask(idx)
-	if sq.isExecuting(idx) {
-		TaskLog(task, "(skip validating, executing...)")
-		return
-	}
 	if sq.getTask(idx).SetTaskType(TypeValidation) {
 		TaskLog(task, "-> validate")
 		sq.pushTask(idx, TypeValidation)

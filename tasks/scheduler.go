@@ -19,7 +19,7 @@ type scheduler struct {
 	workers            int
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 	tracingInfo        *tracing.Info
-	allTasks           []*TxTask
+	tasks              []*TxTask
 	executeCh          chan func()
 	validateCh         chan func()
 	timer              *Timer
@@ -41,27 +41,34 @@ func (s *scheduler) WithTimer(name string, work func()) {
 	s.timer.End(name, id)
 }
 
+func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (Queue, int) {
+	// initialize mutli-version stores
+	s.initMultiVersionStore(ctx)
+	// prefill estimates
+	s.PrefillEstimates(reqs)
+	tasks := toTasks(ctx, reqs)
+	s.tasks = tasks
+
+	workers := s.workers
+	if s.workers < 1 {
+		workers = len(tasks)
+	}
+
+	// initialize scheduler queue
+	queue := NewTaskQueue(tasks)
+
+	// send all tasks to queue
+	go queue.ExecuteAll()
+
+	return queue, workers
+}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	var results []types.ResponseDeliverTx
 	var err error
 	s.WithTimer("ProcessAll", func() {
-		// initialize mutli-version stores
-		s.initMultiVersionStore(ctx)
-		// prefill estimates
-		s.PrefillEstimates(reqs)
-		tasks := toTasks(ctx, reqs)
-		s.allTasks = tasks
 
-		workers := s.workers
-		if s.workers < 1 {
-			workers = len(tasks)
-		}
-
-		// initialize scheduler queue
-		queue := NewTaskQueue(tasks)
-
-		// send all tasks to queue
-		go queue.ExecuteAll()
+		queue, workers := s.initScheduler(ctx, reqs)
 
 		wg := sync.WaitGroup{}
 		wg.Add(workers)
@@ -82,6 +89,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 					// removing this lock creates a lot more tasks
 					task.LockTask()
+					// this safely gets the task type while someone could be editing it
 					if tt, ok := task.PopTaskType(); ok {
 						s.processTask(ctx, tt, worker, task, queue)
 					}
@@ -97,7 +105,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		for _, mv := range s.multiVersionStores {
 			mv.WriteLatestToStore()
 		}
-		results = collectResponses(tasks)
+		results = collectResponses(s.tasks)
 		err = nil
 	})
 	s.timer.PrintReport()

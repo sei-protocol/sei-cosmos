@@ -43,7 +43,9 @@ func TestSchedulerQueue(t *testing.T) {
 
 	// Test Close
 	queue.Close()
-	_, ok = queue.NextTask()
+	for ok {
+		nextTask, ok = queue.NextTask()
+	}
 	assert.False(t, ok)
 
 	// Test FinishExecute leads to Validation
@@ -51,6 +53,7 @@ func TestSchedulerQueue(t *testing.T) {
 	queue.ExecuteAll()
 	nextTask, ok = queue.NextTask()
 	assert.True(t, ok)
+	nextTask.PopTaskType()
 	queue.FinishExecute(nextTask.Index)
 	assertValidating(t, nextTask)
 

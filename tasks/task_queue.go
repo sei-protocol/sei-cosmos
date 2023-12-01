@@ -29,6 +29,8 @@ type Queue interface {
 	FinishExecute(idx int)
 	// FinishTask marks a task as finished (only upon valid).
 	FinishTask(idx int)
+	// ValidateAll marks all tasks as pending validation.
+	ValidateAll()
 	// ValidateLaterTasks marks all tasks after the given index as pending validation.
 	ValidateLaterTasks(afterIdx int)
 	// IsCompleted returns true if all tasks have been executed and validated.
@@ -38,12 +40,14 @@ type Queue interface {
 }
 
 type taskQueue struct {
-	lockTimerID   string
-	mx            sync.Mutex
-	once          sync.Once
-	executing     sync.Map
-	finished      sync.Map
-	finishedCount atomic.Int32
+	lockTimerID string
+	qmx         sync.RWMutex
+	mx          sync.Mutex
+	once        sync.Once
+	executing   sync.Map
+	finished    *syncSet
+	queueLen    atomic.Int64
+	closed      bool
 
 	out   chan int
 	tasks []*TxTask
@@ -51,8 +55,9 @@ type taskQueue struct {
 
 func NewTaskQueue(tasks []*TxTask) Queue {
 	sq := &taskQueue{
-		tasks: tasks,
-		out:   make(chan int, len(tasks)*2),
+		tasks:    tasks,
+		out:      make(chan int, len(tasks)*10),
+		finished: newSyncSet(),
 	}
 	return sq
 }
@@ -68,12 +73,7 @@ func (sq *taskQueue) unlock() {
 func (sq *taskQueue) execute(idx int) {
 	if sq.getTask(idx).SetTaskType(TypeExecution) {
 		TaskLog(sq.getTask(idx), "-> execute")
-
-		if sq.isFinished(idx) {
-			sq.finished.Delete(idx)
-			sq.finishedCount.Add(-1)
-		}
-
+		sq.finished.Delete(idx)
 		sq.executing.Store(idx, struct{}{})
 		sq.pushTask(idx, TypeExecution)
 	}
@@ -98,8 +98,7 @@ func (sq *taskQueue) isExecuting(idx int) bool {
 
 // FinishExecute marks a task as finished executing and transitions directly validation
 func (sq *taskQueue) FinishExecute(idx int) {
-
-	TaskLog(sq.getTask(idx), "-> finish task execute")
+	defer TaskLog(sq.getTask(idx), "-> finished task execute")
 
 	if !sq.isExecuting(idx) {
 		TaskLog(sq.getTask(idx), "not executing, but trying to finish execute")
@@ -113,23 +112,16 @@ func (sq *taskQueue) FinishExecute(idx int) {
 // FinishTask marks a task as finished if nothing else queued it
 // this drives whether the queue thinks everything is done processing
 func (sq *taskQueue) FinishTask(idx int) {
-	if sq.isFinished(idx) {
-		return
-	}
-
+	sq.finished.Add(idx)
 	TaskLog(sq.getTask(idx), "FinishTask -> task is FINISHED (for now)")
-	sq.finishedCount.Add(1)
-	sq.finished.Store(idx, struct{}{})
 }
 
 // ReValidate re-validates a task (back to queue from validation)
 func (sq *taskQueue) ReValidate(idx int) {
-
 	if sq.isExecuting(idx) {
 		TaskLog(sq.getTask(idx), "task is executing (unexpected)")
 		panic("cannot re-validate an executing task")
 	}
-
 	sq.validate(idx)
 }
 
@@ -140,18 +132,22 @@ func (sq *taskQueue) Execute(idx int) {
 	sq.execute(idx)
 }
 
+func (sq *taskQueue) ValidateAll() {
+	for idx := 0; idx < len(sq.tasks); idx++ {
+		sq.validate(idx)
+	}
+}
+
 // ValidateLaterTasks marks all tasks after the given index as pending validation.
 // any executing tasks are skipped
 func (sq *taskQueue) ValidateLaterTasks(afterIdx int) {
-
 	for idx := afterIdx + 1; idx < len(sq.tasks); idx++ {
 		sq.validate(idx)
 	}
 }
 
 func (sq *taskQueue) isFinished(idx int) bool {
-	_, ok := sq.finished.Load(idx)
-	return ok && sq.getTask(idx).IsStatus(statusValidated)
+	return sq.finished.Exists(idx) && sq.getTask(idx).IsStatus(statusValidated)
 }
 
 func (sq *taskQueue) DependenciesFinished(idx int) bool {
@@ -165,21 +161,34 @@ func (sq *taskQueue) DependenciesFinished(idx int) bool {
 
 // IsCompleted returns true if all tasks are "finished"
 func (sq *taskQueue) IsCompleted() bool {
-	fc := sq.finishedCount.Load()
-	return fc == int32(len(sq.tasks))
+	queued := sq.queueLen.Load()
+	if queued > 0 {
+		return false
+	}
+	finished := sq.finished.Length()
+	tasks := len(sq.tasks)
+	if finished != tasks {
+		return false
+	}
+	return true
 }
 
 func (sq *taskQueue) pushTask(idx int, taskType TaskType) {
 	TaskLog(sq.getTask(idx), fmt.Sprintf("-> PUSH task (%s/%d)", taskType, sq.getTask(idx).Incarnation))
+	sq.queueLen.Add(1)
+	sq.qmx.RLock()
+	defer sq.qmx.RUnlock()
+	if sq.closed {
+		TaskLog(sq.getTask(idx), "queue is closed")
+		return
+	}
 	sq.out <- idx
 }
 
 // ExecuteAll executes all tasks in the queue (called to start processing)
 func (sq *taskQueue) ExecuteAll() {
 	for idx := range sq.tasks {
-		sq.lock()
 		sq.execute(idx)
-		sq.unlock()
 	}
 }
 
@@ -191,6 +200,7 @@ func (sq *taskQueue) NextTask() (*TxTask, bool) {
 	if !open {
 		return nil, false
 	}
+	defer sq.queueLen.Add(-1)
 	res := sq.getTask(idx)
 	TaskLog(res, fmt.Sprintf("<- POP task (%d)", res.Incarnation))
 	return res, true
@@ -199,6 +209,48 @@ func (sq *taskQueue) NextTask() (*TxTask, bool) {
 // Close closes the queue, causing NextTask to return false.
 func (sq *taskQueue) Close() {
 	sq.once.Do(func() {
+		sq.qmx.Lock()
+		defer sq.qmx.Unlock()
+		sq.closed = true
 		close(sq.out)
 	})
+}
+
+// syncSet is like sync.Map but it supports length
+type syncSet struct {
+	mx sync.Mutex
+	m  map[int]struct{}
+}
+
+func newSyncSet() *syncSet {
+	return &syncSet{
+		m: make(map[int]struct{}),
+	}
+}
+
+func (ss *syncSet) Add(idx int) {
+	ss.mx.Lock()
+	defer ss.mx.Unlock()
+	ss.m[idx] = struct{}{}
+}
+
+func (ss *syncSet) Delete(idx int) {
+	ss.mx.Lock()
+	defer ss.mx.Unlock()
+	if _, ok := ss.m[idx]; ok {
+		delete(ss.m, idx)
+	}
+}
+
+func (ss *syncSet) Length() int {
+	ss.mx.Lock()
+	defer ss.mx.Unlock()
+	return len(ss.m)
+}
+
+func (ss *syncSet) Exists(idx int) bool {
+	ss.mx.Lock()
+	defer ss.mx.Unlock()
+	_, ok := ss.m[idx]
+	return ok
 }

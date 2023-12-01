@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
@@ -8,6 +9,7 @@ import (
 	"github.com/tendermint/tendermint/abci/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"time"
 )
 
 // TODO: remove after things work
@@ -25,6 +27,22 @@ func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *TxTask) (sdk.C
 	}
 	ctx = ctx.WithTraceSpanContext(spanCtx)
 	return ctx, span
+}
+
+func hangDebug(msg func()) context.CancelFunc {
+	ctx, cancel := context.WithCancel(context.Background())
+	ticker := time.NewTicker(1 * time.Second)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				msg()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return cancel
 }
 
 func toTasks(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) []*TxTask {

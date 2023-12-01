@@ -127,10 +127,10 @@ func TestProcessAll(t *testing.T) {
 	}{
 		{
 			name:      "Test no overlap txs",
-			workers:   5,
-			runs:      100,
+			workers:   500,
+			runs:      1,
 			addStores: true,
-			requests:  requestList(100),
+			requests:  requestList(10000),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
@@ -158,10 +158,10 @@ func TestProcessAll(t *testing.T) {
 		},
 		{
 			name:      "Test every tx accesses same key",
-			workers:   5,
-			runs:      100,
+			workers:   500,
+			runs:      10,
 			addStores: true,
-			requests:  requestList(100),
+			requests:  requestList(10000),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)

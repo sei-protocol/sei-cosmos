@@ -1,8 +1,9 @@
 package tasks
 
 import (
-	"fmt"
 	"github.com/google/uuid"
+
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -36,28 +37,7 @@ func NewTimer(name string) *Timer {
 		reports: make(map[string]*TimerReport),
 		ch:      make(chan timeEvt, 10000),
 	}
-	go t.consume()
 	return t
-}
-
-func (t *Timer) consume() {
-	for evt := range t.ch {
-		if evt.start {
-			if _, ok := t.reports[evt.name]; !ok {
-				t.reports[evt.name] = &TimerReport{
-					starts: make(map[string]time.Time),
-					times:  nil,
-				}
-			}
-			t.reports[evt.name].starts[evt.id] = evt.timestamp
-		} else {
-			if rpt, ok := t.reports[evt.name]; ok {
-				if start, ok := rpt.starts[evt.id]; ok {
-					rpt.times = append(rpt.times, evt.timestamp.Sub(start))
-				}
-			}
-		}
-	}
 }
 
 func (t *Timer) PrintReport() {

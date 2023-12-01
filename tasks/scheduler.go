@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/tendermint/tendermint/abci/types"
 	"sync"
+	"sync/atomic"
 )
 
 // Scheduler processes tasks concurrently
@@ -66,24 +67,43 @@ func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	var results []types.ResponseDeliverTx
 	var err error
+	counter := atomic.Int32{}
+
 	s.WithTimer("ProcessAll", func() {
 
 		queue, workers := s.initScheduler(ctx, reqs)
-
 		wg := sync.WaitGroup{}
 		wg.Add(workers)
+		mx := sync.Mutex{}
+		activeSet := newSyncSet()
+		final := atomic.Bool{}
 
 		for i := 0; i < workers; i++ {
 			go func(worker int) {
 				defer wg.Done()
 
 				for {
-					if queue.IsCompleted() {
-						queue.Close()
+					if activeSet.Length() == 0 {
+						mx.Lock()
+						if queue.IsCompleted() {
+							if final.Load() {
+								queue.Close()
+							} else {
+								final.Store(true)
+								queue.ValidateAll()
+							}
+						}
+						mx.Unlock()
 					}
 
+					cancel := hangDebug(func() {
+						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
+					})
 					task, anyTasks := queue.NextTask()
+					cancel()
+					activeSet.Add(worker)
 					if !anyTasks {
+						activeSet.Delete(worker)
 						return
 					}
 
@@ -91,10 +111,13 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					task.LockTask()
 					// this safely gets the task type while someone could be editing it
 					if tt, ok := task.PopTaskType(); ok {
-						s.processTask(ctx, tt, worker, task, queue)
+						counter.Add(1)
+						if !s.processTask(ctx, tt, worker, task, queue) {
+							final.Store(false)
+						}
 					}
 					task.UnlockTask()
-
+					activeSet.Delete(worker)
 				}
 
 			}(i)
@@ -108,13 +131,13 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		results = collectResponses(s.tasks)
 		err = nil
 	})
-	s.timer.PrintReport()
+	//s.timer.PrintReport()
+	//fmt.Printf("Total Tasks: %d\n", counter.Load())
 
 	return results, err
 }
 
 func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) bool {
-	var result bool
 	switch taskType {
 	case TypeValidation:
 		TaskLog(t, fmt.Sprintf("TypeValidation (worker=%d)", w))
@@ -128,7 +151,7 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			TaskLog(t, "*** VALIDATED ***")
 			// informs queue that it's complete (any subsequent submission for idx unsets this)
 			queue.FinishTask(t.Index)
-			result = true
+			return true
 		case statusWaiting:
 			// task should be re-validated (waiting on others)
 			// how can we wait on dependencies?
@@ -155,13 +178,13 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		} else {
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.Index)
-			//TODO: speed this up
 			queue.ValidateLaterTasks(t.Index)
+			//TODO: speed this up
 		}
 
 	default:
 		TaskLog(t, "unexpected type")
 		panic("unexpected type")
 	}
-	return result
+	return false
 }

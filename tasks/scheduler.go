@@ -36,12 +36,6 @@ func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx
 	}
 }
 
-func (s *scheduler) WithTimer(name string, work func()) {
-	id := s.timer.Start(name)
-	work()
-	s.timer.End(name, id)
-}
-
 func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (Queue, int) {
 	// initialize mutli-version stores
 	s.initMultiVersionStore(ctx)
@@ -69,7 +63,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	var err error
 	counter := atomic.Int32{}
 
-	s.WithTimer("ProcessAll", func() {
+	WithTimer(s.timer, "ProcessAll", func() {
 
 		queue, workers := s.initScheduler(ctx, reqs)
 		wg := sync.WaitGroup{}

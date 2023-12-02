@@ -89,6 +89,12 @@ func (t *Timer) PrintReport() {
 	fmt.Println(strings.Join(lines, "\n"))
 }
 
+func WithTimer(t *Timer, name string, work func()) {
+	id := t.Start(name)
+	work()
+	t.End(name, id)
+}
+
 func (t *Timer) Start(name string) string {
 	id := uuid.New().String()
 	go func() {

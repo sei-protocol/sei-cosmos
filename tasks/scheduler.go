@@ -50,7 +50,7 @@ func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (
 	}
 
 	// initialize scheduler queue
-	queue := NewTaskQueue(tasks)
+	queue := NewTaskQueue(tasks, workers)
 
 	// send all tasks to queue
 	go queue.ExecuteAll()
@@ -93,7 +93,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					cancel := hangDebug(func() {
 						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
 					})
-					task, anyTasks := queue.NextTask()
+					task, anyTasks := queue.NextTask(worker)
 					cancel()
 					atomic.AddInt32(&activeCount, 1)
 
@@ -101,8 +101,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 						return
 					}
 
-					// removing this lock creates a lot more tasks
-					task.LockTask()
 					// this safely gets the task type while someone could be editing it
 					if tt, ok := task.PopTaskType(); ok {
 						counter.Add(1)
@@ -110,7 +108,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 							final.Store(false)
 						}
 					}
-					task.UnlockTask()
 					atomic.AddInt32(&activeCount, -1)
 				}
 
@@ -141,9 +138,9 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		// check the outcome of validation and do things accordingly
 		switch t.status {
 		case statusValidated:
-			// task is possibly finished (can be re-validated by others)
+			// task is finished (but can be re-validated by others)
 			TaskLog(t, "*** VALIDATED ***")
-			// informs queue that it's complete (any subsequent submission for idx unsets this)
+			// informs queue that it's complete (counts towards overall completion)
 			queue.FinishTask(t.Index)
 			return true
 		case statusWaiting:
@@ -152,9 +149,12 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			TaskLog(t, "waiting/executed...revalidating")
 			if queue.DependenciesFinished(t.Index) {
 				queue.Execute(t.Index)
+			} else {
+				queue.ReValidate(t.Index)
 			}
 		case statusInvalid:
 			TaskLog(t, "invalid (re-executing, re-validating > tx)")
+			queue.ValidateLaterTasks(t.Index)
 			queue.Execute(t.Index)
 		default:
 			TaskLog(t, "unexpected status")
@@ -168,11 +168,12 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		s.executeTask(t)
 
 		if t.IsStatus(statusAborted) {
+			//TODO ideally this would wait until dependencies are finished
 			queue.Execute(t.Index)
 		} else {
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.Index)
-			queue.ValidateLaterTasks(t.Index)
+			//queue.ValidateLaterTasks(t.Index)
 		}
 
 	default:

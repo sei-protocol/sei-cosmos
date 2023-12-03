@@ -16,7 +16,7 @@ const (
 
 type Queue interface {
 	// NextTask returns the next task to be executed, or nil if the queue is closed.
-	NextTask() (*TxTask, bool)
+	NextTask(workerID int) (*TxTask, bool)
 	// Close closes the queue, causing NextTask to return false.
 	Close()
 	// ExecuteAll executes all tasks in the queue.
@@ -47,15 +47,20 @@ type taskQueue struct {
 	finished    IntSet
 	queueLen    atomic.Int64
 	closed      bool
-
-	out   chan int
-	tasks []*TxTask
+	workers     int
+	shards      []chan int
+	tasks       []*TxTask
 }
 
-func NewTaskQueue(tasks []*TxTask) Queue {
+func NewTaskQueue(tasks []*TxTask, workers int) Queue {
+	shards := make([]chan int, 0, workers)
+	for i := 0; i < workers; i++ {
+		shards = append(shards, make(chan int, len(tasks)*2))
+	}
 	sq := &taskQueue{
+		workers:   workers,
 		tasks:     tasks,
-		out:       make(chan int, len(tasks)*10),
+		shards:    shards,
 		finished:  newIntSet(len(tasks)), // newSyncSetMap(), //(len(tasks)),
 		executing: newIntSet(len(tasks)),
 	}
@@ -91,10 +96,10 @@ func (sq *taskQueue) isExecuting(idx int) bool {
 func (sq *taskQueue) FinishExecute(idx int) {
 	defer TaskLog(sq.getTask(idx), "-> finished task execute")
 
-	if !sq.isExecuting(idx) {
-		TaskLog(sq.getTask(idx), "not executing, but trying to finish execute")
-		panic("not executing, but trying to finish execute")
-	}
+	//if !sq.isExecuting(idx) {
+	//	TaskLog(sq.getTask(idx), "not executing, but trying to finish execute")
+	//	panic("not executing, but trying to finish execute")
+	//}
 
 	sq.executing.Delete(idx)
 	sq.validate(idx)
@@ -109,10 +114,10 @@ func (sq *taskQueue) FinishTask(idx int) {
 
 // ReValidate re-validates a task (back to queue from validation)
 func (sq *taskQueue) ReValidate(idx int) {
-	if sq.isExecuting(idx) {
-		TaskLog(sq.getTask(idx), "task is executing (unexpected)")
-		panic("cannot re-validate an executing task")
-	}
+	//if sq.isExecuting(idx) {
+	//	TaskLog(sq.getTask(idx), "task is executing (unexpected)")
+	//	panic("cannot re-validate an executing task")
+	//}
 	sq.validate(idx)
 }
 
@@ -173,7 +178,7 @@ func (sq *taskQueue) pushTask(idx int, taskType TaskType) {
 		TaskLog(sq.getTask(idx), "queue is closed")
 		return
 	}
-	sq.out <- idx
+	sq.shards[idx%sq.workers] <- idx
 }
 
 // ExecuteAll executes all tasks in the queue (called to start processing)
@@ -186,8 +191,8 @@ func (sq *taskQueue) ExecuteAll() {
 // NextTask returns the next task to be executed, or nil if the queue is closed.
 // this hangs if no tasks are ready because it's possible a new task might arrive
 // closing the queue causes NextTask to return false immediately
-func (sq *taskQueue) NextTask() (*TxTask, bool) {
-	idx, open := <-sq.out
+func (sq *taskQueue) NextTask(workerID int) (*TxTask, bool) {
+	idx, open := <-sq.shards[workerID]
 	if !open {
 		return nil, false
 	}
@@ -203,6 +208,8 @@ func (sq *taskQueue) Close() {
 		sq.qmx.Lock()
 		defer sq.qmx.Unlock()
 		sq.closed = true
-		close(sq.out)
+		for _, shard := range sq.shards {
+			close(shard)
+		}
 	})
 }

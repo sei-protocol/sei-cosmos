@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -115,6 +118,12 @@ func TestExplicitOrdering(t *testing.T) {
 }
 
 func TestProcessAll(t *testing.T) {
+	runtime.SetBlockProfileRate(1)
+
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
+
 	tests := []struct {
 		name          string
 		workers       int
@@ -128,7 +137,7 @@ func TestProcessAll(t *testing.T) {
 		{
 			name:      "Test no overlap txs",
 			workers:   500,
-			runs:      1,
+			runs:      10,
 			addStores: true,
 			requests:  requestList(10000),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
@@ -158,10 +167,10 @@ func TestProcessAll(t *testing.T) {
 		},
 		{
 			name:      "Test every tx accesses same key",
-			workers:   50,
-			runs:      10,
+			workers:   500,
+			runs:      1,
 			addStores: true,
-			requests:  requestList(1000),
+			requests:  requestList(10000),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)

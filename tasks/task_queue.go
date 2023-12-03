@@ -42,10 +42,9 @@ type Queue interface {
 type taskQueue struct {
 	lockTimerID string
 	qmx         sync.RWMutex
-	mx          sync.Mutex
 	once        sync.Once
-	executing   sync.Map
-	finished    *syncSet
+	executing   IntSet
+	finished    IntSet
 	queueLen    atomic.Int64
 	closed      bool
 
@@ -55,26 +54,19 @@ type taskQueue struct {
 
 func NewTaskQueue(tasks []*TxTask) Queue {
 	sq := &taskQueue{
-		tasks:    tasks,
-		out:      make(chan int, len(tasks)*10),
-		finished: newSyncSet(),
+		tasks:     tasks,
+		out:       make(chan int, len(tasks)*10),
+		finished:  newIntSet(len(tasks)), // newSyncSetMap(), //(len(tasks)),
+		executing: newIntSet(len(tasks)),
 	}
 	return sq
-}
-
-func (sq *taskQueue) lock() {
-	sq.mx.Lock()
-}
-
-func (sq *taskQueue) unlock() {
-	sq.mx.Unlock()
 }
 
 func (sq *taskQueue) execute(idx int) {
 	if sq.getTask(idx).SetTaskType(TypeExecution) {
 		TaskLog(sq.getTask(idx), "-> execute")
 		sq.finished.Delete(idx)
-		sq.executing.Store(idx, struct{}{})
+		sq.executing.Add(idx)
 		sq.pushTask(idx, TypeExecution)
 	}
 }
@@ -92,8 +84,7 @@ func (sq *taskQueue) validate(idx int) {
 }
 
 func (sq *taskQueue) isExecuting(idx int) bool {
-	_, ok := sq.executing.Load(idx)
-	return ok
+	return sq.executing.Exists(idx)
 }
 
 // FinishExecute marks a task as finished executing and transitions directly validation
@@ -214,43 +205,4 @@ func (sq *taskQueue) Close() {
 		sq.closed = true
 		close(sq.out)
 	})
-}
-
-// syncSet is like sync.Map but it supports length
-type syncSet struct {
-	mx sync.Mutex
-	m  map[int]struct{}
-}
-
-func newSyncSet() *syncSet {
-	return &syncSet{
-		m: make(map[int]struct{}),
-	}
-}
-
-func (ss *syncSet) Add(idx int) {
-	ss.mx.Lock()
-	defer ss.mx.Unlock()
-	ss.m[idx] = struct{}{}
-}
-
-func (ss *syncSet) Delete(idx int) {
-	ss.mx.Lock()
-	defer ss.mx.Unlock()
-	if _, ok := ss.m[idx]; ok {
-		delete(ss.m, idx)
-	}
-}
-
-func (ss *syncSet) Length() int {
-	ss.mx.Lock()
-	defer ss.mx.Unlock()
-	return len(ss.m)
-}
-
-func (ss *syncSet) Exists(idx int) bool {
-	ss.mx.Lock()
-	defer ss.mx.Unlock()
-	_, ok := ss.m[idx]
-	return ok
 }

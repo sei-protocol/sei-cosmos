@@ -69,7 +69,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		wg := sync.WaitGroup{}
 		wg.Add(workers)
 		mx := sync.Mutex{}
-		activeSet := newSyncSet()
+		var activeCount int32
 		final := atomic.Bool{}
 
 		for i := 0; i < workers; i++ {
@@ -77,7 +77,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 				defer wg.Done()
 
 				for {
-					if activeSet.Length() == 0 {
+					if atomic.LoadInt32(&activeCount) == 0 {
 						mx.Lock()
 						if queue.IsCompleted() {
 							if final.Load() {
@@ -95,9 +95,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					})
 					task, anyTasks := queue.NextTask()
 					cancel()
-					activeSet.Add(worker)
+					atomic.AddInt32(&activeCount, 1)
+
 					if !anyTasks {
-						activeSet.Delete(worker)
 						return
 					}
 
@@ -111,7 +111,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 						}
 					}
 					task.UnlockTask()
-					activeSet.Delete(worker)
+					atomic.AddInt32(&activeCount, -1)
 				}
 
 			}(i)
@@ -125,7 +125,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		results = collectResponses(s.tasks)
 		err = nil
 	})
-	//s.timer.PrintReport()
+	s.timer.PrintReport()
 	//fmt.Printf("Total Tasks: %d\n", counter.Load())
 
 	return results, err
@@ -173,7 +173,6 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.Index)
 			queue.ValidateLaterTasks(t.Index)
-			//TODO: speed this up
 		}
 
 	default:

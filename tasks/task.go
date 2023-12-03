@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/tendermint/tendermint/abci/types"
 	"sync"
+	"sync/atomic"
 )
 
 type status string
@@ -40,6 +41,8 @@ type TxTask struct {
 	Dependencies  []int
 	Abort         *occ.Abort
 	Index         int
+	Executing     byte
+	Validating    byte
 	Incarnation   int
 	Request       types.RequestDeliverTx
 	Response      *types.ResponseDeliverTx
@@ -48,6 +51,10 @@ type TxTask struct {
 
 func (dt *TxTask) LockTask() {
 	dt.mx.Lock()
+}
+
+func (dt *TxTask) TryLockTask() bool {
+	return dt.mx.TryLock()
 }
 
 func (dt *TxTask) UnlockTask() {
@@ -61,21 +68,25 @@ func (dt *TxTask) IsStatus(s status) bool {
 }
 
 func (dt *TxTask) SetTaskType(tt TaskType) bool {
+	// Early check to potentially avoid locking.
+	if tt == TypeValidation && dt.taskType == TypeNone {
+		return dt.updateTaskType(tt)
+	} else if tt == TypeExecution && dt.taskType != TypeExecution {
+		return dt.updateTaskType(tt)
+	}
+	return false
+}
+
+// updateTaskType assumes that an update is likely needed and does the final check within the lock.
+func (dt *TxTask) updateTaskType(tt TaskType) bool {
 	dt.rwMx.Lock()
 	defer dt.rwMx.Unlock()
-	switch tt {
-	case TypeValidation:
-		if dt.taskType == TypeNone {
-			TaskLog(dt, "SCHEDULE task VALIDATION")
-			dt.taskType = tt
-			return true
-		}
-	case TypeExecution:
-		if dt.taskType != TypeExecution {
-			TaskLog(dt, "SCHEDULE task EXECUTION")
-			dt.taskType = tt
-			return true
-		}
+	if tt == TypeValidation && dt.taskType == TypeNone {
+		dt.taskType = tt
+		return true
+	} else if tt == TypeExecution && dt.taskType != TypeExecution {
+		dt.taskType = tt
+		return true
 	}
 	return false
 }
@@ -142,4 +153,52 @@ func (dt *TxTask) ResetForExecution() {
 
 func (dt *TxTask) Increment() {
 	dt.Incarnation++
+}
+
+// syncSet uses byte slices instead of a map (fastest benchmark)
+type syncSet struct {
+	locks  []sync.RWMutex
+	state  []byte
+	length int32
+}
+
+func newSyncSet(size int) *syncSet {
+	return &syncSet{
+		state: make([]byte, size),
+		locks: make([]sync.RWMutex, size),
+	}
+}
+
+func (ss *syncSet) Add(idx int) {
+	// First check without locking to reduce contention.
+	if ss.state[idx] == byte(0) {
+		ss.locks[idx].Lock()
+		// Check again to make sure it hasn't changed since acquiring the lock.
+		if ss.state[idx] == byte(0) {
+			ss.state[idx] = byte(1)
+			atomic.AddInt32(&ss.length, 1)
+		}
+		ss.locks[idx].Unlock()
+	}
+}
+
+func (ss *syncSet) Delete(idx int) {
+	ss.locks[idx].Lock()
+	defer ss.locks[idx].Unlock()
+
+	// Check again to make sure it hasn't changed since acquiring the lock.
+	if ss.state[idx] == byte(1) {
+		ss.state[idx] = byte(0)
+		atomic.AddInt32(&ss.length, -1)
+	}
+
+}
+
+func (ss *syncSet) Length() int {
+	return int(atomic.LoadInt32(&ss.length))
+}
+
+func (ss *syncSet) Exists(idx int) bool {
+	// Atomic read of a single byte is safe
+	return ss.state[idx] == byte(1)
 }

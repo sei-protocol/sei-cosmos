@@ -2,12 +2,9 @@ package tasks
 
 import (
 	"context"
-	"crypto/sha256"
-	"fmt"
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/abci/types"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"time"
 )
@@ -18,15 +15,24 @@ func TaskLog(task *TxTask, msg string) {
 	//fmt.Println(fmt.Sprintf("%d: Task(%d/%s/%d):\t%s", time.Now().UnixMicro(), task.Index, task.status, task.Incarnation, msg))
 }
 
-func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *TxTask) (sdk.Context, trace.Span) {
-	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
-	if task != nil {
-		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
-		span.SetAttributes(attribute.Int("txIndex", task.Index))
-		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
-	}
-	ctx = ctx.WithTraceSpanContext(spanCtx)
-	return ctx, span
+type Endable interface {
+	End(options ...trace.SpanEndOption)
+}
+
+type mockEndable struct{}
+
+func (m *mockEndable) End(options ...trace.SpanEndOption) {}
+
+func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *TxTask) (sdk.Context, Endable) {
+	//spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
+	//if task != nil {
+	//	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
+	//	span.SetAttributes(attribute.Int("txIndex", task.Index))
+	//	span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
+	//}
+	//ctx = ctx.WithTraceSpanContext(spanCtx)
+	//return ctx, span
+	return ctx, &mockEndable{}
 }
 
 func hangDebug(msg func()) context.CancelFunc {

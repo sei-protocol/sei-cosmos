@@ -89,11 +89,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 						}
 					}
 
-					//cancel := hangDebug(func() {
-					//	fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
-					//})
+					cancel := hangDebug(func() {
+						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
+					})
 					task, anyTasks := queue.NextTask(worker)
-					//cancel()
+					cancel()
 					atomic.AddInt32(&activeCount, 1)
 
 					if !anyTasks {
@@ -148,6 +148,8 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			TaskLog(t, "waiting/executed...revalidating")
 			if queue.DependenciesFinished(t.Index) {
 				queue.Execute(t.Index)
+			} else {
+				queue.ReValidate(t.Index)
 			}
 		case statusInvalid:
 			TaskLog(t, "invalid (re-executing, re-validating > tx)")

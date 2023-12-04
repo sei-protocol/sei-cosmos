@@ -135,6 +135,20 @@ func TestProcessAll(t *testing.T) {
 		assertions    func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx)
 	}{
 		{
+			name:      "Test zero txs does not hang",
+			workers:   20,
+			runs:      10,
+			addStores: true,
+			requests:  requestList(0),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+				panic("should not deliver")
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				require.Len(t, res, 0)
+			},
+			expectedErr: nil,
+		},
+		{
 			name:      "Test no overlap txs",
 			workers:   20,
 			runs:      10,
@@ -168,9 +182,9 @@ func TestProcessAll(t *testing.T) {
 		{
 			name:      "Test every tx accesses same key",
 			workers:   20,
-			runs:      10,
+			runs:      100,
 			addStores: true,
-			requests:  requestList(1000),
+			requests:  requestList(10000),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)

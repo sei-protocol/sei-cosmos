@@ -59,6 +59,10 @@ func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+	if len(reqs) == 0 {
+		return []types.ResponseDeliverTx{}, nil
+	}
+
 	var results []types.ResponseDeliverTx
 	var err error
 	counter := atomic.Int32{}
@@ -89,11 +93,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 						}
 					}
 
-					//cancel := hangDebug(func() {
-					//	fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
-					//})
+					cancel := hangDebug(func() {
+						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
+					})
 					task, anyTasks := queue.NextTask(worker)
-					//cancel()
+					cancel()
 					atomic.AddInt32(&activeCount, 1)
 
 					if !anyTasks {
@@ -146,7 +150,8 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			// task should be re-validated (waiting on others)
 			// how can we wait on dependencies?
 			TaskLog(t, "waiting/executed...revalidating")
-			queue.AddDependentToParents(t.Index)
+			//queue.AddDependentToParents(t.Index)
+			queue.Execute(t.Index)
 
 		case statusInvalid:
 			TaskLog(t, "invalid (re-executing, re-validating > tx)")
@@ -166,10 +171,12 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		if t.IsStatus(statusAborted) {
 			//TODO ideally this would wait until dependencies are finished
 			t.Parents = []int{t.Abort.DependentTxIdx}
-			queue.AddDependentToParents(t.Index)
+			//queue.AddDependentToParents(t.Index)
+			queue.Execute(t.Index)
 		} else {
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.Index)
+			queue.ValidateLaterTasks(t.Index)
 		}
 
 	default:

@@ -40,6 +40,11 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *TxTask) {
 	_, span := s.traceSpan(ctx, "SchedulerValidate", task)
 	defer span.End()
 
+	if task.Response == nil {
+		task.SetStatus(statusInvalid)
+		return
+	}
+
 	valid, conflicts := s.findConflicts(task)
 	task.Parents = conflicts
 

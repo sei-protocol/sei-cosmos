@@ -14,7 +14,6 @@ import (
 type MultiVersionStore interface {
 	GetLatest(key []byte) (value MultiVersionValueItem)
 	GetLatestBeforeIndex(index int, key []byte) (value MultiVersionValueItem)
-	Has(index int, key []byte) bool
 	WriteLatestToStore()
 	SetWriteset(index int, incarnation int, writeset WriteSet)
 	InvalidateWriteset(index int, incarnation int)
@@ -46,6 +45,8 @@ type Store struct {
 	txReadSets     *sync.Map // map of tx index -> readset ReadSet
 	txIterateSets  *sync.Map // map of tx index -> iterateset Iterateset
 
+	txEstimateFlags *sync.Map
+
 	parentStore types.KVStore
 }
 
@@ -55,6 +56,7 @@ func NewMultiVersionStore(parentStore types.KVStore) *Store {
 		txWritesetKeys:  &sync.Map{},
 		txReadSets:      &sync.Map{},
 		txIterateSets:   &sync.Map{},
+		txEstimateFlags: &sync.Map{},
 		parentStore:     parentStore,
 	}
 }
@@ -76,6 +78,13 @@ func (s *Store) GetLatest(key []byte) (value MultiVersionValueItem) {
 	if !found {
 		return nil // this is possible IF there is are writeset that are then removed for that key
 	}
+	txIndex := latestVal.Index()
+	// check against estimate map
+	_, estimateFound := s.txEstimateFlags.Load(txIndex)
+	if estimateFound {
+		// it shouldnt be an issue to have a new item instead of modifying existing?
+		return NewEstimateItem(txIndex, latestVal.Incarnation())
+	}
 	return latestVal
 }
 
@@ -92,21 +101,15 @@ func (s *Store) GetLatestBeforeIndex(index int, key []byte) (value MultiVersionV
 	if !found {
 		return nil
 	}
+	txIndex := val.Index()
+	// check against estimate map
+	_, estimateFound := s.txEstimateFlags.Load(txIndex)
+	if estimateFound {
+		// it shouldnt be an issue to have a new item instead of modifying existing?
+		return NewEstimateItem(txIndex, val.Incarnation())
+	}
 	// found a value prior to the passed in index, return that value (could be estimate OR deleted, but it is a definitive value)
 	return val
-}
-
-// Has implements MultiVersionStore. It checks if the key exists in the multiversion store at or before the specified index.
-func (s *Store) Has(index int, key []byte) bool {
-
-	keyString := string(key)
-	mvVal, found := s.multiVersionMap.Load(keyString)
-	// if the key doesn't exist in the overall map, return nil
-	if !found {
-		return false // this is okay because the caller of this will THEN need to access the parent store to verify that the key doesnt exist there
-	}
-	_, foundVal := mvVal.(MultiVersionValue).GetLatestBeforeIndex(index)
-	return foundVal
 }
 
 func (s *Store) removeOldWriteset(index int, newWriteSet WriteSet) {
@@ -157,23 +160,14 @@ func (s *Store) SetWriteset(index int, incarnation int, writeset WriteSet) {
 			mvVal.Set(index, incarnation, value)
 		}
 	}
-	sort.Strings(writeSetKeys) // TODO: if we're sorting here anyways, maybe we just put it into a btree instead of a slice
+	sort.Strings(writeSetKeys)      // TODO: if we're sorting here anyways, maybe we just put it into a btree instead of a slice
+	s.txEstimateFlags.Delete(index) // remove estimate flag if it exists
 	s.txWritesetKeys.Store(index, writeSetKeys)
 }
 
-// InvalidateWriteset iterates over the keys for the given index and incarnation writeset and replaces with ESTIMATEs
+// InvalidateWriteset updates the estimateFlags to indicate the writeset is out of date
 func (s *Store) InvalidateWriteset(index int, incarnation int) {
-	keysAny, found := s.txWritesetKeys.Load(index)
-	if !found {
-		return
-	}
-	keys := keysAny.([]string)
-	for _, key := range keys {
-		// invalidate all of the writeset items - is this suboptimal? - we could potentially do concurrently if slow because locking is on an item specific level
-		val, _ := s.multiVersionMap.LoadOrStore(key, NewMultiVersionItem())
-		val.(MultiVersionValue).SetEstimate(index, incarnation)
-	}
-	// we leave the writeset in place because we'll need it for key removal later if/when we replace with a new writeset
+	s.txEstimateFlags.Store(index, struct{}{}) // set estimate flag
 }
 
 // SetEstimatedWriteset is used to directly write estimates instead of writing a writeset and later invalidating
@@ -190,6 +184,7 @@ func (s *Store) SetEstimatedWriteset(index int, incarnation int, writeset WriteS
 		mvVal.(MultiVersionValue).SetEstimate(index, incarnation)
 	}
 	sort.Strings(writeSetKeys)
+	s.txEstimateFlags.Store(index, struct{}{}) // set estimate flag
 	s.txWritesetKeys.Store(index, writeSetKeys)
 }
 

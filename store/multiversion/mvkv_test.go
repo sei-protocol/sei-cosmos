@@ -148,10 +148,6 @@ func TestVersionIndexedStoreWrite(t *testing.T) {
 		"key3": []byte("value3"),
 	})
 
-	require.False(t, mvs.Has(3, []byte("key1")))
-	require.False(t, mvs.Has(3, []byte("key2")))
-	require.True(t, mvs.Has(3, []byte("key3")))
-
 	// write some keys
 	vis.Set([]byte("key1"), []byte("value1"))
 	vis.Set([]byte("key2"), []byte("value2"))
@@ -174,10 +170,6 @@ func TestVersionIndexedStoreWriteEstimates(t *testing.T) {
 	mvs.SetWriteset(0, 1, map[string][]byte{
 		"key3": []byte("value3"),
 	})
-
-	require.False(t, mvs.Has(3, []byte("key1")))
-	require.False(t, mvs.Has(3, []byte("key2")))
-	require.True(t, mvs.Has(3, []byte("key3")))
 
 	// write some keys
 	vis.Set([]byte("key1"), []byte("value1"))

@@ -82,8 +82,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 				for {
 
-					mx.Lock()
 					if atomic.LoadInt32(&activeCount) == 0 {
+						mx.Lock()
 						if queue.IsCompleted() {
 							if final.Load() {
 								queue.Close()
@@ -92,8 +92,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 								queue.ValidateAll()
 							}
 						}
+						mx.Unlock()
 					}
-					mx.Unlock()
 
 					cancel := hangDebug(func() {
 						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())

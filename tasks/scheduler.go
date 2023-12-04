@@ -89,11 +89,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 						}
 					}
 
-					cancel := hangDebug(func() {
-						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
-					})
+					//cancel := hangDebug(func() {
+					//	fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
+					//})
 					task, anyTasks := queue.NextTask(worker)
-					cancel()
+					//cancel()
 					atomic.AddInt32(&activeCount, 1)
 
 					if !anyTasks {

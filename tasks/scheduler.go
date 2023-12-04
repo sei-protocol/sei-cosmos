@@ -60,7 +60,7 @@ func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	if len(reqs) == 0 {
-		return nil, nil
+		return []types.ResponseDeliverTx{}, nil
 	}
 
 	var results []types.ResponseDeliverTx

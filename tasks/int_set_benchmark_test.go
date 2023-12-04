@@ -6,7 +6,7 @@ import (
 )
 
 func intSetImpl(size int) IntSet {
-	return newSyncSet(size)
+	return newIntSetByteSlice(size)
 }
 
 func BenchmarkSyncSet_Add(b *testing.B) {

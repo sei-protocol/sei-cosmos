@@ -14,7 +14,7 @@ type IntSet interface {
 
 // points to implementation
 func newIntSet(size int) IntSet {
-	return newIntSetSyncMap(size)
+	return newIntSetByteSlice(size)
 }
 
 // syncSetMap uses a map with a RW Mutex

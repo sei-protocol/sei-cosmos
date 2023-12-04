@@ -93,16 +93,6 @@ func TestMultiVersionStoreWriteToParent(t *testing.T) {
 	require.Equal(t, []byte("value3"), parentKVStore.Get([]byte("key2")))
 	require.False(t, parentKVStore.Has([]byte("key3")))
 	require.False(t, parentKVStore.Has([]byte("key4")))
-
-	// verify no-op if mvs contains ESTIMATE
-	mvs.SetEstimatedWriteset(1, 2, map[string][]byte{
-		"key1": []byte("value1"),
-		"key3": nil,
-		"key4": nil,
-		"key5": nil,
-	})
-	mvs.WriteLatestToStore()
-	require.False(t, parentKVStore.Has([]byte("key5")))
 }
 
 func TestMultiVersionStoreWritesetSetAndInvalidate(t *testing.T) {

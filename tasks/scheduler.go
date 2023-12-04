@@ -6,6 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/tendermint/tendermint/abci/types"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -96,6 +97,14 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					}
 
 					cancel := hangDebug(func() {
+						if worker == 0 && !queue.IsCompleted() {
+							// produce a report of tasks mapped by status
+							var lines []string
+							for _, t := range s.tasks {
+								lines = append(lines, fmt.Sprintf("Task(idx=%d, status=%s, incarnation=%d):\t%s", t.Index, t.status, t.Incarnation, "status"))
+							}
+							fmt.Println(strings.Join(lines, "\n"))
+						}
 						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
 					})
 					task, anyTasks := queue.NextTask(worker)

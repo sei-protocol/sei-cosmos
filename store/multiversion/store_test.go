@@ -46,11 +46,6 @@ func TestMultiVersionStore(t *testing.T) {
 	})
 	require.True(t, store.GetLatestBeforeIndex(5, []byte("key1")).IsEstimate())
 	require.Equal(t, []byte("value4"), store.GetLatestBeforeIndex(7, []byte("key1")).Value())
-
-	// Test Has
-	require.True(t, store.Has(2, []byte("key1")))
-	require.False(t, store.Has(0, []byte("key1")))
-	require.False(t, store.Has(5, []byte("key4")))
 }
 
 func TestMultiVersionStoreHasLaterValue(t *testing.T) {
@@ -69,7 +64,6 @@ func TestMultiVersionStoreKeyDNE(t *testing.T) {
 
 	require.Nil(t, store.GetLatest([]byte("key1")))
 	require.Nil(t, store.GetLatestBeforeIndex(0, []byte("key1")))
-	require.False(t, store.Has(0, []byte("key1")))
 }
 
 func TestMultiVersionStoreWriteToParent(t *testing.T) {

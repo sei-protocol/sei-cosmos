@@ -119,7 +119,7 @@ func (s *Store) removeOldWriteset(index int, newWriteSet WriteSet) {
 		writeset = newWriteSet
 	}
 	// if there is already a writeset existing, we should remove that fully
-	oldKeys, loaded := s.txWritesetKeys.LoadAndDelete(index)
+	oldKeys, loaded := s.txWritesetKeys.Load(index)
 	if loaded {
 		keys := oldKeys.([]string)
 		// we need to delete all of the keys in the writeset from the multiversion store
@@ -387,7 +387,6 @@ func (s *Store) WriteLatestToStore() {
 	// we expect the estimateFlags to be empty
 	s.txEstimateFlags.Range(func(key, value interface{}) bool {
 		panic("estimate flags should be empty when writing to parent store")
-		return false
 	})
 	// sort the keys
 	keys := []string{}

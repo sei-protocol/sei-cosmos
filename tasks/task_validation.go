@@ -41,7 +41,7 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *TxTask) {
 	defer span.End()
 
 	valid, conflicts := s.findConflicts(task)
-	task.Dependencies = conflicts
+	task.Parents = conflicts
 
 	if !valid {
 		s.invalidateTask(task)

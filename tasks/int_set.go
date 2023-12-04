@@ -35,6 +35,16 @@ func (ss *intSetMap) Add(idx int) {
 	ss.m[idx] = struct{}{}
 }
 
+func (ss *intSetMap) List() []int {
+	ss.mx.RLock()
+	defer ss.mx.RUnlock()
+	list := make([]int, 0, len(ss.m))
+	for k := range ss.m {
+		list = append(list, k)
+	}
+	return list
+}
+
 func (ss *intSetMap) Delete(idx int) {
 	if ss.Exists(idx) {
 		ss.mx.Lock()

@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 )
@@ -15,6 +16,8 @@ const (
 )
 
 type Queue interface {
+	// AddDependentToParents adds a dependent to the parents
+	AddDependentToParents(idx int)
 	// NextTask returns the next task to be executed, or nil if the queue is closed.
 	NextTask(workerID int) (*TxTask, bool)
 	// Close closes the queue, causing NextTask to return false.
@@ -94,12 +97,21 @@ func (sq *taskQueue) isExecuting(idx int) bool {
 
 // FinishExecute marks a task as finished executing and transitions directly validation
 func (sq *taskQueue) FinishExecute(idx int) {
-	defer TaskLog(sq.getTask(idx), "-> finished task execute")
+	t := sq.getTask(idx)
+	defer TaskLog(t, "-> finished task execute")
 
 	//if !sq.isExecuting(idx) {
 	//	TaskLog(sq.getTask(idx), "not executing, but trying to finish execute")
 	//	panic("not executing, but trying to finish execute")
 	//}
+	//TODO: optimize
+	if t.Dependents.Length() > 0 {
+		dependentTasks := t.Dependents.List()
+		sort.Ints(dependentTasks)
+		for _, d := range dependentTasks {
+			sq.execute(d)
+		}
+	}
 
 	sq.executing.Delete(idx)
 	sq.validate(idx)
@@ -147,12 +159,19 @@ func (sq *taskQueue) isFinished(idx int) bool {
 }
 
 func (sq *taskQueue) DependenciesFinished(idx int) bool {
-	for _, dep := range sq.getTask(idx).Dependencies {
+	for _, dep := range sq.getTask(idx).Parents {
 		if !sq.isFinished(dep) {
 			return false
 		}
 	}
 	return true
+}
+
+func (sq *taskQueue) AddDependentToParents(idx int) {
+	parents := sq.getTask(idx).Parents
+	for _, p := range parents {
+		sq.getTask(p).Dependents.Add(idx)
+	}
 }
 
 // IsCompleted returns true if all tasks are "finished"

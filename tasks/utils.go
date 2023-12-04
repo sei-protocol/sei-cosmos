@@ -57,8 +57,11 @@ func toTasks(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) []*TxTask {
 		res = append(res, &TxTask{
 			Request: r.Request,
 			Index:   idx,
-			Ctx:     ctx,
-			status:  statusPending,
+			Dependents: &intSetMap{
+				m: make(map[int]struct{}),
+			},
+			Ctx:    ctx,
+			status: statusPending,
 		})
 	}
 	return res

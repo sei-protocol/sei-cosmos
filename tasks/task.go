@@ -38,7 +38,8 @@ type TxTask struct {
 	taskType      TaskType
 	status        status
 	ExecutionID   string
-	Dependencies  []int
+	Parents       []int
+	Dependents    *intSetMap
 	Abort         *occ.Abort
 	Index         int
 	Executing     byte
@@ -136,7 +137,7 @@ func (dt *TxTask) Reset() {
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
-	dt.Dependencies = nil
+	dt.Parents = nil
 	dt.VersionStores = nil
 }
 
@@ -147,7 +148,7 @@ func (dt *TxTask) ResetForExecution() {
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
-	dt.Dependencies = nil
+	dt.Parents = nil
 	dt.VersionStores = nil
 }
 

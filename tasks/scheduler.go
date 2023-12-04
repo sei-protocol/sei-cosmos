@@ -81,17 +81,19 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 				defer wg.Done()
 
 				for {
+
+					mx.Lock()
 					if atomic.LoadInt32(&activeCount) == 0 {
-						if queue.IsCompleted() && mx.TryLock() {
+						if queue.IsCompleted() {
 							if final.Load() {
 								queue.Close()
 							} else {
 								final.Store(true)
 								queue.ValidateAll()
 							}
-							mx.Unlock()
 						}
 					}
+					mx.Unlock()
 
 					cancel := hangDebug(func() {
 						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
@@ -125,7 +127,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		results = collectResponses(s.tasks)
 		err = nil
 	})
-	s.timer.PrintReport()
+	//s.timer.PrintReport()
 	//fmt.Printf("Total Tasks: %d\n", counter.Load())
 
 	return results, err

@@ -384,6 +384,11 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 }
 
 func (s *Store) WriteLatestToStore() {
+	// we expect the estimateFlags to be empty
+	s.txEstimateFlags.Range(func(key, value interface{}) bool {
+		panic("estimate flags should be empty when writing to parent store")
+		return false
+	})
 	// sort the keys
 	keys := []string{}
 	s.multiVersionMap.Range(func(key, value interface{}) bool {

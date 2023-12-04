@@ -121,9 +121,9 @@ func (s *Store) removeOldWriteset(index int, newWriteSet WriteSet) {
 	// if there is already a writeset existing, we should remove that fully
 	oldKeys, loaded := s.txWritesetKeys.Load(index)
 	if loaded {
-		keys := oldKeys.([]string)
+		keys := oldKeys.(*[]string)
 		// we need to delete all of the keys in the writeset from the multiversion store
-		for _, key := range keys {
+		for _, key := range *keys {
 			// small optimization to check if the new writeset is going to write this key, if so, we can leave it behind
 			if _, ok := writeset[key]; ok {
 				// we don't need to remove this key because it will be overwritten anyways - saves the operation of removing + rebalancing underlying btree
@@ -162,7 +162,7 @@ func (s *Store) SetWriteset(index int, incarnation int, writeset WriteSet) {
 	}
 	sort.Strings(writeSetKeys)      // TODO: if we're sorting here anyways, maybe we just put it into a btree instead of a slice
 	s.txEstimateFlags.Delete(index) // remove estimate flag if it exists
-	s.txWritesetKeys.Store(index, writeSetKeys)
+	s.txWritesetKeys.Store(index, &writeSetKeys)
 }
 
 // InvalidateWriteset updates the estimateFlags to indicate the writeset is out of date
@@ -185,7 +185,7 @@ func (s *Store) SetEstimatedWriteset(index int, incarnation int, writeset WriteS
 	}
 	sort.Strings(writeSetKeys)
 	s.txEstimateFlags.Store(index, struct{}{}) // set estimate flag
-	s.txWritesetKeys.Store(index, writeSetKeys)
+	s.txWritesetKeys.Store(index, &writeSetKeys)
 }
 
 // GetAllWritesetKeys implements MultiVersionStore.
@@ -194,8 +194,8 @@ func (s *Store) GetAllWritesetKeys() map[int][]string {
 	// TODO: is this safe?
 	s.txWritesetKeys.Range(func(key, value interface{}) bool {
 		index := key.(int)
-		keys := value.([]string)
-		writesetKeys[index] = keys
+		keys := value.(*[]string)
+		writesetKeys[index] = *keys
 		return true
 	})
 

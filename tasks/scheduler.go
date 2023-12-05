@@ -162,8 +162,8 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		case statusWaiting:
 			// task should be re-validated (waiting on others)
 			// how can we wait on dependencies?
-			TaskLog(t, "waiting/executed...revalidating")
-			queue.AddDependentToParents(t.Index)
+			TaskLog(t, "waiting, executing again")
+			queue.Execute(t.Index)
 
 		case statusInvalid:
 			TaskLog(t, "invalid (re-executing, re-validating > tx)")
@@ -181,9 +181,15 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 		s.executeTask(t)
 
 		if t.IsStatus(statusAborted) {
-			//TODO ideally this would wait until dependencies are finished
-			t.Parents = []int{t.Abort.DependentTxIdx}
-			queue.AddDependentToParents(t.Index)
+			parent := s.tasks[t.Abort.DependentTxIdx]
+			parent.LockTask()
+			if parent.IsTaskType(TypeExecution) {
+				t.Parents = []int{t.Abort.DependentTxIdx}
+				queue.AddDependentToParents(t.Index)
+			} else {
+				queue.Execute(t.Index)
+			}
+			parent.UnlockTask()
 		} else {
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.Index)

@@ -85,7 +85,7 @@ func (sq *taskQueue) getTask(idx int) *TxTask {
 
 func (sq *taskQueue) validate(idx int) {
 	task := sq.getTask(idx)
-	if sq.getTask(idx).SetTaskType(TypeValidation) {
+	if task.SetTaskType(TypeValidation) {
 		TaskLog(task, "-> validate")
 		sq.pushTask(idx, TypeValidation)
 	}
@@ -105,6 +105,7 @@ func (sq *taskQueue) FinishExecute(idx int) {
 	//	panic("not executing, but trying to finish execute")
 	//}
 	//TODO: optimize
+	t.LockTask()
 	if t.Dependents.Length() > 0 {
 		dependentTasks := t.Dependents.List()
 		sort.Ints(dependentTasks)
@@ -112,6 +113,7 @@ func (sq *taskQueue) FinishExecute(idx int) {
 			sq.execute(d)
 		}
 	}
+	t.UnlockTask()
 
 	sq.executing.Delete(idx)
 	sq.validate(idx)
@@ -135,8 +137,8 @@ func (sq *taskQueue) ReValidate(idx int) {
 
 func (sq *taskQueue) Execute(idx int) {
 	task := sq.tasks[idx]
-	TaskLog(task, fmt.Sprintf("-> Execute (%d)", sq.getTask(idx).Incarnation))
 	task.Increment()
+	TaskLog(task, fmt.Sprintf("-> Execute (%d)", task.Incarnation))
 	sq.execute(idx)
 }
 
@@ -150,7 +152,9 @@ func (sq *taskQueue) ValidateAll() {
 // any executing tasks are skipped
 func (sq *taskQueue) ValidateLaterTasks(afterIdx int) {
 	for idx := afterIdx + 1; idx < len(sq.tasks); idx++ {
-		sq.validate(idx)
+		if !sq.isExecuting(idx) {
+			sq.validate(idx)
+		}
 	}
 }
 

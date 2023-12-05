@@ -92,6 +92,12 @@ func (dt *TxTask) updateTaskType(tt TaskType) bool {
 	return false
 }
 
+func (dt *TxTask) IsTaskType(tt TaskType) bool {
+	dt.rwMx.RLock()
+	defer dt.rwMx.RUnlock()
+	return dt.taskType == tt
+}
+
 func (dt *TxTask) PopTaskType() (TaskType, bool) {
 	dt.rwMx.Lock()
 	defer dt.rwMx.Unlock()

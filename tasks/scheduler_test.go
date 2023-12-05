@@ -182,7 +182,7 @@ func TestProcessAll(t *testing.T) {
 		{
 			name:      "Test every tx accesses same key",
 			workers:   20,
-			runs:      100,
+			runs:      1000,
 			addStores: true,
 			requests:  requestList(100),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {

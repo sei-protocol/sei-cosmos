@@ -68,9 +68,8 @@ func (store *Store) GetStoreType() types.StoreType {
 func (store *Store) getFromCache(key []byte) []byte {
 	if cv, ok := store.cache.Load(conv.UnsafeBytesToStr(key)); ok {
 		return cv.(*types.CValue).Value()
-	} else {
-		return store.parent.Get(key)
-	}
+	} 
+	return store.parent.Get(key)
 }
 
 // Get implements types.KVStore.

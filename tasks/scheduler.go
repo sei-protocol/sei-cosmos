@@ -2,13 +2,14 @@ package tasks
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/tendermint/tendermint/abci/types"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 // Scheduler processes tasks concurrently
@@ -98,6 +99,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 					cancel := hangDebug(func() {
 						if worker == 0 && !queue.IsCompleted() {
+							fmt.Printf("Logging tasks for height %d \n", ctx.BlockHeight())
 							// produce a report of tasks mapped by status
 							var lines []string
 							for _, t := range s.tasks {

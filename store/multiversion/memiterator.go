@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"errors"
+	"fmt"
 
 	dbm "github.com/tendermint/tm-db"
 
@@ -117,7 +118,7 @@ func (mi *memIterator) Valid() bool {
 	return mi.skipUntilExistsOrInvalid()
 }
 
-// fast forwards the iterator in the even that we had a race that removed the iterator item's underlying value in the multiversion store
+// fast forwards the iterator in the event that we had a race that removed the iterator item's underlying value in the multiversion store
 func (mi *memIterator) skipUntilExistsOrInvalid() bool {
 	for mi.Iterator.Valid() {
 		// we need to look at the key, check if there is either a writeset OR MVS value present, if not, we fast forward over it
@@ -128,6 +129,7 @@ func (mi *memIterator) skipUntilExistsOrInvalid() bool {
 		if mi.mvStore.GetLatestBeforeIndex(mi.index, key) != nil {
 			return true
 		}
+		fmt.Printf("Nil iterator item condition encountered for key: %X \n", key)
 		// if we are here, we didn't find a value, so we skip over this item
 		mi.Iterator.Next()
 	}

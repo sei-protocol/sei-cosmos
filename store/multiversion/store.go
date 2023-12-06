@@ -7,7 +7,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/types/occ"
-	occtypes "github.com/cosmos/cosmos-sdk/types/occ"
 	db "github.com/tendermint/tm-db"
 )
 
@@ -262,10 +261,10 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 		sortedItems.Set([]byte(key), []byte{})
 	}
 	validChannel := make(chan bool, 1)
-	abortChannel := make(chan occtypes.Abort, 1)
+	abortChannel := make(chan occ.Abort, 1)
 
 	// listen for abort while iterating
-	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort) {
+	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occ.Abort) {
 		var parentIter types.Iterator
 		expectedKeys := iterationTracker.iteratedKeys
 		foundKeys := 0

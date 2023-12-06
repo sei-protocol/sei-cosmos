@@ -63,6 +63,11 @@ func (mi *memIterator) Value() []byte {
 
 	// get the value from the multiversion store
 	val := mi.mvStore.GetLatestBeforeIndex(mi.index, key)
+	// TODO: handle if val is nil - this only happens in a race where the key is collected for iteration and then the underlying value is removed
+	if val == nil {
+		defer mi.ReadsetHandler.UpdateReadSet(key, nil)
+		return nil
+	}
 
 	// if we have an estiamte, write to abort channel
 	if val.IsEstimate() {

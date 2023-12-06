@@ -98,7 +98,7 @@ func (iter *mvsMergeIterator) Next() {
 func (iter *mvsMergeIterator) Key() []byte {
 	valid := iter.skipUntilExistsOrInvalid()
 	if !valid {
-		fmt.Println("mvs mergeiterator turned invalid")
+		fmt.Println("mvsMergeIterator turned invalid")
 	}
 	iter.assertValid()
 

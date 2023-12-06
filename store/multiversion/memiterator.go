@@ -133,7 +133,6 @@ func (mi *memIterator) skipUntilExistsOrInvalid() bool {
 		// if we are here, we didn't find a value, so we skip over this item
 		mi.Iterator.Next()
 	}
-	fmt.Println("Iterated skipped until invalid")
 	// if we got to here, it means that the iterator is no longer valid :'(
 	return false
 }

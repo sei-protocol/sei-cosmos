@@ -119,7 +119,7 @@ func (mi *memIterator) Valid() bool {
 
 // fast forwards the iterator in the even that we had a race that removed the iterator item's underlying value in the multiversion store
 func (mi *memIterator) skipUntilExistsOrInvalid() bool {
-	for mi.Valid() {
+	for mi.Iterator.Valid() {
 		// we need to look at the key, check if there is either a writeset OR MVS value present, if not, we fast forward over it
 		key := mi.Iterator.Key()
 		if _, ok := mi.writeset[string(key)]; ok {

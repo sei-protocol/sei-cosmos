@@ -3,6 +3,7 @@ package multiversion
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -95,7 +96,10 @@ func (iter *mvsMergeIterator) Next() {
 
 // Key implements Iterator
 func (iter *mvsMergeIterator) Key() []byte {
-	iter.skipUntilExistsOrInvalid()
+	valid := iter.skipUntilExistsOrInvalid()
+	if !valid {
+		fmt.Println("mvs mergeiterator turned invalid")
+	}
 	iter.assertValid()
 
 	// If parent is invalid, get the cache key.

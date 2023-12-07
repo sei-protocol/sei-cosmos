@@ -9,9 +9,11 @@ import (
 	"math"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/snapshots/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 const (
@@ -20,7 +22,7 @@ const (
 	opPrune    operation = "prune"
 	opRestore  operation = "restore"
 
-	chunkBufferSize = 4
+	chunkBufferSize = 8
 
 	snapshotMaxItemSize = int(64e6) // SDK has no key/value size limit, so we set an arbitrary limit
 )
@@ -49,37 +51,48 @@ type restoreDone struct {
 //     errors via io.Pipe.CloseWithError().
 type Manager struct {
 	store      *Store
-	multistore types.Snapshotter
+	scStore    types.Snapshotter
+	ssStore    types.Snapshotter
 	extensions map[string]types.ExtensionSnapshotter
+	logger     log.Logger
 
 	mtx                sync.Mutex
 	operation          operation
-	chRestore          chan<- io.ReadCloser
-	chRestoreDone      <-chan restoreDone
+	chSCRestore        chan<- io.ReadCloser
+	chSSRestore        chan<- io.ReadCloser
+	chSCRestoreDone    <-chan restoreDone
+	chSSRestoreDone    <-chan restoreDone
 	restoreChunkHashes [][]byte
 	restoreChunkIndex  uint32
 }
 
 // NewManager creates a new manager.
-func NewManager(store *Store, multistore types.Snapshotter) *Manager {
+func NewManager(store *Store, scStore types.Snapshotter, ssStore types.Snapshotter, logger log.Logger) *Manager {
 	return &Manager{
 		store:      store,
-		multistore: multistore,
+		scStore:    scStore,
+		ssStore:    ssStore,
 		extensions: make(map[string]types.ExtensionSnapshotter),
+		logger:     logger,
 	}
 }
 
 // NewManagerWithExtensions creates a new manager.
-func NewManagerWithExtensions(store *Store, multistore types.Snapshotter, extensions map[string]types.ExtensionSnapshotter) *Manager {
+func NewManagerWithExtensions(store *Store, scStore types.Snapshotter, ssStore types.Snapshotter, extensions map[string]types.ExtensionSnapshotter) *Manager {
 	return &Manager{
 		store:      store,
-		multistore: multistore,
+		scStore:    scStore,
+		ssStore:    ssStore,
 		extensions: extensions,
 	}
 }
 
-func (m *Manager) SetMultiStore(s types.Snapshotter) {
-	m.multistore = s
+func (m *Manager) SetStateCommitStore(s types.Snapshotter) {
+	m.scStore = s
+}
+
+func (m *Manager) SetStateStore(s types.Snapshotter) {
+	m.ssStore = s
 }
 
 func (m *Manager) Close() error {
@@ -130,11 +143,16 @@ func (m *Manager) end() {
 // endLocked ends the current operation while already holding the mutex.
 func (m *Manager) endLocked() {
 	m.operation = opNone
-	if m.chRestore != nil {
-		close(m.chRestore)
-		m.chRestore = nil
+	if m.chSCRestore != nil {
+		close(m.chSCRestore)
+		m.chSCRestore = nil
 	}
-	m.chRestoreDone = nil
+	if m.chSSRestore != nil {
+		close(m.chSSRestore)
+		m.chSSRestore = nil
+	}
+	m.chSCRestoreDone = nil
+	m.chSSRestoreDone = nil
 	m.restoreChunkHashes = nil
 	m.restoreChunkIndex = 0
 }
@@ -160,7 +178,6 @@ func (m *Manager) Create(height uint64) (*types.Snapshot, error) {
 		return nil, err
 	}
 	defer m.end()
-
 	latest, err := m.store.GetLatest()
 	if err != nil {
 		return nil, sdkerrors.Wrap(err, "failed to examine latest snapshot")
@@ -169,7 +186,6 @@ func (m *Manager) Create(height uint64) (*types.Snapshot, error) {
 		return nil, sdkerrors.Wrapf(sdkerrors.ErrConflict,
 			"a more recent snapshot already exists at height %v", latest.Height)
 	}
-
 	// Spawn goroutine to generate snapshot chunks and pass their io.ReadClosers through a channel
 	ch := make(chan io.ReadCloser)
 	go m.createSnapshot(height, ch)
@@ -185,7 +201,8 @@ func (m *Manager) createSnapshot(height uint64, ch chan<- io.ReadCloser) {
 		return
 	}
 	defer streamWriter.Close()
-	if err := m.multistore.Snapshot(height, streamWriter); err != nil {
+	if err := m.scStore.Snapshot(height, streamWriter); err != nil {
+		m.logger.Error("Snapshot creation failed", "err", err)
 		streamWriter.CloseWithError(err)
 		return
 	}
@@ -273,36 +290,57 @@ func (m *Manager) Restore(snapshot types.Snapshot) error {
 	}
 
 	// Start an asynchronous snapshot restoration, passing chunks and completion status via channels.
-	chChunks := make(chan io.ReadCloser, chunkBufferSize)
-	chDone := make(chan restoreDone, 1)
-
+	chSCChunks := make(chan io.ReadCloser, chunkBufferSize)
+	chSCDone := make(chan restoreDone, 1)
 	go func() {
-		err := m.restoreSnapshot(snapshot, chChunks)
-		chDone <- restoreDone{
+		startTime := time.Now()
+		err := m.restoreSnapshot(snapshot, m.scStore, chSCChunks)
+		fmt.Printf("Restore SC snapshot took %d ms\n", time.Since(startTime).Milliseconds())
+		chSCDone <- restoreDone{
 			complete: err == nil,
 			err:      err,
 		}
-		close(chDone)
+		close(chSCDone)
 	}()
+	m.chSCRestore = chSCChunks
+	m.chSCRestoreDone = chSCDone
+	// Start another asynchronous snapshot restoration for ss store if it exists
+	if m.ssStore != nil {
+		chSSChunks := make(chan io.ReadCloser, chunkBufferSize)
+		chSSDone := make(chan restoreDone, 1)
+		go func() {
+			startTime := time.Now()
+			err := m.restoreSnapshot(snapshot, m.ssStore, chSSChunks)
+			fmt.Printf("Restore SS snapshot took %d ms\n", time.Since(startTime).Milliseconds())
+			chSSDone <- restoreDone{
+				complete: err == nil,
+				err:      err,
+			}
+			close(chSSDone)
+		}()
+		m.chSSRestore = chSSChunks
+		m.chSSRestoreDone = chSSDone
+	}
 
-	m.chRestore = chChunks
-	m.chRestoreDone = chDone
 	m.restoreChunkHashes = snapshot.Metadata.ChunkHashes
 	m.restoreChunkIndex = 0
 	return nil
 }
 
 // restoreSnapshot do the heavy work of snapshot restoration after preliminary checks on request have passed.
-func (m *Manager) restoreSnapshot(snapshot types.Snapshot, chChunks <-chan io.ReadCloser) error {
+func (m *Manager) restoreSnapshot(snapshot types.Snapshot, snapshotter types.Snapshotter, chChunks <-chan io.ReadCloser) error {
 	streamReader, err := NewStreamReader(chChunks)
 	if err != nil {
 		return err
 	}
 	defer streamReader.Close()
 
-	next, err := m.multistore.Restore(snapshot.Height, snapshot.Format, streamReader)
+	next, err := snapshotter.Restore(snapshot.Height, snapshot.Format, streamReader)
 	if err != nil {
 		return sdkerrors.Wrap(err, "multistore restore")
+	}
+	if snapshotter == m.ssStore {
+		return nil
 	}
 	for {
 		if next.Item == nil {
@@ -343,7 +381,7 @@ func (m *Manager) RestoreChunk(chunk []byte) (bool, error) {
 
 	// Check if any errors have occurred yet.
 	select {
-	case done := <-m.chRestoreDone:
+	case done := <-m.chSCRestoreDone:
 		m.endLocked()
 		if done.err != nil {
 			return false, done.err
@@ -361,18 +399,33 @@ func (m *Manager) RestoreChunk(chunk []byte) (bool, error) {
 	}
 
 	// Pass the chunk to the restore, and wait for completion if it was the final one.
-	m.chRestore <- ioutil.NopCloser(bytes.NewReader(chunk))
+	m.chSCRestore <- ioutil.NopCloser(bytes.NewReader(chunk))
+	if m.ssStore != nil && m.chSSRestore != nil {
+		m.chSSRestore <- ioutil.NopCloser(bytes.NewReader(chunk))
+	}
+
 	m.restoreChunkIndex++
 
 	if int(m.restoreChunkIndex) >= len(m.restoreChunkHashes) {
-		close(m.chRestore)
-		m.chRestore = nil
-		done := <-m.chRestoreDone
-		m.endLocked()
-		if done.err != nil {
-			return false, done.err
+		close(m.chSCRestore)
+		m.chSCRestore = nil
+		if m.chSSRestore != nil {
+			close(m.chSSRestore)
+			m.chSSRestore = nil
 		}
-		if !done.complete {
+		scDone := <-m.chSCRestoreDone
+		ssDone := scDone
+		if m.chSSRestoreDone != nil {
+			ssDone = <-m.chSSRestoreDone
+		}
+		m.endLocked()
+		if scDone.err != nil {
+			return false, scDone.err
+		}
+		if ssDone.err != nil {
+			return false, ssDone.err
+		}
+		if !scDone.complete || !ssDone.complete {
 			return false, sdkerrors.Wrap(sdkerrors.ErrLogic, "restore ended prematurely")
 		}
 		return true, nil

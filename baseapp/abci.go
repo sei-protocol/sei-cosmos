@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -344,13 +345,17 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 		app.halt()
 	}
 
-	if app.snapshotInterval > 0 && uint64(header.Height)%app.snapshotInterval == 0 {
-		go app.snapshot(header.Height)
-	}
+	app.SnapshotIfApplicable(uint64(header.Height))
 
 	return &abci.ResponseCommit{
 		RetainHeight: retainHeight,
 	}, nil
+}
+
+func (app *BaseApp) SnapshotIfApplicable(height uint64) {
+	if app.snapshotInterval > 0 && height%app.snapshotInterval == 0 {
+		go app.Snapshot(int64(height))
+	}
 }
 
 // halt attempts to gracefully shutdown the node via SIGINT and SIGTERM falling
@@ -376,7 +381,7 @@ func (app *BaseApp) halt() {
 }
 
 // snapshot takes a snapshot of the current state and prunes any old snapshottypes.
-func (app *BaseApp) snapshot(height int64) {
+func (app *BaseApp) Snapshot(height int64) {
 	if app.snapshotManager == nil {
 		app.logger.Info("snapshot manager not configured")
 		return
@@ -589,6 +594,16 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 
 func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQuery) abci.ResponseQuery {
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
+	defer func() {
+		// We should close the multistore to avoid leaking resources.
+		if closer, ok := ctx.MultiStore().(io.Closer); ok {
+			err := closer.Close()
+			if err != nil {
+				app.logger.Error("failed to close Cache MultiStore", "err", err)
+			}
+		}
+	}()
+
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}
@@ -641,7 +656,11 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 		return sdk.Context{}, err
 	}
 
-	lastBlockHeight := app.LastBlockHeight()
+	var qms sdk.MultiStore = app.qms
+	if qms == nil || height == app.cms.LatestVersion() {
+		qms = app.cms
+	}
+	lastBlockHeight := qms.LatestVersion()
 	if height > lastBlockHeight {
 		return sdk.Context{},
 			sdkerrors.Wrap(
@@ -663,7 +682,7 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	cacheMS, err := app.cms.CacheMultiStoreWithVersion(height)
+	cacheMS, err := qms.CacheMultiStoreWithVersion(height)
 	if err != nil {
 		return sdk.Context{},
 			sdkerrors.Wrapf(
@@ -872,6 +891,17 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 	}
 
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
+
+	defer func() {
+		// We should close the multistore to avoid leaking resources.
+		if closer, ok := ctx.MultiStore().(io.Closer); ok {
+			err := closer.Close()
+			if err != nil {
+				app.logger.Error("failed to close Cache MultiStore", "err", err)
+			}
+		}
+	}()
+
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}

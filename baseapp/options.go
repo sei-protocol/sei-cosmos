@@ -284,7 +284,7 @@ func (app *BaseApp) SetSnapshotStore(snapshotStore *snapshots.Store) {
 		app.snapshotManager = nil
 		return
 	}
-	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms)
+	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms, app.qms, app.logger)
 }
 
 // SetSnapshotInterval sets the snapshot interval.
@@ -327,4 +327,11 @@ func (app *BaseApp) SetStreamingService(s StreamingService) {
 	// register the StreamingService within the BaseApp
 	// BaseApp will pass BeginBlock, DeliverTx, and EndBlock requests and responses to the streaming services to update their ABCI context
 	app.abciListeners = append(app.abciListeners, s)
+}
+
+// SetQueryMultiStore set an alternative MultiStore implementation to support historical queries.
+//
+// Ref: https://github.com/cosmos/cosmos-sdk/issues/13317
+func (app *BaseApp) SetQueryMultiStore(ms sdk.QueryMultiStore) {
+	app.qms = ms
 }

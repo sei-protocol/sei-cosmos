@@ -431,6 +431,11 @@ func (rs *Store) LastCommitID() types.CommitID {
 	return c.CommitID()
 }
 
+// LatestVersion returns the latest version in the store
+func (rs *Store) LatestVersion() int64 {
+	return rs.LastCommitID().Version
+}
+
 func (rs *Store) GetWorkingHash() ([]byte, error) {
 	storeInfos := []types.StoreInfo{}
 	for key, store := range rs.stores {
@@ -1046,10 +1051,6 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 		panic(fmt.Errorf("error on batch write %w", err))
 	}
 	rs.logger.Info("App State Saved height=%d hash=%X\n", cInfo.CommitID().Version, cInfo.CommitID().Hash)
-}
-
-func (rs *Store) SetOrphanConfig(opts *iavltree.Options) {
-	rs.orphanOpts = opts
 }
 
 func (rs *Store) LastCommitInfo() *types.CommitInfo {

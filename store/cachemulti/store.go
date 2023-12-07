@@ -208,3 +208,8 @@ func (cms Store) GetKVStore(key types.StoreKey) types.KVStore {
 func (cms Store) GetWorkingHash() ([]byte, error) {
 	panic("should never attempt to get working hash from cache multi store")
 }
+
+// LatestVersion returns the branch version of the store
+func (cms Store) LatestVersion() int64 {
+	panic("cannot get latest version from branch cached multi-store")
+}

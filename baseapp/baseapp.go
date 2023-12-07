@@ -30,7 +30,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
@@ -173,6 +172,7 @@ type BaseApp struct { //nolint: maligned
 type appStore struct {
 	db          dbm.DB               // common DB backend
 	cms         sdk.CommitMultiStore // Main (uncached) state
+	qms         sdk.QueryMultiStore  // Optional alternative multistore for querying only
 	storeLoader StoreLoader          // function to handle store loading, may be overridden with SetStoreLoader()
 
 	// an inter-block write-through cache provided to the context during deliverState
@@ -290,9 +290,6 @@ func NewBaseApp(
 		panic("must pass --chain-id when calling 'seid start' or set in ~/.sei/config/client.toml")
 	}
 	app.startCompactionRoutine(db)
-	if app.orphanConfig != nil {
-		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
-	}
 
 	return app
 }
@@ -407,6 +404,13 @@ func (app *BaseApp) CommitMultiStore() sdk.CommitMultiStore {
 	return app.cms
 }
 
+// QueryMultiStore returns the query multi-store.
+// App constructor can use this to access the `qms`.
+// UNSAFE: must not be used during the abci life cycle.
+func (app *BaseApp) QueryMultiStore() sdk.QueryMultiStore {
+	return app.qms
+}
+
 // SnapshotManager returns the snapshot manager.
 // application use this to register extra extension snapshotters.
 func (app *BaseApp) SnapshotManager() *snapshots.Manager {
@@ -443,19 +447,11 @@ func (app *BaseApp) init() error {
 	app.setCheckState(tmproto.Header{})
 	app.Seal()
 
-	// make sure the snapshot interval is a multiple of the pruning KeepEvery interval
-	if app.snapshotManager != nil && app.snapshotInterval > 0 {
-		rms, ok := app.cms.(*rootmulti.Store)
-		if !ok {
-			return errors.New("state sync snapshots require a rootmulti store")
-		}
-		pruningOpts := rms.GetPruning()
-		if pruningOpts.KeepEvery > 0 && app.snapshotInterval%pruningOpts.KeepEvery != 0 {
-			return fmt.Errorf(
-				"state sync snapshot interval %v must be a multiple of pruning keep every interval %v",
-				app.snapshotInterval, pruningOpts.KeepEvery)
-		}
+	if app.cms == nil {
+		return errors.New("commit multi-store must not be nil")
 	}
+
+	return app.cms.GetPruning().Validate()
 
 	return nil
 }
@@ -862,7 +858,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}
 
 	// Wait for signals to complete before starting the transaction. This is needed before any of the
-	// resources are acceessed by the ante handlers and message handlers.
+	// resources are accessed by the ante handlers and message handlers.
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it
@@ -1174,6 +1170,9 @@ func (app *BaseApp) Close() error {
 	if err := app.appStore.db.Close(); err != nil {
 		return err
 	}
+	if err := app.qms.Close(); err != nil {
+		return err
+	}
 	return app.snapshotManager.Close()
 }
 
@@ -1188,7 +1187,7 @@ func (app *BaseApp) ReloadDB() error {
 	app.db = db
 	app.cms = store.NewCommitMultiStore(db)
 	if app.snapshotManager != nil {
-		app.snapshotManager.SetMultiStore(app.cms)
+		app.snapshotManager.SetStateCommitStore(app.cms)
 	}
 	return nil
 }
@@ -1196,3 +1195,5 @@ func (app *BaseApp) ReloadDB() error {
 func (app *BaseApp) GetCheckCtx() sdk.Context {
 	return app.checkState.ctx
 }
+
+//

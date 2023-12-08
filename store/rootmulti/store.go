@@ -1197,3 +1197,12 @@ func flushPruningHeights(batch dbm.Batch, pruneHeights []int64) {
 
 	batch.Set([]byte(pruneHeightsKey), bz)
 }
+
+// LatestVersion returns the latest version in the store
+func (rs *Store) LatestVersion() int64 {
+	return rs.LastCommitID().Version
+}
+
+func (rs *Store) Close() error {
+	return rs.db.Close()
+}

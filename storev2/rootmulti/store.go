@@ -278,10 +278,6 @@ func (rs *Store) SetTracingContext(types.TraceContext) types.MultiStore {
 	return nil
 }
 
-func (rs *Store) LatestVersion() int64 {
-	return rs.scStore.Version()
-}
-
 // Implements interface Snapshotter
 // not needed, memiavl manage its own snapshot/pruning strategy
 func (rs *Store) PruneSnapshotHeight(_ int64) {

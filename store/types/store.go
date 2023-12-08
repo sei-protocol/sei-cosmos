@@ -145,6 +145,8 @@ type MultiStore interface {
 
 	// Resets the tracked event list
 	ResetEvents()
+
+	io.Closer
 }
 
 // From MultiStore.CacheMultiStore()....

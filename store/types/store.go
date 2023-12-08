@@ -145,8 +145,6 @@ type MultiStore interface {
 
 	// Resets the tracked event list
 	ResetEvents()
-
-	io.Closer
 }
 
 // From MultiStore.CacheMultiStore()....
@@ -209,6 +207,9 @@ type CommitMultiStore interface {
 
 	// RollbackToVersion rollback the db to specific version(height).
 	RollbackToVersion(version int64) error
+
+	// Close the underline resources
+	io.Closer
 }
 
 //---------subsp-------------------------------

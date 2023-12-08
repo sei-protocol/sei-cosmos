@@ -136,7 +136,7 @@ func (rs *Store) StateStoreCommit() {
 // Flush all the pending changesets to commit store.
 func (rs *Store) flush() error {
 	var changeSets []*proto.NamedChangeSet
-	currentVersion := rs.LatestVersion()
+	currentVersion := rs.lastCommitInfo.Version
 	for key := range rs.ckvStores {
 		// it'll unwrap the inter-block cache
 		store := rs.GetCommitKVStore(key)

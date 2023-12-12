@@ -485,17 +485,17 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 	var abortOccurred bool
 
 	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var abort *occ.Abort
 	// Drain the AbortCh in a non-blocking way
 	go func() {
 		defer wg.Done()
-		wg.Add(1)
 		for abt := range task.AbortCh {
 			if !abortOccurred {
 				abortOccurred = true
-				task.Status = statusAborted
-				task.Abort = &abt
+				abort = &abt
 			}
-			// continue draining remaining values
 		}
 	}()
 
@@ -506,10 +506,10 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	wg.Wait()
 
-	// Close the AbortCh channel to end the draining goroutine
-
 	// If abort has occurred, return, else set the response and status
 	if abortOccurred {
+		task.Status = statusAborted
+		task.Abort = abort
 		return
 	}
 

@@ -440,32 +440,6 @@ func (s *scheduler) prepareTask(task *deliverTxTask) {
 	task.Ctx = ctx
 }
 
-// executeTask executes a single task
-func (s *scheduler) executeTask3(task *deliverTxTask) {
-	s.prepareTask(task)
-	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerDeliverTx", task)
-	defer dSpan.End()
-	task.Ctx = dCtx
-
-	resp := s.deliverTx(task.Ctx, task.Request)
-
-	close(task.AbortCh)
-
-	if abt, ok := <-task.AbortCh; ok {
-		task.Status = statusAborted
-		task.Abort = &abt
-		return
-	}
-
-	// write from version store to multiversion stores
-	for _, v := range task.VersionStores {
-		v.WriteToMultiVersionStore()
-	}
-
-	task.Status = statusExecuted
-	task.Response = &resp
-}
-
 func (s *scheduler) executeTask(task *deliverTxTask) {
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerExecuteTask", task)
 	defer dSpan.End()

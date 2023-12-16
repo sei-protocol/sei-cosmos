@@ -818,7 +818,14 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, checksum [32]byte) (sdk.Cont
 // Note, gas execution info is always returned. A reference to a Result is
 // returned if the tx does not run out of gas and if all the messages are valid
 // and execute successfully. An error is returned otherwise.
-func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [32]byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
+func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [32]byte) (
+	gInfo sdk.GasInfo,
+	result *sdk.Result,
+	anteEvents []abci.Event,
+	priority int64,
+	pendingTxChecker abci.PendingTxChecker,
+	err error,
+) {
 	defer telemetry.MeasureThroughputSinceWithLabels(
 		telemetry.TxCount,
 		[]metrics.Label{
@@ -852,7 +859,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 
 	// only run the tx if there is block gas remaining
 	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
-		return gInfo, nil, nil, -1, sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
+		return gInfo, nil, nil, -1, nil, sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
 	}
 
 	defer func() {
@@ -889,13 +896,13 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 	}
 
 	if tx == nil {
-		return sdk.GasInfo{}, nil, nil, 0, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "tx decode error")
+		return sdk.GasInfo{}, nil, nil, 0, nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "tx decode error")
 	}
 
 	msgs := tx.GetMsgs()
 
 	if err := validateBasicTxMsgs(msgs); err != nil {
-		return sdk.GasInfo{}, nil, nil, 0, err
+		return sdk.GasInfo{}, nil, nil, 0, nil, err
 	}
 
 	if app.anteHandler != nil {
@@ -937,7 +944,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 		// GasMeter expected to be set in AnteHandler
 		gasWanted = ctx.GasMeter().Limit()
 		if err != nil {
-			return gInfo, nil, nil, 0, err
+			return gInfo, nil, nil, 0, nil, err
 		}
 
 		// Dont need to validate in checkTx mode
@@ -952,11 +959,12 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 					op.EmitValidationFailMetrics()
 				}
 				errMessage := fmt.Sprintf("Invalid Concurrent Execution antehandler missing %d access operations", len(missingAccessOps))
-				return gInfo, nil, nil, 0, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
+				return gInfo, nil, nil, 0, nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 			}
 		}
 
 		priority = ctx.Priority()
+		pendingTxChecker = ctx.PendingTxChecker()
 		msCache.Write()
 		anteEvents = events.ToABCIEvents()
 		anteSpan.End()
@@ -983,7 +991,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 		// append the events in the order of occurrence
 		result.Events = append(anteEvents, result.Events...)
 	}
-	return gInfo, result, anteEvents, priority, err
+	return gInfo, result, anteEvents, priority, pendingTxChecker, err
 }
 
 // runMsgs iterates through a list of messages and executes them with the provided

@@ -34,6 +34,7 @@ type Context struct {
 	voteInfo         []abci.VoteInfo
 	gasMeter         GasMeter
 	occEnabled       bool
+	blockGasMeter    GasMeter
 	checkTx          bool
 	recheckTx        bool // if recheckTx == true, then checkTx must also be true
 	minGasPrice      DecCoins

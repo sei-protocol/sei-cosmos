@@ -344,13 +344,17 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 		app.halt()
 	}
 
-	if app.snapshotInterval > 0 && uint64(header.Height)%app.snapshotInterval == 0 {
-		go app.snapshot(header.Height)
-	}
+	app.SnapshotIfApplicable(uint64(header.Height))
 
 	return &abci.ResponseCommit{
 		RetainHeight: retainHeight,
 	}, nil
+}
+
+func (app *BaseApp) SnapshotIfApplicable(height uint64) {
+	if app.snapshotInterval > 0 && height%app.snapshotInterval == 0 {
+		go app.Snapshot(int64(height))
+	}
 }
 
 // halt attempts to gracefully shutdown the node via SIGINT and SIGTERM falling
@@ -376,7 +380,7 @@ func (app *BaseApp) halt() {
 }
 
 // snapshot takes a snapshot of the current state and prunes any old snapshottypes.
-func (app *BaseApp) snapshot(height int64) {
+func (app *BaseApp) Snapshot(height int64) {
 	if app.snapshotManager == nil {
 		app.logger.Info("snapshot manager not configured")
 		return
@@ -734,22 +738,6 @@ func (app *BaseApp) GetBlockRetentionHeight(commitHeight int64) int64 {
 	cp := app.GetConsensusParams(app.deliverState.ctx)
 	if cp != nil && cp.Evidence != nil && cp.Evidence.MaxAgeNumBlocks > 0 {
 		retentionHeight = commitHeight - cp.Evidence.MaxAgeNumBlocks
-	}
-
-	// Define the state pruning offset, i.e. the block offset at which the
-	// underlying logical database is persisted to disk.
-	statePruningOffset := int64(app.cms.GetPruning().KeepEvery)
-	if statePruningOffset > 0 {
-		if commitHeight > statePruningOffset {
-			v := commitHeight - (commitHeight % statePruningOffset)
-			retentionHeight = minNonZero(retentionHeight, v)
-		} else {
-			// Hitting this case means we have persisting enabled but have yet to reach
-			// a height in which we persist state, so we return zero regardless of other
-			// conditions. Otherwise, we could end up pruning blocks without having
-			// any state committed to disk.
-			return 0
-		}
 	}
 
 	if app.snapshotInterval > 0 && app.snapshotKeepRecent > 0 {

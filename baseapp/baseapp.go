@@ -30,7 +30,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
@@ -290,9 +289,6 @@ func NewBaseApp(
 		panic("must pass --chain-id when calling 'seid start' or set in ~/.sei/config/client.toml")
 	}
 	app.startCompactionRoutine(db)
-	if app.orphanConfig != nil {
-		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
-	}
 
 	return app
 }
@@ -443,19 +439,11 @@ func (app *BaseApp) init() error {
 	app.setCheckState(tmproto.Header{})
 	app.Seal()
 
-	// make sure the snapshot interval is a multiple of the pruning KeepEvery interval
-	if app.snapshotManager != nil && app.snapshotInterval > 0 {
-		rms, ok := app.cms.(*rootmulti.Store)
-		if !ok {
-			return errors.New("state sync snapshots require a rootmulti store")
-		}
-		pruningOpts := rms.GetPruning()
-		if pruningOpts.KeepEvery > 0 && app.snapshotInterval%pruningOpts.KeepEvery != 0 {
-			return fmt.Errorf(
-				"state sync snapshot interval %v must be a multiple of pruning keep every interval %v",
-				app.snapshotInterval, pruningOpts.KeepEvery)
-		}
+	if app.cms == nil {
+		return errors.New("root multistore must not be nil")
 	}
+
+	return app.cms.GetPruning().Validate()
 
 	return nil
 }
@@ -470,10 +458,6 @@ func (app *BaseApp) setHaltHeight(haltHeight uint64) {
 
 func (app *BaseApp) setHaltTime(haltTime uint64) {
 	app.haltTime = haltTime
-}
-
-func (app *BaseApp) setOrphanConfig(opts *iavl.Options) {
-	app.orphanConfig = opts
 }
 
 func (app *BaseApp) setMinRetainBlocks(minRetainBlocks uint64) {
@@ -1174,9 +1158,13 @@ func (app *BaseApp) Close() error {
 	if err := app.appStore.db.Close(); err != nil {
 		return err
 	}
+	if err := app.cms.Close(); err != nil {
+		return err
+	}
 	return app.snapshotManager.Close()
 }
 
+// TODO: Remove DB Sync
 func (app *BaseApp) ReloadDB() error {
 	if err := app.db.Close(); err != nil {
 		return err

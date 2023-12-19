@@ -2,6 +2,8 @@ package multiversion
 
 import (
 	"bytes"
+	"encoding/hex"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -260,6 +262,18 @@ func (s *Store) CollectIteratorItems(index int) *db.MemDB {
 }
 
 func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
+	sortedIteratedKeys := make([]string, 0, len(tracker.iteratedKeys))
+	for key := range tracker.iteratedKeys {
+		sortedIteratedKeys = append(sortedIteratedKeys, hex.EncodeToString([]byte(key)))
+	}
+	sort.Strings(sortedIteratedKeys)
+	fmt.Printf(
+		"iteration tracker startKey: %s, endKey: %s, earlyStop: %s, iteratedKeys: %v \n",
+		hex.EncodeToString(tracker.startKey),
+		hex.EncodeToString(tracker.endKey),
+		hex.EncodeToString(tracker.earlyStopKey),
+		sortedIteratedKeys,
+	)
 	// collect items from multiversion store
 	sortedItems := s.CollectIteratorItems(index)
 	// add the iterationtracker writeset keys to the sorted items

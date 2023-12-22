@@ -314,14 +314,19 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 	header := app.stateToCommit.ctx.BlockHeader()
 	retainHeight := app.GetBlockRetentionHeight(header.Height)
 
+	app.logger.Info(fmt.Sprintf("[Cosmos-Debug] Start abci Commit for block %d", header.Height))
 	app.WriteStateToCommitAndGetWorkingHash()
+	app.logger.Info(fmt.Sprintf("[Cosmos-Debug] Completed WriteStateToCommitAndGetWorkingHash for block %d", header.Height))
+
 	app.cms.Commit(true)
+	app.logger.Info(fmt.Sprintf("[Cosmos-Debug] Completed cms.Commit for block %d", header.Height))
 
 	// Reset the Check state to the latest committed.
 	//
 	// NOTE: This is safe because Tendermint holds a lock on the mempool for
 	// Commit. Use the header from this latest block.
 	app.setCheckState(header)
+	app.logger.Info(fmt.Sprintf("[Cosmos-Debug] Completed setCheckState for block %d", header.Height))
 
 	// empty/reset the deliver state
 	app.resetStatesExceptCheckState()

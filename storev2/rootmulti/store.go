@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"cosmossdk.io/errors"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
@@ -17,6 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/storev2/commitment"
 	"github.com/cosmos/cosmos-sdk/storev2/state"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	protoio "github.com/gogo/protobuf/io"
 	commonerrors "github.com/sei-protocol/sei-db/common/errors"
@@ -75,6 +77,12 @@ func NewStore(
 		if err != nil {
 			panic(err)
 		}
+		// Check whether SC was enabled before but SS was not
+		ssVersion, _ := ssStore.GetLatestVersion()
+		scVersion, _ := scStore.GetLatestVersion()
+		if ssVersion <= 0 && scVersion > 0 {
+			panic("Enabling SS store without state sync could cause data corruption")
+		}
 		if err = ss.RecoverStateStore(homeDir, logger, ssStore); err != nil {
 			panic(err)
 		}
@@ -91,8 +99,10 @@ func NewStore(
 // Commit implements interface Committer, called by ABCI Commit
 func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	if !bumpVersion {
-		return rs.lastCommitInfo.CommitID()
+		panic("Commit should always bump version in root multistore")
 	}
+	commitStartTime := time.Now()
+	defer telemetry.MeasureSince(commitStartTime, "storeV2", "sc", "commit", "latency")
 	if err := rs.flush(); err != nil {
 		panic(err)
 	}
@@ -130,6 +140,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 func (rs *Store) StateStoreCommit() {
 	for pendingChangeSet := range rs.pendingChanges {
 		version := pendingChangeSet.Version
+		telemetry.SetGauge(float32(version), "storeV2", "ss", "version")
 		for _, cs := range pendingChangeSet.Changesets {
 			if err := rs.ssStore.ApplyChangeset(version, cs); err != nil {
 				panic(err)
@@ -141,7 +152,7 @@ func (rs *Store) StateStoreCommit() {
 // Flush all the pending changesets to commit store.
 func (rs *Store) flush() error {
 	var changeSets []*proto.NamedChangeSet
-	currentVersion := rs.lastCommitInfo.Version
+	currentVersion := rs.lastCommitInfo.Version + 1
 	for key := range rs.ckvStores {
 		// it'll unwrap the inter-block cache
 		store := rs.GetCommitKVStore(key)
@@ -206,8 +217,8 @@ func (rs *Store) GetStoreType() types.StoreType {
 }
 
 // Implements interface CacheWrapper
-func (rs *Store) CacheWrap(storeKey types.StoreKey) types.CacheWrap {
-	return rs.CacheMultiStore().CacheWrap(storeKey)
+func (rs *Store) CacheWrap(_ types.StoreKey) types.CacheWrap {
+	return rs.CacheMultiStore().(types.CacheWrap)
 }
 
 // Implements interface CacheWrapper
@@ -237,6 +248,8 @@ func (rs *Store) CacheMultiStoreWithVersion(version int64) (types.CacheMultiStor
 	if version <= 0 || (rs.lastCommitInfo != nil && version == rs.lastCommitInfo.Version) {
 		return rs.CacheMultiStore(), nil
 	}
+	rs.mtx.RLock()
+	defer rs.mtx.RUnlock()
 	stores := make(map[types.StoreKey]types.CacheWrapper)
 	// add the transient/mem stores registered in current app.
 	for k, store := range rs.ckvStores {
@@ -351,8 +364,9 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 			initialStores = append(initialStores, key.Name())
 		}
 	}
-	if err := rs.scStore.Initialize(initialStores); err != nil {
-		return err
+	rs.scStore.Initialize(initialStores)
+	if _, err := rs.scStore.LoadVersion(version, false); err != nil {
+		return nil
 	}
 
 	var treeUpgrades []*proto.TreeNameUpgrade
@@ -477,7 +491,7 @@ func (rs *Store) GetStoreByName(name string) types.Store {
 // Implements interface Queryable
 func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 	version := req.Height
-	if version <= 0 {
+	if version <= 0 || version > rs.lastCommitInfo.Version {
 		version = rs.scStore.Version()
 	}
 	path := req.Path
@@ -486,21 +500,21 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 		return sdkerrors.QueryResult(err)
 	}
 	var store types.Queryable
+	var commitInfo *types.CommitInfo
 
-	if !req.Prove && version < rs.lastCommitInfo.Version && rs.ssStore != nil {
+	if !req.Prove && rs.ssStore != nil {
 		// Serve abci query from ss store if no proofs needed
 		store = types.Queryable(state.NewStore(rs.ssStore, types.NewKVStoreKey(storeName), version))
-	} else if version < rs.lastCommitInfo.Version {
+	} else {
 		// Serve abci query from historical sc store if proofs needed
 		scStore, err := rs.scStore.LoadVersion(version, true)
-		defer scStore.Close()
 		if err != nil {
 			return sdkerrors.QueryResult(err)
 		}
+		defer scStore.Close()
 		store = types.Queryable(commitment.NewStore(scStore.GetTreeByName(storeName), rs.logger))
-	} else {
-		// Serve directly from latest sc store
-		store = types.Queryable(commitment.NewStore(rs.scStore.GetTreeByName(storeName), rs.logger))
+		commitInfo = convertCommitInfo(scStore.LastCommitInfo())
+		commitInfo = amendCommitInfo(commitInfo, rs.storesParams)
 	}
 
 	// trim the path and execute the query
@@ -509,14 +523,13 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 
 	if !req.Prove || !rootmulti.RequireProof(subPath) {
 		return res
+	} else if commitInfo != nil {
+		// Restore origin path and append proof op.
+		res.ProofOps.Ops = append(res.ProofOps.Ops, commitInfo.ProofOp(storeName))
 	}
 	if res.ProofOps == nil || len(res.ProofOps.Ops) == 0 {
 		return sdkerrors.QueryResult(errors.Wrap(sdkerrors.ErrInvalidRequest, "proof is unexpectedly empty; ensure height has not been pruned"))
 	}
-	commitInfo := convertCommitInfo(rs.scStore.LastCommitInfo())
-	commitInfo = amendCommitInfo(commitInfo, rs.storesParams)
-	// Restore origin path and append proof op.
-	res.ProofOps.Ops = append(res.ProofOps.Ops, commitInfo.ProofOp(storeName))
 	return res
 }
 

@@ -422,7 +422,6 @@ func TestWaitForQuitSignals(t *testing.T) {
 		errCode := server.WaitForQuitSignals(
 			&server.Context{Logger: log.NewNopLogger()},
 			restartCh,
-			time.Now().Add(500*time.Millisecond),
 		)
 		expectedCode := int(syscall.SIGTERM) + 128
 		if errCode.Code != expectedCode {
@@ -440,7 +439,6 @@ func TestWaitForQuitSignals(t *testing.T) {
 		errCode := server.WaitForQuitSignals(
 			&server.Context{Logger: log.NewNopLogger()},
 			restartCh,
-			time.Now().Add(-100*time.Millisecond),
 		)
 		if errCode.Code != server.RestartErrorCode {
 			t.Errorf("Expected error code %d, got %d", server.RestartErrorCode, errCode.Code)
@@ -459,7 +457,6 @@ func TestWaitForQuitSignals(t *testing.T) {
 		errCode := server.WaitForQuitSignals(
 			&server.Context{Logger: log.NewNopLogger()},
 			make(chan struct{}),
-			time.Now(),
 		)
 		expectedCode := int(syscall.SIGINT) + 128
 		if errCode.Code != expectedCode {
@@ -476,7 +473,6 @@ func TestWaitForQuitSignals(t *testing.T) {
 		errCode := server.WaitForQuitSignals(
 			&server.Context{Logger: log.NewNopLogger()},
 			make(chan struct{}),
-			time.Now(),
 		)
 		expectedCode := int(syscall.SIGTERM) + 128
 		if errCode.Code != expectedCode {

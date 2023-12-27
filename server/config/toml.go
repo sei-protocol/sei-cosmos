@@ -3,11 +3,12 @@ package config
 import (
 	"bytes"
 	"fmt"
-	seidb "github.com/sei-protocol/sei-db/config"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"text/template"
+
+	"github.com/sei-protocol/sei-db/config"
+	"github.com/spf13/viper"
 )
 
 const DefaultConfigTemplate = `# This is a TOML config file.
@@ -27,9 +28,16 @@ minimum-gas-prices = "{{ .BaseConfig.MinGasPrices }}"
 # everything: all saved states will be deleted, storing only the recent 2 blocks; pruning at every block
 # custom: allow pruning options to be manually specified through 'pruning-keep-recent' and 'pruning-interval'
 # When seiDB is enabled, pruning will be applied for state store.
+
+# Pruning Strategies:
+# - default: Keep the recent 362880 blocks and prune is triggered every 10 blocks
+# - nothing: all historic states will be saved, nothing will be deleted (i.e. archiving node)
+# - everything: all saved states will be deleted, storing only the recent 2 blocks; pruning at every block
+# - custom: allow pruning options to be manually specified through 'pruning-keep-recent' and 'pruning-interval'
+# Pruning strategy is completely ignored when seidb is enabled
 pruning = "{{ .BaseConfig.Pruning }}"
 
-# These are applied if and only if the pruning strategy is custom.
+# These are applied if and only if the pruning strategy is custom, and seidb is not enabled
 pruning-keep-recent = "{{ .BaseConfig.PruningKeepRecent }}"
 
 # Deprecated: this will not take effect any more with seiDB enabled.
@@ -77,11 +85,11 @@ inter-block-cache = {{ .BaseConfig.InterBlockCache }}
 # ["message.sender", "message.recipient"]
 index-events = {{ .BaseConfig.IndexEvents }}
 
-# IavlCacheSize set the size of the iavl tree cache. 
+# IavlCacheSize set the size of the iavl tree cache.
 # Default cache size is 50mb.
 iavl-cache-size = {{ .BaseConfig.IAVLCacheSize }}
 
-# IAVLDisableFastNode enables or disables the fast node feature of IAVL. 
+# IAVLDisableFastNode enables or disables the fast node feature of IAVL.
 # Default is true.
 iavl-disable-fastnode = {{ .BaseConfig.IAVLDisableFastNode }}
 
@@ -245,7 +253,7 @@ snapshot-keep-recent = {{ .StateSync.SnapshotKeepRecent }}
 # default is emtpy which will then store under the app home directory same as before.
 snapshot-directory = "{{ .StateSync.SnapshotDirectory }}"
 
-` + seidb.DefaultConfigTemplate
+` + config.DefaultConfigTemplate
 
 var configTemplate *template.Template
 

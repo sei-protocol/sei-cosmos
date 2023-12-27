@@ -381,7 +381,9 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 			}
 		}
 	}
-	fmt.Println("readsetKV: ", readsetKV)
+	if len(readsetKV) > 0 {
+		fmt.Printf("readsetKV: %v \n", readsetKV)
+	}
 
 	conflictIndices := make([]int, 0, len(conflictSet))
 	for index := range conflictSet {

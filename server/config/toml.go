@@ -242,10 +242,13 @@ snapshot-interval = {{ .StateSync.SnapshotInterval }}
 # snapshot-keep-recent specifies the number of recent snapshots to keep and serve (0 to keep all).
 snapshot-keep-recent = {{ .StateSync.SnapshotKeepRecent }}
 
+<<<<<<< HEAD
 # snapshot-directory sets the directory for where state sync snapshots are persisted.
 # default is emtpy which will then store under the app home directory same as before.
 snapshot-directory = "{{ .StateSync.SnapshotDirectory }}"
 
+=======
+>>>>>>> 637b43b1 (SeiDB part 1)
 ` + config.DefaultConfigTemplate
 
 var configTemplate *template.Template

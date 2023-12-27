@@ -77,6 +77,12 @@ func NewStore(
 		if err != nil {
 			panic(err)
 		}
+		// Check whether SC was enabled before but SS was not
+		ssVersion, _ := ssStore.GetLatestVersion()
+		scVersion, _ := scStore.GetLatestVersion()
+		if ssVersion <= 0 && scVersion > 0 {
+			panic("Enabling SS store without state sync could cause data corruption")
+		}
 		if err = ss.RecoverStateStore(homeDir, logger, ssStore); err != nil {
 			panic(err)
 		}
@@ -358,8 +364,9 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 			initialStores = append(initialStores, key.Name())
 		}
 	}
-	if err := rs.scStore.Initialize(initialStores); err != nil {
-		return err
+	rs.scStore.Initialize(initialStores)
+	if _, err := rs.scStore.LoadVersion(version, false); err != nil {
+		return nil
 	}
 	if version > 0 {
 		_, err := rs.scStore.LoadVersion(version, false)
@@ -507,10 +514,10 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 	} else {
 		// Serve abci query from historical sc store if proofs needed
 		scStore, err := rs.scStore.LoadVersion(version, true)
-		defer scStore.Close()
 		if err != nil {
 			return sdkerrors.QueryResult(err)
 		}
+		defer scStore.Close()
 		store = types.Queryable(commitment.NewStore(scStore.GetTreeByName(storeName), rs.logger))
 		commitInfo = convertCommitInfo(scStore.LastCommitInfo())
 		commitInfo = amendCommitInfo(commitInfo, rs.storesParams)

@@ -382,6 +382,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 		}
 	}
 	if len(readsetKV) > 0 {
+		sort.Strings(readsetKV)
 		fmt.Printf("readsetKV: %v \n", readsetKV)
 	}
 

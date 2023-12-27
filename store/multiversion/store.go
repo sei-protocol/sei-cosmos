@@ -355,7 +355,9 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 	}
 	readset := readSetAny.(ReadSet)
 	// iterate over readset and check if the value is the same as the latest value relateive to txIndex in the multiversion store
+	readsetKV := make([]string, 0, len(readset))
 	for key, value := range readset {
+		readsetKV = append(readsetKV, fmt.Sprintf("%s;%s", hex.EncodeToString([]byte(key)), hex.EncodeToString(value)))
 		// get the latest value from the multiversion store
 		latestValue := s.GetLatestBeforeIndex(index, []byte(key))
 		if latestValue == nil {
@@ -379,6 +381,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 			}
 		}
 	}
+	fmt.Println("readsetKV: ", readsetKV)
 
 	conflictIndices := make([]int, 0, len(conflictSet))
 	for index := range conflictSet {

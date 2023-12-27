@@ -389,7 +389,6 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 		}
 		mtree := &iavl.MutableTree{
 			ITree: iTree,
-			Mtx:   &sync.RWMutex{},
 		}
 
 		// get proof from tree and convert to merkle.Proof before adding to result

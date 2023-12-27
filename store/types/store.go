@@ -219,6 +219,9 @@ type CommitMultiStore interface {
 
 	// RollbackToVersion rollback the db to specific version(height).
 	RollbackToVersion(version int64) error
+
+	// Close the underline resources
+	io.Closer
 }
 
 //---------subsp-------------------------------

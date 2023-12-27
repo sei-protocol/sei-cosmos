@@ -1210,3 +1210,7 @@ func (rs *Store) StoreKeys() []types.StoreKey {
 	}
 	return res
 }
+
+func (rs *Store) Close() error {
+	return rs.db.Close()
+}

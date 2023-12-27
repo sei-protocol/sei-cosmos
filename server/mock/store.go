@@ -241,3 +241,7 @@ func (ms multiStore) SetKVStores(handler func(key store.StoreKey, s sdk.KVStore)
 func (ms multiStore) StoreKeys() []sdk.StoreKey {
 	panic("not implemented")
 }
+
+func (ms multiStore) Close() error {
+	return nil
+}

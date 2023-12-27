@@ -42,7 +42,7 @@ func SetHaltTime(haltTime uint64) func(*BaseApp) {
 }
 
 func SetOrphanConfig(opts *iavl.Options) func(*BaseApp) {
-	return func(bapp *BaseApp) { bapp.setOrphanConfig(opts) }
+	return func(bapp *BaseApp) {}
 }
 
 // SetMinRetainBlocks returns a BaseApp option function that sets the minimum
@@ -288,7 +288,7 @@ func (app *BaseApp) SetSnapshotStore(snapshotStore *snapshots.Store) {
 		app.snapshotManager = nil
 		return
 	}
-	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms, app.qms, app.logger)
+	app.snapshotManager = snapshots.NewManager(snapshotStore, app.cms, app.logger)
 }
 
 // SetSnapshotInterval sets the snapshot interval.
@@ -303,7 +303,7 @@ func (app *BaseApp) SetConcurrencyWorkers(workers int) {
 	if app.sealed {
 		panic("SetConcurrencyWorkers() on sealed BaseApp")
 	}
-	app.concurrencyWorkers = workers
+	app.SetConcurrencyWorkers(workers)
 }
 
 // SetSnapshotKeepRecent sets the number of recent snapshots to keep.
@@ -338,11 +338,4 @@ func (app *BaseApp) SetStreamingService(s StreamingService) {
 	// register the StreamingService within the BaseApp
 	// BaseApp will pass BeginBlock, DeliverTx, and EndBlock requests and responses to the streaming services to update their ABCI context
 	app.abciListeners = append(app.abciListeners, s)
-}
-
-// SetQueryMultiStore set an alternative MultiStore implementation to support historical queries.
-//
-// Ref: https://github.com/cosmos/cosmos-sdk/issues/13317
-func (app *BaseApp) SetQueryMultiStore(ms sdk.QueryMultiStore) {
-	app.qms = ms
 }

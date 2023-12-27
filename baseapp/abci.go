@@ -6,14 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/cosmos/cosmos-sdk/tasks"
 
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
@@ -28,6 +25,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/legacytm"
+	"github.com/cosmos/cosmos-sdk/utils"
 )
 
 // InitChain implements the ABCI interface. It runs the initialization logic
@@ -237,45 +235,11 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	}, nil
 }
 
-// DeliverTxBatch executes multiple txs
-func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
-	startTime := time.Now()
-	defer func() {
-		fmt.Printf("[Debug] DeliverTxBatch of %d txs for block height %d took %s \n", len(req.TxEntries), app.LastBlockHeight(), time.Since(startTime))
-	}()
-	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.MockDeliverTx)
-	// This will basically no-op the actual prefill if the metadata for the txs is empty
-
-	// process all txs, this will also initializes the MVS if prefill estimates was disabled
-	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
-	if err != nil {
-		// TODO: handle error
-	}
-
-	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
-	for _, tx := range txRes {
-		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
-	}
-	return sdk.DeliverTxBatchResponse{Results: responses}
-}
-
-func (app *BaseApp) MockDeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
-	return abci.ResponseDeliverTx{
-		GasWanted: int64(5), // TODO: Should type accept unsigned ints?
-		GasUsed:   int64(5), // TODO: Should type accept unsigned ints?
-		Log:       "",
-		Data:      nil,
-		Events:    nil,
-	}
-}
-
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.
 // State only gets persisted if all messages are valid and get executed successfully.
-// Otherwise, the ResponseDeliverTx will contain relevant error information.
+// Otherwise, the ResponseDeliverTx will contain releveant error information.
 // Regardless of tx execution outcome, the ResponseDeliverTx will contain relevant
 // gas execution context.
-// TODO: (occ) this is the function called from sei-chain to perform execution of a transaction.
-// We'd likely replace this with an execution tasks that is scheduled by the OCC scheduler
 func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
 	defer func() {
@@ -416,7 +380,7 @@ func (app *BaseApp) halt() {
 	os.Exit(0)
 }
 
-// snapshot takes a snapshot of the current state and prunes any old snapshottypes.
+// Snapshot takes a snapshot of the current state and prunes any old snapshottypes.
 func (app *BaseApp) Snapshot(height int64) {
 	if app.snapshotManager == nil {
 		app.logger.Info("snapshot manager not configured")
@@ -630,16 +594,6 @@ func (app *BaseApp) ApplySnapshotChunk(context context.Context, req *abci.Reques
 
 func (app *BaseApp) handleQueryGRPC(handler GRPCQueryHandler, req abci.RequestQuery) abci.ResponseQuery {
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
-	defer func() {
-		// We should close the multistore to avoid leaking resources.
-		if closer, ok := ctx.MultiStore().(io.Closer); ok {
-			err := closer.Close()
-			if err != nil {
-				app.logger.Error("failed to close Cache MultiStore", "err", err)
-			}
-		}
-	}()
-
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}
@@ -692,11 +646,7 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 		return sdk.Context{}, err
 	}
 
-	qms := app.qms
-	if qms == nil || height == app.cms.LatestVersion() {
-		qms = app.cms
-	}
-	lastBlockHeight := qms.LatestVersion()
+	lastBlockHeight := app.LastBlockHeight()
 	if height > lastBlockHeight {
 		return sdk.Context{},
 			sdkerrors.Wrap(
@@ -718,7 +668,7 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	cacheMS, err := qms.CacheMultiStoreWithVersion(height)
+	cacheMS, err := app.cms.CacheMultiStoreWithVersion(height)
 	if err != nil {
 		return sdk.Context{},
 			sdkerrors.Wrapf(
@@ -927,17 +877,6 @@ func handleQueryCustom(app *BaseApp, path []string, req abci.RequestQuery) abci.
 	}
 
 	ctx, err := app.CreateQueryContext(req.Height, req.Prove)
-
-	defer func() {
-		// We should close the multistore to avoid leaking resources.
-		if closer, ok := ctx.MultiStore().(io.Closer); ok {
-			err := closer.Close()
-			if err != nil {
-				app.logger.Error("failed to close Cache MultiStore", "err", err)
-			}
-		}
-	}()
-
 	if err != nil {
 		return sdkerrors.QueryResultWithDebug(err, app.trace)
 	}
@@ -974,7 +913,7 @@ func splitPath(requestPath string) (path []string) {
 }
 
 // ABCI++
-func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepareProposal) (resp *abci.ResponsePrepareProposal, err error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "prepare_proposal")
 
 	header := tmproto.Header{
@@ -1008,21 +947,40 @@ func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepar
 
 	app.preparePrepareProposalState()
 
+	defer func() {
+		if err := recover(); err != nil {
+			app.logger.Error(
+				"panic recovered in PrepareProposal",
+				"height", req.Height,
+				"time", req.Time,
+				"panic", err,
+			)
+
+			resp = &abci.ResponsePrepareProposal{
+				TxRecords: utils.Map(req.Txs, func(tx []byte) *abci.TxRecord {
+					return &abci.TxRecord{Action: abci.TxRecord_UNMODIFIED, Tx: tx}
+				}),
+			}
+		}
+	}()
+
 	if app.prepareProposalHandler != nil {
-		res, err := app.prepareProposalHandler(app.prepareProposalState.ctx, req)
+		resp, err = app.prepareProposalHandler(app.prepareProposalState.ctx, req)
 		if err != nil {
 			return nil, err
 		}
+
 		if cp := app.GetConsensusParams(app.prepareProposalState.ctx); cp != nil {
-			res.ConsensusParamUpdates = cp
+			resp.ConsensusParamUpdates = cp
 		}
-		return res, nil
-	} else {
-		return nil, errors.New("no prepare proposal handler")
+
+		return resp, nil
 	}
+
+	return nil, errors.New("no prepare proposal handler")
 }
 
-func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {
+func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProcessProposal) (resp *abci.ResponseProcessProposal, err error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "process_proposal")
 
 	header := tmproto.Header{
@@ -1063,21 +1021,36 @@ func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProces
 	}
 
 	// NOTE: header hash is not set in NewContext, so we manually set it here
-
 	app.prepareProcessProposalState(gasMeter, req.Hash)
 
+	defer func() {
+		if err := recover(); err != nil {
+			app.logger.Error(
+				"panic recovered in ProcessProposal",
+				"height", req.Height,
+				"time", req.Time,
+				"hash", fmt.Sprintf("%X", req.Hash),
+				"panic", err,
+			)
+
+			resp = &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}
+		}
+	}()
+
 	if app.processProposalHandler != nil {
-		res, err := app.processProposalHandler(app.processProposalState.ctx, req)
+		resp, err = app.processProposalHandler(app.processProposalState.ctx, req)
 		if err != nil {
 			return nil, err
 		}
+
 		if cp := app.GetConsensusParams(app.processProposalState.ctx); cp != nil {
-			res.ConsensusParamUpdates = cp
+			resp.ConsensusParamUpdates = cp
 		}
-		return res, nil
-	} else {
-		return nil, errors.New("no process proposal handler")
+
+		return resp, nil
 	}
+
+	return nil, errors.New("no process proposal handler")
 }
 
 func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {

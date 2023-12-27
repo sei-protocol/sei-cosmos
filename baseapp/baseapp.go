@@ -3,7 +3,6 @@ package baseapp
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -11,10 +10,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/armon/go-metrics"
-	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
@@ -35,7 +34,6 @@ import (
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/cosmos/iavl"
 )
 
 const (
@@ -59,8 +57,7 @@ const (
 	FlagArchivalArweaveIndexDBFullPath = "archival-arweave-index-db-full-path"
 	FlagArchivalArweaveNodeURL         = "archival-arweave-node-url"
 
-	FlagChainID            = "chain-id"
-	FlagConcurrencyWorkers = "concurrency-workers"
+	FlagChainID = "chain-id"
 )
 
 var (
@@ -163,19 +160,14 @@ type BaseApp struct { //nolint: maligned
 
 	compactionInterval uint64
 
-	orphanConfig *iavl.Options
-
 	TmConfig *tmcfg.Config
 
 	TracingInfo *tracing.Info
-
-	concurrencyWorkers int
 }
 
 type appStore struct {
 	db          dbm.DB               // common DB backend
 	cms         sdk.CommitMultiStore // Main (uncached) state
-	qms         sdk.QueryMultiStore  // Optional alternative multistore for querying only
 	storeLoader StoreLoader          // function to handle store loading, may be overridden with SetStoreLoader()
 
 	// an inter-block write-through cache provided to the context during deliverState
@@ -294,16 +286,6 @@ func NewBaseApp(
 	}
 	app.startCompactionRoutine(db)
 
-	// if no option overrode already, initialize to the flags value
-	// this avoids forcing every implementation to pass an option, but allows it
-	if app.concurrencyWorkers == 0 {
-		app.concurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
-	}
-	// safely default this to the default value if 0
-	if app.concurrencyWorkers == 0 {
-		app.concurrencyWorkers = config.DefaultConcurrencyWorkers
-	}
-
 	return app
 }
 
@@ -315,11 +297,6 @@ func (app *BaseApp) Name() string {
 // AppVersion returns the application's protocol version.
 func (app *BaseApp) AppVersion() uint64 {
 	return app.appVersion
-}
-
-// ConcurrencyWorkers returns the number of concurrent workers for the BaseApp.
-func (app *BaseApp) ConcurrencyWorkers() int {
-	return app.concurrencyWorkers
 }
 
 // Version returns the application's version string.
@@ -422,13 +399,6 @@ func (app *BaseApp) CommitMultiStore() sdk.CommitMultiStore {
 	return app.cms
 }
 
-// QueryMultiStore returns the query multi-store.
-// App constructor can use this to access the `qms`.
-// UNSAFE: must not be used during the abci life cycle.
-func (app *BaseApp) QueryMultiStore() sdk.QueryMultiStore {
-	return app.qms
-}
-
 // SnapshotManager returns the snapshot manager.
 // application use this to register extra extension snapshotters.
 func (app *BaseApp) SnapshotManager() *snapshots.Manager {
@@ -465,12 +435,6 @@ func (app *BaseApp) init() error {
 	app.setCheckState(tmproto.Header{})
 	app.Seal()
 
-	if app.cms == nil {
-		return errors.New("commit multi-store must not be nil")
-	}
-
-	return app.cms.GetPruning().Validate()
-
 	return nil
 }
 
@@ -484,10 +448,6 @@ func (app *BaseApp) setHaltHeight(haltHeight uint64) {
 
 func (app *BaseApp) setHaltTime(haltTime uint64) {
 	app.haltTime = haltTime
-}
-
-func (app *BaseApp) setOrphanConfig(opts *iavl.Options) {
-	app.orphanConfig = opts
 }
 
 func (app *BaseApp) setMinRetainBlocks(minRetainBlocks uint64) {
@@ -835,7 +795,6 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 
 // cacheTxContext returns a new context based off of the provided context with
 // a branched multi-store.
-// TODO: (occ) This is an example of where we wrap the multistore with a cache multistore, and then return a modified context using that multistore
 func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
 	ms := ctx.MultiStore()
 	// TODO: https://github.com/cosmos/cosmos-sdk/issues/2824
@@ -862,13 +821,13 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 // and execute successfully. An error is returned otherwise.
 func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInfo sdk.GasInfo, result *sdk.Result, anteEvents []abci.Event, priority int64, err error) {
 
-	// defer telemetry.MeasureThroughputSinceWithLabels(
-	// 	telemetry.TxCount,
-	// 	[]metrics.Label{
-	// 		telemetry.NewLabel("mode", modeKeyToString[mode]),
-	// 	},
-	// 	time.Now(),
-	// )
+	defer telemetry.MeasureThroughputSinceWithLabels(
+		telemetry.TxCount,
+		[]metrics.Label{
+			telemetry.NewLabel("mode", modeKeyToString[mode]),
+		},
+		time.Now(),
+	)
 
 	// Reset events after each checkTx or simulateTx or recheckTx
 	// DeliverTx is garbage collected after FinalizeBlocker
@@ -877,14 +836,14 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}
 
 	// Wait for signals to complete before starting the transaction. This is needed before any of the
-	// resources are accessed by the ante handlers and message handlers.
+	// resources are acceessed by the ante handlers and message handlers.
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
 	// check for existing parent tracer, and if applicable, use it
-	//spanCtx, span := app.TracingInfo.StartWithContext("RunTx", ctx.TraceSpanContext())
-	//defer span.End()
-	//ctx = ctx.WithTraceSpanContext(spanCtx)
-	//span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
+	spanCtx, span := app.TracingInfo.StartWithContext("RunTx", ctx.TraceSpanContext())
+	defer span.End()
+	ctx = ctx.WithTraceSpanContext(spanCtx)
+	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
 
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
@@ -944,8 +903,8 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 
 	if app.anteHandler != nil {
 		// trace AnteHandler
-		//_, anteSpan := app.TracingInfo.StartWithContext("AnteHandler", ctx.TraceSpanContext())
-		//defer anteSpan.End()
+		_, anteSpan := app.TracingInfo.StartWithContext("AnteHandler", ctx.TraceSpanContext())
+		defer anteSpan.End()
 		var (
 			anteCtx sdk.Context
 			msCache sdk.CacheMultiStore
@@ -989,7 +948,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps := ctx.TxMsgAccessOps()[acltypes.ANTE_MSG_INDEX]
 
-			// TODO: (occ) This is an example of where we do our current validation. Note that this validation operates on the declared dependencies for a TX / antehandler + the utilized dependencies, whereas the validation
 			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
 				for op := range missingAccessOps {
@@ -1004,7 +962,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		priority = ctx.Priority()
 		msCache.Write()
 		anteEvents = events.ToABCIEvents()
-		//anteSpan.End()
+		anteSpan.End()
 	}
 
 	// Create a new Context based off of the existing Context with a MultiStore branch
@@ -1134,8 +1092,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		storeAccessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[i]
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
-		// TODO: (occ) This is where we are currently validating our per message dependencies,
-		// whereas validation will be done holistically based on the mvkv for OCC approach
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {
 				ctx.Logger().Info((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))
@@ -1210,7 +1166,7 @@ func (app *BaseApp) ReloadDB() error {
 	app.db = db
 	app.cms = store.NewCommitMultiStore(db)
 	if app.snapshotManager != nil {
-		app.snapshotManager.SetStateCommitStore(app.cms)
+		app.snapshotManager.SetMultiStore(app.cms)
 	}
 	return nil
 }
@@ -1218,5 +1174,3 @@ func (app *BaseApp) ReloadDB() error {
 func (app *BaseApp) GetCheckCtx() sdk.Context {
 	return app.checkState.ctx
 }
-
-//

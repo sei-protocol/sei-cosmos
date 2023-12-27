@@ -13,14 +13,13 @@ import (
 	"testing"
 	"time"
 
-	protoio "github.com/gogo/protobuf/io"
-	"github.com/stretchr/testify/require"
-	db "github.com/tendermint/tm-db"
-
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/snapshots/types"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	protoio "github.com/gogo/protobuf/io"
+	"github.com/stretchr/testify/require"
+	db "github.com/tendermint/tm-db"
 )
 
 func checksums(slice [][]byte) [][]byte {

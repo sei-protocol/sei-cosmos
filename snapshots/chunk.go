@@ -62,7 +62,9 @@ func (w *ChunkWriter) CloseWithError(err error) {
 		}
 		w.closed = true
 		close(w.ch)
-		_ = w.pipe.CloseWithError(err)
+		if w.pipe != nil {
+			_ = w.pipe.CloseWithError(err)
+		}
 	}
 }
 

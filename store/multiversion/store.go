@@ -268,7 +268,8 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 	}
 	sort.Strings(sortedIteratedKeys)
 	fmt.Printf(
-		"iteration tracker startKey: %s, endKey: %s, earlyStop: %s, iteratedKeys: %v \n",
+		"iteration tracker %d startKey: %s, endKey: %s, earlyStop: %s, iteratedKeys: %v \n",
+		index,
 		hex.EncodeToString(tracker.startKey),
 		hex.EncodeToString(tracker.endKey),
 		hex.EncodeToString(tracker.earlyStopKey),
@@ -383,7 +384,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 	}
 	if len(readsetKV) > 0 {
 		sort.Strings(readsetKV)
-		fmt.Printf("readsetKV: %v \n", readsetKV)
+		fmt.Printf("readsetKV %d: %v \n", index, readsetKV)
 	}
 
 	conflictIndices := make([]int, 0, len(conflictSet))

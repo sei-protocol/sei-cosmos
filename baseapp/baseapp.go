@@ -29,7 +29,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -442,8 +441,15 @@ func (app *BaseApp) LoadVersion(version int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to load version %d: %w", version, err)
 	}
-
 	return app.init()
+}
+
+// LoadVersionWithoutInit loads the BaseApp application version, it doesn't call app.init any more,
+// specifically used by export genesis command.
+func (app *BaseApp) LoadVersionWithoutInit(version int64) error {
+	err := app.cms.LoadVersion(version)
+	app.setCheckState(tmproto.Header{})
+	return err
 }
 
 // LastCommitID returns the last CommitID of the multistore.

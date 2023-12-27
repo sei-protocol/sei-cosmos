@@ -56,7 +56,6 @@ func LoadStoreWithInitialVersion(db dbm.DB, logger log.Logger, key types.StoreKe
 	tree, err := iavl.NewMutableTreeWithOpts(db, cacheSize, &iavl.Options{
 		InitialVersion: initialVersion,
 		Sync:           false,
-		NoVersioning:   noVersioning,
 	}, disableFastNode)
 	if err != nil {
 		return nil, err
@@ -383,7 +382,7 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 			panic(fmt.Sprintf("version exists in store but could not retrieve corresponding versioned tree in store, %s", err.Error()))
 		}
 		mtree := &iavl.MutableTree{
-			ImmutableTree: iTree,
+			ITree: iTree,
 		}
 
 		// get proof from tree and convert to merkle.Proof before adding to result
@@ -428,14 +427,14 @@ func getProofFromTree(tree *iavl.MutableTree, key []byte, exists bool) *tmcrypto
 
 	if exists {
 		// value was found
-		commitmentProof, err = tree.GetMembershipProof(key)
+		commitmentProof, err = tree.ImmutableTree().GetMembershipProof(key)
 		if err != nil {
 			// sanity check: If value was found, membership proof must be creatable
 			panic(fmt.Sprintf("unexpected value for empty proof: %s", err.Error()))
 		}
 	} else {
 		// value wasn't found
-		commitmentProof, err = tree.GetNonMembershipProof(key)
+		commitmentProof, err = tree.ImmutableTree().GetNonMembershipProof(key)
 		if err != nil {
 			// sanity check: If value wasn't found, nonmembership proof must be creatable
 			panic(fmt.Sprintf("unexpected error for nonexistence proof: %s", err.Error()))

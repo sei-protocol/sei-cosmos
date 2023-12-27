@@ -3,7 +3,6 @@ package baseapp
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/armon/go-metrics"
+	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
@@ -30,7 +30,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
@@ -418,8 +417,15 @@ func (app *BaseApp) LoadVersion(version int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to load version %d: %w", version, err)
 	}
-
 	return app.init()
+}
+
+// LoadVersionWithoutInit loads the BaseApp application version, it doesn't call app.init any more,
+// specifically used by export genesis command.
+func (app *BaseApp) LoadVersionWithoutInit(version int64) error {
+	err := app.cms.LoadVersion(version)
+	app.setCheckState(tmproto.Header{})
+	return err
 }
 
 // LastCommitID returns the last CommitID of the multistore.
@@ -440,20 +446,6 @@ func (app *BaseApp) init() error {
 	// needed for the export command which inits from store but never calls initchain
 	app.setCheckState(tmproto.Header{})
 	app.Seal()
-
-	// make sure the snapshot interval is a multiple of the pruning KeepEvery interval
-	if app.snapshotManager != nil && app.snapshotInterval > 0 {
-		rms, ok := app.cms.(*rootmulti.Store)
-		if !ok {
-			return errors.New("state sync snapshots require a rootmulti store")
-		}
-		pruningOpts := rms.GetPruning()
-		if pruningOpts.KeepEvery > 0 && app.snapshotInterval%pruningOpts.KeepEvery != 0 {
-			return fmt.Errorf(
-				"state sync snapshot interval %v must be a multiple of pruning keep every interval %v",
-				app.snapshotInterval, pruningOpts.KeepEvery)
-		}
-	}
 
 	return nil
 }
@@ -1170,6 +1162,10 @@ func (app *BaseApp) Close() error {
 	app.commitLock.Lock()
 	defer app.commitLock.Unlock()
 	if err := app.appStore.db.Close(); err != nil {
+		return err
+	}
+	// close the underline database for storeV2
+	if err := app.cms.Close(); err != nil {
 		return err
 	}
 	return app.snapshotManager.Close()

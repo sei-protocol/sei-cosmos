@@ -407,29 +407,8 @@ func TestInterceptConfigsWithBadPermissions(t *testing.T) {
 }
 
 func TestWaitForQuitSignals(t *testing.T) {
-	t.Run("WithRestartChannelAndCanRestartAfterNotReached", func(t *testing.T) {
-		restartCh := make(chan struct{})
-		go func() {
-			time.Sleep(100 * time.Millisecond)
-			restartCh <- struct{}{}
-		}()
 
-		go func() {
-			time.Sleep(200 * time.Millisecond)
-			syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-		}()
-
-		errCode := server.WaitForQuitSignals(
-			&server.Context{Logger: log.NewNopLogger()},
-			restartCh,
-		)
-		expectedCode := int(syscall.SIGTERM) + 128
-		if errCode.Code != expectedCode {
-			t.Errorf("Expected error code %d, got %d", expectedCode, errCode.Code)
-		}
-	})
-
-	t.Run("WithRestartChannelAndCanRestartAfterReached", func(t *testing.T) {
+	t.Run("WithRestartChannel", func(t *testing.T) {
 		restartCh := make(chan struct{})
 		go func() {
 			time.Sleep(100 * time.Millisecond)

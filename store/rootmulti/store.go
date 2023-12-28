@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -473,7 +474,10 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		version = c.GetVersion()
 	}
 
+	startTime := time.Now()
 	rs.SetLastCommitInfo(commitStores(version, rs.stores, bumpVersion))
+	rs.logger.Info(fmt.Sprintf("IAVL store commit for height %d took %s", c.CommitID().Version, time.Since(startTime)))
+
 	defer rs.flushMetadata(rs.db, version, rs.LastCommitInfo())
 
 	// Determine if pruneHeight height needs to be added to the list of heights to

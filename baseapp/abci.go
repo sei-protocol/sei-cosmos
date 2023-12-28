@@ -279,8 +279,14 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 }
 
 func (app *BaseApp) WriteStateToCommitAndGetWorkingHash() []byte {
+	startTime := time.Now()
 	app.stateToCommit.ms.Write()
+	fmt.Printf("[DEBUG] ABCI stateToCommit for block height %d took %s", app.LastBlockHeight(), time.Since(startTime))
+
+	workingHashStart := time.Now()
 	hash, err := app.cms.GetWorkingHash()
+	fmt.Printf("[DEBUG] ABCI GetWorkingHash for block height %d took %s", app.LastBlockHeight(), time.Since(workingHashStart))
+
 	if err != nil {
 		// this should never happen
 		panic(fmt.Errorf("error when getting working hash: %s", err))

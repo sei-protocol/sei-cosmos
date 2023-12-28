@@ -7,16 +7,18 @@ type trackedIterator struct {
 	types.Iterator
 
 	iterateset iterationTracker
+	ReadsetHandler
 	IterateSetHandler
 }
 
 // TODO: test
 
-func NewTrackedIterator(iter types.Iterator, iterationTracker iterationTracker, iterateSetHandler IterateSetHandler) *trackedIterator {
+func NewTrackedIterator(iter types.Iterator, iterationTracker iterationTracker, iterateSetHandler IterateSetHandler, readSetHandler ReadsetHandler) *trackedIterator {
 	return &trackedIterator{
 		Iterator:          iter,
 		iterateset:        iterationTracker,
 		IterateSetHandler: iterateSetHandler,
+		ReadsetHandler:    readSetHandler,
 	}
 }
 
@@ -35,23 +37,29 @@ func (ti *trackedIterator) Close() error {
 // Key calls the iterator.Key() and adds the key to the iterateset, then returns the key from the iterator
 func (ti *trackedIterator) Key() []byte {
 	key := ti.Iterator.Key()
+	val := ti.Iterator.Value()
 	// add key to the tracker
 	ti.iterateset.AddKey(key)
+	ti.UpdateReadSet(key, val)
 	return key
 }
 
 // Value calls the iterator.Key() and adds the key to the iterateset, then returns the value from the iterator
 func (ti *trackedIterator) Value() []byte {
 	key := ti.Iterator.Key()
+	val := ti.Iterator.Value()
 	// add key to the tracker
 	ti.iterateset.AddKey(key)
-	return ti.Iterator.Value()
+	ti.UpdateReadSet(key, val)
+	return val
 }
 
 func (ti *trackedIterator) Next() {
 	// add current key to the tracker
 	key := ti.Iterator.Key()
+	val := ti.Iterator.Value()
 	ti.iterateset.AddKey(key)
+	ti.UpdateReadSet(key, val)
 	// call next
 	ti.Iterator.Next()
 }

@@ -282,7 +282,7 @@ func (store *VersionIndexedStore) iterator(start []byte, end []byte, ascending b
 	var parent, memIterator types.Iterator
 
 	// make a memIterator
-	memIterator = store.newMemIterator(start, end, memDB, ascending, store)
+	memIterator = store.newMemIterator(start, end, memDB, ascending)
 
 	if ascending {
 		parent = store.parent.Iterator(start, end)
@@ -290,7 +290,7 @@ func (store *VersionIndexedStore) iterator(start []byte, end []byte, ascending b
 		parent = store.parent.ReverseIterator(start, end)
 	}
 
-	mergeIterator := NewMVSMergeIterator(parent, memIterator, ascending, store)
+	mergeIterator := NewMVSMergeIterator(parent, memIterator, ascending)
 
 	iterationTracker := NewIterationTracker(start, end, ascending, store.writeset)
 	trackedIterator := NewTrackedIterator(mergeIterator, iterationTracker, store, store)

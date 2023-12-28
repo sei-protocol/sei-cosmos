@@ -16,7 +16,6 @@ type mvsMergeIterator struct {
 	parent    types.Iterator
 	cache     types.Iterator
 	ascending bool
-	ReadsetHandler
 }
 
 var _ types.Iterator = (*mvsMergeIterator)(nil)
@@ -24,13 +23,11 @@ var _ types.Iterator = (*mvsMergeIterator)(nil)
 func NewMVSMergeIterator(
 	parent, cache types.Iterator,
 	ascending bool,
-	readsetHandler ReadsetHandler,
 ) *mvsMergeIterator {
 	iter := &mvsMergeIterator{
-		parent:         parent,
-		cache:          cache,
-		ascending:      ascending,
-		ReadsetHandler: readsetHandler,
+		parent:    parent,
+		cache:     cache,
+		ascending: ascending,
 	}
 
 	return iter

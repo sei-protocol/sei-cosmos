@@ -108,7 +108,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	if err != nil {
 		panic(err)
 	}
-	rs.logger.Info(fmt.Sprintf("SC Store commit for block %d took %s", version, time.Since(startTime)))
+	rs.logger.Info(fmt.Sprintf("[DEBUG] SC store commit for block %d took %s", version, time.Since(startTime)))
 
 	// The underlying sc store might be reloaded, reload the store as well.
 	for key := range rs.ckvStores {
@@ -136,7 +136,7 @@ func (rs *Store) StateStoreCommit() {
 				panic(err)
 			}
 		}
-		rs.logger.Info(fmt.Sprintf("SS store commit for block height %d took %s", version, time.Since(startTime)))
+		rs.logger.Info(fmt.Sprintf("[DEBUG] SS store commit for block height %d took %s", version, time.Since(startTime)))
 	}
 }
 

@@ -89,28 +89,31 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	if !bumpVersion {
 		return rs.lastCommitInfo.CommitID()
 	}
+	version := rs.lastCommitInfo.CommitID().Version
+	flushStart := time.Now()
 	if err := rs.flush(); err != nil {
 		panic(err)
 	}
+	rs.logger.Info(fmt.Sprintf("[DEBUG] SC flush for block %d took %s", version, time.Since(flushStart)))
 
 	rs.mtx.Lock()
-	defer rs.mtx.Unlock()
 	for _, store := range rs.ckvStores {
 		if store.GetStoreType() != types.StoreTypeIAVL {
 			_ = store.Commit(bumpVersion)
 		}
 	}
+	rs.mtx.Unlock()
 
-	startTime := time.Now()
-	version := rs.lastCommitInfo.CommitID().Version
 	// Commit to SC Store
+	commitStart := time.Now()
 	_, err := rs.scStore.Commit()
 	if err != nil {
 		panic(err)
 	}
-	rs.logger.Info(fmt.Sprintf("[DEBUG] SC store commit for block %d took %s", version, time.Since(startTime)))
+	rs.logger.Info(fmt.Sprintf("[DEBUG] SC store commit for block %d took %s", version, time.Since(commitStart)))
 
 	// The underlying sc store might be reloaded, reload the store as well.
+	rs.mtx.Lock()
 	for key := range rs.ckvStores {
 		store := rs.ckvStores[key]
 		if store.GetStoreType() == types.StoreTypeIAVL {
@@ -120,6 +123,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 			}
 		}
 	}
+	rs.mtx.Unlock()
 
 	rs.lastCommitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())
 	rs.lastCommitInfo = amendCommitInfo(rs.lastCommitInfo, rs.storesParams)

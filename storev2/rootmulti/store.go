@@ -601,6 +601,11 @@ func convertCommitInfo(commitInfo *proto.CommitInfo) *types.CommitInfo {
 
 // GetWorkingHash returns the working app hash
 func (rs *Store) GetWorkingHash() ([]byte, error) {
+	startTime := time.Now()
+	defer func() {
+		rs.logger.Info(fmt.Sprintf("[DEBUG] GetWorkingHash for block height %d took %s", rs.lastCommitInfo.Version, time.Since(startTime)))
+
+	}()
 	if err := rs.flush(); err != nil {
 		return nil, err
 	}

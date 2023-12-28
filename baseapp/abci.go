@@ -309,15 +309,17 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 	defer func() {
 		fmt.Printf("[DEBUG] ABCI commit for height %d took %s \n", version, time.Since(startTime))
 	}()
-	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
 	app.commitLock.Lock()
 	defer app.commitLock.Unlock()
 
 	if app.stateToCommit == nil {
 		panic("no state to commit")
 	}
+
+	retainStart := time.Now()
 	header := app.stateToCommit.ctx.BlockHeader()
 	retainHeight := app.GetBlockRetentionHeight(header.Height)
+	fmt.Printf("[DEBUG] ABCI GetBlockRetentionHeight for height %d took %s \n", version, time.Since(retainStart))
 
 	workingHashStart := time.Now()
 	app.WriteStateToCommitAndGetWorkingHash()

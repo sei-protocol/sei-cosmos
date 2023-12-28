@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"cosmossdk.io/errors"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
@@ -99,11 +100,15 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 			_ = store.Commit(bumpVersion)
 		}
 	}
+
+	startTime := time.Now()
+	version := rs.lastCommitInfo.CommitID()
 	// Commit to SC Store
 	_, err := rs.scStore.Commit()
 	if err != nil {
 		panic(err)
 	}
+	rs.logger.Info(fmt.Sprintf("SC Store commit for block %d took %s", version, time.Since(startTime)))
 
 	// The underlying sc store might be reloaded, reload the store as well.
 	for key := range rs.ckvStores {
@@ -125,11 +130,13 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 func (rs *Store) StateStoreCommit() {
 	for pendingChangeSet := range rs.pendingChanges {
 		version := pendingChangeSet.Version
+		startTime := time.Now()
 		for _, cs := range pendingChangeSet.Changesets {
 			if err := rs.ssStore.ApplyChangeset(version, cs); err != nil {
 				panic(err)
 			}
 		}
+		rs.logger.Info(fmt.Sprintf("SS store commit for block height %d took %s", version, time.Since(startTime)))
 	}
 }
 

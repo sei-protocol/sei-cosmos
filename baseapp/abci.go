@@ -305,8 +305,9 @@ func (app *BaseApp) SetDeliverStateToCommit() {
 // height.
 func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err error) {
 	startTime := time.Now()
+	version := app.LastBlockHeight()
 	defer func() {
-		fmt.Printf("[DEBUG] ABCI commit for height %d took %s \n", app.LastBlockHeight(), time.Since(startTime))
+		fmt.Printf("[DEBUG] ABCI commit for height %d took %s \n", version, time.Since(startTime))
 	}()
 	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
 	app.commitLock.Lock()
@@ -318,9 +319,15 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 	header := app.stateToCommit.ctx.BlockHeader()
 	retainHeight := app.GetBlockRetentionHeight(header.Height)
 
+	workingHashStart := time.Now()
 	app.WriteStateToCommitAndGetWorkingHash()
-	app.cms.Commit(true)
+	fmt.Printf("[DEBUG] ABCI get working hash for height %d took %s \n", version, time.Since(workingHashStart))
 
+	cmsStart := time.Now()
+	app.cms.Commit(true)
+	fmt.Printf("[DEBUG] ABCI CMS commit for height %d took %s \n", version, time.Since(cmsStart))
+
+	checkResetStart := time.Now()
 	// Reset the Check state to the latest committed.
 	//
 	// NOTE: This is safe because Tendermint holds a lock on the mempool for
@@ -329,6 +336,7 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 
 	// empty/reset the deliver state
 	app.resetStatesExceptCheckState()
+	fmt.Printf("[DEBUG] ABCI setCheckState for height %d took %s \n", version, time.Since(checkResetStart))
 
 	var halt bool
 

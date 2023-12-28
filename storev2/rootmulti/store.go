@@ -90,11 +90,9 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		return rs.lastCommitInfo.CommitID()
 	}
 	version := rs.lastCommitInfo.CommitID().Version
-	flushStart := time.Now()
 	if err := rs.flush(); err != nil {
 		panic(err)
 	}
-	rs.logger.Info(fmt.Sprintf("[DEBUG] SC flush for block %d took %s", version, time.Since(flushStart)))
 
 	rs.mtx.Lock()
 	for _, store := range rs.ckvStores {

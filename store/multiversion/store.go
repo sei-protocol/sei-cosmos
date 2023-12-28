@@ -281,7 +281,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 			parentIter = s.parentStore.ReverseIterator(iterationTracker.startKey, iterationTracker.endKey)
 		}
 		// create a new MVSMergeiterator
-		mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending, NoOpHandler{})
+		mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending)
 		defer mergeIterator.Close()
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
 			if (len(expectedKeys) - foundKeys) == 0 {

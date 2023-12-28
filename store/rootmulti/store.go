@@ -476,7 +476,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 
 	startTime := time.Now()
 	rs.SetLastCommitInfo(commitStores(version, rs.stores, bumpVersion))
-	fmt.Printf("IAVL store commit for height %d took %s \n", c.CommitID().Version, time.Since(startTime))
+	fmt.Printf("[DEBUG] IAVL store commit for height %d took %s \n", c.CommitID().Version, time.Since(startTime))
 
 	defer rs.flushMetadata(rs.db, version, rs.LastCommitInfo())
 

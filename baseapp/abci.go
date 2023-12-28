@@ -304,6 +304,10 @@ func (app *BaseApp) SetDeliverStateToCommit() {
 // against that height and gracefully halt if it matches the latest committed
 // height.
 func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err error) {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[DEBUG] ABCI commit for height %d took %s \n", app.LastBlockHeight(), time.Since(startTime))
+	}()
 	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
 	app.commitLock.Lock()
 	defer app.commitLock.Unlock()

@@ -279,13 +279,8 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 }
 
 func (app *BaseApp) WriteStateToCommitAndGetWorkingHash() []byte {
-	startTime := time.Now()
 	app.stateToCommit.ms.Write()
-	fmt.Printf("[DEBUG] ABCI stateToCommit for block height %d took %s \n", app.LastBlockHeight(), time.Since(startTime))
-
-	workingHashStart := time.Now()
 	hash, err := app.cms.GetWorkingHash()
-	fmt.Printf("[DEBUG] ABCI GetWorkingHash for block height %d took %s \n", app.LastBlockHeight(), time.Since(workingHashStart))
 
 	if err != nil {
 		// this should never happen
@@ -327,11 +322,11 @@ func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err e
 
 	workingHashStart := time.Now()
 	app.WriteStateToCommitAndGetWorkingHash()
-	fmt.Printf("[DEBUG] ABCI get working hash for height %d took %s \n", version, time.Since(workingHashStart))
+	fmt.Printf("[DEBUG] WriteStateToCommitAndGetWorkingHash for height %d took %s \n", version, time.Since(workingHashStart))
 
 	cmsStart := time.Now()
 	app.cms.Commit(true)
-	fmt.Printf("[DEBUG] ABCI CMS commit for height %d took %s \n", version, time.Since(cmsStart))
+	fmt.Printf("[DEBUG] CMS commit for height %d took %s \n", version, time.Since(cmsStart))
 
 	// Reset the Check state to the latest committed.
 	//

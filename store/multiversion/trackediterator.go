@@ -37,10 +37,8 @@ func (ti *trackedIterator) Close() error {
 // Key calls the iterator.Key() and adds the key to the iterateset, then returns the key from the iterator
 func (ti *trackedIterator) Key() []byte {
 	key := ti.Iterator.Key()
-	val := ti.Iterator.Value()
 	// add key to the tracker
 	ti.iterateset.AddKey(key)
-	ti.UpdateReadSet(key, val)
 	return key
 }
 
@@ -50,16 +48,13 @@ func (ti *trackedIterator) Value() []byte {
 	val := ti.Iterator.Value()
 	// add key to the tracker
 	ti.iterateset.AddKey(key)
-	ti.UpdateReadSet(key, val)
 	return val
 }
 
 func (ti *trackedIterator) Next() {
 	// add current key to the tracker
 	key := ti.Iterator.Key()
-	val := ti.Iterator.Value()
 	ti.iterateset.AddKey(key)
-	ti.UpdateReadSet(key, val)
 	// call next
 	ti.Iterator.Next()
 }

@@ -16,6 +16,7 @@ type mvsMergeIterator struct {
 	parent    types.Iterator
 	cache     types.Iterator
 	ascending bool
+	ReadsetHandler
 }
 
 var _ types.Iterator = (*mvsMergeIterator)(nil)
@@ -23,11 +24,13 @@ var _ types.Iterator = (*mvsMergeIterator)(nil)
 func NewMVSMergeIterator(
 	parent, cache types.Iterator,
 	ascending bool,
+	readsetHandler ReadsetHandler,
 ) *mvsMergeIterator {
 	iter := &mvsMergeIterator{
-		parent:    parent,
-		cache:     cache,
-		ascending: ascending,
+		parent:         parent,
+		cache:          cache,
+		ascending:      ascending,
+		ReadsetHandler: readsetHandler,
 	}
 
 	return iter
@@ -135,6 +138,8 @@ func (iter *mvsMergeIterator) Value() []byte {
 	// If cache is invalid, get the parent value.
 	if !iter.cache.Valid() {
 		value := iter.parent.Value()
+		// add values read from parent to readset
+		iter.ReadsetHandler.UpdateReadSet(iter.parent.Key(), value)
 		return value
 	}
 
@@ -145,6 +150,8 @@ func (iter *mvsMergeIterator) Value() []byte {
 	switch cmp {
 	case -1: // parent < cache
 		value := iter.parent.Value()
+		// add values read from parent to readset
+		iter.ReadsetHandler.UpdateReadSet(iter.parent.Key(), value)
 		return value
 	case 0, 1: // parent >= cache
 		value := iter.cache.Value()

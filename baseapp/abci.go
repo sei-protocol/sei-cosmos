@@ -386,15 +386,6 @@ func (app *BaseApp) Snapshot(height int64) {
 		return
 	}
 
-	app.logger.Info("creating state snapshot", "height", height)
-
-	snapshot, err := app.snapshotManager.Create(uint64(height))
-	if err != nil {
-		app.logger.Error("failed to create state snapshot", "height", height, "err", err)
-		return
-	}
-
-	app.logger.Info("completed state snapshot", "height", height, "format", snapshot.Format)
 	app.logger.Info(fmt.Sprintf("pruning old state snapshots with keep recent %d", app.snapshotKeepRecent))
 	if app.snapshotKeepRecent > 0 {
 		pruned, err := app.snapshotManager.Prune(app.snapshotKeepRecent)
@@ -404,6 +395,17 @@ func (app *BaseApp) Snapshot(height int64) {
 		}
 		app.logger.Info("pruned state snapshots", "pruned", pruned)
 	}
+
+	app.logger.Info("creating state snapshot", "height", height)
+
+	snapshot, err := app.snapshotManager.Create(uint64(height))
+	if err != nil {
+		app.logger.Error("failed to create state snapshot", "height", height, "err", err)
+		return
+	}
+
+	app.logger.Info("completed state snapshot", "height", height, "format", snapshot.Format)
+
 }
 
 // Query implements the ABCI interface. It delegates to CommitMultiStore if it

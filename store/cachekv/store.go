@@ -132,9 +132,6 @@ func (store *Store) Write() {
 		}
 	}
 
-	// Clear the cache using the map clearing idiom
-	// and not allocating fresh objects.
-	// Please see https://bencher.orijtech.com/perfclinic/mapclearing/
 	store.cache = &sync.Map{}
 	store.deleted = &sync.Map{}
 	store.unsortedCache = &sync.Map{}

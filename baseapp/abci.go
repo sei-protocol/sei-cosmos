@@ -395,17 +395,14 @@ func (app *BaseApp) Snapshot(height int64) {
 	}
 
 	app.logger.Info("completed state snapshot", "height", height, "format", snapshot.Format)
-
+	app.logger.Info(fmt.Sprintf("pruning old state snapshots with keep recent %d", app.snapshotKeepRecent))
 	if app.snapshotKeepRecent > 0 {
-		app.logger.Debug("pruning state snapshots")
-
 		pruned, err := app.snapshotManager.Prune(app.snapshotKeepRecent)
 		if err != nil {
 			app.logger.Error("Failed to prune state snapshots", "err", err)
 			return
 		}
-
-		app.logger.Debug("pruned state snapshots", "pruned", pruned)
+		app.logger.Info("pruned state snapshots", "pruned", pruned)
 	}
 }
 

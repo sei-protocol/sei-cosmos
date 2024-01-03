@@ -723,16 +723,19 @@ loop:
 }
 
 // Snapshot Implements the interface from Snapshotter
-func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
+func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) (returnErr error) {
 	if height > math.MaxUint32 {
 		return fmt.Errorf("height overflows uint32: %d", height)
 	}
 
+	totalItems := 0
 	exporter, err := rs.scStore.Exporter(int64(height))
 	if err != nil {
 		return err
 	}
-	defer exporter.Close()
+	defer func() {
+		returnErr = exporter.Close()
+	}()
 	for {
 		item, err := exporter.Next()
 		if err != nil {
@@ -741,9 +744,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			}
 			return err
 		}
-
 		switch item := item.(type) {
 		case *sctypes.SnapshotNode:
+			totalItems++
 			if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_IAVL{
 					IAVL: &snapshottypes.SnapshotIAVLItem{
@@ -756,6 +759,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			}); err != nil {
 				return err
 			}
+			if totalItems%10000 == 0 {
+				rs.logger.Info(fmt.Sprintf("[Debug] Exported snapshot items: %d", totalItems))
+			}
 		case string:
 			if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_Store{
@@ -766,6 +772,7 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			}); err != nil {
 				return err
 			}
+			rs.logger.Info(fmt.Sprintf("[Debug] Exporting snapshot store: %s", item))
 		default:
 			return fmt.Errorf("unknown item type %T", item)
 		}

@@ -16,11 +16,10 @@ import (
 //
 // TODO: Optimize by memoizing.
 type cacheMergeIterator struct {
-	parent       types.Iterator
-	cache        types.Iterator
-	ascending    bool
-	eventManager *sdktypes.EventManager
-	storeKey     sdktypes.StoreKey
+	parent    types.Iterator
+	cache     types.Iterator
+	ascending bool
+	storeKey  sdktypes.StoreKey
 }
 
 var _ types.Iterator = (*cacheMergeIterator)(nil)
@@ -28,15 +27,13 @@ var _ types.Iterator = (*cacheMergeIterator)(nil)
 func NewCacheMergeIterator(
 	parent, cache types.Iterator,
 	ascending bool,
-	eventManager *sdktypes.EventManager,
 	storeKey sdktypes.StoreKey,
 ) *cacheMergeIterator {
 	iter := &cacheMergeIterator{
-		parent:       parent,
-		cache:        cache,
-		ascending:    ascending,
-		eventManager: eventManager,
-		storeKey:     storeKey,
+		parent:    parent,
+		cache:     cache,
+		ascending: ascending,
+		storeKey:  storeKey,
 	}
 
 	return iter

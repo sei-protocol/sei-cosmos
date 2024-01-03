@@ -206,7 +206,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
-	s.PrefillEstimates(reqs)
+	// s.PrefillEstimates(reqs)
 	tasks := toTasks(reqs)
 	s.allTasks = tasks
 	s.executeCh = make(chan func(), len(tasks))

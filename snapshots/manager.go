@@ -184,6 +184,7 @@ func (m *Manager) Create(height uint64) (*types.Snapshot, error) {
 // createSnapshot do the heavy work of snapshotting after the validations of request are done
 // the produced chunks are written to the channel.
 func (m *Manager) createSnapshot(height uint64, ch chan<- io.ReadCloser) {
+	m.logger.Info(fmt.Sprintf("[Debug] Start createSnapshot of height %d", height))
 	streamWriter := NewStreamWriter(ch)
 	if streamWriter == nil {
 		return
@@ -194,6 +195,7 @@ func (m *Manager) createSnapshot(height uint64, ch chan<- io.ReadCloser) {
 		streamWriter.CloseWithError(err)
 		return
 	}
+	m.logger.Info(fmt.Sprintf("[Debug] Start createSnapshot for extension of height %d", height))
 	for _, name := range m.sortedExtensionNames() {
 		extension := m.extensions[name]
 		// write extension metadata
@@ -214,6 +216,7 @@ func (m *Manager) createSnapshot(height uint64, ch chan<- io.ReadCloser) {
 			return
 		}
 	}
+	m.logger.Info(fmt.Sprintf("[Debug] Finished createSnapshot of height %d", height))
 }
 
 // List lists snapshots, mirroring ABCI ListSnapshots. It can be concurrent with other operations.

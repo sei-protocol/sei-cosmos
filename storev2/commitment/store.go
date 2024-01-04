@@ -2,7 +2,9 @@ package commitment
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	"io"
+	"time"
 
 	"cosmossdk.io/errors"
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
@@ -94,6 +96,7 @@ func (st *Store) Set(key, value []byte) {
 
 // Implements types.KVStore.
 func (st *Store) Get(key []byte) []byte {
+	defer telemetry.MeasureSince(time.Now(), "storeV2", "committer", "get")
 	return st.tree.Get(key)
 }
 

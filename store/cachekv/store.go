@@ -2,12 +2,6 @@ package cachekv
 
 import (
 	"bytes"
-	"fmt"
-	"io"
-	"sort"
-	"sync"
-	"time"
-
 	"github.com/cosmos/cosmos-sdk/internal/conv"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
@@ -16,6 +10,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/kv"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
+	"io"
+	"sort"
+	"sync"
 )
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
@@ -72,12 +69,12 @@ func (store *Store) getFromCache(key []byte) []byte {
 	if cv, ok := store.cache.Load(conv.UnsafeBytesToStr(key)); ok {
 		return cv.(*types.CValue).Value()
 	}
-	storeName := store.storeKey.Name()
-	startTime := time.Now()
+	//storeName := store.storeKey.Name()
+	//startTime := time.Now()
 	value := store.parent.Get(key)
-	if storeName == "wasm" || storeName == "bank" || storeName == "acc" {
-		fmt.Printf("[Debug] Get key %X from store %s took %s \n", key, store.storeKey.Name(), time.Since(startTime))
-	}
+	//if storeName == "wasm" || storeName == "bank" || storeName == "acc" {
+	//	fmt.Printf("[Debug] Get key %X from store %s took %s \n", key, store.storeKey.Name(), time.Since(startTime))
+	//}
 	return value
 }
 

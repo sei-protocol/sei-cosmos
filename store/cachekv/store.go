@@ -2,9 +2,12 @@ package cachekv
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	"io"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/internal/conv"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
@@ -69,7 +72,11 @@ func (store *Store) getFromCache(key []byte) []byte {
 	if cv, ok := store.cache.Load(conv.UnsafeBytesToStr(key)); ok {
 		return cv.(*types.CValue).Value()
 	}
-	return store.parent.Get(key)
+	startTime := time.Now()
+	value := store.parent.Get(key)
+	telemetry.MeasureSince(startTime, "store_get_latency")
+	fmt.Printf("[Debug] Get from parent store %s took %s \n", store.storeKey.Name(), time.Since(startTime))
+	return value
 }
 
 // Get implements types.KVStore.

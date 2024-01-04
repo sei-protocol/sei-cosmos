@@ -100,11 +100,6 @@ var TOTAL_V2_GET = atomic.Int64{}
 
 func (st *Store) Get(key []byte) []byte {
 	defer telemetry.MeasureSince(time.Now(), "storeV2", "committer", "get")
-	TOTAL_V2_GET.Add(1)
-	count := TOTAL_V2_GET.Load()
-	if count%1000 == 0 {
-		fmt.Printf("[DEBUG] Total memiavl read triggered: %d \n", count)
-	}
 	return st.tree.Get(key)
 }
 

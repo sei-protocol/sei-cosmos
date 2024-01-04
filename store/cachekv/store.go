@@ -6,6 +6,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/kv"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -13,6 +14,7 @@ import (
 	"io"
 	"sort"
 	"sync"
+	"time"
 )
 
 // Store wraps an in-memory cache around an underlying types.KVStore.
@@ -80,6 +82,7 @@ func (store *Store) getFromCache(key []byte) []byte {
 
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
+	defer telemetry.MeasureSince(time.Now(), "cachekv", "store", "get")
 	types.AssertValidKey(key)
 	return store.getFromCache(key)
 }

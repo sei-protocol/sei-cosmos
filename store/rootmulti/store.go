@@ -856,7 +856,6 @@ func (rs *Store) Restore(
 	var snapshotItem snapshottypes.SnapshotItem
 loop:
 	for {
-		startTime := time.Now()
 		snapshotItem = snapshottypes.SnapshotItem{}
 		err := protoReader.ReadMsg(&snapshotItem)
 		if err == io.EOF {
@@ -864,7 +863,7 @@ loop:
 		} else if err != nil {
 			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
 		}
-
+		startTime := time.Now()
 		switch item := snapshotItem.Item.(type) {
 		case *snapshottypes.SnapshotItem_Store:
 			if importer != nil {

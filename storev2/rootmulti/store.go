@@ -671,7 +671,6 @@ func (rs *Store) restore(height int64, protoReader protoio.Reader) (snapshottype
 	}
 loop:
 	for {
-		startTime := time.Now()
 		snapshotItem = snapshottypes.SnapshotItem{}
 		err = protoReader.ReadMsg(&snapshotItem)
 		if err == io.EOF {
@@ -689,6 +688,7 @@ loop:
 				break loop
 			}
 		case *snapshottypes.SnapshotItem_IAVL:
+			startTime := time.Now()
 			if item.IAVL.Height > math.MaxInt8 {
 				restoreErr = errors.Wrapf(sdkerrors.ErrLogic, "node height %v cannot exceed %v",
 					item.IAVL.Height, math.MaxInt8)

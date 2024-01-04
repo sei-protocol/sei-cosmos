@@ -37,15 +37,16 @@ var (
 )
 
 type Store struct {
-	logger         log.Logger
-	mtx            sync.RWMutex
-	scStore        sctypes.Committer
-	ssStore        sstypes.StateStore
-	lastCommitInfo *types.CommitInfo
-	storesParams   map[types.StoreKey]storeParams
-	storeKeys      map[string]types.StoreKey
-	ckvStores      map[types.StoreKey]types.CommitKVStore
-	pendingChanges chan VersionedChangesets
+	logger          log.Logger
+	mtx             sync.RWMutex
+	scStore         sctypes.Committer
+	ssStore         sstypes.StateStore
+	lastCommitInfo  *types.CommitInfo
+	storesParams    map[types.StoreKey]storeParams
+	storeKeys       map[string]types.StoreKey
+	ckvStores       map[types.StoreKey]types.CommitKVStore
+	pendingChanges  chan VersionedChangesets
+	interBlockCache types.MultiStorePersistentCache
 }
 
 type VersionedChangesets struct {
@@ -310,6 +311,14 @@ func (rs *Store) GetCommitStore(key types.StoreKey) types.CommitStore {
 
 // GetCommitKVStore Implements interface CommitMultiStore
 func (rs *Store) GetCommitKVStore(key types.StoreKey) types.CommitKVStore {
+	// If the Store has an inter-block cache, first attempt to lookup and unwrap
+	// the underlying CommitKVStore by StoreKey. If it does not exist, fallback to
+	// the main mapping of CommitKVStores.
+	if rs.interBlockCache != nil {
+		if store := rs.interBlockCache.Unwrap(key); store != nil {
+			return store
+		}
+	}
 	return rs.ckvStores[key]
 }
 
@@ -396,7 +405,14 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, params storeParam
 		if tree == nil {
 			return nil, fmt.Errorf("new store is not added in upgrades: %s", key.Name())
 		}
-		return types.CommitKVStore(commitment.NewStore(tree, rs.logger)), nil
+		store := types.CommitKVStore(commitment.NewStore(tree, rs.logger))
+		if rs.interBlockCache != nil {
+			// Wrap and get a CommitKVStore with inter-block caching. Note, this should
+			// only wrap the primary CommitKVStore, not any store that is already
+			// branched as that will create unexpected behavior.
+			store = rs.interBlockCache.GetStoreCache(key, store)
+		}
+		return store, nil
 	case types.StoreTypeDB:
 		panic("recursive MultiStores not yet supported")
 	case types.StoreTypeTransient:
@@ -422,8 +438,12 @@ func (rs *Store) LoadVersion(ver int64) error {
 	return rs.LoadVersionAndUpgrade(ver, nil)
 }
 
-// SetInterBlockCache is a noop since we do caching on its own, which works well with zero-copy.
-func (rs *Store) SetInterBlockCache(_ types.MultiStorePersistentCache) {}
+// SetInterBlockCache sets the Store's internal inter-block (persistent) cache.
+// When this is defined, all CommitKVStores will be wrapped with their respective
+// inter-block cache.
+func (rs *Store) SetInterBlockCache(c types.MultiStorePersistentCache) {
+	rs.interBlockCache = c
+}
 
 // SetInitialVersion Implements interface CommitMultiStore
 // used by InitChain when the initial height is bigger than 1

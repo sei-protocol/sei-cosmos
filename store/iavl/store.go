@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	ics23 "github.com/confio/ics23/go"
@@ -235,8 +234,6 @@ func (st *Store) Set(key, value []byte) {
 	types.AssertValidValue(value)
 	st.tree.Set(key, value)
 }
-
-var TOTAL_IAVL_COUNT = atomic.Int64{}
 
 // Implements types.KVStore.
 func (st *Store) Get(key []byte) []byte {

@@ -2,13 +2,12 @@ package cache
 
 import (
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
-
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	lru "github.com/hashicorp/golang-lru/v2"
 )
 

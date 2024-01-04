@@ -2,11 +2,13 @@ package rootmulti
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	"io"
 	"math"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"cosmossdk.io/errors"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
@@ -705,8 +707,8 @@ loop:
 			if node.Height == 0 && node.Value == nil {
 				node.Value = []byte{}
 			}
+			startTime := time.Now()
 			scImporter.AddNode(node)
-
 			// Check if we should also import to SS store
 			if rs.ssStore != nil && node.Height == 0 && ssImporter != nil {
 				ssImporter <- sstypes.SnapshotNode{
@@ -715,6 +717,7 @@ loop:
 					Value:    node.Value,
 				}
 			}
+			telemetry.MeasureSince(startTime, "memiavl", "import", "add")
 		default:
 			// unknown element, could be an extension
 			break loop

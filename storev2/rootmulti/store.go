@@ -688,7 +688,6 @@ loop:
 				break loop
 			}
 		case *snapshottypes.SnapshotItem_IAVL:
-			startTime := time.Now()
 			if item.IAVL.Height > math.MaxInt8 {
 				restoreErr = errors.Wrapf(sdkerrors.ErrLogic, "node height %v cannot exceed %v",
 					item.IAVL.Height, math.MaxInt8)
@@ -708,7 +707,7 @@ loop:
 			if node.Height == 0 && node.Value == nil {
 				node.Value = []byte{}
 			}
-
+			startTime := time.Now()
 			scImporter.AddNode(node)
 			// Check if we should also import to SS store
 			if rs.ssStore != nil && node.Height == 0 && ssImporter != nil {

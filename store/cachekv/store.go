@@ -3,7 +3,6 @@ package cachekv
 import (
 	"bytes"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/telemetry"
 	"io"
 	"sort"
 	"sync"
@@ -75,8 +74,8 @@ func (store *Store) getFromCache(key []byte) []byte {
 	}
 	startTime := time.Now()
 	value := store.parent.Get(key)
-	telemetry.MeasureSince(startTime, "store_get_latency")
-	if time.Since(startTime).Microseconds() > 10 {
+	//telemetry.MeasureSince(startTime, "store_get_latency")
+	if time.Since(startTime).Microseconds() > 50 {
 		fmt.Printf("[Debug] Get key %X from store %s took %s \n", key, store.storeKey.Name(), time.Since(startTime))
 	}
 	return value

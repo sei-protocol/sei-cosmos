@@ -72,10 +72,11 @@ func (store *Store) getFromCache(key []byte) []byte {
 	if cv, ok := store.cache.Load(conv.UnsafeBytesToStr(key)); ok {
 		return cv.(*types.CValue).Value()
 	}
+	storeName := store.storeKey.Name()
 	startTime := time.Now()
 	value := store.parent.Get(key)
 	//telemetry.MeasureSince(startTime, "store_get_latency")
-	if time.Since(startTime).Microseconds() > 50 {
+	if storeName == "wasm" || storeName == "bank" || storeName == "acc" {
 		fmt.Printf("[Debug] Get key %X from store %s took %s \n", key, store.storeKey.Name(), time.Since(startTime))
 	}
 	return value

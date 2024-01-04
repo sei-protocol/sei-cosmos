@@ -671,6 +671,7 @@ func (rs *Store) restore(height int64, protoReader protoio.Reader) (snapshottype
 	}
 loop:
 	for {
+		startTime := time.Now()
 		snapshotItem = snapshottypes.SnapshotItem{}
 		err = protoReader.ReadMsg(&snapshotItem)
 		if err == io.EOF {
@@ -707,8 +708,8 @@ loop:
 			if node.Height == 0 && node.Value == nil {
 				node.Value = []byte{}
 			}
-			startTime := time.Now()
-			//scImporter.AddNode(node)
+
+			scImporter.AddNode(node)
 			// Check if we should also import to SS store
 			if rs.ssStore != nil && node.Height == 0 && ssImporter != nil {
 				ssImporter <- sstypes.SnapshotNode{

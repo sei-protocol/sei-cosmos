@@ -77,7 +77,7 @@ func (store *Store) getFromCache(key []byte) []byte {
 	value := store.parent.Get(key)
 	telemetry.MeasureSince(startTime, "store_get_latency")
 	if time.Since(startTime).Microseconds() > 10 {
-		fmt.Printf("[Debug] Get from parent store %s took %s \n", store.storeKey.Name(), time.Since(startTime))
+		fmt.Printf("[Debug] Get key %X from store %s took %s \n", key, store.storeKey.Name(), time.Since(startTime))
 	}
 	return value
 }

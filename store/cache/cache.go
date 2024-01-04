@@ -2,7 +2,9 @@ package cache
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
@@ -122,12 +124,11 @@ func (ckv *CommitKVStoreCache) getAndWriteToCache(key []byte) []byte {
 // If the value doesn't exist in the write-through cache, the query is delegated
 // to the underlying CommitKVStore.
 func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
+	defer telemetry.MeasureSince(time.Now(), "cache", "inter-block-cache", "get")
 	types.AssertValidKey(key)
-
 	if value, ok := ckv.getFromCache(key); ok {
 		return value
 	}
-
 	// if not found in the cache, query the underlying CommitKVStore and init cache value
 	return ckv.getAndWriteToCache(key)
 }

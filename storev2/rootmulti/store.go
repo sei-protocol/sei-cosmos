@@ -311,14 +311,6 @@ func (rs *Store) GetCommitStore(key types.StoreKey) types.CommitStore {
 
 // GetCommitKVStore Implements interface CommitMultiStore
 func (rs *Store) GetCommitKVStore(key types.StoreKey) types.CommitKVStore {
-	// If the Store has an inter-block cache, first attempt to lookup and unwrap
-	// the underlying CommitKVStore by StoreKey. If it does not exist, fallback to
-	// the main mapping of CommitKVStores.
-	if rs.interBlockCache != nil {
-		if store := rs.interBlockCache.Unwrap(key); store != nil {
-			return store
-		}
-	}
 	return rs.ckvStores[key]
 }
 

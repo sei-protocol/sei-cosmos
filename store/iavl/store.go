@@ -244,7 +244,7 @@ func (st *Store) Get(key []byte) []byte {
 	TOTAL_IAVL_COUNT.Add(1)
 	count := TOTAL_IAVL_COUNT.Load()
 	if count%1000 == 0 {
-		fmt.Printf("[DEBUG] Total iavl get triggered: %d", count)
+		fmt.Printf("[DEBUG] Total iavl get triggered: %d \n", count)
 	}
 	value, err := st.tree.Get(key)
 	if err != nil {

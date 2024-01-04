@@ -103,7 +103,7 @@ func (st *Store) Get(key []byte) []byte {
 	TOTAL_V2_GET.Add(1)
 	count := TOTAL_V2_GET.Load()
 	if count%1000 == 0 {
-		fmt.Printf("[DEBUG] Total memiavl read triggered: %d", count)
+		fmt.Printf("[DEBUG] Total memiavl read triggered: %d \n", count)
 	}
 	return st.tree.Get(key)
 }

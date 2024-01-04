@@ -863,7 +863,6 @@ loop:
 		} else if err != nil {
 			return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "invalid protobuf message")
 		}
-		startTime := time.Now()
 		switch item := snapshotItem.Item.(type) {
 		case *snapshottypes.SnapshotItem_Store:
 			if importer != nil {
@@ -884,6 +883,7 @@ loop:
 			defer importer.Close()
 
 		case *snapshottypes.SnapshotItem_IAVL:
+			startTime := time.Now()
 			if importer == nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(sdkerrors.ErrLogic, "received IAVL node item before store item")
 			}
@@ -906,11 +906,10 @@ loop:
 				node.Value = []byte{}
 			}
 			err := importer.Add(node)
-			telemetry.MeasureSince(startTime, "iavl", "import", "add")
 			if err != nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrap(err, "IAVL node import failed")
 			}
-
+			telemetry.MeasureSince(startTime, "iavl", "import", "add")
 		default:
 			break loop
 		}

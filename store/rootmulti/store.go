@@ -856,6 +856,7 @@ func (rs *Store) Restore(
 	var snapshotItem snapshottypes.SnapshotItem
 loop:
 	for {
+		startTime := time.Now()
 		snapshotItem = snapshottypes.SnapshotItem{}
 		err := protoReader.ReadMsg(&snapshotItem)
 		if err == io.EOF {
@@ -905,7 +906,6 @@ loop:
 			if node.Height == 0 && node.Value == nil {
 				node.Value = []byte{}
 			}
-			startTime := time.Now()
 			err := importer.Add(node)
 			telemetry.MeasureSince(startTime, "iavl", "import", "add")
 			if err != nil {

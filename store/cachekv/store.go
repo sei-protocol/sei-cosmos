@@ -68,6 +68,7 @@ func (store *Store) GetStoreType() types.StoreType {
 }
 
 // getFromCache queries the write-through cache for a value by key.
+
 func (store *Store) getFromCache(key []byte) []byte {
 	if cv, ok := store.cache.Load(conv.UnsafeBytesToStr(key)); ok {
 		return cv.(*types.CValue).Value()
@@ -75,7 +76,9 @@ func (store *Store) getFromCache(key []byte) []byte {
 	startTime := time.Now()
 	value := store.parent.Get(key)
 	telemetry.MeasureSince(startTime, "store_get_latency")
-	fmt.Printf("[Debug] Get from parent store %s took %s \n", store.storeKey.Name(), time.Since(startTime))
+	if time.Since(startTime).Microseconds() > 10 {
+		fmt.Printf("[Debug] Get from parent store %s took %s \n", store.storeKey.Name(), time.Since(startTime))
+	}
 	return value
 }
 

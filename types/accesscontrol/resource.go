@@ -22,6 +22,7 @@ var ResourceTree = map[ResourceType]TreeNode{
 		ResourceType_KV_FEEGRANT,
 		ResourceType_KV_SLASHING,
 		ResourceType_KV_BANK_DEFERRED,
+		ResourceType_KV_EVM,
 	}},
 	ResourceType_Mem: {ResourceType_ANY, []ResourceType{
 		ResourceType_DexMem,

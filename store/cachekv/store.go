@@ -75,7 +75,6 @@ func (store *Store) getFromCache(key []byte) []byte {
 	storeName := store.storeKey.Name()
 	startTime := time.Now()
 	value := store.parent.Get(key)
-	//telemetry.MeasureSince(startTime, "store_get_latency")
 	if storeName == "wasm" || storeName == "bank" || storeName == "acc" {
 		fmt.Printf("[Debug] Get key %X from store %s took %s \n", key, store.storeKey.Name(), time.Since(startTime))
 	}

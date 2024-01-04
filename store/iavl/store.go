@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	ics23 "github.com/confio/ics23/go"
@@ -235,9 +236,16 @@ func (st *Store) Set(key, value []byte) {
 	st.tree.Set(key, value)
 }
 
+var TOTAL_IAVL_COUNT = atomic.Int64{}
+
 // Implements types.KVStore.
 func (st *Store) Get(key []byte) []byte {
 	defer telemetry.MeasureSince(time.Now(), "store", "iavl", "get")
+	TOTAL_IAVL_COUNT.Add(1)
+	count := TOTAL_IAVL_COUNT.Load()
+	if count%1000 == 0 {
+		fmt.Printf("[DEBUG] Total iavl get triggered: %d", count)
+	}
 	value, err := st.tree.Get(key)
 	if err != nil {
 		panic(err)

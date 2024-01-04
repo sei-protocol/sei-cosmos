@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"io"
+	"sync/atomic"
 	"time"
 
 	"cosmossdk.io/errors"
@@ -95,8 +96,15 @@ func (st *Store) Set(key, value []byte) {
 }
 
 // Implements types.KVStore.
+var TOTAL_V2_GET = atomic.Int64{}
+
 func (st *Store) Get(key []byte) []byte {
 	defer telemetry.MeasureSince(time.Now(), "storeV2", "committer", "get")
+	TOTAL_V2_GET.Add(1)
+	count := TOTAL_V2_GET.Load()
+	if count%1000 == 0 {
+		fmt.Printf("[DEBUG] Total memiavl read triggered: %d", count)
+	}
 	return st.tree.Get(key)
 }
 

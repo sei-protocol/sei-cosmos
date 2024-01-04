@@ -828,6 +828,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 	anteEvents []abci.Event,
 	priority int64,
 	pendingTxChecker abci.PendingTxChecker,
+	expireHandler abci.ExpireTxHandler,
 	err error,
 ) {
 	defer telemetry.MeasureThroughputSinceWithLabels(
@@ -863,7 +864,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 
 	// only run the tx if there is block gas remaining
 	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
-		return gInfo, nil, nil, -1, nil, sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
+		return gInfo, nil, nil, -1, nil, nil, sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
 	}
 
 	defer func() {
@@ -900,13 +901,13 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 	}
 
 	if tx == nil {
-		return sdk.GasInfo{}, nil, nil, 0, nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "tx decode error")
+		return sdk.GasInfo{}, nil, nil, 0, nil, nil, sdkerrors.Wrap(sdkerrors.ErrTxDecode, "tx decode error")
 	}
 
 	msgs := tx.GetMsgs()
 
 	if err := validateBasicTxMsgs(msgs); err != nil {
-		return sdk.GasInfo{}, nil, nil, 0, nil, err
+		return sdk.GasInfo{}, nil, nil, 0, nil, nil, err
 	}
 
 	if app.anteHandler != nil {
@@ -948,7 +949,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 		// GasMeter expected to be set in AnteHandler
 		gasWanted = ctx.GasMeter().Limit()
 		if err != nil {
-			return gInfo, nil, nil, 0, nil, err
+			return gInfo, nil, nil, 0, nil, nil, err
 		}
 
 		// Dont need to validate in checkTx mode
@@ -963,12 +964,13 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 					op.EmitValidationFailMetrics()
 				}
 				errMessage := fmt.Sprintf("Invalid Concurrent Execution antehandler missing %d access operations", len(missingAccessOps))
-				return gInfo, nil, nil, 0, nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
+				return gInfo, nil, nil, 0, nil, nil, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 			}
 		}
 
 		priority = ctx.Priority()
 		pendingTxChecker = ctx.PendingTxChecker()
+		expireHandler = ctx.ExpireTxHandler()
 		msCache.Write()
 		anteEvents = events.ToABCIEvents()
 		anteSpan.End()
@@ -998,7 +1000,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 	if ctx.CheckTxCallback() != nil {
 		ctx.CheckTxCallback()(err)
 	}
-	return gInfo, result, anteEvents, priority, pendingTxChecker, err
+	return gInfo, result, anteEvents, priority, pendingTxChecker, expireHandler, err
 }
 
 // runMsgs iterates through a list of messages and executes them with the provided

@@ -3,7 +3,6 @@ package baseapp
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -30,13 +29,11 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	acltypes "github.com/cosmos/cosmos-sdk/types/accesscontrol"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/legacy/legacytx"
-	"github.com/cosmos/iavl"
 )
 
 const (
@@ -163,8 +160,6 @@ type BaseApp struct { //nolint: maligned
 
 	compactionInterval uint64
 
-	orphanConfig *iavl.Options
-
 	TmConfig *tmcfg.Config
 
 	TracingInfo *tracing.Info
@@ -290,9 +285,6 @@ func NewBaseApp(
 		panic("must pass --chain-id when calling 'seid start' or set in ~/.sei/config/client.toml")
 	}
 	app.startCompactionRoutine(db)
-	if app.orphanConfig != nil {
-		app.cms.(*rootmulti.Store).SetOrphanConfig(app.orphanConfig)
-	}
 
 	return app
 }
@@ -443,20 +435,6 @@ func (app *BaseApp) init() error {
 	app.setCheckState(tmproto.Header{})
 	app.Seal()
 
-	// make sure the snapshot interval is a multiple of the pruning KeepEvery interval
-	if app.snapshotManager != nil && app.snapshotInterval > 0 {
-		rms, ok := app.cms.(*rootmulti.Store)
-		if !ok {
-			return errors.New("state sync snapshots require a rootmulti store")
-		}
-		pruningOpts := rms.GetPruning()
-		if pruningOpts.KeepEvery > 0 && app.snapshotInterval%pruningOpts.KeepEvery != 0 {
-			return fmt.Errorf(
-				"state sync snapshot interval %v must be a multiple of pruning keep every interval %v",
-				app.snapshotInterval, pruningOpts.KeepEvery)
-		}
-	}
-
 	return nil
 }
 
@@ -470,10 +448,6 @@ func (app *BaseApp) setHaltHeight(haltHeight uint64) {
 
 func (app *BaseApp) setHaltTime(haltTime uint64) {
 	app.haltTime = haltTime
-}
-
-func (app *BaseApp) setOrphanConfig(opts *iavl.Options) {
-	app.orphanConfig = opts
 }
 
 func (app *BaseApp) setMinRetainBlocks(minRetainBlocks uint64) {
@@ -1172,6 +1146,10 @@ func (app *BaseApp) Close() error {
 	app.commitLock.Lock()
 	defer app.commitLock.Unlock()
 	if err := app.appStore.db.Close(); err != nil {
+		return err
+	}
+	// close the underline database for storeV2
+	if err := app.cms.Close(); err != nil {
 		return err
 	}
 	return app.snapshotManager.Close()

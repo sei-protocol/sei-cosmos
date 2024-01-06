@@ -3,6 +3,7 @@ package rootmulti
 import (
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/sei-protocol/sei-db/ss/pruning"
 	"io"
 	"math"
 	"sort"
@@ -49,6 +50,7 @@ type Store struct {
 	ckvStores       map[types.StoreKey]types.CommitKVStore
 	pendingChanges  chan VersionedChangesets
 	interBlockCache types.MultiStorePersistentCache
+	pruningManager  *pruning.Manager
 }
 
 type VersionedChangesets struct {
@@ -81,6 +83,8 @@ func NewStore(
 		}
 		store.ssStore = ssStore
 		go store.StateStoreCommit()
+		store.pruningManager = pruning.NewPruningManager(logger, ssStore, int64(ssConfig.KeepRecent), int64(ssConfig.PruneIntervalSeconds))
+		store.pruningManager.Start()
 	}
 	return store
 

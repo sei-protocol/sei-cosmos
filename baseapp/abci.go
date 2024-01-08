@@ -204,7 +204,7 @@ func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abc
 // internal CheckTx state if the AnteHandler passes. Otherwise, the ResponseCheckTx
 // will contain releveant error information. Regardless of tx execution outcome,
 // the ResponseCheckTx will contain relevant gas execution context.
-func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error) {
+func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTxV2, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "check_tx")
 
 	var mode runTxMode
@@ -221,17 +221,29 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	}
 
 	sdkCtx := app.getContextForTx(mode, req.Tx)
-	gInfo, result, _, priority, err := app.runTx(sdkCtx, mode, req.Tx)
+	tx, err := app.txDecoder(req.Tx)
+	if err != nil {
+		res := sdkerrors.ResponseCheckTx(err, 0, 0, app.trace)
+		return &abci.ResponseCheckTxV2{ResponseCheckTx: &res}, err
+	}
+	gInfo, result, _, priority, pendingTxChecker, expireTxHandler, err := app.runTx(sdkCtx, mode, tx, sha256.Sum256(req.Tx))
 	if err != nil {
 		res := sdkerrors.ResponseCheckTx(err, gInfo.GasWanted, gInfo.GasUsed, app.trace)
-		return &res, err
+		return &abci.ResponseCheckTxV2{ResponseCheckTx: &res}, err
 	}
 
-	return &abci.ResponseCheckTx{
+	res := &abci.ResponseCheckTxV2{ResponseCheckTx: &abci.ResponseCheckTx{
 		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
 		Data:      result.Data,
 		Priority:  priority,
-	}, nil
+	}}
+	if pendingTxChecker != nil {
+		res.IsPendingTransaction = true
+		res.Checker = pendingTxChecker
+	}
+	res.ExpireTxHandler = expireTxHandler
+
+	return res, nil
 }
 
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.
@@ -239,7 +251,7 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // Otherwise, the ResponseDeliverTx will contain releveant error information.
 // Regardless of tx execution outcome, the ResponseDeliverTx will contain relevant
 // gas execution context.
-func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res abci.ResponseDeliverTx) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
 	defer func() {
 		for _, streamingListener := range app.abciListeners {
@@ -259,7 +271,7 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 		telemetry.SetGauge(float32(gInfo.GasWanted), "tx", "gas", "wanted")
 	}()
 
-	gInfo, result, anteEvents, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
+	gInfo, result, anteEvents, _, _, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, tx, checksum)
 	if err != nil {
 		resultStr = "failed"
 		// if we have a result, use those events instead of just the anteEvents

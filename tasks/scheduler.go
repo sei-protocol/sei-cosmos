@@ -46,6 +46,8 @@ type deliverTxTask struct {
 	Index         int
 	Incarnation   int
 	Request       types.RequestDeliverTx
+	SdkTx         sdk.Tx
+	Checksum      [32]byte
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
 	ValidateCh    chan status
@@ -71,7 +73,7 @@ type Scheduler interface {
 }
 
 type scheduler struct {
-	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)
+	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx)
 	workers            int
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 	tracingInfo        *tracing.Info
@@ -81,7 +83,7 @@ type scheduler struct {
 }
 
 // NewScheduler creates a new scheduler
-func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)) Scheduler {
+func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx)) Scheduler {
 	return &scheduler{
 		workers:     workers,
 		deliverTx:   deliverTxFunc,
@@ -144,6 +146,8 @@ func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 	for idx, r := range reqs {
 		res = append(res, &deliverTxTask{
 			Request:    r.Request,
+			SdkTx:      r.SdkTx,
+			Checksum:   r.Checksum,
 			Index:      idx,
 			Status:     statusPending,
 			ValidateCh: make(chan status, 1),
@@ -452,7 +456,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	// Run deliverTx in a separate goroutine
 	go func() {
-		doneCh <- s.deliverTx(task.Ctx, task.Request)
+		doneCh <- s.deliverTx(task.Ctx, task.Request, task.SdkTx, task.Checksum)
 	}()
 
 	// Flag to mark if abort has happened

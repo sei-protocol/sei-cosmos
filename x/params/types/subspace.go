@@ -219,6 +219,7 @@ func (s Subspace) Update(ctx sdk.Context, key, value []byte) error {
 // in the ParamSetPair by calling Subspace#Get.
 func (s Subspace) GetParamSet(ctx sdk.Context, ps ParamSet) {
 	for _, pair := range ps.ParamSetPairs() {
+		fmt.Printf("PSUDEBUG - pairs: %s\n", pair)
 		s.Get(ctx, pair.Key, pair.Value)
 	}
 }

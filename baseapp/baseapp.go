@@ -59,6 +59,7 @@ const (
 
 	FlagChainID            = "chain-id"
 	FlagConcurrencyWorkers = "concurrency-workers"
+	FlagOccEnabled         = "occ-enabled"
 )
 
 var (
@@ -167,6 +168,7 @@ type BaseApp struct { //nolint: maligned
 	TracingInfo *tracing.Info
 
 	concurrencyWorkers int
+	occEnabled         bool
 }
 
 type appStore struct {
@@ -317,6 +319,11 @@ func (app *BaseApp) AppVersion() uint64 {
 // ConcurrencyWorkers returns the number of concurrent workers for the BaseApp.
 func (app *BaseApp) ConcurrencyWorkers() int {
 	return app.concurrencyWorkers
+}
+
+// OccEnabled returns the whether OCC is enabled for the BaseApp.
+func (app *BaseApp) OccEnabled() bool {
+	return app.occEnabled
 }
 
 // Version returns the application's version string.

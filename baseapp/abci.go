@@ -246,7 +246,6 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 		res.IsPendingTransaction = true
 		res.Checker = pendingTxChecker
 	}
-	res.ExpireTxHandler = expireTxHandler
 
 	return res, nil
 }

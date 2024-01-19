@@ -24,21 +24,22 @@ but please do not over-use it. We try to keep all data structured
 and standard additions here would be better just to add to the Context struct
 */
 type Context struct {
-	ctx              context.Context
-	ms               MultiStore
-	header           tmproto.Header
-	headerHash       tmbytes.HexBytes
-	chainID          string
-	txBytes          []byte
-	logger           log.Logger
-	voteInfo         []abci.VoteInfo
-	gasMeter         GasMeter
-	blockGasMeter    GasMeter
-	checkTx          bool
-	recheckTx        bool // if recheckTx == true, then checkTx must also be true
-	minGasPrice      DecCoins
-	consParams       *tmproto.ConsensusParams
-	eventManager     *EventManager
+	ctx           context.Context
+	ms            MultiStore
+	header        tmproto.Header
+	headerHash    tmbytes.HexBytes
+	chainID       string
+	txBytes       []byte
+	logger        log.Logger
+	voteInfo      []abci.VoteInfo
+	gasMeter      GasMeter
+	blockGasMeter GasMeter
+	checkTx       bool
+	recheckTx     bool // if recheckTx == true, then checkTx must also be true
+	minGasPrice   DecCoins
+	consParams    *tmproto.ConsensusParams
+	eventManager  *EventManager
+
 	priority         int64                 // The tx priority, only relevant in CheckTx
 	pendingTxChecker abci.PendingTxChecker // Checker for pending transaction, only relevant in CheckTx
 	checkTxCallback  func(error)           // callback to make at the end of CheckTx. Input param is the error (nil-able) of `runMsgs`
@@ -47,6 +48,11 @@ type Context struct {
 	txBlockingChannels   acltypes.MessageAccessOpsChannelMapping
 	txCompletionChannels acltypes.MessageAccessOpsChannelMapping
 	txMsgAccessOps       map[int][]acltypes.AccessOperation
+
+	// EVM properties
+	evm              bool   // EVM transaction flag
+	evmNonce         uint64 // EVM Transaction nonce
+	evmSenderAddress string // EVM Sender address
 
 	msgValidator *acltypes.MsgValidator
 	messageIndex int // Used to track current message being processed
@@ -121,6 +127,18 @@ func (c Context) Priority() int64 {
 
 func (c Context) ExpireTxHandler() abci.ExpireTxHandler {
 	return c.expireTxHandler
+}
+
+func (c Context) EVMSenderAddress() string {
+	return c.evmSenderAddress
+}
+
+func (c Context) EVMNonce() uint64 {
+	return c.evmNonce
+}
+
+func (c Context) IsEVM() bool {
+	return c.evm
 }
 
 func (c Context) PendingTxChecker() abci.PendingTxChecker {
@@ -361,6 +379,21 @@ func (c Context) WithMsgValidator(msgValidator *acltypes.MsgValidator) Context {
 
 func (c Context) WithTraceSpanContext(ctx context.Context) Context {
 	c.traceSpanContext = ctx
+	return c
+}
+
+func (c Context) WithEVMSenderAddress(address string) Context {
+	c.evmSenderAddress = address
+	return c
+}
+
+func (c Context) WithEVMNonce(nonce uint64) Context {
+	c.evmNonce = nonce
+	return c
+}
+
+func (c Context) WithIsEVM(isEVM bool) Context {
+	c.evm = isEVM
 	return c
 }
 

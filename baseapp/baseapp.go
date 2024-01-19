@@ -991,7 +991,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		msCache.Write()
 		anteEvents = events.ToABCIEvents()
 		anteSpan.End()
-		ctx.Logger().Info(fmt.Sprintf("Current gas at end of AnteHandler with tx index: %d, %d", ctx.TxIndex(), ctx.GasMeter().GasConsumed()))
+		if mode == runTxModeDeliver {
+			ctx.Logger().Info(fmt.Sprintf("Current gas at end of AnteHandler with tx index: %d, %d", ctx.TxIndex(), ctx.GasMeter().GasConsumed()))
+		}
 	}
 
 	// Create a new Context based off of the existing Context with a MultiStore branch

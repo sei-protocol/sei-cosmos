@@ -417,7 +417,7 @@ func (k BaseKeeper) DeferredSendCoinsFromAccountToModule(
 	if moduleAcc == nil {
 		panic(sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "module account %s does not exist", recipientModule))
 	}
-	fmt.Printf("Writing deferred balance for module %s, amount %s, txIndex %d\n", recipientModule, amount, ctx.TxIndex())
+	ctx.Logger().Info(fmt.Sprintf("Writing deferred balance for module %s, amount %s, txIndex %d\n", recipientModule, amount, ctx.TxIndex()))
 	// get txIndex
 	txIndex := ctx.TxIndex()
 	err = k.deferredCache.UpsertBalances(ctx, moduleAcc.GetAddress(), uint64(txIndex), amount)

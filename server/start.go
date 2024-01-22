@@ -197,10 +197,6 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 				return fmt.Errorf("failed to initialize telemetry: %w", err)
 			}
 
-			restartCoolDownDuration := time.Second * time.Duration(serverCtx.Config.SelfRemediation.RestartCooldownSeconds)
-			// Set the first restart time to be now - restartCoolDownDuration so that the first restart can trigger whenever
-			canRestartAfter := time.Now().Add(-restartCoolDownDuration)
-
 			serverCtx.Logger.Info("Starting Process")
 			for {
 				err = startInProcess(
@@ -210,7 +206,6 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 					tracerProviderOptions,
 					nodeMetricsProvider,
 					apiMetrics,
-					canRestartAfter,
 				)
 				errCode, ok := err.(ErrorCode)
 				exitCode = errCode.Code
@@ -221,7 +216,6 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 					break
 				}
 				serverCtx.Logger.Info("restarting node...")
-				canRestartAfter = time.Now().Add(restartCoolDownDuration)
 			}
 			return nil
 		},
@@ -314,7 +308,7 @@ func startStandAlone(ctx *Context, appCreator types.AppCreator) error {
 	restartCh := make(chan struct{})
 
 	// Wait for SIGINT or SIGTERM signal
-	return WaitForQuitSignals(ctx, restartCh, time.Now())
+	return WaitForQuitSignals(ctx, restartCh)
 }
 
 func startInProcess(
@@ -324,7 +318,6 @@ func startInProcess(
 	tracerProviderOptions []trace.TracerProviderOption,
 	nodeMetricsProvider *node.NodeMetrics,
 	apiMetrics *telemetry.Metrics,
-	canRestartAfter time.Time,
 ) error {
 	cfg := ctx.Config
 	home := cfg.RootDir
@@ -461,7 +454,7 @@ func startInProcess(
 	// we do not need to start Rosetta or handle any Tendermint related processes.
 	if gRPCOnly {
 		// wait for signal capture and gracefully return
-		return WaitForQuitSignals(ctx, restartCh, canRestartAfter)
+		return WaitForQuitSignals(ctx, restartCh)
 	}
 
 	var rosettaSrv crgserver.Server
@@ -534,5 +527,5 @@ func startInProcess(
 	}()
 
 	// wait for signal capture and gracefully return
-	return WaitForQuitSignals(ctx, restartCh, canRestartAfter)
+	return WaitForQuitSignals(ctx, restartCh)
 }

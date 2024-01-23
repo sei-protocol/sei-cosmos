@@ -192,6 +192,10 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	return NewCacheMergeIterator(parent, cache, ascending, store.storeKey)
 }
 
+func (store *Store) VersionExists(version int64) bool {
+	return store.parent.VersionExists(version)
+}
+
 func findStartIndex(strL []string, startQ string) int {
 	// Modified binary search to find the very first element in >=startQ.
 	if len(strL) == 0 {

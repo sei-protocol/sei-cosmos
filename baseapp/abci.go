@@ -912,7 +912,7 @@ func splitPath(requestPath string) (path []string) {
 }
 
 // ABCI++
-func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepareProposal) (*abci.ResponsePrepareProposal, error) {
+func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepareProposal) (resp *abci.ResponsePrepareProposal, err error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "prepare_proposal")
 
 	header := tmproto.Header{
@@ -946,18 +946,34 @@ func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepar
 
 	app.preparePrepareProposalState()
 
+	defer func() {
+		if err := recover(); err != nil {
+			app.logger.Error(
+				"panic recovered in PrepareProposal",
+				"height", req.Height,
+				"time", req.Time,
+				"panic", err,
+			)
+
+			// TODO(bez): Set records correctly.
+			resp = &abci.ResponsePrepareProposal{TxRecords: req.Txs}
+		}
+	}()
+
 	if app.prepareProposalHandler != nil {
-		res, err := app.prepareProposalHandler(app.prepareProposalState.ctx, req)
+		resp, err = app.prepareProposalHandler(app.prepareProposalState.ctx, req)
 		if err != nil {
 			return nil, err
 		}
+
 		if cp := app.GetConsensusParams(app.prepareProposalState.ctx); cp != nil {
-			res.ConsensusParamUpdates = cp
+			resp.ConsensusParamUpdates = cp
 		}
-		return res, nil
-	} else {
-		return nil, errors.New("no prepare proposal handler")
+
+		return resp, nil
 	}
+
+	return nil, errors.New("no prepare proposal handler")
 }
 
 func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProcessProposal) (*abci.ResponseProcessProposal, error) {

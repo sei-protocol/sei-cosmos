@@ -25,6 +25,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/legacytm"
+	"github.com/cosmos/cosmos-sdk/utils"
 )
 
 // InitChain implements the ABCI interface. It runs the initialization logic
@@ -955,8 +956,11 @@ func (app *BaseApp) PrepareProposal(ctx context.Context, req *abci.RequestPrepar
 				"panic", err,
 			)
 
-			// TODO(bez): Set records correctly.
-			resp = &abci.ResponsePrepareProposal{TxRecords: req.Txs}
+			resp = &abci.ResponsePrepareProposal{
+				TxRecords: utils.Map(req.Txs, func(tx []byte) *abci.TxRecord {
+					return &abci.TxRecord{Action: abci.TxRecord_UNMODIFIED, Tx: tx}
+				}),
+			}
 		}
 	}()
 

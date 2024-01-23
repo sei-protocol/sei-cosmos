@@ -247,6 +247,8 @@ type KVStore interface {
 	ReverseIterator(start, end []byte) Iterator
 
 	GetWorkingHash() ([]byte, error)
+
+	VersionExists(version int64) bool
 }
 
 // Iterator is an alias db's Iterator for convenience.

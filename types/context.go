@@ -102,10 +102,6 @@ func (c Context) GasMeter() GasMeter {
 	return c.gasMeter
 }
 
-func (c Context) BlockGasMeter() GasMeter {
-	return c.blockGasMeter
-}
-
 func (c Context) IsCheckTx() bool {
 	return c.checkTx
 }
@@ -304,12 +300,6 @@ func (c Context) WithVoteInfos(voteInfo []abci.VoteInfo) Context {
 // WithGasMeter returns a Context with an updated transaction GasMeter.
 func (c Context) WithGasMeter(meter GasMeter) Context {
 	c.gasMeter = meter
-	return c
-}
-
-// WithBlockGasMeter returns a Context with an updated block GasMeter
-func (c Context) WithBlockGasMeter(meter GasMeter) Context {
-	c.blockGasMeter = meter
 	return c
 }
 

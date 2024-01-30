@@ -145,6 +145,12 @@ type MultiStore interface {
 
 	// Resets the tracked event list
 	ResetEvents()
+
+	// SetKVStores is a generalized wrapper method
+	SetKVStores(handler func(key StoreKey, s KVStore) CacheWrap) MultiStore
+
+	// StoreKeys returns a list of store keys
+	StoreKeys() []StoreKey
 }
 
 // From MultiStore.CacheMultiStore()....
@@ -247,6 +253,10 @@ type KVStore interface {
 	ReverseIterator(start, end []byte) Iterator
 
 	GetWorkingHash() ([]byte, error)
+
+	VersionExists(version int64) bool
+
+	DeleteAll(start, end []byte) error
 }
 
 // Iterator is an alias db's Iterator for convenience.

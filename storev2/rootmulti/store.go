@@ -93,17 +93,20 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	if !bumpVersion {
 		return rs.lastCommitInfo.CommitID()
 	}
+	rs.mtx.RLock()
 	if err := rs.flush(); err != nil {
 		panic(err)
 	}
 
-	rs.mtx.Lock()
-	defer rs.mtx.Unlock()
-	for _, store := range rs.ckvStores {
+	iavlStoreKeys := make([]types.StoreKey, 0)
+	for key, store := range rs.ckvStores {
 		if store.GetStoreType() != types.StoreTypeIAVL {
 			_ = store.Commit(bumpVersion)
+		} else {
+			iavlStoreKeys = append(iavlStoreKeys, key)
 		}
 	}
+	rs.mtx.RUnlock()
 	// Commit to SC Store
 	_, err := rs.scStore.Commit()
 	if err != nil {
@@ -111,13 +114,12 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	}
 
 	// The underlying sc store might be reloaded, reload the store as well.
-	for key := range rs.ckvStores {
-		store := rs.ckvStores[key]
-		if store.GetStoreType() == types.StoreTypeIAVL {
-			rs.ckvStores[key], err = rs.loadCommitStoreFromParams(key, rs.storesParams[key])
-			if err != nil {
-				panic(fmt.Errorf("inconsistent store map, store %s not found", key.Name()))
-			}
+	for _, key := range iavlStoreKeys {
+		rs.mtx.Lock()
+		rs.ckvStores[key], err = rs.loadCommitStoreFromParams(key, rs.storesParams[key])
+		rs.mtx.Unlock()
+		if err != nil {
+			panic(fmt.Errorf("inconsistent store map, store %s not found", key.Name()))
 		}
 	}
 
@@ -262,11 +264,15 @@ func (rs *Store) CacheMultiStoreWithVersion(version int64) (types.CacheMultiStor
 
 // GetStore Implements interface MultiStore
 func (rs *Store) GetStore(key types.StoreKey) types.Store {
+	rs.mtx.RLock()
+	defer rs.mtx.RUnlock()
 	return rs.ckvStores[key]
 }
 
 // GetKVStore Implements interface MultiStore
 func (rs *Store) GetKVStore(key types.StoreKey) types.KVStore {
+	rs.mtx.RLock()
+	defer rs.mtx.RUnlock()
 	return rs.ckvStores[key]
 }
 
@@ -317,6 +323,8 @@ func (rs *Store) GetCommitStore(key types.StoreKey) types.CommitStore {
 
 // GetCommitKVStore Implements interface CommitMultiStore
 func (rs *Store) GetCommitKVStore(key types.StoreKey) types.CommitKVStore {
+	rs.mtx.RLock()
+	defer rs.mtx.RUnlock()
 	return rs.ckvStores[key]
 }
 
@@ -380,7 +388,6 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 			return err
 		}
 	}
-
 	rs.mtx.Lock()
 	defer rs.mtx.Unlock()
 	rs.ckvStores = newStores
@@ -599,6 +606,8 @@ func convertCommitInfo(commitInfo *proto.CommitInfo) *types.CommitInfo {
 
 // GetWorkingHash returns the working app hash
 func (rs *Store) GetWorkingHash() ([]byte, error) {
+	rs.mtx.RLock()
+	defer rs.mtx.RUnlock()
 	if err := rs.flush(); err != nil {
 		return nil, err
 	}

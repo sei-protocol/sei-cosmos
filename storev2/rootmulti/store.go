@@ -144,9 +144,8 @@ func (rs *Store) StateStoreCommit() {
 func (rs *Store) flush() error {
 	var changeSets []*proto.NamedChangeSet
 	currentVersion := rs.lastCommitInfo.Version
-	for key := range rs.ckvStores {
+	for key, store := range rs.ckvStores {
 		// it'll unwrap the inter-block cache
-		store := rs.GetCommitKVStore(key)
 		if commitStore, ok := store.(*commitment.Store); ok {
 			cs := commitStore.PopChangeSet()
 			if len(cs.Pairs) > 0 {

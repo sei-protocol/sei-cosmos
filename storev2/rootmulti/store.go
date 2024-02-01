@@ -509,7 +509,6 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 		store = types.Queryable(commitment.NewStore(scStore.GetTreeByName(storeName), rs.logger))
 		commitInfo = convertCommitInfo(scStore.LastCommitInfo())
 		commitInfo = amendCommitInfo(commitInfo, rs.storesParams)
-
 	} else {
 		// Serve directly from latest sc store
 		store = types.Queryable(commitment.NewStore(rs.scStore.GetTreeByName(storeName), rs.logger))

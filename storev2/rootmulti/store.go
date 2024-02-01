@@ -521,7 +521,7 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 
 	if !req.Prove || !rootmulti.RequireProof(subPath) {
 		return res
-	} else {
+	} else if commitInfo != nil {
 		// Restore origin path and append proof op.
 		res.ProofOps.Ops = append(res.ProofOps.Ops, commitInfo.ProofOp(storeName))
 	}

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/tendermint/tendermint/abci/types"
 	"go.opentelemetry.io/otel/attribute"
@@ -170,10 +171,16 @@ func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+	startTime := time.Now()
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
+	prefillStart := time.Now()
 	s.PrefillEstimates(ctx, reqs)
+	prefillLatency := time.Since(prefillStart)
+	defer func() {
+		fmt.Printf("[Debug] ProcessAll %d txs took %s, prefill took %s", len(reqs), time.Since(startTime), prefillLatency)
+	}()
 	tasks := toTasks(reqs)
 	toExecute := tasks
 	for !allValidated(tasks) {

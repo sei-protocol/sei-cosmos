@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
@@ -201,16 +200,15 @@ func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry
 	}
 }
 
-var TOTAL_PREPARE_LATENCY = atomic.Int64{}
-
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Debug] ProcessAll %d txs took %s\n", len(reqs), time.Since(startTime))
+	}()
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
-	// prefill estimates
-	prefillStart := time.Now()
 	s.PrefillEstimates(ctx, reqs)
-	prefillLatency := time.Since(prefillStart).Microseconds()
+
 	tasks := toTasks(reqs)
 	s.allTasks = tasks
 	s.executeCh = make(chan func(), len(tasks))
@@ -254,12 +252,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
-	totalLatency := time.Since(startTime).Microseconds()
-	if len(reqs) > 0 {
-		fmt.Printf("[OCC-Debug] Num workers: %d, Total ProcessAll %d txs latency is: %dus, Prefill latency: %dus, ExecuteAll latency: %dus, ValidateAll latency: %dus\n", s.workers, len(reqs), totalLatency, prefillLatency, totalExecuteAllLatency, totalValidateAllLatency)
-		fmt.Printf("[OCC-Debug] Total prepareTask latency for %d txs: %dus\n", len(reqs), TOTAL_PREPARE_LATENCY.Load())
-		TOTAL_PREPARE_LATENCY.Store(0)
-	}
 	return collectResponses(tasks), nil
 }
 
@@ -299,10 +291,9 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 }
 
 func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
-	//_, span := s.traceSpan(ctx, "SchedulerValidate", task)
-	//defer span.End()
 
 	if s.shouldRerun(task) {
+
 		return false
 	}
 	return true
@@ -388,23 +379,8 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 	}()
 }
 
-//func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
-//	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
-//	if task != nil {
-//		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
-//		span.SetAttributes(attribute.Int("txIndex", task.Index))
-//		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
-//	}
-//	ctx = ctx.WithTraceSpanContext(spanCtx)
-//	return ctx, span
-//}
-
 // prepareTask initializes the context and version stores for a task
 func (s *scheduler) prepareTask(ctx sdk.Context, task *deliverTxTask) {
-	startPrepareTime := time.Now()
-	defer func() {
-		TOTAL_PREPARE_LATENCY.Add(time.Since(startPrepareTime).Microseconds())
-	}()
 	ctx = ctx.WithTxIndex(task.Index)
 
 	//_, span := s.traceSpan(ctx, "SchedulerPrepare", task)

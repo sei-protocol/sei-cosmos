@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/tasks"
+
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -68,11 +70,6 @@ func (app *BaseApp) InitChain(ctx context.Context, req *abci.RequestInitChain) (
 	if app.initChainer == nil {
 		return
 	}
-
-	// add block gas meter for any genesis transactions (allow infinite gas)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-	app.prepareProposalState.ctx = app.prepareProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-	app.processProposalState.ctx = app.processProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 
 	resp := app.initChainer(app.deliverState.ctx, *req)
 	app.initChainer(app.prepareProposalState.ctx, *req)
@@ -235,11 +232,31 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	}, nil
 }
 
+// DeliverTxBatch executes multiple txs
+func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
+	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
+	// This will basically no-op the actual prefill if the metadata for the txs is empty
+
+	// process all txs, this will also initializes the MVS if prefill estimates was disabled
+	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
+	if err != nil {
+		// TODO: handle error
+	}
+
+	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
+	for _, tx := range txRes {
+		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
+	}
+	return sdk.DeliverTxBatchResponse{Results: responses}
+}
+
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.
 // State only gets persisted if all messages are valid and get executed successfully.
-// Otherwise, the ResponseDeliverTx will contain releveant error information.
+// Otherwise, the ResponseDeliverTx will contain relevant error information.
 // Regardless of tx execution outcome, the ResponseDeliverTx will contain relevant
 // gas execution context.
+// TODO: (occ) this is the function called from sei-chain to perform execution of a transaction.
+// We'd likely replace this with an execution tasks that is scheduled by the OCC scheduler
 func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
 	defer func() {
@@ -1012,16 +1029,9 @@ func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProces
 		app.setProcessProposalHeader(header)
 	}
 
-	// add block gas meter
-	var gasMeter sdk.GasMeter
-	if maxGas := app.getMaximumBlockGas(app.processProposalState.ctx); maxGas > 0 {
-		gasMeter = sdk.NewGasMeter(maxGas)
-	} else {
-		gasMeter = sdk.NewInfiniteGasMeter()
-	}
-
 	// NOTE: header hash is not set in NewContext, so we manually set it here
-	app.prepareProcessProposalState(gasMeter, req.Hash)
+
+	app.prepareProcessProposalState(req.Hash)
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -1094,22 +1104,14 @@ func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalize
 		app.setDeliverStateHeader(header)
 	}
 
-	// add block gas meter
-	var gasMeter sdk.GasMeter
-	if maxGas := app.getMaximumBlockGas(app.deliverState.ctx); maxGas > 0 {
-		gasMeter = sdk.NewGasMeter(maxGas)
-	} else {
-		gasMeter = sdk.NewInfiniteGasMeter()
-	}
-
 	// NOTE: header hash is not set in NewContext, so we manually set it here
 
-	app.prepareDeliverState(gasMeter, req.Hash)
+	app.prepareDeliverState(req.Hash)
 
 	// we also set block gas meter to checkState in case the application needs to
 	// verify gas consumption during (Re)CheckTx
 	if app.checkState != nil {
-		app.checkState.SetContext(app.checkState.ctx.WithBlockGasMeter(gasMeter).WithHeaderHash(req.Hash))
+		app.checkState.SetContext(app.checkState.ctx.WithHeaderHash(req.Hash))
 	}
 
 	if app.finalizeBlocker != nil {

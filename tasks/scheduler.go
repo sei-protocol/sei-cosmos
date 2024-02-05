@@ -1,7 +1,9 @@
 package tasks
 
 import (
+	"fmt"
 	"sort"
+	"time"
 
 	"github.com/tendermint/tendermint/abci/types"
 	"golang.org/x/sync/errgroup"
@@ -162,6 +164,10 @@ func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Debug] ProcessAll %d txs took %s\n", len(reqs), time.Since(startTime))
+	}()
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates

@@ -880,11 +880,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 		gInfo = sdk.GasInfo{GasWanted: gasWanted, GasUsed: ctx.GasMeter().GasConsumed()}
 	}()
 
-	tx, err := app.txDecoder(txBytes)
-	if err != nil {
-		return sdk.GasInfo{}, nil, nil, 0, err
-	}
-
 	msgs := tx.GetMsgs()
 
 	if err := validateBasicTxMsgs(msgs); err != nil {

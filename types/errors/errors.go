@@ -147,7 +147,7 @@ var (
 	// ErrInvalidConcurrency defines an error occurred during concurrent execution
 	ErrInvalidConcurrencyExecution = Register(RootCodespace, 41, "error during concurrent execution")
 
-	// ErrAlreadyExists defines an error for which the tx is considered as a spam because the node has already seen it before
+	// ErrAlreadyExists defines an error for which the tx failed checkTx because the node has already seen it before
 	ErrAlreadyExists = Register(RootCodespace, 42, "error tx already exists")
 
 	// ErrPanic is only set when we recover from a panic, so we know to

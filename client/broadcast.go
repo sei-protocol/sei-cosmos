@@ -142,6 +142,9 @@ func (ctx Context) BroadcastTxSync(txBytes []byte) (*sdk.TxResponse, error) {
 	}
 
 	res, err := node.BroadcastTxSync(context.Background(), txBytes)
+	if res.Code == 18 {
+		fmt.Printf("Got failed broadcast response: %v, err %v \n", res, err)
+	}
 	if errRes := CheckTendermintError(err, txBytes); errRes != nil {
 		return errRes, nil
 	}

@@ -532,13 +532,9 @@ func (k Keeper) UpdateWritesetsWithAccessOps(accessOps []acltypes.AccessOperatio
 }
 
 // GenerateEstimatedWritesets utilizes the existing patterns for access operation generation to estimate the writesets for a transaction
-func (k Keeper) GenerateEstimatedWritesets(ctx sdk.Context, txDecoder sdk.TxDecoder, anteDepGen sdk.AnteDepGenerator, txIndex int, txBytes []byte) (sdk.MappedWritesets, error) {
+func (k Keeper) GenerateEstimatedWritesets(ctx sdk.Context, anteDepGen sdk.AnteDepGenerator, txIndex int, tx sdk.Tx) (sdk.MappedWritesets, error) {
 	storeKeyMap := k.GetStoreKeyMap(ctx)
 	writesets := make(sdk.MappedWritesets)
-	tx, err := txDecoder(txBytes)
-	if err != nil {
-		return nil, err
-	}
 	// generate antedeps accessOps for tx
 	anteDeps, err := anteDepGen([]acltypes.AccessOperation{}, tx, txIndex)
 	if err != nil {
@@ -556,11 +552,11 @@ func (k Keeper) GenerateEstimatedWritesets(ctx sdk.Context, txDecoder sdk.TxDeco
 	return writesets, nil
 }
 
-func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, anteDepGen sdk.AnteDepGenerator, txs [][]byte) (*types.Dag, error) {
+func (k Keeper) BuildDependencyDag(ctx sdk.Context, anteDepGen sdk.AnteDepGenerator, typedTxs []sdk.Tx) (*types.Dag, error) {
 	defer MeasureBuildDagDuration(time.Now(), "BuildDependencyDag")
 	// contains the latest msg index for a specific Access Operation
 	dependencyDag := types.NewDag()
-	for txIndex, tx := range txs {
+	for txIndex, tx := range typedTxs {
 		if tx == nil {
 			// this implies decoding error
 			return nil, sdkerrors.ErrTxDecode

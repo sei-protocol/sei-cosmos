@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"sort"
 	"sync"
@@ -46,6 +45,9 @@ type deliverTxTask struct {
 	Index         int
 	Incarnation   int
 	Request       types.RequestDeliverTx
+	TypedTx       sdk.Tx
+	Checksum      [32]byte
+	AbsoluteIndex int
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
 	ValidateCh    chan status
@@ -71,7 +73,7 @@ type Scheduler interface {
 }
 
 type scheduler struct {
-	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)
+	deliverTx          func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx)
 	workers            int
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 	tracingInfo        *tracing.Info
@@ -81,7 +83,7 @@ type scheduler struct {
 }
 
 // NewScheduler creates a new scheduler
-func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx)) Scheduler {
+func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx)) Scheduler {
 	return &scheduler{
 		workers:     workers,
 		deliverTx:   deliverTxFunc,
@@ -143,10 +145,13 @@ func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 	res := make([]*deliverTxTask, 0, len(reqs))
 	for idx, r := range reqs {
 		res = append(res, &deliverTxTask{
-			Request:    r.Request,
-			Index:      idx,
-			Status:     statusPending,
-			ValidateCh: make(chan status, 1),
+			Request:       r.Request,
+			TypedTx:       r.SdkTx,
+			Checksum:      r.Checksum,
+			AbsoluteIndex: r.AbsoluteIndex,
+			Index:         idx,
+			Status:        statusPending,
+			ValidateCh:    make(chan status, 1),
 		})
 	}
 	return res
@@ -401,7 +406,7 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask) (sdk.Context, trace.Span) {
 	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
 	if task != nil {
-		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
+		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", task.Checksum)))
 		span.SetAttributes(attribute.Int("txIndex", task.Index))
 		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
 	}
@@ -455,7 +460,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	// Run deliverTx in a separate goroutine
 	go func() {
-		doneCh <- s.deliverTx(task.Ctx, task.Request)
+		doneCh <- s.deliverTx(task.Ctx.WithTxIndex(task.AbsoluteIndex), task.Request, task.TypedTx, task.Checksum)
 	}()
 
 	// Flag to mark if abort has happened

@@ -10,6 +10,7 @@ import (
 type DeliverTxEntry struct {
 	Request            abci.RequestDeliverTx
 	EstimatedWritesets MappedWritesets
+	TypedTx            Tx
 }
 
 // EstimatedWritesets represents an estimated writeset for a transaction mapped by storekey to the writeset estimate.

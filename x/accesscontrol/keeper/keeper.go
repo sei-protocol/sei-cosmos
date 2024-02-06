@@ -556,11 +556,11 @@ func (k Keeper) GenerateEstimatedWritesets(ctx sdk.Context, txDecoder sdk.TxDeco
 	return writesets, nil
 }
 
-func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, anteDepGen sdk.AnteDepGenerator, txs [][]byte) (*types.Dag, error) {
+func (k Keeper) BuildDependencyDag(ctx sdk.Context, anteDepGen sdk.AnteDepGenerator, typedTxs []sdk.Tx) (*types.Dag, error) {
 	defer MeasureBuildDagDuration(time.Now(), "BuildDependencyDag")
 	// contains the latest msg index for a specific Access Operation
 	dependencyDag := types.NewDag()
-	for txIndex, tx := range txs {
+	for txIndex, tx := range typedTxs {
 		if tx == nil {
 			// this implies decoding error
 			return nil, sdkerrors.ErrTxDecode

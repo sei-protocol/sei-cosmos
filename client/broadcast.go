@@ -143,7 +143,7 @@ func (ctx Context) BroadcastTxSync(txBytes []byte) (*sdk.TxResponse, error) {
 
 	res, err := node.BroadcastTxSync(context.Background(), txBytes)
 	if res.Code == 18 {
-		fmt.Printf("Got failed broadcast response: %v, err %v \n", res, err)
+		fmt.Printf("[Debug] Got failed broadcast response: %v, err %v \n", res, err)
 	}
 	if errRes := CheckTendermintError(err, txBytes); errRes != nil {
 		return errRes, nil
@@ -161,6 +161,9 @@ func (ctx Context) BroadcastTxAsync(txBytes []byte) (*sdk.TxResponse, error) {
 	}
 
 	res, err := node.BroadcastTxAsync(context.Background(), txBytes)
+	if res.Code == 18 {
+		fmt.Printf("[Debug] Got failed broadcast response: %v, err %v \n", res, err)
+	}
 	if errRes := CheckTendermintError(err, txBytes); errRes != nil {
 		return errRes, nil
 	}

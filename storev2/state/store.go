@@ -98,7 +98,6 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	if req.Height > 0 && req.Height > st.version {
 		return sdkerrors.QueryResult(errors.Wrap(sdkerrors.ErrInvalidHeight, "invalid height"))
 	}
-	res.Height = st.version
 	switch req.Path {
 	case "/key": // get by key
 		res.Key = req.Data // data holds the key bytes

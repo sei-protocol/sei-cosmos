@@ -161,7 +161,7 @@ func (rs *Store) flush() error {
 		})
 		if rs.ssStore != nil {
 			rs.pendingChanges <- VersionedChangesets{
-				Version:    currentVersion,
+				Version:    currentVersion + 1,
 				Changesets: changeSets,
 			}
 		}

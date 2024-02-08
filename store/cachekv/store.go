@@ -56,8 +56,6 @@ func (store *Store) GetEvents() []abci.Event {
 
 // Implements Store
 func (store *Store) ResetEvents() {
-	store.mtx.Lock()
-	defer store.mtx.Unlock()
 	store.eventManager = sdktypes.NewEventManager()
 }
 
@@ -77,7 +75,6 @@ func (store *Store) getFromCache(key []byte) []byte {
 // Get implements types.KVStore.
 func (store *Store) Get(key []byte) (value []byte) {
 	types.AssertValidKey(key)
-	store.eventManager.EmitResourceAccessReadEvent("get", store.storeKey, key, value)
 	return store.getFromCache(key)
 }
 
@@ -86,13 +83,11 @@ func (store *Store) Set(key []byte, value []byte) {
 	types.AssertValidKey(key)
 	types.AssertValidValue(value)
 	store.setCacheValue(key, value, false, true)
-	store.eventManager.EmitResourceAccessWriteEvent("set", store.storeKey, key, value)
 }
 
 // Has implements types.KVStore.
 func (store *Store) Has(key []byte) bool {
 	value := store.Get(key)
-	store.eventManager.EmitResourceAccessReadEvent("has", store.storeKey, key, value)
 	return value != nil
 }
 
@@ -194,7 +189,11 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	}()
 	store.dirtyItems(start, end)
 	cache = newMemIterator(start, end, store.sortedCache, store.deleted, ascending, store.eventManager, store.storeKey)
-	return NewCacheMergeIterator(parent, cache, ascending, store.storeKey, store.eventManager)
+	return NewCacheMergeIterator(parent, cache, ascending, store.storeKey)
+}
+
+func (store *Store) VersionExists(version int64) bool {
+	return store.parent.VersionExists(version)
 }
 
 func findStartIndex(strL []string, startQ string) int {
@@ -363,4 +362,23 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 func (store *Store) isDeleted(key string) bool {
 	_, ok := store.deleted.Load(key)
 	return ok
+}
+
+func (store *Store) GetParent() types.KVStore {
+	return store.parent
+}
+
+func (store *Store) DeleteAll(start, end []byte) error {
+	store.dirtyItems(start, end)
+	// memdb iterator
+	cachedIter, err := store.sortedCache.Iterator(start, end)
+	if err != nil {
+		return err
+	}
+	defer cachedIter.Close()
+	for ; cachedIter.Valid(); cachedIter.Next() {
+		// `Delete` would not touch sortedCache so it's okay to perform inside iterator
+		store.Delete(cachedIter.Key())
+	}
+	return nil
 }

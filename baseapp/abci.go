@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/tasks"
+
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -68,11 +70,6 @@ func (app *BaseApp) InitChain(ctx context.Context, req *abci.RequestInitChain) (
 	if app.initChainer == nil {
 		return
 	}
-
-	// add block gas meter for any genesis transactions (allow infinite gas)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-	app.prepareProposalState.ctx = app.prepareProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
-	app.processProposalState.ctx = app.processProposalState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 
 	resp := app.initChainer(app.deliverState.ctx, *req)
 	app.initChainer(app.prepareProposalState.ctx, *req)
@@ -205,7 +202,7 @@ func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abc
 // internal CheckTx state if the AnteHandler passes. Otherwise, the ResponseCheckTx
 // will contain releveant error information. Regardless of tx execution outcome,
 // the ResponseCheckTx will contain relevant gas execution context.
-func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error) {
+func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTxV2, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "check_tx")
 
 	var mode runTxMode
@@ -222,25 +219,60 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	}
 
 	sdkCtx := app.getContextForTx(mode, req.Tx)
-	gInfo, result, _, priority, err := app.runTx(sdkCtx, mode, req.Tx)
+	tx, err := app.txDecoder(req.Tx)
+	if err != nil {
+		res := sdkerrors.ResponseCheckTx(err, 0, 0, app.trace)
+		return &abci.ResponseCheckTxV2{ResponseCheckTx: &res}, err
+	}
+	gInfo, result, _, priority, pendingTxChecker, expireTxHandler, txCtx, err := app.runTx(sdkCtx, mode, tx, sha256.Sum256(req.Tx))
 	if err != nil {
 		res := sdkerrors.ResponseCheckTx(err, gInfo.GasWanted, gInfo.GasUsed, app.trace)
-		return &res, err
+		return &abci.ResponseCheckTxV2{ResponseCheckTx: &res}, err
 	}
 
-	return &abci.ResponseCheckTx{
-		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
-		Data:      result.Data,
-		Priority:  priority,
-	}, nil
+	res := &abci.ResponseCheckTxV2{
+		ResponseCheckTx: &abci.ResponseCheckTx{
+			GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
+			Data:      result.Data,
+			Priority:  priority,
+		},
+		ExpireTxHandler:  expireTxHandler,
+		EVMNonce:         txCtx.EVMNonce(),
+		EVMSenderAddress: txCtx.EVMSenderAddress(),
+		IsEVM:            txCtx.IsEVM(),
+	}
+	if pendingTxChecker != nil {
+		res.IsPendingTransaction = true
+		res.Checker = pendingTxChecker
+	}
+
+	return res, nil
+}
+
+// DeliverTxBatch executes multiple txs
+func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
+	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
+	// This will basically no-op the actual prefill if the metadata for the txs is empty
+
+	// process all txs, this will also initializes the MVS if prefill estimates was disabled
+	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
+	if err != nil {
+		// TODO: handle error
+	}
+
+	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
+	for _, tx := range txRes {
+		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
+	}
+	return sdk.DeliverTxBatchResponse{Results: responses}
 }
 
 // DeliverTx implements the ABCI interface and executes a tx in DeliverTx mode.
 // State only gets persisted if all messages are valid and get executed successfully.
-// Otherwise, the ResponseDeliverTx will contain releveant error information.
+// Otherwise, the ResponseDeliverTx will contain relevant error information.
 // Regardless of tx execution outcome, the ResponseDeliverTx will contain relevant
 // gas execution context.
-func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res abci.ResponseDeliverTx) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
 	defer func() {
 		for _, streamingListener := range app.abciListeners {
@@ -260,7 +292,7 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 		telemetry.SetGauge(float32(gInfo.GasWanted), "tx", "gas", "wanted")
 	}()
 
-	gInfo, result, anteEvents, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
+	gInfo, result, anteEvents, _, _, _, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, tx, checksum)
 	if err != nil {
 		resultStr = "failed"
 		// if we have a result, use those events instead of just the anteEvents
@@ -1012,16 +1044,9 @@ func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProces
 		app.setProcessProposalHeader(header)
 	}
 
-	// add block gas meter
-	var gasMeter sdk.GasMeter
-	if maxGas := app.getMaximumBlockGas(app.processProposalState.ctx); maxGas > 0 {
-		gasMeter = sdk.NewGasMeter(maxGas)
-	} else {
-		gasMeter = sdk.NewInfiniteGasMeter()
-	}
-
 	// NOTE: header hash is not set in NewContext, so we manually set it here
-	app.prepareProcessProposalState(gasMeter, req.Hash)
+
+	app.prepareProcessProposalState(req.Hash)
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -1094,22 +1119,14 @@ func (app *BaseApp) FinalizeBlock(ctx context.Context, req *abci.RequestFinalize
 		app.setDeliverStateHeader(header)
 	}
 
-	// add block gas meter
-	var gasMeter sdk.GasMeter
-	if maxGas := app.getMaximumBlockGas(app.deliverState.ctx); maxGas > 0 {
-		gasMeter = sdk.NewGasMeter(maxGas)
-	} else {
-		gasMeter = sdk.NewInfiniteGasMeter()
-	}
-
 	// NOTE: header hash is not set in NewContext, so we manually set it here
 
-	app.prepareDeliverState(gasMeter, req.Hash)
+	app.prepareDeliverState(req.Hash)
 
 	// we also set block gas meter to checkState in case the application needs to
 	// verify gas consumption during (Re)CheckTx
 	if app.checkState != nil {
-		app.checkState.SetContext(app.checkState.ctx.WithBlockGasMeter(gasMeter).WithHeaderHash(req.Hash))
+		app.checkState.SetContext(app.checkState.ctx.WithHeaderHash(req.Hash))
 	}
 
 	if app.finalizeBlocker != nil {

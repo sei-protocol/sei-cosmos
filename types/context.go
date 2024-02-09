@@ -39,11 +39,20 @@ type Context struct {
 	minGasPrice  DecCoins
 	consParams   *tmproto.ConsensusParams
 	eventManager *EventManager
-	priority     int64 // The tx priority, only relevant in CheckTx
+
+	priority         int64                 // The tx priority, only relevant in CheckTx
+	pendingTxChecker abci.PendingTxChecker // Checker for pending transaction, only relevant in CheckTx
+	checkTxCallback  func(error)           // callback to make at the end of CheckTx. Input param is the error (nil-able) of `runMsgs`
+	expireTxHandler  func()                // callback that the mempool invokes when a tx is expired
 
 	txBlockingChannels   acltypes.MessageAccessOpsChannelMapping
 	txCompletionChannels acltypes.MessageAccessOpsChannelMapping
 	txMsgAccessOps       map[int][]acltypes.AccessOperation
+
+	// EVM properties
+	evm              bool   // EVM transaction flag
+	evmNonce         uint64 // EVM Transaction nonce
+	evmSenderAddress string // EVM Sender address
 
 	msgValidator *acltypes.MsgValidator
 	messageIndex int // Used to track current message being processed
@@ -114,6 +123,30 @@ func (c Context) EventManager() *EventManager {
 
 func (c Context) Priority() int64 {
 	return c.priority
+}
+
+func (c Context) ExpireTxHandler() abci.ExpireTxHandler {
+	return c.expireTxHandler
+}
+
+func (c Context) EVMSenderAddress() string {
+	return c.evmSenderAddress
+}
+
+func (c Context) EVMNonce() uint64 {
+	return c.evmNonce
+}
+
+func (c Context) IsEVM() bool {
+	return c.evm
+}
+
+func (c Context) PendingTxChecker() abci.PendingTxChecker {
+	return c.pendingTxChecker
+}
+
+func (c Context) CheckTxCallback() func(error) {
+	return c.checkTxCallback
 }
 
 func (c Context) TxCompletionChannels() acltypes.MessageAccessOpsChannelMapping {
@@ -346,6 +379,36 @@ func (c Context) WithMsgValidator(msgValidator *acltypes.MsgValidator) Context {
 
 func (c Context) WithTraceSpanContext(ctx context.Context) Context {
 	c.traceSpanContext = ctx
+	return c
+}
+
+func (c Context) WithEVMSenderAddress(address string) Context {
+	c.evmSenderAddress = address
+	return c
+}
+
+func (c Context) WithEVMNonce(nonce uint64) Context {
+	c.evmNonce = nonce
+	return c
+}
+
+func (c Context) WithIsEVM(isEVM bool) Context {
+	c.evm = isEVM
+	return c
+}
+
+func (c Context) WithPendingTxChecker(checker abci.PendingTxChecker) Context {
+	c.pendingTxChecker = checker
+	return c
+}
+
+func (c Context) WithCheckTxCallback(checkTxCallback func(error)) Context {
+	c.checkTxCallback = checkTxCallback
+	return c
+}
+
+func (c Context) WithExpireTxHandler(expireTxHandler func()) Context {
+	c.expireTxHandler = expireTxHandler
 	return c
 }
 

@@ -155,11 +155,16 @@ func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 	return res
 }
 
-func collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
+func (s *scheduler) collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
+	var maxIncarnation int
 	for _, t := range tasks {
+		if t.Incarnation > maxIncarnation {
+			maxIncarnation = t.Incarnation
+		}
 		res = append(res, *t.Response)
 	}
+	s.metrics.maxIncarnation = maxIncarnation
 	return res
 }
 
@@ -263,15 +268,12 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			return nil, err
 		}
 		// these are retries which apply to metrics
-		if len(toExecute) > 0 {
-			s.metrics.retries += len(toExecute)
-			s.metrics.maxIncarnation = toExecute[0].Incarnation
-		}
+		s.metrics.retries += len(toExecute)
 	}
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
-	return collectResponses(tasks), nil
+	return s.collectResponses(tasks), nil
 }
 
 func (s *scheduler) shouldRerun(task *deliverTxTask) bool {

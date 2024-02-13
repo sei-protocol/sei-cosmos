@@ -23,6 +23,8 @@ type SendKeeper interface {
 	SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int, wei sdk.Int) error
 	SubUnlockedCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error
 	AddCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error
+	SubWei(ctx sdk.Context, addr sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int) error
+	AddWei(ctx sdk.Context, addr sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int) error
 
 	GetParams(ctx sdk.Context) types.Params
 	SetParams(ctx sdk.Context, params types.Params)
@@ -330,51 +332,72 @@ func (k BaseSendKeeper) BlockedAddr(addr sdk.AccAddress) bool {
 	return k.blockedAddrs[addr.String()]
 }
 
-func (k BaseSendKeeper) SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int, wei sdk.Int) error {
-	if wei.Equal(sdk.ZeroInt()) {
-		if amt.Equal(sdk.ZeroInt()) {
-			return nil
-		}
-		return k.SendCoinsWithoutAccCreation(ctx, from, to, sdk.NewCoins(sdk.NewCoin(denom, amt)))
+func (k BaseSendKeeper) SubWei(ctx sdk.Context, addr sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int) error {
+	if amt.Equal(sdk.ZeroInt()) {
+		return nil
 	}
-	if wei.GTE(MaxWeiBalance) {
+	if amt.GTE(MaxWeiBalance) {
 		return errors.New("cannot send more than 10^12 wei")
 	}
 	escrow := customEscrow
 	if escrow == nil {
 		escrow = k.ak.GetModuleAddress(types.WeiEscrowName)
 	}
-	currentWeiBalanceFrom := k.GetWeiBalance(ctx, from)
-	postWeiBalanceFrom := currentWeiBalanceFrom.Sub(wei)
-	if postWeiBalanceFrom.GTE(sdk.ZeroInt()) {
-		if err := k.setWeiBalance(ctx, from, postWeiBalanceFrom); err != nil {
+	currentWeiBalance := k.GetWeiBalance(ctx, addr)
+	postWeiBalance := currentWeiBalance.Sub(amt)
+	if postWeiBalance.GTE(sdk.ZeroInt()) {
+		if err := k.setWeiBalance(ctx, addr, postWeiBalance); err != nil {
 			return err
 		}
 	} else {
-		if err := k.setWeiBalance(ctx, from, MaxWeiBalance.Add(postWeiBalanceFrom)); err != nil {
+		if err := k.setWeiBalance(ctx, addr, MaxWeiBalance.Add(postWeiBalance)); err != nil {
 			// postWeiBalanceFrom is negative
 			return err
 		}
 		// need to send one sei to escrow because wei balance is insufficient
-		if err := k.sendCoinsWithoutAccCreation(ctx, from, escrow, sdk.NewCoins(sdk.NewCoin(denom, sdk.OneInt())), false); err != nil {
+		if err := k.sendCoinsWithoutAccCreation(ctx, addr, escrow, sdk.NewCoins(sdk.NewCoin(denom, sdk.OneInt())), false); err != nil {
 			return err
 		}
 	}
-	currentWeiBalanceTo := k.GetWeiBalance(ctx, to)
-	postWeiBalanceTo := currentWeiBalanceTo.Add(wei)
-	if postWeiBalanceTo.LT(MaxWeiBalance) {
-		if err := k.setWeiBalance(ctx, to, postWeiBalanceTo); err != nil {
+	return nil
+}
+
+func (k BaseSendKeeper) AddWei(ctx sdk.Context, addr sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int) error {
+	if amt.Equal(sdk.ZeroInt()) {
+		return nil
+	}
+	if amt.GTE(MaxWeiBalance) {
+		return errors.New("cannot send more than 10^12 wei")
+	}
+	escrow := customEscrow
+	if escrow == nil {
+		escrow = k.ak.GetModuleAddress(types.WeiEscrowName)
+	}
+	currentWeiBalance := k.GetWeiBalance(ctx, addr)
+	postWeiBalance := currentWeiBalance.Add(amt)
+	if postWeiBalance.LT(MaxWeiBalance) {
+		if err := k.setWeiBalance(ctx, addr, postWeiBalance); err != nil {
 			return err
 		}
 	} else {
-		if err := k.setWeiBalance(ctx, to, postWeiBalanceTo.Sub(MaxWeiBalance)); err != nil {
+		if err := k.setWeiBalance(ctx, addr, postWeiBalance.Sub(MaxWeiBalance)); err != nil {
 			return err
 		}
 		// need to redeem one sei from escrow because wei balance overflowed
 		one := sdk.NewCoins(sdk.NewCoin(denom, sdk.OneInt()))
-		if err := k.sendCoinsWithoutAccCreation(ctx, escrow, to, one, false); err != nil {
+		if err := k.sendCoinsWithoutAccCreation(ctx, escrow, addr, one, false); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (k BaseSendKeeper) SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int, wei sdk.Int) error {
+	if err := k.SubWei(ctx, from, customEscrow, denom, wei); err != nil {
+		return err
+	}
+	if err := k.AddWei(ctx, to, customEscrow, denom, wei); err != nil {
+		return err
 	}
 	if amt.GT(sdk.ZeroInt()) {
 		return k.SendCoinsWithoutAccCreation(ctx, from, to, sdk.NewCoins(sdk.NewCoin(denom, amt)))

@@ -164,7 +164,7 @@ func (s *scheduler) collectResponses(tasks []*deliverTxTask) []types.ResponseDel
 		}
 		res = append(res, *t.Response)
 	}
-	s.metrics.maxIncarnation = maxIncarnation
+	s.metrics.incarnation = maxIncarnation
 	return res
 }
 
@@ -213,14 +213,14 @@ func (s *scheduler) PrefillEstimates(reqs []*sdk.DeliverTxEntry) {
 // schedulerMetrics contains metrics for the scheduler
 type schedulerMetrics struct {
 	// maxIncarnation is the highest incarnation seen in this set
-	maxIncarnation int
+	incarnation int
 	// retries is the number of tx attempts beyond the first attempt
 	retries int
 }
 
 func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.retries), "scheduler", "retries")
-	telemetry.SetGauge(float32(s.metrics.maxIncarnation), "scheduler", "max_incarnation")
+	telemetry.IncrCounter(float32(s.metrics.incarnation), "scheduler", "incarnation")
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {

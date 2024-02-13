@@ -21,6 +21,8 @@ type SendKeeper interface {
 	SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
 	SendCoinsWithoutAccCreation(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
 	SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int, wei sdk.Int) error
+	SubUnlockedCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error
+	AddCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error
 
 	GetParams(ctx sdk.Context) types.Params
 	SetParams(ctx sdk.Context, params types.Params)
@@ -89,7 +91,7 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 			return err
 		}
 
-		err = k.subUnlockedCoins(ctx, inAddress, in.Coins, true)
+		err = k.SubUnlockedCoins(ctx, inAddress, in.Coins, true)
 		if err != nil {
 			return err
 		}
@@ -107,7 +109,7 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 		if err != nil {
 			return err
 		}
-		err = k.addCoins(ctx, outAddress, out.Coins, true)
+		err = k.AddCoins(ctx, outAddress, out.Coins, true)
 		if err != nil {
 			return err
 		}
@@ -159,12 +161,12 @@ func (k BaseSendKeeper) SendCoinsWithoutAccCreation(ctx sdk.Context, fromAddr sd
 }
 
 func (k BaseSendKeeper) sendCoinsWithoutAccCreation(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error {
-	err := k.subUnlockedCoins(ctx, fromAddr, amt, checkNeg)
+	err := k.SubUnlockedCoins(ctx, fromAddr, amt, checkNeg)
 	if err != nil {
 		return err
 	}
 
-	err = k.addCoins(ctx, toAddr, amt, checkNeg)
+	err = k.AddCoins(ctx, toAddr, amt, checkNeg)
 	if err != nil {
 		return err
 	}
@@ -185,10 +187,10 @@ func (k BaseSendKeeper) sendCoinsWithoutAccCreation(ctx sdk.Context, fromAddr sd
 	return nil
 }
 
-// subUnlockedCoins removes the unlocked amt coins of the given account. An error is
+// SubUnlockedCoins removes the unlocked amt coins of the given account. An error is
 // returned if the resulting balance is negative or the initial amount is invalid.
 // A coin_spent event is emitted after.
-func (k BaseSendKeeper) subUnlockedCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error {
+func (k BaseSendKeeper) SubUnlockedCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error {
 	if !amt.IsValid() {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amt.String())
 	}
@@ -227,9 +229,9 @@ func (k BaseSendKeeper) subUnlockedCoins(ctx sdk.Context, addr sdk.AccAddress, a
 	return nil
 }
 
-// addCoins increase the addr balance by the given amt. Fails if the provided amt is invalid.
+// AddCoins increase the addr balance by the given amt. Fails if the provided amt is invalid.
 // It emits a coin received event.
-func (k BaseSendKeeper) addCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error {
+func (k BaseSendKeeper) AddCoins(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Coins, checkNeg bool) error {
 	if !amt.IsValid() {
 		return sdkerrors.Wrap(sdkerrors.ErrInvalidCoins, amt.String())
 	}

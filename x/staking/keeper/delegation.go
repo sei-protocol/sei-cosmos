@@ -835,9 +835,9 @@ func (k Keeper) Undelegate(
 		return time.Time{}, types.ErrNoDelegatorForAddress
 	}
 
-	if k.HasMaxUnbondingDelegationEntries(ctx, delAddr, valAddr) {
-		return time.Time{}, types.ErrMaxUnbondingDelegationEntries
-	}
+	//if k.HasMaxUnbondingDelegationEntries(ctx, delAddr, valAddr) {
+	//	return time.Time{}, types.ErrMaxUnbondingDelegationEntries
+	//}
 
 	returnAmount, err := k.Unbond(ctx, delAddr, valAddr, sharesAmount)
 	if err != nil {

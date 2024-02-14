@@ -255,8 +255,10 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// validation tasks uses length of tasks to avoid blocking on validation
 	start(workerCtx, s.validateCh, len(tasks))
 
+	var iterationCount int
 	toExecute := tasks
 	for !allValidated(tasks) {
+		iterationCount++
 		var err error
 
 		// execute sets statuses of tasks to either executed or aborted
@@ -279,6 +281,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
+	fmt.Println("DEBUG: scheduler iteration count: ", iterationCount)
 	return s.collectResponses(tasks), nil
 }
 

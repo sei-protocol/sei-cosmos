@@ -35,6 +35,8 @@ const (
 	statusValidated status = "validated"
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
+
+	maxIterations = 5
 )
 
 type deliverTxTask struct {
@@ -216,11 +218,14 @@ type schedulerMetrics struct {
 	maxIncarnation int
 	// retries is the number of tx attempts beyond the first attempt
 	retries int
+	// number of synchronous txs
+	synchronous int
 }
 
 func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.retries), "scheduler", "retries")
-	telemetry.SetGauge(float32(s.metrics.maxIncarnation), "scheduler", "max_incarnation")
+	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "incarnation")
+	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "synchronous_txs")
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
@@ -249,13 +254,23 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// validation tasks uses length of tasks to avoid blocking on validation
 	start(workerCtx, s.validateCh, len(tasks))
 
+	var iterations int
 	toExecute := tasks
 	for !allValidated(tasks) {
-		var err error
+		iterations++
 
+		// if number of iterations exceeds a threshold
+		// run the remaining ones serially
+		// this mitigates impact of highly-contentious txs
+		synchronous := iterations > maxIterations
+		if synchronous {
+			s.metrics.synchronous = len(toExecute)
+		}
+
+		var err error
 		// execute sets statuses of tasks to either executed or aborted
 		if len(toExecute) > 0 {
-			err = s.executeAll(ctx, toExecute)
+			err = s.executeAll(ctx, toExecute, synchronous)
 			if err != nil {
 				return nil, err
 			}
@@ -267,6 +282,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		if err != nil {
 			return nil, err
 		}
+
+		if len(toExecute) > 0 && synchronous {
+			panic("could not process all tasks, even synchronously")
+		}
+
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
 	}
@@ -367,7 +387,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 }
 
 // ExecuteAll executes all tasks concurrently
-func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
+func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask, synchronous bool) error {
 	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
 	defer span.End()
 
@@ -378,6 +398,10 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 
 	for _, task := range tasks {
 		t := task
+		if synchronous {
+			s.prepareAndRunTask(validationWg, ctx, t)
+			continue
+		}
 		s.DoExecute(func() {
 			s.prepareAndRunTask(validationWg, ctx, t)
 		})

@@ -226,7 +226,7 @@ type schedulerMetrics struct {
 }
 
 func (s *scheduler) emitMetrics() {
-	telemetry.IncrCounter(float32(s.metrics.retries), "scheduler", "retries")
+	telemetry.SetGauge(float32(s.metrics.retries), "scheduler", "retries")
 	telemetry.SetGauge(float32(s.metrics.maxIncarnation), "scheduler", "max_incarnation")
 	s.metrics.retries = 0
 }

@@ -35,7 +35,7 @@ const (
 	statusValidated status = "validated"
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
-
+	// if the number of iterations exceeds this threshold, run the remaining ones serially
 	maxIterations = 5
 )
 

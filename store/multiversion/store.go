@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -361,6 +362,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 					valid = false
 				}
 			} else if !bytes.Equal(latestValue.Value(), value) {
+				fmt.Printf("Readset conflict on key %X, expected val %X, got %X, index %d\n", key, latestValue.Value(), value, index)
 				valid = false
 			}
 		}
@@ -384,6 +386,10 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 	iteratorValid := s.checkIteratorAtIndex(index)
 
 	readsetValid, conflictIndices := s.checkReadsetAtIndex(index)
+
+	if !iteratorValid || !readsetValid {
+		fmt.Printf("Scheduler ValidateTransacton State index %d, iteratorValid %v, readsetValid %v, conflictIndices %v\n", index, iteratorValid, readsetValid, conflictIndices)
+	}
 
 	return iteratorValid && readsetValid, conflictIndices
 }

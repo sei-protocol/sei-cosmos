@@ -20,7 +20,7 @@ type SendKeeper interface {
 	InputOutputCoins(ctx sdk.Context, inputs []types.Input, outputs []types.Output) error
 	SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
 	SendCoinsWithoutAccCreation(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error
-	SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int, wei sdk.Int) error
+	SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, amt sdk.Int, wei sdk.Int) error
 
 	GetParams(ctx sdk.Context) types.Params
 	SetParams(ctx sdk.Context, params types.Params)
@@ -328,12 +328,17 @@ func (k BaseSendKeeper) BlockedAddr(addr sdk.AccAddress) bool {
 	return k.blockedAddrs[addr.String()]
 }
 
-func (k BaseSendKeeper) SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, denom string, amt sdk.Int, wei sdk.Int) error {
+func (k BaseSendKeeper) SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, customEscrow sdk.AccAddress, amt sdk.Int, wei sdk.Int) error {
+	baseDenom, _ := sdk.GetBaseDenom()
+	if baseDenom == "" {
+		baseDenom = sdk.DefaultBondDenom
+	}
+
 	if wei.Equal(sdk.ZeroInt()) {
 		if amt.Equal(sdk.ZeroInt()) {
 			return nil
 		}
-		return k.SendCoinsWithoutAccCreation(ctx, from, to, sdk.NewCoins(sdk.NewCoin(denom, amt)))
+		return k.SendCoinsWithoutAccCreation(ctx, from, to, sdk.NewCoins(sdk.NewCoin(baseDenom, amt)))
 	}
 	if wei.GTE(MaxWeiBalance) {
 		return errors.New("cannot send more than 10^12 wei")
@@ -354,7 +359,7 @@ func (k BaseSendKeeper) SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to
 			return err
 		}
 		// need to send one sei to escrow because wei balance is insufficient
-		if err := k.sendCoinsWithoutAccCreation(ctx, from, escrow, sdk.NewCoins(sdk.NewCoin(denom, sdk.OneInt())), false); err != nil {
+		if err := k.sendCoinsWithoutAccCreation(ctx, from, escrow, sdk.NewCoins(sdk.NewCoin(baseDenom, sdk.OneInt())), false); err != nil {
 			return err
 		}
 	}
@@ -369,13 +374,13 @@ func (k BaseSendKeeper) SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to
 			return err
 		}
 		// need to redeem one sei from escrow because wei balance overflowed
-		one := sdk.NewCoins(sdk.NewCoin(denom, sdk.OneInt()))
+		one := sdk.NewCoins(sdk.NewCoin(baseDenom, sdk.OneInt()))
 		if err := k.sendCoinsWithoutAccCreation(ctx, escrow, to, one, false); err != nil {
 			return err
 		}
 	}
 	if amt.GT(sdk.ZeroInt()) {
-		return k.SendCoinsWithoutAccCreation(ctx, from, to, sdk.NewCoins(sdk.NewCoin(denom, amt)))
+		return k.SendCoinsWithoutAccCreation(ctx, from, to, sdk.NewCoins(sdk.NewCoin(baseDenom, amt)))
 	}
 	return nil
 }

@@ -219,13 +219,13 @@ type schedulerMetrics struct {
 	// retries is the number of tx attempts beyond the first attempt
 	retries int
 	// number of synchronous txs
-	synchronous int
+	synchronousTxs int
 }
 
 func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.retries), "scheduler", "retries")
 	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "incarnation")
-	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "synchronous_txs")
+	telemetry.IncrCounter(float32(s.metrics.synchronousTxs), "scheduler", "synchronous_txs")
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
@@ -264,7 +264,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		// this mitigates impact of highly-contentious txs
 		synchronous := iterations > maxIterations
 		if synchronous {
-			s.metrics.synchronous = len(toExecute)
+			s.metrics.synchronousTxs = len(toExecute)
 		}
 
 		var err error

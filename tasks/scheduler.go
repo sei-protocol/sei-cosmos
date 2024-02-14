@@ -281,7 +281,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
-	fmt.Println("DEBUG: scheduler iteration count: ", iterationCount)
+	fmt.Printf("DEBUG: scheduler txs: %d, iterations: %d\n", len(tasks), iterationCount)
 	return s.collectResponses(tasks), nil
 }
 

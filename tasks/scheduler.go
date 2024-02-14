@@ -4,8 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"sort"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
@@ -254,6 +257,16 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 	// validation tasks uses length of tasks to avoid blocking on validation
 	start(workerCtx, s.validateCh, len(tasks))
+
+	delay := os.Getenv("HACK_DELAY")
+	if delay != "" {
+		delayMs, err := strconv.Atoi(delay)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("DEBUG: sleeping for", delay)
+		time.Sleep(time.Duration(delayMs) * time.Millisecond)
+	}
 
 	var iterationCount int
 	toExecute := tasks

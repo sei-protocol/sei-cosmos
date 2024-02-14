@@ -294,7 +294,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
-	fmt.Printf("DEBUG: scheduler txs: %d, iterations: %d\n", len(tasks), iterationCount)
+	fmt.Printf("DEBUG: scheduler txs: %d, iterations: %d, delay: %sms\n", len(tasks), iterationCount, os.Getenv("HACK_DELAY"))
 	return s.collectResponses(tasks), nil
 }
 

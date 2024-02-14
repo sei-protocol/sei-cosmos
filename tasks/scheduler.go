@@ -171,6 +171,7 @@ func (s *scheduler) collectResponses(tasks []*deliverTxTask) []types.ResponseDel
 		res = append(res, *t.Response)
 	}
 	s.metrics.maxIncarnation = maxIncarnation
+	fmt.Printf("Scheduler Max Incarnation: %d\n", maxIncarnation)
 	return res
 }
 

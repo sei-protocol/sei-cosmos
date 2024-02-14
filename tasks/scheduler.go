@@ -283,10 +283,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			return nil, err
 		}
 
-		if len(toExecute) > 0 && synchronous {
-			panic("could not process all tasks, even synchronously")
-		}
-
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
 	}

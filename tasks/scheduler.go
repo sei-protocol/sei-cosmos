@@ -374,7 +374,8 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 	wg := &sync.WaitGroup{}
 	for i := startIdx; i < len(tasks); i++ {
 		wg.Add(1)
-		go func(t *deliverTxTask) {
+		t := tasks[i]
+		s.DoValidate(func() {
 			defer wg.Done()
 			if !s.validateTask(ctx, t) {
 				mx.Lock()
@@ -383,7 +384,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 				t.Increment()
 				res = append(res, t)
 			}
-		}(tasks[i])
+		})
 	}
 	wg.Wait()
 

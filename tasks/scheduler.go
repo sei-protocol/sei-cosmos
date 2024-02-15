@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
@@ -34,6 +35,13 @@ const (
 	statusWaiting status = "waiting"
 )
 
+var (
+	TotalExecute  = atomic.Int64{}
+	TotalReset    = atomic.Int64{}
+	TotalRerun    = atomic.Int64{}
+	TotalValidate = atomic.Int64{}
+)
+
 type deliverTxTask struct {
 	Ctx     sdk.Context
 	AbortCh chan occ.Abort
@@ -50,6 +58,7 @@ type deliverTxTask struct {
 }
 
 func (dt *deliverTxTask) Reset() {
+	TotalReset.Add(1)
 	dt.Status = statusPending
 	dt.Response = nil
 	dt.Abort = nil
@@ -202,9 +211,7 @@ func (s *scheduler) PrefillEstimates(ctx sdk.Context, reqs []*sdk.DeliverTxEntry
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	startTime := time.Now()
-	defer func() {
-		fmt.Printf("[Debug] ProcessAll %d txs took %s\n", len(reqs), time.Since(startTime))
-	}()
+
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	s.PrefillEstimates(ctx, reqs)
@@ -213,7 +220,14 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	s.allTasks = tasks
 	s.executeCh = make(chan func(), len(tasks))
 	s.validateCh = make(chan func(), len(tasks))
-
+	TotalExecute.Store(0)
+	TotalValidate.Store(0)
+	TotalRerun.Store(0)
+	TotalReset.Store(0)
+	defer func() {
+		fmt.Printf("[Debug] ProcessAll %d txs took %s, total execute %d, total validate %d, total reset %d, total rerun %d \n",
+			len(reqs), time.Since(startTime), TotalExecute.Load(), TotalValidate.Load(), TotalReset.Load(), TotalRerun.Load())
+	}()
 	workers := s.workers
 	if s.workers < 1 {
 		workers = len(tasks)
@@ -291,9 +305,9 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 }
 
 func (s *scheduler) validateTask(ctx sdk.Context, task *deliverTxTask) bool {
-
+	TotalValidate.Add(1)
 	if s.shouldRerun(task) {
-
+		TotalRerun.Add(1)
 		return false
 	}
 	return true
@@ -365,6 +379,7 @@ func (s *scheduler) prepareAndRunTask(wg *sync.WaitGroup, ctx sdk.Context, task 
 	task.Ctx = ctx
 
 	s.executeTask(task.Ctx, task)
+	TotalExecute.Add(1)
 	go func() {
 		defer wg.Done()
 		defer close(task.ValidateCh)

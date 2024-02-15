@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -361,6 +362,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 					valid = false
 				}
 			} else if !bytes.Equal(latestValue.Value(), value) {
+				fmt.Printf("Readset conflict on key %X, expected val %X, got %X, index %d\n", key, latestValue.Value(), value, index)
 				valid = false
 			}
 		}

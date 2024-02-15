@@ -223,6 +223,17 @@ func (s *scheduler) emitMetrics() {
 	telemetry.SetGauge(float32(s.metrics.maxIncarnation), "scheduler", "max_incarnation")
 }
 
+func countByStatus(tasks []*deliverTxTask) map[status]int {
+	res := make(map[status]int)
+	for _, t := range tasks {
+		if _, ok := res[t.Status]; !ok {
+			res[t.Status] = 0
+		}
+		res[t.Status]++
+	}
+	return res
+}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
@@ -251,6 +262,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 	toExecute := tasks
 	for !allValidated(tasks) {
+		fmt.Println("statuses", countByStatus(tasks), "toExecute", len(toExecute))
 		var err error
 
 		// execute sets statuses of tasks to either executed or aborted

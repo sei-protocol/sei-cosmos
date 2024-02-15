@@ -233,18 +233,7 @@ type schedulerMetrics struct {
 
 func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.retries), "scheduler", "retries")
-	telemetry.SetGauge(float32(s.metrics.maxIncarnation), "scheduler", "max_incarnation")
-}
-
-func countByStatus(tasks []*deliverTxTask) map[status]int {
-	res := make(map[status]int)
-	for _, t := range tasks {
-		if _, ok := res[t.Status]; !ok {
-			res[t.Status] = 0
-		}
-		res[t.Status]++
-	}
-	return res
+	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "incarnations")
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
@@ -275,7 +264,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 	toExecute := tasks
 	for !allValidated(tasks) {
-		fmt.Println("statuses", countByStatus(tasks), "toExecute", len(toExecute))
 		var err error
 
 		// execute sets statuses of tasks to either executed or aborted
@@ -509,12 +497,12 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	// If abort has occurred, return, else set the response and status
 	if abortOccurred {
-		task.Status = statusAborted
+		task.SetStatus(statusAborted)
 		task.Abort = abort
 		return
 	}
 
-	task.Status = statusExecuted
+	task.SetStatus(statusExecuted)
 	task.Response = &resp
 
 	// write from version store to multiversion stores

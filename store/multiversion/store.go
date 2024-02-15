@@ -362,7 +362,7 @@ func (s *Store) checkReadsetAtIndex(index int) (bool, []int) {
 					valid = false
 				}
 			} else if !bytes.Equal(latestValue.Value(), value) {
-				fmt.Printf("Readset conflict on key %X, expected val %X, got %X, index %d\n", key, latestValue.Value(), value, index)
+				fmt.Printf("Readset conflict on key %X, expected val %X, got %X, index %d, latestValue index %d, latest incarnation %d\n", key, latestValue.Value(), value, index, latestValue.Index(), latestValue.Incarnation())
 				valid = false
 			}
 		}

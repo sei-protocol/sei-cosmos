@@ -262,8 +262,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	TotalValidate.Store(0)
 	TotalRerun.Store(0)
 	defer func() {
-		fmt.Printf("[Debug] ProcessAll %d txs took %s, total execute %d, total validate %d, total reset %d, total rerun %d \n",
-			len(reqs), time.Since(startTime), TotalExecute.Load(), TotalValidate.Load(), TotalReset.Load(), TotalRerun.Load())
+		fmt.Printf("[Debug] ProcessAll %d txs for height %d took %s, total execute %d, total validate %d, total reset %d, total rerun %d \n",
+			len(reqs), ctx.BlockHeight(), time.Since(startTime), TotalExecute.Load(), TotalValidate.Load(), TotalReset.Load(), TotalRerun.Load())
 	}()
 	// default to number of tasks if workers is negative or 0 by this point
 	workers := s.workers

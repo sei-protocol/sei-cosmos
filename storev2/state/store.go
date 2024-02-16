@@ -1,9 +1,10 @@
 package state
 
 import (
-	"cosmossdk.io/errors"
 	"fmt"
 	"io"
+
+	"cosmossdk.io/errors"
 
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/listenkv"
@@ -97,6 +98,7 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	if req.Height > 0 && req.Height > st.version {
 		return sdkerrors.QueryResult(errors.Wrap(sdkerrors.ErrInvalidHeight, "invalid height"))
 	}
+	res.Height = st.version
 	switch req.Path {
 	case "/key": // get by key
 		res.Key = req.Data // data holds the key bytes
@@ -105,7 +107,6 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 		pairs := kv.Pairs{
 			Pairs: make([]kv.Pair, 0),
 		}
-
 		subspace := req.Data
 		res.Key = subspace
 		iterator := types.KVStorePrefixIterator(st, subspace)
@@ -124,4 +125,25 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	}
 
 	return res
+}
+
+func (st *Store) VersionExists(version int64) bool {
+	earliest, err := st.store.GetEarliestVersion()
+	if err != nil {
+		panic(err)
+	}
+	return version >= earliest
+}
+
+func (st *Store) DeleteAll(start, end []byte) error {
+	iter := st.Iterator(start, end)
+	keys := [][]byte{}
+	for ; iter.Valid(); iter.Next() {
+		keys = append(keys, iter.Key())
+	}
+	iter.Close()
+	for _, key := range keys {
+		st.Delete(key)
+	}
+	return nil
 }

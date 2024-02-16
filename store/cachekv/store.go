@@ -192,6 +192,10 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	return NewCacheMergeIterator(parent, cache, ascending, store.storeKey)
 }
 
+func (store *Store) VersionExists(version int64) bool {
+	return store.parent.VersionExists(version)
+}
+
 func findStartIndex(strL []string, startQ string) int {
 	// Modified binary search to find the very first element in >=startQ.
 	if len(strL) == 0 {
@@ -362,4 +366,19 @@ func (store *Store) isDeleted(key string) bool {
 
 func (store *Store) GetParent() types.KVStore {
 	return store.parent
+}
+
+func (store *Store) DeleteAll(start, end []byte) error {
+	store.dirtyItems(start, end)
+	// memdb iterator
+	cachedIter, err := store.sortedCache.Iterator(start, end)
+	if err != nil {
+		return err
+	}
+	defer cachedIter.Close()
+	for ; cachedIter.Valid(); cachedIter.Next() {
+		// `Delete` would not touch sortedCache so it's okay to perform inside iterator
+		store.Delete(cachedIter.Key())
+	}
+	return nil
 }

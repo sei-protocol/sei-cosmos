@@ -177,3 +177,21 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 
 	return res
 }
+
+func (st *Store) VersionExists(version int64) bool {
+	// one version per SC tree
+	return version == st.tree.Version()
+}
+
+func (st *Store) DeleteAll(start, end []byte) error {
+	iter := st.Iterator(start, end)
+	keys := [][]byte{}
+	for ; iter.Valid(); iter.Next() {
+		keys = append(keys, iter.Key())
+	}
+	iter.Close()
+	for _, key := range keys {
+		st.Delete(key)
+	}
+	return nil
+}

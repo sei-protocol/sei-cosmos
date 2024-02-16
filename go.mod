@@ -15,6 +15,7 @@ require (
 	github.com/cosmos/iavl v0.21.0-alpha.1.0.20230904092046-df3db2d96583
 	github.com/cosmos/ledger-cosmos-go v0.12.2
 	github.com/deckarep/golang-set v1.8.0
+	github.com/evmos/ethermint v0.21.0
 	github.com/gogo/gateway v1.1.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/mock v1.6.0

@@ -32,7 +32,7 @@ func TestVersionIndexedStoreGetters(t *testing.T) {
 	require.Equal(t, []byte("value1"), val2)
 	require.True(t, vis.Has([]byte("key1")))
 	// verify value now in readset
-	require.Equal(t, []byte("value1"), vis.GetReadset()["key1"])
+	require.Equal(t, [][]byte{[]byte("value1")}, vis.GetReadset()["key1"])
 
 	// read the same key that should now be served from the readset (can be verified by setting a different value for the key in the parent store)
 	parentKVStore.Set([]byte("key1"), []byte("value2")) // realistically shouldn't happen, modifying to verify readset access

@@ -648,10 +648,10 @@ func TestMVSIteratorValidationEarlyStopEarlierKeyRemoved(t *testing.T) {
 	mvs.SetWriteset(1, 2, writeset)
 
 	readset := make(multiversion.ReadSet)
-	readset["key1"] = []byte("value1")
-	readset["key2"] = []byte("value2")
-	readset["key3"] = nil
-	readset["key4"] = []byte("value4")
+	readset["key1"] = [][]byte{[]byte("value1")}
+	readset["key2"] = [][]byte{[]byte("value2")}
+	readset["key3"] = [][]byte{nil}
+	readset["key4"] = [][]byte{[]byte("value4")}
 	mvs.SetReadset(5, readset)
 
 	i := 0

@@ -1,24 +1,22 @@
 package multiversion
 
-import "github.com/cosmos/cosmos-sdk/store/types"
+import (
+	"github.com/cosmos/cosmos-sdk/store/types"
+)
 
 // tracked iterator is a wrapper around an existing iterator to track the iterator progress and monitor which keys are iterated.
 type trackedIterator struct {
 	types.Iterator
 
-	iterateset iterationTracker
+	iterateset *iterationTracker
 	ReadsetHandler
-	IterateSetHandler
 }
 
-// TODO: test
-
-func NewTrackedIterator(iter types.Iterator, iterationTracker iterationTracker, iterateSetHandler IterateSetHandler, readSetHandler ReadsetHandler) *trackedIterator {
+func NewTrackedIterator(iter types.Iterator, iterationTracker *iterationTracker, readSetHandler ReadsetHandler) *trackedIterator {
 	return &trackedIterator{
-		Iterator:          iter,
-		iterateset:        iterationTracker,
-		IterateSetHandler: iterateSetHandler,
-		ReadsetHandler:    readSetHandler,
+		Iterator:       iter,
+		iterateset:     iterationTracker,
+		ReadsetHandler: readSetHandler,
 	}
 }
 
@@ -26,11 +24,11 @@ func NewTrackedIterator(iter types.Iterator, iterationTracker iterationTracker, 
 func (ti *trackedIterator) Close() error {
 	// TODO: if there are more keys to the iterator, then we consider it early stopped?
 	if ti.Iterator.Valid() {
+		key := ti.Iterator.Key()
 		// TODO: test whether reaching end of iteration range means valid is true or false
-		ti.iterateset.SetEarlyStopKey(ti.Iterator.Key())
+		ti.iterateset.AddKey(key)
+		ti.iterateset.SetEarlyStopKey(key)
 	}
-	// Update iterate set
-	ti.IterateSetHandler.UpdateIterateSet(ti.iterateset)
 	return ti.Iterator.Close()
 }
 
@@ -48,6 +46,7 @@ func (ti *trackedIterator) Value() []byte {
 	val := ti.Iterator.Value()
 	// add key to the tracker
 	ti.iterateset.AddKey(key)
+	ti.ReadsetHandler.UpdateReadSet(key, val)
 	return val
 }
 

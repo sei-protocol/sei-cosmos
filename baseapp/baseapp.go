@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/armon/go-metrics"
+	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 	"github.com/gogo/protobuf/proto"
 	sdbm "github.com/sei-protocol/sei-tm-db/backends"
@@ -57,7 +58,9 @@ const (
 	FlagArchivalArweaveIndexDBFullPath = "archival-arweave-index-db-full-path"
 	FlagArchivalArweaveNodeURL         = "archival-arweave-node-url"
 
-	FlagChainID = "chain-id"
+	FlagChainID            = "chain-id"
+	FlagConcurrencyWorkers = "concurrency-workers"
+	FlagOccEnabled         = "occ-enabled"
 )
 
 var (
@@ -162,7 +165,11 @@ type BaseApp struct { //nolint: maligned
 
 	TmConfig *tmcfg.Config
 
-	TracingInfo *tracing.Info
+	TracingInfo    *tracing.Info
+	TracingEnabled bool
+
+	concurrencyWorkers int
+	occEnabled         bool
 }
 
 type appStore struct {
@@ -238,7 +245,8 @@ func NewBaseApp(
 	tp := trace.NewNoopTracerProvider()
 	otel.SetTracerProvider(trace.NewNoopTracerProvider())
 	tr := tp.Tracer("component-main")
-	if tracingEnabled := cast.ToBool(appOpts.Get(tracing.FlagTracing)); tracingEnabled {
+	tracingEnabled := cast.ToBool(appOpts.Get(tracing.FlagTracing))
+	if tracingEnabled {
 		tp, err := tracing.DefaultTracerProvider()
 		if err != nil {
 			panic(err)
@@ -261,8 +269,9 @@ func NewBaseApp(
 			grpcQueryRouter:  NewGRPCQueryRouter(),
 			msgServiceRouter: NewMsgServiceRouter(),
 		},
-		txDecoder: txDecoder,
-		TmConfig:  tmConfig,
+		txDecoder:      txDecoder,
+		TmConfig:       tmConfig,
+		TracingEnabled: tracingEnabled,
 		TracingInfo: &tracing.Info{
 			Tracer: &tr,
 		},
@@ -286,6 +295,16 @@ func NewBaseApp(
 	}
 	app.startCompactionRoutine(db)
 
+	// if no option overrode already, initialize to the flags value
+	// this avoids forcing every implementation to pass an option, but allows it
+	if app.concurrencyWorkers == 0 {
+		app.concurrencyWorkers = cast.ToInt(appOpts.Get(FlagConcurrencyWorkers))
+	}
+	// safely default this to the default value if 0
+	if app.concurrencyWorkers == 0 {
+		app.concurrencyWorkers = config.DefaultConcurrencyWorkers
+	}
+
 	return app
 }
 
@@ -297,6 +316,16 @@ func (app *BaseApp) Name() string {
 // AppVersion returns the application's protocol version.
 func (app *BaseApp) AppVersion() uint64 {
 	return app.appVersion
+}
+
+// ConcurrencyWorkers returns the number of concurrent workers for the BaseApp.
+func (app *BaseApp) ConcurrencyWorkers() int {
+	return app.concurrencyWorkers
+}
+
+// OccEnabled returns the whether OCC is enabled for the BaseApp.
+func (app *BaseApp) OccEnabled() bool {
+	return app.occEnabled
 }
 
 // Version returns the application's version string.
@@ -587,8 +616,8 @@ func (app *BaseApp) preparePrepareProposalState() {
 	}
 }
 
-func (app *BaseApp) prepareProcessProposalState(gasMeter sdk.GasMeter, headerHash []byte) {
-	app.processProposalState.SetContext(app.processProposalState.Context().WithBlockGasMeter(gasMeter).
+func (app *BaseApp) prepareProcessProposalState(headerHash []byte) {
+	app.processProposalState.SetContext(app.processProposalState.Context().
 		WithHeaderHash(headerHash).
 		WithConsensusParams(app.GetConsensusParams(app.processProposalState.Context())))
 
@@ -597,9 +626,8 @@ func (app *BaseApp) prepareProcessProposalState(gasMeter sdk.GasMeter, headerHas
 	}
 }
 
-func (app *BaseApp) prepareDeliverState(gasMeter sdk.GasMeter, headerHash []byte) {
+func (app *BaseApp) prepareDeliverState(headerHash []byte) {
 	app.deliverState.SetContext(app.deliverState.Context().
-		WithBlockGasMeter(gasMeter).
 		WithHeaderHash(headerHash).
 		WithConsensusParams(app.GetConsensusParams(app.deliverState.Context())))
 }
@@ -698,27 +726,6 @@ func (app *BaseApp) StoreConsensusParams(ctx sdk.Context, cp *tmproto.ConsensusP
 	app.paramStore.Set(ctx, ParamStoreKeyABCIParams, cp.Abci)
 }
 
-// getMaximumBlockGas gets the maximum gas from the consensus params. It panics
-// if maximum block gas is less than negative one and returns zero if negative
-// one.
-func (app *BaseApp) getMaximumBlockGas(ctx sdk.Context) uint64 {
-	cp := app.GetConsensusParams(ctx)
-	if cp == nil || cp.Block == nil {
-		return 0
-	}
-
-	maxGas := cp.Block.MaxGas
-
-	// TODO::: This is a temporary fix, max gas causes non-deterministic behavior
-	// 			with parallel TX
-	switch {
-	case maxGas < -1:
-		panic(fmt.Sprintf("invalid maximum block gas: %d", maxGas))
-	default:
-		return 0
-	}
-}
-
 func (app *BaseApp) validateHeight(req abci.RequestBeginBlock) error {
 	if req.Header.Height < 1 {
 		return fmt.Errorf("invalid height: %d", req.Header.Height)
@@ -795,6 +802,7 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 
 // cacheTxContext returns a new context based off of the provided context with
 // a branched multi-store.
+// TODO: (occ) This is an example of where we wrap the multistore with a cache multistore, and then return a modified context using that multistore
 func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
 	ms := ctx.MultiStore()
 	// TODO: https://github.com/cosmos/cosmos-sdk/issues/2824
@@ -839,11 +847,13 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	// resources are acceessed by the ante handlers and message handlers.
 	defer acltypes.SendAllSignalsForTx(ctx.TxCompletionChannels())
 	acltypes.WaitForAllSignalsForTx(ctx.TxBlockingChannels())
-	// check for existing parent tracer, and if applicable, use it
-	spanCtx, span := app.TracingInfo.StartWithContext("RunTx", ctx.TraceSpanContext())
-	defer span.End()
-	ctx = ctx.WithTraceSpanContext(spanCtx)
-	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
+	if app.TracingEnabled {
+		// check for existing parent tracer, and if applicable, use it
+		spanCtx, span := app.TracingInfo.StartWithContext("RunTx", ctx.TraceSpanContext())
+		defer span.End()
+		ctx = ctx.WithTraceSpanContext(spanCtx)
+		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(txBytes))))
+	}
 
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is
 	// determined by the GasMeter. We need access to the context to get the gas
@@ -851,11 +861,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	var gasWanted uint64
 
 	ms := ctx.MultiStore()
-
-	// only run the tx if there is block gas remaining
-	if mode == runTxModeDeliver && ctx.BlockGasMeter().IsOutOfGas() {
-		return gInfo, nil, nil, -1, sdkerrors.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
-	}
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -869,27 +874,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		gInfo = sdk.GasInfo{GasWanted: gasWanted, GasUsed: ctx.GasMeter().GasConsumed()}
 	}()
 
-	blockGasConsumed := false
-	// consumeBlockGas makes sure block gas is consumed at most once. It must happen after
-	// tx processing, and must be execute even if tx processing fails. Hence we use trick with `defer`
-	consumeBlockGas := func() {
-		if !blockGasConsumed {
-			blockGasConsumed = true
-			ctx.BlockGasMeter().ConsumeGas(
-				ctx.GasMeter().GasConsumedToLimit(), "block gas meter",
-			)
-		}
-	}
-
-	// If BlockGasMeter() panics it will be caught by the above recover and will
-	// return an error - in any case BlockGasMeter will consume gas past the limit.
-	//
-	// NOTE: This must exist in a separate defer function for the above recovery
-	// to recover from this one.
-	if mode == runTxModeDeliver {
-		defer consumeBlockGas()
-	}
-
 	tx, err := app.txDecoder(txBytes)
 	if err != nil {
 		return sdk.GasInfo{}, nil, nil, 0, err
@@ -902,9 +886,12 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	}
 
 	if app.anteHandler != nil {
-		// trace AnteHandler
-		_, anteSpan := app.TracingInfo.StartWithContext("AnteHandler", ctx.TraceSpanContext())
-		defer anteSpan.End()
+		var anteSpan trace.Span
+		if app.TracingEnabled {
+			// trace AnteHandler
+			_, anteSpan = app.TracingInfo.StartWithContext("AnteHandler", ctx.TraceSpanContext())
+			defer anteSpan.End()
+		}
 		var (
 			anteCtx sdk.Context
 			msCache sdk.CacheMultiStore
@@ -948,6 +935,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 			storeAccessOpEvents := msCache.GetEvents()
 			accessOps := ctx.TxMsgAccessOps()[acltypes.ANTE_MSG_INDEX]
 
+			// TODO: (occ) This is an example of where we do our current validation. Note that this validation operates on the declared dependencies for a TX / antehandler + the utilized dependencies, whereas the validation
 			missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
 			if len(missingAccessOps) != 0 {
 				for op := range missingAccessOps {
@@ -962,7 +950,9 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 		priority = ctx.Priority()
 		msCache.Write()
 		anteEvents = events.ToABCIEvents()
-		anteSpan.End()
+		if app.TracingEnabled {
+			anteSpan.End()
+		}
 	}
 
 	// Create a new Context based off of the existing Context with a MultiStore branch
@@ -976,9 +966,6 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, txBytes []byte) (gInf
 	result, err = app.runMsgs(runMsgCtx, msgs, mode)
 
 	if err == nil && mode == runTxModeDeliver {
-		// When block gas exceeds, it'll panic and won't commit the cached store.
-		consumeBlockGas()
-
 		msCache.Write()
 	}
 	// we do this since we will only be looking at result in DeliverTx
@@ -1010,9 +997,11 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			panic(err)
 		}
 	}()
-	spanCtx, span := app.TracingInfo.StartWithContext("RunMsgs", ctx.TraceSpanContext())
-	defer span.End()
-	ctx = ctx.WithTraceSpanContext(spanCtx)
+	if app.TracingEnabled {
+		spanCtx, span := app.TracingInfo.StartWithContext("RunMsgs", ctx.TraceSpanContext())
+		defer span.End()
+		ctx = ctx.WithTraceSpanContext(spanCtx)
+	}
 	msgLogs := make(sdk.ABCIMessageLogs, 0, len(msgs))
 	events := sdk.EmptyEvents()
 	txMsgData := &sdk.TxMsgData{
@@ -1092,6 +1081,8 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		storeAccessOpEvents := msgMsCache.GetEvents()
 		accessOps := ctx.TxMsgAccessOps()[i]
 		missingAccessOps := ctx.MsgValidator().ValidateAccessOperations(accessOps, storeAccessOpEvents)
+		// TODO: (occ) This is where we are currently validating our per message dependencies,
+		// whereas validation will be done holistically based on the mvkv for OCC approach
 		if len(missingAccessOps) != 0 {
 			for op := range missingAccessOps {
 				ctx.Logger().Info((fmt.Sprintf("eventMsgName=%s Missing Access Operation:%s ", eventMsgName, op.String())))

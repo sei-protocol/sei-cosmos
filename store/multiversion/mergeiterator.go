@@ -1,39 +1,36 @@
-package cachekv
+package multiversion
 
 import (
 	"bytes"
 	"errors"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
-// cacheMergeIterator merges a parent Iterator and a cache Iterator.
+// mvsMergeIterator merges a parent Iterator and a cache Iterator.
 // The cache iterator may return nil keys to signal that an item
 // had been deleted (but not deleted in the parent).
 // If the cache iterator has the same key as the parent, the
 // cache shadows (overrides) the parent.
-//
-// TODO: Optimize by memoizing.
-type cacheMergeIterator struct {
+type mvsMergeIterator struct {
 	parent    types.Iterator
 	cache     types.Iterator
 	ascending bool
-	storeKey  sdktypes.StoreKey
+	ReadsetHandler
 }
 
-var _ types.Iterator = (*cacheMergeIterator)(nil)
+var _ types.Iterator = (*mvsMergeIterator)(nil)
 
-func NewCacheMergeIterator(
+func NewMVSMergeIterator(
 	parent, cache types.Iterator,
 	ascending bool,
-	storeKey sdktypes.StoreKey,
-) *cacheMergeIterator {
-	iter := &cacheMergeIterator{
-		parent:    parent,
-		cache:     cache,
-		ascending: ascending,
-		storeKey:  storeKey,
+	readsetHandler ReadsetHandler,
+) *mvsMergeIterator {
+	iter := &mvsMergeIterator{
+		parent:         parent,
+		cache:          cache,
+		ascending:      ascending,
+		ReadsetHandler: readsetHandler,
 	}
 
 	return iter
@@ -42,7 +39,7 @@ func NewCacheMergeIterator(
 // Domain implements Iterator.
 // It returns the union of the iter.Parent doman, and the iter.Cache domain.
 // If the domains are disjoint, this includes the domain in between them as well.
-func (iter *cacheMergeIterator) Domain() (start, end []byte) {
+func (iter *mvsMergeIterator) Domain() (start, end []byte) {
 	startP, endP := iter.parent.Domain()
 	startC, endC := iter.cache.Domain()
 
@@ -62,12 +59,12 @@ func (iter *cacheMergeIterator) Domain() (start, end []byte) {
 }
 
 // Valid implements Iterator.
-func (iter *cacheMergeIterator) Valid() bool {
+func (iter *mvsMergeIterator) Valid() bool {
 	return iter.skipUntilExistsOrInvalid()
 }
 
 // Next implements Iterator
-func (iter *cacheMergeIterator) Next() {
+func (iter *mvsMergeIterator) Next() {
 	iter.skipUntilExistsOrInvalid()
 	iter.assertValid()
 
@@ -97,7 +94,7 @@ func (iter *cacheMergeIterator) Next() {
 }
 
 // Key implements Iterator
-func (iter *cacheMergeIterator) Key() []byte {
+func (iter *mvsMergeIterator) Key() []byte {
 	iter.skipUntilExistsOrInvalid()
 	iter.assertValid()
 
@@ -128,7 +125,7 @@ func (iter *cacheMergeIterator) Key() []byte {
 }
 
 // Value implements Iterator
-func (iter *cacheMergeIterator) Value() []byte {
+func (iter *mvsMergeIterator) Value() []byte {
 	iter.skipUntilExistsOrInvalid()
 	iter.assertValid()
 
@@ -141,6 +138,8 @@ func (iter *cacheMergeIterator) Value() []byte {
 	// If cache is invalid, get the parent value.
 	if !iter.cache.Valid() {
 		value := iter.parent.Value()
+		// add values read from parent to readset
+		iter.ReadsetHandler.UpdateReadSet(iter.parent.Key(), value)
 		return value
 	}
 
@@ -151,6 +150,8 @@ func (iter *cacheMergeIterator) Value() []byte {
 	switch cmp {
 	case -1: // parent < cache
 		value := iter.parent.Value()
+		// add values read from parent to readset
+		iter.ReadsetHandler.UpdateReadSet(iter.parent.Key(), value)
 		return value
 	case 0, 1: // parent >= cache
 		value := iter.cache.Value()
@@ -161,7 +162,7 @@ func (iter *cacheMergeIterator) Value() []byte {
 }
 
 // Close implements Iterator
-func (iter *cacheMergeIterator) Close() error {
+func (iter *mvsMergeIterator) Close() error {
 	if err := iter.parent.Close(); err != nil {
 		// still want to close cache iterator regardless
 		iter.cache.Close()
@@ -171,11 +172,11 @@ func (iter *cacheMergeIterator) Close() error {
 	return iter.cache.Close()
 }
 
-// Error returns an error if the cacheMergeIterator is invalid defined by the
+// Error returns an error if the mvsMergeIterator is invalid defined by the
 // Valid method.
-func (iter *cacheMergeIterator) Error() error {
+func (iter *mvsMergeIterator) Error() error {
 	if !iter.Valid() {
-		return errors.New("invalid cacheMergeIterator")
+		return errors.New("invalid mvsMergeIterator")
 	}
 
 	return nil
@@ -183,14 +184,14 @@ func (iter *cacheMergeIterator) Error() error {
 
 // If not valid, panics.
 // NOTE: May have side-effect of iterating over cache.
-func (iter *cacheMergeIterator) assertValid() {
+func (iter *mvsMergeIterator) assertValid() {
 	if err := iter.Error(); err != nil {
 		panic(err)
 	}
 }
 
 // Like bytes.Compare but opposite if not ascending.
-func (iter *cacheMergeIterator) compare(a, b []byte) int {
+func (iter *mvsMergeIterator) compare(a, b []byte) int {
 	if iter.ascending {
 		return bytes.Compare(a, b)
 	}
@@ -203,7 +204,7 @@ func (iter *cacheMergeIterator) compare(a, b []byte) int {
 // If the current cache item is not a delete item, does nothing.
 // If `until` is nil, there is no limit, and cache may end up invalid.
 // CONTRACT: cache is valid.
-func (iter *cacheMergeIterator) skipCacheDeletes(until []byte) {
+func (iter *mvsMergeIterator) skipCacheDeletes(until []byte) {
 	for iter.cache.Valid() &&
 		iter.cache.Value() == nil &&
 		(until == nil || iter.compare(iter.cache.Key(), until) < 0) {
@@ -214,7 +215,7 @@ func (iter *cacheMergeIterator) skipCacheDeletes(until []byte) {
 // Fast forwards cache (or parent+cache in case of deleted items) until current
 // item exists, or until iterator becomes invalid.
 // Returns whether the iterator is valid.
-func (iter *cacheMergeIterator) skipUntilExistsOrInvalid() bool {
+func (iter *mvsMergeIterator) skipUntilExistsOrInvalid() bool {
 	for {
 		// If parent is invalid, fast-forward cache.
 		if !iter.parent.Valid() {

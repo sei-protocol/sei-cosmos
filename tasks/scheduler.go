@@ -287,8 +287,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 	toExecute := tasks
 	for !allValidated(tasks) {
-		// if the max incarnation > 5, we should revert to synchronous
-		if s.maxIncarnation > maximumIncarnation {
+		// if the max incarnation >= 5, we should revert to synchronous
+		if s.maxIncarnation >= maximumIncarnation {
 			// process synchronously
 			s.synchronous = true
 			// execute all non-validated tasks (no more "waiting" status)

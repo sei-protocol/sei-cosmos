@@ -266,6 +266,7 @@ func TestProcessAll(t *testing.T) {
 				}
 
 				res, err := s.ProcessAll(ctx, tt.requests)
+				require.LessOrEqual(t, s.(*scheduler).maxIncarnation, maximumIncarnation)
 				require.Len(t, res, len(tt.requests))
 
 				if !errors.Is(err, tt.expectedErr) {

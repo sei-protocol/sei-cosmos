@@ -9,14 +9,12 @@ type trackedIterator struct {
 	types.Iterator
 
 	iterateset *iterationTracker
-	ReadsetHandler
 }
 
-func NewTrackedIterator(iter types.Iterator, iterationTracker *iterationTracker, readSetHandler ReadsetHandler) *trackedIterator {
+func NewTrackedIterator(iter types.Iterator, iterationTracker *iterationTracker) *trackedIterator {
 	return &trackedIterator{
-		Iterator:       iter,
-		iterateset:     iterationTracker,
-		ReadsetHandler: readSetHandler,
+		Iterator:   iter,
+		iterateset: iterationTracker,
 	}
 }
 
@@ -46,7 +44,6 @@ func (ti *trackedIterator) Value() []byte {
 	val := ti.Iterator.Value()
 	// add key to the tracker
 	ti.iterateset.AddKey(key)
-	ti.ReadsetHandler.UpdateReadSet(key, val)
 	return val
 }
 

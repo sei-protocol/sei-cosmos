@@ -301,7 +301,7 @@ func (store *VersionIndexedStore) iterator(start []byte, end []byte, ascending b
 
 	iterationTracker := NewIterationTracker(start, end, ascending, store.writeset)
 	store.UpdateIterateSet(&iterationTracker)
-	trackedIterator := NewTrackedIterator(mergeIterator, &iterationTracker, store)
+	trackedIterator := NewTrackedIterator(mergeIterator, &iterationTracker)
 
 	// mergeIterator
 	return trackedIterator

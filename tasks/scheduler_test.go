@@ -55,14 +55,6 @@ func initTestCtx(injectStores bool) sdk.Context {
 	return ctx
 }
 
-func generateTasks(count int) []*deliverTxTask {
-	var res []*deliverTxTask
-	for i := 0; i < count; i++ {
-		res = append(res, &deliverTxTask{Index: i})
-	}
-	return res
-}
-
 func TestProcessAll(t *testing.T) {
 	runtime.SetBlockProfileRate(1)
 
@@ -176,7 +168,7 @@ func TestProcessAll(t *testing.T) {
 		{
 			name:      "Test every tx accesses same key",
 			workers:   50,
-			runs:      1,
+			runs:      5,
 			addStores: true,
 			requests:  requestList(1000),
 			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {

@@ -485,7 +485,7 @@ func (rs *Store) GetStoreByName(name string) types.Store {
 // Implements interface Queryable
 func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 	version := req.Height
-	if version <= 0 {
+	if version <= 0 || version > rs.lastCommitInfo.Version {
 		version = rs.scStore.Version()
 	}
 	path := req.Path
@@ -496,10 +496,10 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 	var store types.Queryable
 	var commitInfo *types.CommitInfo
 
-	if !req.Prove && version < rs.lastCommitInfo.Version && rs.ssStore != nil {
+	if !req.Prove && rs.ssStore != nil {
 		// Serve abci query from ss store if no proofs needed
 		store = types.Queryable(state.NewStore(rs.ssStore, types.NewKVStoreKey(storeName), version))
-	} else if version < rs.lastCommitInfo.Version {
+	} else {
 		// Serve abci query from historical sc store if proofs needed
 		scStore, err := rs.scStore.LoadVersion(version, true)
 		defer scStore.Close()
@@ -508,11 +508,6 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 		}
 		store = types.Queryable(commitment.NewStore(scStore.GetTreeByName(storeName), rs.logger))
 		commitInfo = convertCommitInfo(scStore.LastCommitInfo())
-		commitInfo = amendCommitInfo(commitInfo, rs.storesParams)
-	} else {
-		// Serve directly from latest sc store
-		store = types.Queryable(commitment.NewStore(rs.scStore.GetTreeByName(storeName), rs.logger))
-		commitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())
 		commitInfo = amendCommitInfo(commitInfo, rs.storesParams)
 	}
 
@@ -789,4 +784,18 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	}
 
 	return nil
+}
+
+// SetKVStores implements types.CommitMultiStore.
+func (*Store) SetKVStores(handler func(key types.StoreKey, s types.KVStore) types.CacheWrap) types.MultiStore {
+	panic("unimplemented")
+}
+
+// StoreKeys implements types.CommitMultiStore.
+func (s *Store) StoreKeys() []types.StoreKey {
+	res := make([]types.StoreKey, len(s.storeKeys))
+	for _, sk := range s.storeKeys {
+		res = append(res, sk)
+	}
+	return res
 }

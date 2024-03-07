@@ -21,6 +21,12 @@ const (
 
 	// DefaultGRPCWebAddress defines the default address to bind the gRPC-web server to.
 	DefaultGRPCWebAddress = "0.0.0.0:9091"
+
+	// DefaultConcurrencyWorkers defines the default workers to use for concurrent transactions
+	DefaultConcurrencyWorkers = 20
+
+	// DefaultOccEanbled defines whether to use OCC for tx processing
+	DefaultOccEnabled = false
 )
 
 // BaseConfig defines the server's basic configuration
@@ -88,6 +94,12 @@ type BaseConfig struct {
 	SeparateOrphanVersionsToKeep int64  `mapstructure:"separate-orphan-versions-to-keep"`
 	NumOrphanPerFile             int    `mapstructure:"num-orphan-per-file"`
 	OrphanDirectory              string `mapstructure:"orphan-dir"`
+
+	// ConcurrencyWorkers defines the number of workers to use for concurrent
+	// transaction execution. A value of -1 means unlimited workers.  Default value is 10.
+	ConcurrencyWorkers int `mapstructure:"concurrency-workers"`
+	// Whether to enable optimistic concurrency control for tx execution, default is true
+	OccEnabled bool `mapstructure:"occ-enabled"`
 }
 
 // APIConfig defines the API listener configuration.
@@ -238,6 +250,8 @@ func DefaultConfig() *Config {
 			IAVLDisableFastNode: true,
 			CompactionInterval:  0,
 			NoVersioning:        false,
+			ConcurrencyWorkers:  DefaultConcurrencyWorkers,
+			OccEnabled:          DefaultOccEnabled,
 		},
 		Telemetry: telemetry.Config{
 			Enabled:      false,
@@ -314,6 +328,8 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			SeparateOrphanVersionsToKeep: v.GetInt64("separate-orphan-versions-to-keep"),
 			NumOrphanPerFile:             v.GetInt("num-orphan-per-file"),
 			OrphanDirectory:              v.GetString("orphan-dir"),
+			ConcurrencyWorkers:           v.GetInt("concurrency-workers"),
+			OccEnabled:                   v.GetBool("occ-enabled"),
 		},
 		Telemetry: telemetry.Config{
 			ServiceName:             v.GetString("telemetry.service-name"),

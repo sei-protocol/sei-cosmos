@@ -24,22 +24,22 @@ but please do not over-use it. We try to keep all data structured
 and standard additions here would be better just to add to the Context struct
 */
 type Context struct {
-	ctx           context.Context
-	ms            MultiStore
-	header        tmproto.Header
-	headerHash    tmbytes.HexBytes
-	chainID       string
-	txBytes       []byte
-	logger        log.Logger
-	voteInfo      []abci.VoteInfo
-	gasMeter      GasMeter
-	blockGasMeter GasMeter
-	checkTx       bool
-	recheckTx     bool // if recheckTx == true, then checkTx must also be true
-	minGasPrice   DecCoins
-	consParams    *tmproto.ConsensusParams
-	eventManager  *EventManager
-	priority      int64 // The tx priority, only relevant in CheckTx
+	ctx          context.Context
+	ms           MultiStore
+	header       tmproto.Header
+	headerHash   tmbytes.HexBytes
+	chainID      string
+	txBytes      []byte
+	logger       log.Logger
+	voteInfo     []abci.VoteInfo
+	gasMeter     GasMeter
+	occEnabled   bool
+	checkTx      bool
+	recheckTx    bool // if recheckTx == true, then checkTx must also be true
+	minGasPrice  DecCoins
+	consParams   *tmproto.ConsensusParams
+	eventManager *EventManager
+	priority     int64 // The tx priority, only relevant in CheckTx
 
 	txBlockingChannels   acltypes.MessageAccessOpsChannelMapping
 	txCompletionChannels acltypes.MessageAccessOpsChannelMapping
@@ -92,16 +92,16 @@ func (c Context) GasMeter() GasMeter {
 	return c.gasMeter
 }
 
-func (c Context) BlockGasMeter() GasMeter {
-	return c.blockGasMeter
-}
-
 func (c Context) IsCheckTx() bool {
 	return c.checkTx
 }
 
 func (c Context) IsReCheckTx() bool {
 	return c.recheckTx
+}
+
+func (c Context) IsOCCEnabled() bool {
+	return c.occEnabled
 }
 
 func (c Context) MinGasPrices() DecCoins {
@@ -269,15 +269,15 @@ func (c Context) WithGasMeter(meter GasMeter) Context {
 	return c
 }
 
-// WithBlockGasMeter returns a Context with an updated block GasMeter
-func (c Context) WithBlockGasMeter(meter GasMeter) Context {
-	c.blockGasMeter = meter
-	return c
-}
-
 // WithIsCheckTx enables or disables CheckTx value for verifying transactions and returns an updated Context
 func (c Context) WithIsCheckTx(isCheckTx bool) Context {
 	c.checkTx = isCheckTx
+	return c
+}
+
+// WithIsOCCEnabled enables or disables whether OCC is used as the concurrency algorithm
+func (c Context) WithIsOCCEnabled(isOCCEnabled bool) Context {
+	c.occEnabled = isOCCEnabled
 	return c
 }
 

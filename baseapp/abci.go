@@ -256,9 +256,10 @@ func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchReques
 	// This will basically no-op the actual prefill if the metadata for the txs is empty
 
 	// process all txs, this will also initializes the MVS if prefill estimates was disabled
+	fmt.Printf("[Debug] DeliverTxBatch start processing %d txs in block %d \n", len(req.TxEntries), ctx.BlockHeight())
 	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
 	if err != nil {
-		// TODO: handle error
+		panic(err)
 	}
 
 	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))

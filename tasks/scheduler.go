@@ -212,6 +212,7 @@ func indexesValidated(tasks []*deliverTxTask, idx []int) bool {
 func allValidated(tasks []*deliverTxTask) bool {
 	for _, t := range tasks {
 		if !t.IsStatus(statusValidated) {
+			fmt.Printf("[Debug] allValidated task %d NOT VALID\n", t.Index)
 			return false
 		}
 	}

@@ -93,6 +93,7 @@ type scheduler struct {
 	workers            int
 	multiVersionStores map[sdk.StoreKey]multiversion.MultiVersionStore
 	tracingInfo        *tracing.Info
+	allTasksMap        map[int]*deliverTxTask
 	allTasks           []*deliverTxTask
 	executeCh          chan func()
 	validateCh         chan func()
@@ -159,10 +160,11 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	return valid, conflicts
 }
 
-func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
-	res := make([]*deliverTxTask, 0, len(reqs))
+func toTasks(reqs []*sdk.DeliverTxEntry) ([]*deliverTxTask, map[int]*deliverTxTask) {
+	tasksMap := make(map[int]*deliverTxTask)
+	allTasks := make([]*deliverTxTask, 0, len(reqs))
 	for idx, r := range reqs {
-		res = append(res, &deliverTxTask{
+		task := &deliverTxTask{
 			Request:       r.Request,
 			SdkTx:         r.SdkTx,
 			Checksum:      r.Checksum,
@@ -170,9 +172,11 @@ func toTasks(reqs []*sdk.DeliverTxEntry) []*deliverTxTask {
 			Index:         idx,
 			Status:        statusPending,
 			ValidateCh:    make(chan status, 1),
-		})
+		}
+		tasksMap[r.AbsoluteIndex] = task
+		allTasks = append(allTasks, task)
 	}
-	return res
+	return allTasks, tasksMap
 }
 
 func (s *scheduler) collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
@@ -200,9 +204,11 @@ func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
 	s.multiVersionStores = mvs
 }
 
-func indexesValidated(tasks []*deliverTxTask, idx []int) bool {
+func indexesValidated(tasksMap map[int]*deliverTxTask, idx []int) bool {
 	for _, i := range idx {
-		if !tasks[i].IsStatus(statusValidated) {
+		// because idx contains absoluteIndices, we need to fetch from map
+		task := tasksMap[i]
+		if !task.IsStatus(statusValidated) {
 			return false
 		}
 	}
@@ -221,12 +227,12 @@ func allValidated(tasks []*deliverTxTask) bool {
 
 func (s *scheduler) PrefillEstimates(reqs []*sdk.DeliverTxEntry) {
 	// iterate over TXs, update estimated writesets where applicable
-	for i, req := range reqs {
+	for _, req := range reqs {
 		mappedWritesets := req.EstimatedWritesets
 		// order shouldnt matter for storeKeys because each storeKey partitioned MVS is independent
 		for storeKey, writeset := range mappedWritesets {
 			// we use `-1` to indicate a prefill incarnation
-			s.multiVersionStores[storeKey].SetEstimatedWriteset(i, -1, writeset)
+			s.multiVersionStores[storeKey].SetEstimatedWriteset(req.AbsoluteIndex, -1, writeset)
 		}
 	}
 }
@@ -253,8 +259,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
 	s.PrefillEstimates(reqs)
-	tasks := toTasks(reqs)
+	tasks, tasksMap := toTasks(reqs)
 	s.allTasks = tasks
+	s.allTasksMap = tasksMap
 	s.executeCh = make(chan func(), len(tasks))
 	s.validateCh = make(chan func(), len(tasks))
 	defer s.emitMetrics()
@@ -317,7 +324,7 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 			s.invalidateTask(task)
 
 			// if the conflicts are now validated, then rerun this task
-			if indexesValidated(s.allTasks, conflicts) {
+			if indexesValidated(s.allTasksMap, conflicts) {
 				return true
 			} else {
 				// otherwise, wait for completion
@@ -335,7 +342,7 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 
 	case statusWaiting:
 		// if conflicts are done, then this task is ready to run again
-		return indexesValidated(s.allTasks, task.Dependencies)
+		return indexesValidated(s.allTasksMap, task.Dependencies)
 	}
 	panic("unexpected status: " + task.Status)
 }

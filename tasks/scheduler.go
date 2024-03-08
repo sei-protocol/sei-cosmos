@@ -469,6 +469,9 @@ func (s *scheduler) prepareTask(task *deliverTxTask) {
 
 func (s *scheduler) executeTask(task *deliverTxTask) {
 	fmt.Printf("[Debug] executing task %d\n", task.Index)
+	defer func() {
+		fmt.Printf("[Debug] finished executing task %d\n", task.Index)
+	}()
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerExecuteTask", task)
 	defer dSpan.End()
 	task.Ctx = dCtx

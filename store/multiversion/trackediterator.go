@@ -23,6 +23,9 @@ func (ti *trackedIterator) Valid() bool {
 	// if no longer valid, remove the early stop key since we reached end of range
 	if !valid {
 		ti.iterateset.SetEarlyStopKey(nil)
+	} else {
+		key := ti.Iterator.Key()
+		ti.iterateset.AddKey(key)
 	}
 	return valid
 }

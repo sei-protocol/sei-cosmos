@@ -437,3 +437,40 @@ func TestIteratorReadsetRace(t *testing.T) {
 	readset := vis.GetReadset()
 	require.Len(t, readset["key4"], 2)
 }
+
+func TestRemoveLastEntry(t *testing.T) {
+	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
+	mvs := multiversion.NewMultiVersionStore(parentKVStore)
+	vis := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 2, 1, make(chan scheduler.Abort, 1))
+
+	parentKVStore.Set([]byte("key1"), []byte("value1"))
+	parentKVStore.Set([]byte("key2"), []byte("value2"))
+	parentKVStore.Set([]byte("key3"), []byte("value3"))
+
+	i := 0
+	iter := vis.Iterator([]byte("key1"), []byte("key5"))
+	for iter.Valid() {
+		i++
+		iter.Next()
+		// break after iterating 2 items
+		if i == 2 {
+			// this checks if a key exists after key2
+			if iter.Valid() {
+				//do something that affects consensus here (e.g. emit event)
+			}
+			break
+		}
+	}
+	iter.Close()
+	vis.WriteToMultiVersionStore()
+
+	// removal of key3 by an earlier tx - should invalidate iterateset
+	writeset := make(multiversion.WriteSet)
+	writeset["key3"] = nil
+	mvs.SetWriteset(1, 1, writeset)
+
+	// should not be valid
+	valid, conflicts := mvs.ValidateTransactionState(2)
+	require.False(t, valid)
+	require.Empty(t, conflicts)
+}

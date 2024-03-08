@@ -288,6 +288,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
 		toExecute, err = s.validateAll(ctx, tasks)
+		fmt.Printf("[Debug] Done validateAll with toExecute %d tasks\n", len(toExecute))
 		if err != nil {
 			return nil, err
 		}

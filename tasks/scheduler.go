@@ -252,7 +252,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
-	s.PrefillEstimates(reqs)
+	// This "optimization" path is being disabled because we don't have a strong reason to have it given that it
+	// s.PrefillEstimates(reqs)
 	tasks, tasksMap := toTasks(reqs)
 	s.allTasks = tasks
 	s.allTasksMap = tasksMap
@@ -511,8 +512,9 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	// If abort has occurred, return, else set the response and status
 	if abortOccurred {
-		task.SetStatus(statusAborted)
+		task.SetStatus(statusWaiting)
 		task.Abort = abort
+		task.Dependencies = append(task.Dependencies, abort.DependentTxIdx)
 		return
 	}
 

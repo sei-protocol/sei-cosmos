@@ -316,7 +316,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		s.reportAll()
 		// if the max incarnation >= 5, we should revert to synchronous
 		if validationCycles >= maximumIncarnation {
-			break
 			// process synchronously
 			s.synchronous = true
 			// execute all non-validated tasks (no more "waiting" status)
@@ -327,7 +326,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			for _, t := range toExecute {
 				taskIndices = append(taskIndices, t.AbsoluteIndex)
 			}
-			ctx.Logger().Error("Synchronously executing tasks", "indices", taskIndices)
+			fmt.Println("Synchronously executing tasks", "indices", taskIndices)
 		}
 
 		var err error
@@ -363,7 +362,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			// loop from start Idx through the rest
 			for i := startIdx; i < len(tasks); i++ {
 				t := tasks[i]
-				ctx.Logger().Error("Synchronously executing task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
+				fmt.Println("Synchronously executing task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 				if !t.IsStatus(statusValidated) {
 					s.executeTask(t)
 				} else {
@@ -371,12 +370,12 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					if !s.validateTask(ctx, t) {
 						t.Reset()
 						t.Increment()
-						ctx.Logger().Error("Task failed validation, needs re-execution", "taskIndex", t.AbsoluteIndex, "incarnation", t.Incarnation, "dependencies", t.Dependencies, "status", t.Status)
+						fmt.Println("Task failed validation, needs re-execution", "taskIndex", t.AbsoluteIndex, "incarnation", t.Incarnation, "dependencies", t.Dependencies, "status", t.Status)
 						// re-execute if necessray
 						s.executeTask(t)
 					}
 				}
-				ctx.Logger().Error("Done with sync execution for task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
+				fmt.Println("Done with sync execution for task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 				if !s.validateTask(ctx, t) {
 					panic("unexpected task failed validation after synchronous execution")
 				}
@@ -471,7 +470,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 			defer wg.Done()
 			if !s.validateTask(ctx, t) {
 				if s.synchronous {
-					ctx.Logger().Error("scheduler failed to validate task in sync mode", "task", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
+					fmt.Println("scheduler failed to validate task in sync mode", "task", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 				}
 				mx.Lock()
 				defer mx.Unlock()
@@ -586,7 +585,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 		abort, ok := <-task.AbortCh
 		if ok {
 			// if there is an abort item that means we need to wait on the dependent tx
-			task.SetStatus(statusWaiting)
+			task.SetStatus(statusAborted)
 			task.Abort = &abort
 			task.AppendDependencies([]int{abort.DependentTxIdx})
 		}

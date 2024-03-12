@@ -273,6 +273,9 @@ func (s *scheduler) emitMetrics() {
 func (s *scheduler) reportAll() {
 	sm := make(map[status]int)
 	for _, t := range s.allTasks {
+		if t.Status == statusExecuted {
+			fmt.Println("Executed status TX", t.AbsoluteIndex, "Incarnation", t.Incarnation, "Dependencies", t.Dependencies)
+		}
 		if _, ok := sm[t.Status]; !ok {
 			sm[t.Status] = 0
 		}

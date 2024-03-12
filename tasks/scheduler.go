@@ -365,13 +365,14 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			// loop from start Idx through the rest
 			for i := startIdx; i < len(tasks); i++ {
 				t := tasks[i]
-				ctx.Logger().Error("Synchronously executing task", "index", i, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
+				ctx.Logger().Error("Synchronously executing task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 				if !t.IsStatus(statusValidated) {
 					s.executeTask(t)
 				} else {
 					// re-validate
 					if !s.validateTask(ctx, t) {
-						// re-execute
+						ctx.Logger().Error("Task failed validation, needs re-execution")
+						// re-execute if necessray
 						s.executeTask(t)
 					}
 				}

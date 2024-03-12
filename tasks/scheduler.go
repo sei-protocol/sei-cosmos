@@ -354,12 +354,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		fmt.Println("last report All")
 		s.reportAll()
 	}
-	fmt.Println("reportAll before sync execution")
-	s.reportAll()
 	// if any are left at this point in a non-validated state, we need to sweep them up one by one
 	if !allValidated(tasks) {
 		// start from the last non-validated task, if not in a validated status, execute, if it IS in a validated state, re-validate, and if now no valid, re-execute
-
+		fmt.Println("reportAll before sync execution")
+		s.reportAll()
 		// find the first non-validated task
 		startIdx, anyLeft := s.findFirstNonValidated()
 		if anyLeft {
@@ -382,14 +381,14 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			if err != nil {
 				return nil, err
 			}
+			fmt.Println("reportAll after sync execution")
+			s.reportAll()
 			if len(toExecute) > 0 {
 				panic("unexpected tasks to execute after synchronous execution")
 			}
 		}
 
 	}
-	fmt.Println("reportAll after sync execution")
-	s.reportAll()
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}

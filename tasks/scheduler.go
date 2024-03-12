@@ -376,6 +376,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 						s.executeTask(t)
 					}
 				}
+				ctx.Logger().Error("Done with sync execution for task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 			}
 			// validate all
 			toExecute, err := s.validateAll(ctx, tasks)

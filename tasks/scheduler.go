@@ -437,6 +437,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 // ExecuteAll executes all tasks concurrently
 func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
+	span.SetAttributes(attribute.Bool("synchronous", s.synchronous))
 	defer span.End()
 
 	// validationWg waits for all validations to complete

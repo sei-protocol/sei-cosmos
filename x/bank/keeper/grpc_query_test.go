@@ -180,10 +180,10 @@ func (suite *IntegrationTestSuite) TestQueryParams() {
 	suite.Require().Equal(suite.app.BankKeeper.GetParams(suite.ctx), res.GetParams())
 }
 
-func (suite *IntegrationTestSuite) QueryDenomsMetadataRequest() {
+func (suite *IntegrationTestSuite) TestQueryDenomsMetadataRequest() {
 	var (
 		req         *types.QueryDenomsMetadataRequest
-		expMetadata = []types.Metadata{}
+		expMetadata []types.Metadata
 	)
 
 	testCases := []struct {

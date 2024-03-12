@@ -272,6 +272,17 @@ func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "incarnations")
 }
 
+func (s *scheduler) reportAll() {
+	sm := make(map[status]int)
+	for _, t := range s.allTasks {
+		if _, ok := sm[t.Status]; !ok {
+			sm[t.Status] = 0
+		}
+		sm[t.Status]++
+	}
+	fmt.Println("DEBUG statuses", s.allTasksMap)
+}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
@@ -337,6 +348,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
 		validationCycles++
+		s.reportAll()
 	}
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()

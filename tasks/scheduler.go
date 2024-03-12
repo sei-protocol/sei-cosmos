@@ -280,7 +280,7 @@ func (s *scheduler) reportAll() {
 		}
 		sm[t.Status]++
 	}
-	fmt.Println("DEBUG statuses", s.allTasksMap)
+	fmt.Println("DEBUG statuses", sm)
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {

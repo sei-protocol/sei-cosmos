@@ -366,6 +366,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			// loop from start Idx through the rest
 			for i := startIdx; i < len(tasks); i++ {
 				t := tasks[i]
+				ctx.Logger().Error("Synchronously executing task", "index", i, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 				if !t.IsStatus(statusValidated) {
 					s.executeTask(t)
 				} else {
@@ -593,6 +594,9 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 			task.SetStatus(statusWaiting)
 			task.Abort = &abort
 			task.AppendDependencies([]int{abort.DependentTxIdx})
+		}
+		for _, v := range task.VersionStores {
+			v.WriteEstimatesToMultiVersionStore()
 		}
 		return
 	}

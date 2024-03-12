@@ -48,7 +48,6 @@ type deliverTxTask struct {
 	Status        status
 	Dependencies  map[int]struct{}
 	Abort         *occ.Abort
-	Index         int
 	Incarnation   int
 	Request       types.RequestDeliverTx
 	SdkTx         sdk.Tx
@@ -181,13 +180,12 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 func toTasks(reqs []*sdk.DeliverTxEntry) ([]*deliverTxTask, map[int]*deliverTxTask) {
 	tasksMap := make(map[int]*deliverTxTask)
 	allTasks := make([]*deliverTxTask, 0, len(reqs))
-	for idx, r := range reqs {
+	for _, r := range reqs {
 		task := &deliverTxTask{
 			Request:       r.Request,
 			SdkTx:         r.SdkTx,
 			Checksum:      r.Checksum,
 			AbsoluteIndex: r.AbsoluteIndex,
-			Index:         idx,
 			Status:        statusPending,
 			Dependencies:  map[int]struct{}{},
 		}
@@ -371,7 +369,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 				} else {
 					// re-validate
 					if !s.validateTask(ctx, t) {
-						ctx.Logger().Error("Task failed validation, needs re-execution")
+						t.Reset()
+						t.Increment()
+						ctx.Logger().Error("Task failed validation, needs re-execution", "taskIndex", t.AbsoluteIndex, "incarnation", t.Incarnation, "dependencies", t.Dependencies, "status", t.Status)
 						// re-execute if necessray
 						s.executeTask(t)
 					}
@@ -530,7 +530,6 @@ func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *deliverTxTask)
 	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
 	if task != nil {
 		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
-		span.SetAttributes(attribute.Int("txIndex", task.Index))
 		span.SetAttributes(attribute.Int("absoluteIndex", task.AbsoluteIndex))
 		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
 	}

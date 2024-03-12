@@ -348,6 +348,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
 		validationCycles++
+		for _, t := range toExecute {
+			fmt.Println("ToExecute abs indices", t.AbsoluteIndex)
+		}
 		fmt.Println("last report All")
 		s.reportAll()
 	}

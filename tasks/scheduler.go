@@ -84,7 +84,6 @@ func (dt *deliverTxTask) Reset() {
 	dt.Abort = nil
 	dt.AbortCh = nil
 	dt.VersionStores = nil
-	dt.Dependencies = map[int]struct{}{}
 }
 
 func (dt *deliverTxTask) Increment() {
@@ -378,17 +377,12 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 					}
 				}
 				ctx.Logger().Error("Done with sync execution for task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
-			}
-			// validate all
-			toExecute, err := s.validateAll(ctx, tasks)
-			if err != nil {
-				return nil, err
+				if !s.validateTask(ctx, t) {
+					panic("unexpected task failed validation after synchronous execution")
+				}
 			}
 			fmt.Println("reportAll after sync execution")
 			s.reportAll()
-			if len(toExecute) > 0 {
-				panic("unexpected tasks to execute after synchronous execution")
-			}
 		}
 
 	}

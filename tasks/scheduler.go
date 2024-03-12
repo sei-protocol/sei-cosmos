@@ -311,6 +311,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			toExecute = filterTasks(tasks, func(t *deliverTxTask) bool {
 				return !t.IsStatus(statusValidated)
 			})
+			taskIndices := []int{}
+			for _, t := range toExecute {
+				taskIndices = append(taskIndices, t.AbsoluteIndex)
+			}
+			ctx.Logger().Error("Synchronously executing tasks", "indices", taskIndices)
 		}
 
 		var err error
@@ -418,7 +423,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 			defer wg.Done()
 			if !s.validateTask(ctx, t) {
 				if s.synchronous {
-					ctx.Logger().Error("scheduler failed to validate task in sync mode", "task", fmt.Sprintf("%v", t))
+					ctx.Logger().Error("scheduler failed to validate task in sync mode", "task", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 				}
 				mx.Lock()
 				defer mx.Unlock()

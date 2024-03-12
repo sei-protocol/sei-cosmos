@@ -300,10 +300,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// validation tasks uses length of tasks to avoid blocking on validation
 	start(workerCtx, s.validateCh, len(tasks))
 
+	validationCycles := 0
 	toExecute := tasks
 	for !allValidated(tasks) {
 		// if the max incarnation >= 5, we should revert to synchronous
-		if s.maxIncarnation >= maximumIncarnation {
+		if validationCycles >= maximumIncarnation {
 			// process synchronously
 			s.synchronous = true
 			// execute all non-validated tasks (no more "waiting" status)
@@ -330,6 +331,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		}
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
+		validationCycles++
 	}
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()

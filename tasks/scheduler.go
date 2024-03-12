@@ -417,6 +417,9 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 		s.DoValidate(func() {
 			defer wg.Done()
 			if !s.validateTask(ctx, t) {
+				if s.synchronous {
+					ctx.Logger().Error("scheduler failed to validate task in sync mode", "task", t)
+				}
 				mx.Lock()
 				defer mx.Unlock()
 				t.Reset()

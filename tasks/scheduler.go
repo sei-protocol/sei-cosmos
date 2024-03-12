@@ -84,6 +84,7 @@ func (dt *deliverTxTask) Reset() {
 	dt.Abort = nil
 	dt.AbortCh = nil
 	dt.VersionStores = nil
+	dt.Dependencies = map[int]struct{}{}
 }
 
 func (dt *deliverTxTask) Increment() {

@@ -318,6 +318,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		s.reportAll()
 		// if the max incarnation >= 5, we should revert to synchronous
 		if validationCycles >= maximumIncarnation {
+			break
 			// process synchronously
 			s.synchronous = true
 			// execute all non-validated tasks (no more "waiting" status)
@@ -353,6 +354,41 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		fmt.Println("last report All")
 		s.reportAll()
 	}
+	fmt.Println("reportAll before sync execution")
+	s.reportAll()
+	// if any are left at this point in a non-validated state, we need to sweep them up one by one
+	if !allValidated(tasks) {
+		// start from the last non-validated task, if not in a validated status, execute, if it IS in a validated state, re-validate, and if now no valid, re-execute
+
+		// find the first non-validated task
+		startIdx, anyLeft := s.findFirstNonValidated()
+		if anyLeft {
+			// loop from start Idx through the rest
+			for i := startIdx; i < len(tasks); i++ {
+				t := tasks[i]
+				if !t.IsStatus(statusValidated) {
+					s.executeTask(t)
+				} else {
+					// re-validate
+					if !s.validateTask(ctx, t) {
+						// re-execute
+						s.executeTask(t)
+					}
+				}
+			}
+			// validate all
+			toExecute, err := s.validateAll(ctx, tasks)
+			if err != nil {
+				return nil, err
+			}
+			if len(toExecute) > 0 {
+				panic("unexpected tasks to execute after synchronous execution")
+			}
+		}
+
+	}
+	fmt.Println("reportAll after sync execution")
+	s.reportAll()
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}

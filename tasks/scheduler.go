@@ -429,7 +429,7 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 	}
 
 	wg := &sync.WaitGroup{}
-	fmt.Println("Validating all with start idx", startIdx)
+	fmt.Println("Validating all with start idx (abs)", tasks[startIdx].AbsoluteIndex)
 	for i := startIdx; i < len(tasks); i++ {
 		wg.Add(1)
 		t := tasks[i]

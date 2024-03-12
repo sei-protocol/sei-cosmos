@@ -108,7 +108,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 			_ = store.Commit(bumpVersion)
 		}
 	}
-	// Commit to SC StorescCommitStartTime := time.Now()
+	// Commit to SC Store
 	_, err := rs.scStore.Commit()
 	if err != nil {
 		panic(err)

@@ -314,6 +314,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	validationCycles := 0
 	toExecute := tasks
 	for !allValidated(tasks) {
+		fmt.Println("first report All")
+		s.reportAll()
 		// if the max incarnation >= 5, we should revert to synchronous
 		if validationCycles >= maximumIncarnation {
 			// process synchronously
@@ -348,6 +350,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
 		validationCycles++
+		fmt.Println("last report All")
 		s.reportAll()
 	}
 	for _, mv := range s.multiVersionStores {

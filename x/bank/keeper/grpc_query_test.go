@@ -282,7 +282,7 @@ func (suite *IntegrationTestSuite) TestQueryDenomsMetadataRequest() {
 	}
 }
 
-func (suite *IntegrationTestSuite) QueryDenomMetadataRequest() {
+func (suite *IntegrationTestSuite) TestQueryDenomMetadataRequest() {
 	var (
 		req         *types.QueryDenomMetadataRequest
 		expMetadata = types.Metadata{}
@@ -312,7 +312,7 @@ func (suite *IntegrationTestSuite) QueryDenomMetadataRequest() {
 		{
 			"success",
 			func() {
-				expMetadata := types.Metadata{
+				expMetadata = types.Metadata{
 					Description: "The native staking token of the Cosmos Hub.",
 					DenomUnits: []*types.DenomUnit{
 						{

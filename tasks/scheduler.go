@@ -326,7 +326,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			for _, t := range toExecute {
 				taskIndices = append(taskIndices, t.AbsoluteIndex)
 			}
-			fmt.Println("Synchronously executing tasks", "indices", taskIndices)
+			fmt.Println("Synchronously executing tasks", "indices", taskIndices, "len", len(taskIndices))
 		}
 
 		var err error
@@ -350,40 +350,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		validationCycles++
 		fmt.Println("last report All")
 		s.reportAll()
-	}
-	// if any are left at this point in a non-validated state, we need to sweep them up one by one
-	if !allValidated(tasks) {
-		// start from the last non-validated task, if not in a validated status, execute, if it IS in a validated state, re-validate, and if now no valid, re-execute
-		fmt.Println("reportAll before sync execution")
-		s.reportAll()
-		// find the first non-validated task
-		startIdx, anyLeft := s.findFirstNonValidated()
-		if anyLeft {
-			// loop from start Idx through the rest
-			for i := startIdx; i < len(tasks); i++ {
-				t := tasks[i]
-				fmt.Println("Synchronously executing task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
-				if !t.IsStatus(statusValidated) {
-					s.executeTask(t)
-				} else {
-					// re-validate
-					if !s.validateTask(ctx, t) {
-						t.Reset()
-						t.Increment()
-						fmt.Println("Task failed validation, needs re-execution", "taskIndex", t.AbsoluteIndex, "incarnation", t.Incarnation, "dependencies", t.Dependencies, "status", t.Status)
-						// re-execute if necessray
-						s.executeTask(t)
-					}
-				}
-				fmt.Println("Done with sync execution for task", "index", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
-				if !s.validateTask(ctx, t) {
-					panic("unexpected task failed validation after synchronous execution")
-				}
-			}
-			fmt.Println("reportAll after sync execution")
-			s.reportAll()
-		}
-
 	}
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()

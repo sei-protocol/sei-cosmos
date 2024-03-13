@@ -436,6 +436,14 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	if len(tasks) == 0 {
 		return nil
 	}
+	if s.synchronous {
+		var ids []int
+		for _, t := range tasks {
+			ids = append(ids, t.AbsoluteIndex)
+		}
+		fmt.Println("synchronously running", ids)
+	}
+
 	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
 	span.SetAttributes(attribute.Bool("synchronous", s.synchronous))
 	defer span.End()
@@ -515,6 +523,16 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerExecuteTask", task)
 	defer dSpan.End()
 	task.Ctx = dCtx
+
+	// in the synchronous case, we only want to re-execute tasks that need re-executing
+	// if already validated, then this does another validation
+	if s.synchronous && task.IsStatus(statusValidated) {
+		s.shouldRerun(task)
+		if task.IsStatus(statusValidated) {
+			return
+		}
+		task.Increment()
+	}
 
 	s.prepareTask(task)
 

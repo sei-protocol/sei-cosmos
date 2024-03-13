@@ -394,7 +394,7 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 			return false
 		}
 		// conflicts and valid, so it'll validate next time
-		return false
+		return true
 
 	case statusWaiting:
 		// if conflicts are done, then this task is ready to run again

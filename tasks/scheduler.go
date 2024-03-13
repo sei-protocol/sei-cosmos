@@ -37,7 +37,7 @@ const (
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
 	// maximumIncarnation before we revert to sequential (for high conflict rates)
-	maximumIncarnation = 5
+	maximumIncarnation = 3
 )
 
 type deliverTxTask struct {
@@ -319,6 +319,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		s.reportAll()
 		// if the max incarnation >= 5, we should revert to synchronous
 		if validationCycles >= maximumIncarnation {
+			break
 			// process synchronously
 			s.synchronous = true
 			// execute all non-validated tasks (no more "waiting" status)
@@ -357,6 +358,32 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		fmt.Println("last report All")
 		s.reportAll()
 	}
+	if !allValidated(tasks) {
+		fmt.Println("Doing synchronous execution for remaining tasks")
+		// if there are any that aren't valid, we need to execute them synchronously
+		// find the first non-validated task
+		startIdx, anyLeft := s.findFirstNonValidated()
+		if anyLeft {
+			// loop from start Idx through the rest
+			for i := startIdx; i < len(tasks); i++ {
+				t := tasks[i]
+				if !t.IsStatus(statusValidated) {
+					s.executeTask(t)
+				} else {
+					// re-validate
+					if !s.validateTask(ctx, t) {
+						// re-execute
+						s.executeTask(t)
+					}
+				}
+				if !s.validateTask(ctx, t) {
+					panic("sync validation should not fail")
+				}
+			}
+		}
+
+	}
+
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
@@ -385,8 +412,8 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 				return true
 			} else {
 				// otherwise, wait for completion
-				task.SetStatus(statusAborted)
-				return true
+				task.SetStatus(statusWaiting)
+				return false
 			}
 		} else if len(conflicts) == 0 {
 			// mark as validated, which will avoid re-validating unless a lower-index re-validates
@@ -394,7 +421,7 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 			return false
 		}
 		// conflicts and valid, so it'll validate next time
-		return true
+		return false
 
 	case statusWaiting:
 		// if conflicts are done, then this task is ready to run again

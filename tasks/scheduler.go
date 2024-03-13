@@ -474,10 +474,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 		// read the first abort from the channel
 		abort, ok := <-task.AbortCh
 		if ok {
-			// if there is an abort item that means we need to wait on the dependent tx
-			task.SetStatus(statusWaiting)
 			task.Abort = &abort
-			task.AppendDependencies([]int{abort.DependentTxIdx})
 		}
 		// write from version store to multiversion stores
 		for _, v := range task.VersionStores {

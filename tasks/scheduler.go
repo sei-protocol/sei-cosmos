@@ -4,10 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"sort"
-	"sync"
-	"time"
-
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -18,6 +14,8 @@ import (
 	"github.com/tendermint/tendermint/abci/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"sort"
+	"sync"
 )
 
 type status string
@@ -272,23 +270,8 @@ func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "incarnations")
 }
 
-func (s *scheduler) reportAll() {
-	sm := make(map[status]int)
-	for _, t := range s.allTasks {
-		if _, ok := sm[t.Status]; !ok {
-			sm[t.Status] = 0
-		}
-		sm[t.Status]++
-	}
-	fmt.Println("DEBUG statuses", sm)
-}
-
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
-	startTime := time.Now()
 	var validationCycles int
-	defer func() {
-		fmt.Printf("Scheduler ProcessAll tx=%d, duration=%s, iterations=%d\n", len(reqs), time.Since(startTime), validationCycles)
-	}()
 
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
@@ -319,7 +302,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 	toExecute := tasks
 	for !allValidated(tasks) {
-		s.reportAll()
 		// if the max incarnation >= x, we should revert to synchronous
 		if validationCycles >= maximumIterations {
 			// process synchronously
@@ -361,7 +343,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
 		validationCycles++
-		s.reportAll()
 	}
 
 	for _, mv := range s.multiVersionStores {

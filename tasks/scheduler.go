@@ -287,9 +287,9 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	startTime := time.Now()
 	var validationCycles int
 	defer func() {
-		fmt.Printf("Scheduler ProcessAll duration:%s, iterations=%d", time.Since(startTime), validationCycles)
+		fmt.Printf("Scheduler ProcessAll tx=%d, duration=%s, iterations=%d\n", len(reqs), time.Since(startTime), validationCycles)
 	}()
-	
+
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates

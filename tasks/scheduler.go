@@ -38,7 +38,7 @@ const (
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
 	// maximumIterations before we revert to sequential (for high conflict rates)
-	maximumIterations = 1000
+	maximumIterations = 10
 )
 
 type deliverTxTask struct {
@@ -320,7 +320,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	toExecute := tasks
 	for !allValidated(tasks) {
 		s.reportAll()
-		// if the max incarnation >= 5, we should revert to synchronous
+		// if the max incarnation >= x, we should revert to synchronous
 		if validationCycles >= maximumIterations {
 			// process synchronously
 			s.synchronous = true

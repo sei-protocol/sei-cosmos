@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/abci/types"
@@ -269,6 +271,41 @@ func TestProcessAll(t *testing.T) {
 				for idx, response := range res {
 					require.Equal(t, fmt.Sprintf("%d", idx), response.Info)
 				}
+			},
+			expectedErr: nil,
+		},
+		{
+			name:      "Test every tx accesses same key with delays",
+			workers:   50,
+			runs:      1,
+			addStores: true,
+			requests:  requestList(1000),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
+				wait := rand.Intn(10)
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				// all txs read and write to the same key to maximize conflicts
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+				val := string(kv.Get(itemKey))
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				// write to the store with this tx's index
+				newVal := val + fmt.Sprintf("%d", ctx.TxIndex())
+				kv.Set(itemKey, []byte(newVal))
+
+				// return what was read from the store (final attempt should be index-1)
+				return types.ResponseDeliverTx{
+					Info: newVal,
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				expected := ""
+				for idx, response := range res {
+					expected = expected + fmt.Sprintf("%d", idx)
+					require.Equal(t, expected, response.Info)
+				}
+				// confirm last write made it to the parent store
+				latest := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
+				require.Equal(t, expected, string(latest))
 			},
 			expectedErr: nil,
 		},

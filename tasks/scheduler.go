@@ -36,8 +36,8 @@ const (
 	statusValidated status = "validated"
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
-	// maximumIncarnation before we revert to sequential (for high conflict rates)
-	maximumIncarnation = 3
+	// maximumIterations before we revert to sequential (for high conflict rates)
+	maximumIterations = 10
 )
 
 type deliverTxTask struct {
@@ -84,6 +84,7 @@ func (dt *deliverTxTask) Reset() {
 	dt.Abort = nil
 	dt.AbortCh = nil
 	dt.VersionStores = nil
+	dt.Dependencies = make(map[int]struct{})
 }
 
 func (dt *deliverTxTask) Increment() {
@@ -270,21 +271,9 @@ func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "incarnations")
 }
 
-func (s *scheduler) reportAll() {
-	sm := make(map[status]int)
-	for _, t := range s.allTasks {
-		if t.Status == statusExecuted {
-			fmt.Println("Executed status TX", t.AbsoluteIndex, "Incarnation", t.Incarnation, "Dependencies", t.Dependencies)
-		}
-		if _, ok := sm[t.Status]; !ok {
-			sm[t.Status] = 0
-		}
-		sm[t.Status]++
-	}
-	fmt.Println("DEBUG statuses", sm)
-}
-
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+	var iterations int
+
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
 	// prefill estimates
@@ -312,76 +301,33 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	// validation tasks uses length of tasks to avoid blocking on validation
 	start(workerCtx, s.validateCh, len(tasks))
 
-	validationCycles := 0
 	toExecute := tasks
 	for !allValidated(tasks) {
-		fmt.Println("first report All")
-		s.reportAll()
-		// if the max incarnation >= 5, we should revert to synchronous
-		if validationCycles >= maximumIncarnation {
-			break
+		// if the max incarnation >= x, we should revert to synchronous
+		if iterations >= maximumIterations {
 			// process synchronously
 			s.synchronous = true
-			// execute all non-validated tasks (no more "waiting" status)
-			toExecute = filterTasks(tasks, func(t *deliverTxTask) bool {
-				return !t.IsStatus(statusValidated)
-			})
-			taskIndices := []int{}
-			for _, t := range toExecute {
-				taskIndices = append(taskIndices, t.AbsoluteIndex)
+			startIdx, anyLeft := s.findFirstNonValidated()
+			if !anyLeft {
+				break
 			}
-			fmt.Println("Synchronously executing tasks", "indices", taskIndices, "len", len(taskIndices))
+			toExecute = tasks[startIdx:]
 		}
 
-		var err error
-
 		// execute sets statuses of tasks to either executed or aborted
-		if len(toExecute) > 0 {
-			err = s.executeAll(ctx, toExecute)
-			if err != nil {
-				return nil, err
-			}
+		if err := s.executeAll(ctx, toExecute); err != nil {
+			return nil, err
 		}
 
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
-		toExecute, err = s.validateAll(ctx, tasks)
+		toExecute, err := s.validateAll(ctx, tasks)
 		if err != nil {
 			return nil, err
 		}
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
-		validationCycles++
-		for _, t := range toExecute {
-			fmt.Println("ToExecute abs indices", t.AbsoluteIndex)
-		}
-		fmt.Println("last report All")
-		s.reportAll()
-	}
-	if !allValidated(tasks) {
-		fmt.Println("Doing synchronous execution for remaining tasks")
-		// if there are any that aren't valid, we need to execute them synchronously
-		// find the first non-validated task
-		startIdx, anyLeft := s.findFirstNonValidated()
-		if anyLeft {
-			// loop from start Idx through the rest
-			for i := startIdx; i < len(tasks); i++ {
-				t := tasks[i]
-				if !t.IsStatus(statusValidated) {
-					s.executeTask(t)
-				} else {
-					// re-validate
-					if !s.validateTask(ctx, t) {
-						// re-execute
-						s.executeTask(t)
-					}
-				}
-				if !s.validateTask(ctx, t) {
-					panic("sync validation should not fail")
-				}
-			}
-		}
-
+		iterations++
 	}
 
 	for _, mv := range s.multiVersionStores {
@@ -404,7 +350,6 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 		// TODO: in a future async scheduler that no longer exhaustively validates in order, we may need to carefully handle the `valid=true` with conflicts case
 		if valid, conflicts := s.findConflicts(task); !valid {
 			s.invalidateTask(task)
-			fmt.Println("task invalid", "index", task.AbsoluteIndex, "conflicts", conflicts)
 			task.AppendDependencies(conflicts)
 
 			// if the conflicts are now validated, then rerun this task
@@ -463,14 +408,12 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 	}
 
 	wg := &sync.WaitGroup{}
-	fmt.Println("Validating all with start idx (abs)", tasks[startIdx].AbsoluteIndex)
 	for i := startIdx; i < len(tasks); i++ {
 		wg.Add(1)
 		t := tasks[i]
 		s.DoValidate(func() {
 			defer wg.Done()
 			if !s.validateTask(ctx, t) {
-				fmt.Println("scheduler validation failed", "sync", s.synchronous, "task", t.AbsoluteIndex, "status", t.Status, "incarnation", t.Incarnation, "dependencies", t.Dependencies)
 				mx.Lock()
 				defer mx.Unlock()
 				t.Reset()
@@ -490,6 +433,17 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 
 // ExecuteAll executes all tasks concurrently
 func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+	if s.synchronous {
+		var ids []int
+		for _, t := range tasks {
+			ids = append(ids, t.AbsoluteIndex)
+		}
+		fmt.Println("synchronously running", ids)
+	}
+
 	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
 	span.SetAttributes(attribute.Bool("synchronous", s.synchronous))
 	defer span.End()
@@ -569,6 +523,17 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerExecuteTask", task)
 	defer dSpan.End()
 	task.Ctx = dCtx
+
+	// in the synchronous case, we only want to re-execute tasks that need re-executing
+	// if already validated, then this does another validation
+	if s.synchronous && task.IsStatus(statusValidated) {
+		s.shouldRerun(task)
+		if task.IsStatus(statusValidated) {
+			return
+		}
+		task.Reset()
+		task.Increment()
+	}
 
 	s.prepareTask(task)
 

@@ -377,6 +377,7 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 		// TODO: in a future async scheduler that no longer exhaustively validates in order, we may need to carefully handle the `valid=true` with conflicts case
 		if valid, conflicts := s.findConflicts(task); !valid {
 			s.invalidateTask(task)
+			fmt.Println("task invalid", "index", task.AbsoluteIndex, "conflicts", conflicts)
 			task.AppendDependencies(conflicts)
 
 			// if the conflicts are now validated, then rerun this task

@@ -531,6 +531,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 		if task.IsStatus(statusValidated) {
 			return
 		}
+		task.Reset()
 		task.Increment()
 	}
 

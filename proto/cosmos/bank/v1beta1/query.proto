@@ -47,7 +47,7 @@ service Query {
     option (google.api.http).get = "/cosmos/bank/v1beta1/denoms_metadata/{denom}";
   }
 
-  // DenomsMetadata queries the client metadata of a given coin denomination.
+  // DenomsMetadata queries the client metadata of a given token factory coin denomination.
   rpc TokenFactoryDenomMetadata(QueryTokenFactoryDenomMetadataRequest) returns (QueryDenomMetadataResponse) {
     option (google.api.http).get = "/cosmos/bank/v1beta1/token_factory/denoms_metadata";
   }

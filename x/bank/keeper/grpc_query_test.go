@@ -337,6 +337,29 @@ func (suite *IntegrationTestSuite) TestQueryDenomMetadataRequest() {
 			},
 			true,
 		},
+		{
+			"success",
+			func() {
+				expMetadata = types.Metadata{
+					Description: "Token factory custom token",
+					DenomUnits: []*types.DenomUnit{
+						{
+							Denom:    "factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN",
+							Exponent: 0,
+							Aliases:  []string{"factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN"},
+						},
+					},
+					Base:    "factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN",
+					Display: "factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN",
+				}
+
+				suite.app.BankKeeper.SetDenomMetaData(suite.ctx, expMetadata)
+				req = &types.QueryDenomMetadataRequest{
+					Denom: expMetadata.Base,
+				}
+			},
+			true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -347,6 +370,79 @@ func (suite *IntegrationTestSuite) TestQueryDenomMetadataRequest() {
 			ctx := sdk.WrapSDKContext(suite.ctx)
 
 			res, err := suite.queryClient.DenomMetadata(ctx, req)
+
+			if tc.expPass {
+				suite.Require().NoError(err)
+				suite.Require().NotNil(res)
+				suite.Require().Equal(expMetadata, res.Metadata)
+			} else {
+				suite.Require().Error(err)
+			}
+		})
+	}
+}
+
+func (suite *IntegrationTestSuite) TestQueryTokenFactoryDenomMetadataRequest() {
+	var (
+		req         *types.QueryTokenFactoryDenomMetadataRequest
+		expMetadata = types.Metadata{}
+	)
+	tokenFactoryDenom := "factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN"
+	testCases := []struct {
+		msg      string
+		malleate func()
+		expPass  bool
+	}{
+		{
+			"empty denom",
+			func() {
+				req = &types.QueryTokenFactoryDenomMetadataRequest{}
+			},
+			false,
+		},
+		{
+			"not found denom",
+			func() {
+				req = &types.QueryTokenFactoryDenomMetadataRequest{
+					Denom: tokenFactoryDenom,
+				}
+			},
+			false,
+		},
+		{
+			"success",
+			func() {
+
+				expMetadata = types.Metadata{
+					Description: "Token factory custom token",
+					DenomUnits: []*types.DenomUnit{
+						{
+							Denom:    tokenFactoryDenom,
+							Exponent: 0,
+							Aliases:  []string{tokenFactoryDenom},
+						},
+					},
+					Base:    tokenFactoryDenom,
+					Display: tokenFactoryDenom,
+				}
+
+				suite.app.BankKeeper.SetDenomMetaData(suite.ctx, expMetadata)
+				req = &types.QueryTokenFactoryDenomMetadataRequest{
+					Denom: expMetadata.Base,
+				}
+			},
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(fmt.Sprintf("Case %s", tc.msg), func() {
+			suite.SetupTest() // reset
+
+			tc.malleate()
+			ctx := sdk.WrapSDKContext(suite.ctx)
+
+			res, err := suite.queryClient.TokenFactoryDenomMetadata(ctx, req)
 
 			if tc.expPass {
 				suite.Require().NoError(err)

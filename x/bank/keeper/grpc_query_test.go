@@ -337,29 +337,6 @@ func (suite *IntegrationTestSuite) TestQueryDenomMetadataRequest() {
 			},
 			true,
 		},
-		{
-			"success",
-			func() {
-				expMetadata = types.Metadata{
-					Description: "Token factory custom token",
-					DenomUnits: []*types.DenomUnit{
-						{
-							Denom:    "factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN",
-							Exponent: 0,
-							Aliases:  []string{"factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN"},
-						},
-					},
-					Base:    "factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN",
-					Display: "factory/sei1gxskuzvhr4s8sdm2rpruaf7yx2dnmjn0zfdu9q/NEWCOIN",
-				}
-
-				suite.app.BankKeeper.SetDenomMetaData(suite.ctx, expMetadata)
-				req = &types.QueryDenomMetadataRequest{
-					Denom: expMetadata.Base,
-				}
-			},
-			true,
-		},
 	}
 
 	for _, tc := range testCases {

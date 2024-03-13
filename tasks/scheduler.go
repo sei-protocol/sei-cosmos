@@ -36,8 +36,8 @@ const (
 	statusValidated status = "validated"
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
-	// maximumIncarnation before we revert to sequential (for high conflict rates)
-	maximumIncarnation = 3
+	// maximumIterations before we revert to sequential (for high conflict rates)
+	maximumIterations = 3
 )
 
 type deliverTxTask struct {
@@ -84,6 +84,7 @@ func (dt *deliverTxTask) Reset() {
 	dt.Abort = nil
 	dt.AbortCh = nil
 	dt.VersionStores = nil
+	dt.Dependencies = make(map[int]struct{})
 }
 
 func (dt *deliverTxTask) Increment() {
@@ -318,14 +319,20 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		fmt.Println("first report All")
 		s.reportAll()
 		// if the max incarnation >= 5, we should revert to synchronous
-		if validationCycles >= maximumIncarnation {
-			break
+		if validationCycles >= maximumIterations {
 			// process synchronously
 			s.synchronous = true
-			// execute all non-validated tasks (no more "waiting" status)
-			toExecute = filterTasks(tasks, func(t *deliverTxTask) bool {
-				return !t.IsStatus(statusValidated)
-			})
+
+			startIdx, anyLeft := s.findFirstNonValidated()
+			if !anyLeft {
+				break
+			}
+			var executeTasks []*deliverTxTask
+			for i := startIdx; i < len(tasks); i++ {
+				executeTasks = append(executeTasks, tasks[i])
+			}
+			toExecute = executeTasks
+
 			taskIndices := []int{}
 			for _, t := range toExecute {
 				taskIndices = append(taskIndices, t.AbsoluteIndex)
@@ -357,31 +364,6 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		}
 		fmt.Println("last report All")
 		s.reportAll()
-	}
-	if !allValidated(tasks) {
-		fmt.Println("Doing synchronous execution for remaining tasks")
-		// if there are any that aren't valid, we need to execute them synchronously
-		// find the first non-validated task
-		startIdx, anyLeft := s.findFirstNonValidated()
-		if anyLeft {
-			// loop from start Idx through the rest
-			for i := startIdx; i < len(tasks); i++ {
-				t := tasks[i]
-				if !t.IsStatus(statusValidated) {
-					s.executeTask(t)
-				} else {
-					// re-validate
-					if !s.validateTask(ctx, t) {
-						// re-execute
-						s.executeTask(t)
-					}
-				}
-				if !s.validateTask(ctx, t) {
-					panic("sync validation should not fail")
-				}
-			}
-		}
-
 	}
 
 	for _, mv := range s.multiVersionStores {

@@ -385,8 +385,8 @@ func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
 				return true
 			} else {
 				// otherwise, wait for completion
-				task.SetStatus(statusWaiting)
-				return false
+				task.SetStatus(statusAborted)
+				return true
 			}
 		} else if len(conflicts) == 0 {
 			// mark as validated, which will avoid re-validating unless a lower-index re-validates

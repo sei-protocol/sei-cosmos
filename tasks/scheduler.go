@@ -436,13 +436,6 @@ func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
 	if len(tasks) == 0 {
 		return nil
 	}
-	if s.synchronous {
-		var ids []int
-		for _, t := range tasks {
-			ids = append(ids, t.AbsoluteIndex)
-		}
-		fmt.Println("synchronously running", ids)
-	}
 
 	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
 	span.SetAttributes(attribute.Bool("synchronous", s.synchronous))

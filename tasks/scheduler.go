@@ -38,7 +38,7 @@ const (
 	// statusWaiting tasks are waiting for another tx to complete
 	statusWaiting status = "waiting"
 	// maximumIterations before we revert to sequential (for high conflict rates)
-	maximumIterations = 3
+	maximumIterations = 10
 )
 
 type deliverTxTask struct {

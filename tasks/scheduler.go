@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"sort"
+	"sync"
+
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -14,8 +17,6 @@ import (
 	"github.com/tendermint/tendermint/abci/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"sort"
-	"sync"
 )
 
 type status string
@@ -271,7 +272,7 @@ func (s *scheduler) emitMetrics() {
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
-	var validationCycles int
+	var iterations int
 
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
@@ -303,46 +304,30 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	toExecute := tasks
 	for !allValidated(tasks) {
 		// if the max incarnation >= x, we should revert to synchronous
-		if validationCycles >= maximumIterations {
+		if iterations >= maximumIterations {
 			// process synchronously
 			s.synchronous = true
-
 			startIdx, anyLeft := s.findFirstNonValidated()
 			if !anyLeft {
 				break
 			}
-			var executeTasks []*deliverTxTask
-			for i := startIdx; i < len(tasks); i++ {
-				executeTasks = append(executeTasks, tasks[i])
-			}
-			toExecute = executeTasks
-
-			taskIndices := []int{}
-			for _, t := range toExecute {
-				taskIndices = append(taskIndices, t.AbsoluteIndex)
-			}
-			fmt.Println("Synchronously executing tasks", "indices", taskIndices, "len", len(taskIndices))
+			toExecute = tasks[startIdx:]
 		}
 
-		var err error
-
 		// execute sets statuses of tasks to either executed or aborted
-		if len(toExecute) > 0 {
-			err = s.executeAll(ctx, toExecute)
-			if err != nil {
-				return nil, err
-			}
+		if err := s.executeAll(ctx, toExecute); err != nil {
+			return nil, err
 		}
 
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
-		toExecute, err = s.validateAll(ctx, tasks)
+		toExecute, err := s.validateAll(ctx, tasks)
 		if err != nil {
 			return nil, err
 		}
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
-		validationCycles++
+		iterations++
 	}
 
 	for _, mv := range s.multiVersionStores {
@@ -448,6 +433,9 @@ func (s *scheduler) validateAll(ctx sdk.Context, tasks []*deliverTxTask) ([]*del
 
 // ExecuteAll executes all tasks concurrently
 func (s *scheduler) executeAll(ctx sdk.Context, tasks []*deliverTxTask) error {
+	if len(tasks) == 0 {
+		return nil
+	}
 	ctx, span := s.traceSpan(ctx, "SchedulerExecuteAll", nil)
 	span.SetAttributes(attribute.Bool("synchronous", s.synchronous))
 	defer span.End()
@@ -527,6 +515,13 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 	dCtx, dSpan := s.traceSpan(task.Ctx, "SchedulerExecuteTask", task)
 	defer dSpan.End()
 	task.Ctx = dCtx
+
+	if task.IsStatus(statusValidated) {
+		valid, _ := s.findConflicts(task)
+		if valid {
+			return
+		}
+	}
 
 	s.prepareTask(task)
 

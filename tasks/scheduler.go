@@ -516,13 +516,6 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 	defer dSpan.End()
 	task.Ctx = dCtx
 
-	if task.IsStatus(statusValidated) {
-		valid, _ := s.findConflicts(task)
-		if valid {
-			return
-		}
-	}
-
 	s.prepareTask(task)
 
 	resp := s.deliverTx(task.Ctx, task.Request, task.SdkTx, task.Checksum)

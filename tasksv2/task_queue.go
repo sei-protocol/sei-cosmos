@@ -13,6 +13,7 @@ const (
 	TypeNone       TaskType = "NONE"
 	TypeExecution  TaskType = "EXECUTE"
 	TypeValidation TaskType = "VALIDATE"
+	maxRetryRatio           = 3
 )
 
 type Queue interface {
@@ -43,16 +44,18 @@ type Queue interface {
 }
 
 type taskQueue struct {
-	lockTimerID string
-	qmx         sync.RWMutex
-	once        sync.Once
-	executing   IntSet
-	finished    IntSet
-	queueLen    atomic.Int64
-	closed      bool
-	workers     int
-	shards      []chan int
-	tasks       []*TxTask
+	lockTimerID     string
+	qmx             sync.RWMutex
+	once            sync.Once
+	executing       IntSet
+	finished        IntSet
+	queueLen        atomic.Int64
+	closed          bool
+	workers         int
+	shards          []chan int
+	tasks           []*TxTask
+	increments      atomic.Int64
+	maxIncarnations int64
 }
 
 func NewTaskQueue(tasks []*TxTask, workers int) Queue {
@@ -61,11 +64,12 @@ func NewTaskQueue(tasks []*TxTask, workers int) Queue {
 		shards = append(shards, make(chan int, len(tasks)*2))
 	}
 	sq := &taskQueue{
-		workers:   workers,
-		tasks:     tasks,
-		shards:    shards,
-		finished:  newIntSet(len(tasks)), // newSyncSetMap(), //(len(tasks)),
-		executing: newIntSet(len(tasks)),
+		workers:         workers,
+		tasks:           tasks,
+		shards:          shards,
+		finished:        newIntSet(len(tasks)), // newSyncSetMap(), //(len(tasks)),
+		executing:       newIntSet(len(tasks)),
+		maxIncarnations: int64(len(tasks) * maxRetryRatio),
 	}
 	return sq
 }
@@ -133,9 +137,22 @@ func (sq *taskQueue) ReValidate(idx int) {
 	sq.validate(idx)
 }
 
+func (sq *taskQueue) retryRatioTooHigh() bool {
+	count := sq.increments.Add(1)
+	return count >= sq.maxIncarnations
+}
+
 func (sq *taskQueue) Execute(idx int) {
 	task := sq.tasks[idx]
 	task.Increment()
+
+	// if this happens, all remaining tasks will run sequentially
+	// this is a safety behavior to prevent incredibly long runtimes
+	if sq.retryRatioTooHigh() {
+		sq.Close()
+		return
+	}
+
 	sq.execute(idx)
 }
 

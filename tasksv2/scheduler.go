@@ -62,6 +62,24 @@ func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (
 	return queue, workers
 }
 
+func (s *scheduler) validateAll(ctx sdk.Context) {
+	for _, t := range s.tasks {
+		if t.IsStatus(statusValidated) {
+			s.validateTask(ctx, t)
+			if t.IsStatus(statusValidated) {
+				continue
+			}
+		}
+		t.ResetForExecution()
+		t.Increment()
+		s.executeTask(t)
+		s.validateTask(ctx, t)
+		if !t.IsStatus(statusValidated) {
+			panic("invalid task after sequential execution")
+		}
+	}
+}
+
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	if len(reqs) == 0 {
 		return []types.ResponseDeliverTx{}, nil
@@ -85,16 +103,10 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 				defer wg.Done()
 
 				for {
-
 					if atomic.LoadInt32(&activeCount) == 0 {
 						mx.Lock()
 						if queue.IsCompleted() {
-							if final.Load() {
-								queue.Close()
-							} else {
-								final.Store(true)
-								queue.ValidateAll()
-							}
+							queue.Close()
 						}
 						mx.Unlock()
 					}
@@ -133,6 +145,10 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		}
 
 		wg.Wait()
+
+		// if there are any tasks left, process them sequentially
+		// this can happen with high conflict rates and high incarnations
+		s.validateAll(ctx)
 
 		for _, mv := range s.multiVersionStores {
 			mv.WriteLatestToStore()

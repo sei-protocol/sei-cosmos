@@ -115,28 +115,21 @@ func newIntSetByteSlice(size int) *syncSet {
 }
 
 func (ss *intSetByteSlice) Add(idx int) {
-	// First check without locking to reduce contention.
+	ss.locks[idx].Lock()
+	defer ss.locks[idx].Unlock()
 	if ss.state[idx] == byte(0) {
-		ss.locks[idx].Lock()
-		// Check again to make sure it hasn't changed since acquiring the lock.
-		if ss.state[idx] == byte(0) {
-			ss.state[idx] = byte(1)
-			atomic.AddInt32(&ss.length, 1)
-		}
-		ss.locks[idx].Unlock()
+		ss.state[idx] = byte(1)
+		atomic.AddInt32(&ss.length, 1)
 	}
 }
 
 func (ss *intSetByteSlice) Delete(idx int) {
 	ss.locks[idx].Lock()
 	defer ss.locks[idx].Unlock()
-
-	// Check again to make sure it hasn't changed since acquiring the lock.
 	if ss.state[idx] == byte(1) {
 		ss.state[idx] = byte(0)
 		atomic.AddInt32(&ss.length, -1)
 	}
-
 }
 
 func (ss *intSetByteSlice) Length() int {

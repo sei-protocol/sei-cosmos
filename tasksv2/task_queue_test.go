@@ -2,24 +2,30 @@ package tasksv2
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/tendermint/abci/types"
 	"testing"
 )
 
 func generateTasks(count int) []*TxTask {
 	var res []*TxTask
 	for i := 0; i < count; i++ {
-		res = append(res, &TxTask{AbsoluteIndex: i})
+		res = append(res, &TxTask{AbsoluteIndex: i,
+			Parents: &intSetMap{
+				m: make(map[int]struct{}),
+			},
+			Dependents: &intSetMap{
+				m: make(map[int]struct{}),
+			}})
 	}
 	return res
 }
 
 func assertExecuting(t *testing.T, task *TxTask) {
-
-	assert.True(t, task.taskType == TypeExecution)
+	assert.Equal(t, TypeExecution, task.taskType)
 }
 
 func assertValidating(t *testing.T, task *TxTask) {
-	assert.True(t, task.taskType == TypeValidation)
+	assert.Equal(t, TypeValidation, task.taskType)
 }
 
 func testQueue() (Queue, []*TxTask) {
@@ -54,6 +60,8 @@ func TestSchedulerQueue(t *testing.T) {
 	nextTask, ok = queue.NextTask(0)
 	assert.True(t, ok)
 	nextTask.PopTaskType()
+	// mock so it's not nil, because no execution actually happened here
+	nextTask.Response = &types.ResponseDeliverTx{}
 	queue.FinishExecute(nextTask.AbsoluteIndex)
 	assertValidating(t, nextTask)
 

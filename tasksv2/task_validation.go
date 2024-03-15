@@ -46,7 +46,9 @@ func (s *scheduler) validateTask(ctx sdk.Context, task *TxTask) {
 	}
 
 	valid, conflicts := s.findConflicts(task)
-	task.Parents = conflicts
+	for _, c := range conflicts {
+		task.Parents.Add(c)
+	}
 
 	if !valid {
 		s.invalidateTask(task)

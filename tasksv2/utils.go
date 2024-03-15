@@ -60,6 +60,9 @@ func toTasks(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) []*TxTask {
 			AbsoluteIndex: r.AbsoluteIndex,
 			SdkTx:         r.SdkTx,
 			Checksum:      r.Checksum,
+			Parents: &intSetMap{
+				m: make(map[int]struct{}),
+			},
 			Dependents: &intSetMap{
 				m: make(map[int]struct{}),
 			},

@@ -160,7 +160,7 @@ func (sq *taskQueue) isFinished(idx int) bool {
 }
 
 func (sq *taskQueue) DependenciesFinished(idx int) bool {
-	for _, dep := range sq.getTask(idx).Parents {
+	for _, dep := range sq.getTask(idx).Parents.List() {
 		if !sq.isFinished(dep) {
 			return false
 		}
@@ -170,7 +170,7 @@ func (sq *taskQueue) DependenciesFinished(idx int) bool {
 
 func (sq *taskQueue) AddDependentToParents(idx int) {
 	parents := sq.getTask(idx).Parents
-	for _, p := range parents {
+	for _, p := range parents.List() {
 		sq.getTask(p).Dependents.Add(idx)
 	}
 }

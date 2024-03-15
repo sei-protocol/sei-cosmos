@@ -38,7 +38,7 @@ type TxTask struct {
 	taskType      TaskType
 	status        status
 	ExecutionID   string
-	Parents       []int
+	Parents       *intSetMap
 	Dependents    *intSetMap
 	Abort         *occ.Abort
 	AbsoluteIndex int
@@ -145,7 +145,6 @@ func (dt *TxTask) Reset() {
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
-	dt.Parents = nil
 	dt.VersionStores = nil
 }
 
@@ -156,7 +155,6 @@ func (dt *TxTask) ResetForExecution() {
 	dt.Response = nil
 	dt.Abort = nil
 	dt.AbortCh = nil
-	dt.Parents = nil
 	dt.VersionStores = nil
 }
 
@@ -179,15 +177,12 @@ func newSyncSet(size int) *syncSet {
 }
 
 func (ss *syncSet) Add(idx int) {
-	// First check without locking to reduce contention.
+	ss.locks[idx].Lock()
+	defer ss.locks[idx].Unlock()
+	// Check again to make sure it hasn't changed since acquiring the lock.
 	if ss.state[idx] == byte(0) {
-		ss.locks[idx].Lock()
-		// Check again to make sure it hasn't changed since acquiring the lock.
-		if ss.state[idx] == byte(0) {
-			ss.state[idx] = byte(1)
-			atomic.AddInt32(&ss.length, 1)
-		}
-		ss.locks[idx].Unlock()
+		ss.state[idx] = byte(1)
+		atomic.AddInt32(&ss.length, 1)
 	}
 }
 

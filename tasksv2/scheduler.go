@@ -186,7 +186,7 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			parent := s.tasks[t.Abort.DependentTxIdx]
 			parent.LockTask()
 			if parent.IsTaskType(TypeExecution) {
-				t.Parents = []int{t.Abort.DependentTxIdx}
+				t.Parents.Add(t.Abort.DependentTxIdx)
 				queue.AddDependentToParents(t.AbsoluteIndex)
 			} else {
 				queue.Execute(t.AbsoluteIndex)

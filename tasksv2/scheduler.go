@@ -2,7 +2,6 @@ package tasksv2
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -40,7 +39,7 @@ func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc Schedule
 	}
 }
 
-func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (Queue, int) {
+func (s *scheduler) initSchedulerAndQueue(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (Queue, int) {
 	// initialize mutli-version stores
 	s.initMultiVersionStore(ctx)
 	// prefill estimates
@@ -62,107 +61,61 @@ func (s *scheduler) initScheduler(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) (
 	return queue, workers
 }
 
-func (s *scheduler) validateAll(ctx sdk.Context) {
-	for _, t := range s.tasks {
-		if t.IsStatus(statusValidated) {
-			s.validateTask(ctx, t)
-			if t.IsStatus(statusValidated) {
-				continue
-			}
-		}
-		t.ResetForExecution()
-		t.Increment()
-		s.executeTask(t)
-		s.validateTask(ctx, t)
-		if !t.IsStatus(statusValidated) {
-			panic("invalid task after sequential execution")
-		}
-	}
-}
-
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
 	if len(reqs) == 0 {
 		return []types.ResponseDeliverTx{}, nil
 	}
 
 	var results []types.ResponseDeliverTx
-	var err error
-	counter := atomic.Int32{}
 
-	WithTimer(s.timer, "ProcessAll", func() {
+	queue, workers := s.initSchedulerAndQueue(ctx, reqs)
+	wg := sync.WaitGroup{}
+	wg.Add(workers)
+	var activeWorkers int32
 
-		queue, workers := s.initScheduler(ctx, reqs)
-		wg := sync.WaitGroup{}
-		wg.Add(workers)
-		mx := sync.Mutex{}
-		var activeCount int32
-		final := atomic.Bool{}
+	for i := 0; i < workers; i++ {
+		go func(worker int) {
+			defer wg.Done()
 
-		for i := 0; i < workers; i++ {
-			go func(worker int) {
-				defer wg.Done()
-
-				for {
-					if atomic.LoadInt32(&activeCount) == 0 {
-						mx.Lock()
-						if queue.IsCompleted() {
-							queue.Close()
-						}
-						mx.Unlock()
+			for {
+				if atomic.LoadInt32(&activeWorkers) == 0 {
+					if queue.IsCompleted() {
+						queue.Close()
 					}
-
-					cancel := hangDebug(func() {
-						if worker == 0 && !queue.IsCompleted() {
-							fmt.Printf("Logging tasks for height %d \n", ctx.BlockHeight())
-							// produce a report of tasks mapped by status
-							var lines []string
-							for _, t := range s.tasks {
-								lines = append(lines, fmt.Sprintf("Task(idx=%d, status=%s, incarnation=%d):\t%s", t.AbsoluteIndex, t.status, t.Incarnation, "status"))
-							}
-							fmt.Println(strings.Join(lines, "\n"))
-						}
-						fmt.Printf("worker=%d, completed=%v\n", worker, queue.IsCompleted())
-					})
-					task, anyTasks := queue.NextTask(worker)
-					cancel()
-					atomic.AddInt32(&activeCount, 1)
-
-					if !anyTasks {
-						return
-					}
-
-					// this safely gets the task type while someone could be editing it
-					if tt, ok := task.PopTaskType(); ok {
-						counter.Add(1)
-						if !s.processTask(ctx, tt, worker, task, queue) {
-							final.Store(false)
-						}
-					}
-					atomic.AddInt32(&activeCount, -1)
 				}
 
-			}(i)
-		}
+				task, anyTasks := queue.NextTask(worker)
+				atomic.AddInt32(&activeWorkers, 1)
 
-		wg.Wait()
+				if !anyTasks {
+					return
+				}
 
-		// if there are any tasks left, process them sequentially
-		// this can happen with high conflict rates and high incarnations
-		s.validateAll(ctx)
+				// threadsafe acquisition of task type, avoids dual-execution
+				if tt, ok := task.PopTaskType(); ok {
+					s.processTask(ctx, tt, worker, task, queue)
+				}
+				atomic.AddInt32(&activeWorkers, -1)
+			}
 
-		for _, mv := range s.multiVersionStores {
-			mv.WriteLatestToStore()
-		}
-		results = collectResponses(s.tasks)
-		err = nil
-	})
-	//s.timer.PrintReport()
-	//fmt.Printf("Total Tasks: %d\n", counter.Load())
+		}(i)
+	}
 
-	return results, err
+	wg.Wait()
+
+	// if there are any tasks left, process them sequentially
+	// this can happen with high conflict rates and high incarnations
+	s.validateAll(ctx)
+
+	for _, mv := range s.multiVersionStores {
+		mv.WriteLatestToStore()
+	}
+	results = collectResponses(s.tasks)
+
+	return results, nil
 }
 
-func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) bool {
+func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *TxTask, queue Queue) {
 	switch taskType {
 	case TypeValidation:
 		TaskLog(t, fmt.Sprintf("TypeValidation (worker=%d)", w))
@@ -176,10 +129,9 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			TaskLog(t, "*** VALIDATED ***")
 			// informs queue that it's complete (counts towards overall completion)
 			queue.FinishTask(t.AbsoluteIndex)
-			return true
+
 		case statusWaiting:
 			// task should be re-validated (waiting on others)
-			// how can we wait on dependencies?
 			TaskLog(t, "waiting, executing again")
 			queue.Execute(t.AbsoluteIndex)
 
@@ -187,9 +139,10 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 			TaskLog(t, "invalid (re-executing, re-validating > tx)")
 			queue.ValidateLaterTasks(t.AbsoluteIndex)
 			queue.Execute(t.AbsoluteIndex)
+
 		default:
 			TaskLog(t, "unexpected status")
-			panic("unexpected status ")
+			panic("unexpected status")
 		}
 
 	case TypeExecution:
@@ -198,7 +151,8 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 
 		s.executeTask(t)
 
-		if t.IsStatus(statusAborted) {
+		switch t.status {
+		case statusAborted:
 			parent := s.tasks[t.Abort.DependentTxIdx]
 			parent.LockTask()
 			if parent.IsTaskType(TypeExecution) {
@@ -208,14 +162,18 @@ func (s *scheduler) processTask(ctx sdk.Context, taskType TaskType, w int, t *Tx
 				queue.Execute(t.AbsoluteIndex)
 			}
 			parent.UnlockTask()
-		} else {
+
+		case statusExecuted:
 			TaskLog(t, fmt.Sprintf("FINISHING task EXECUTION (worker=%d, incarnation=%d)", w, t.Incarnation))
 			queue.FinishExecute(t.AbsoluteIndex)
+
+		default:
+			TaskLog(t, "unexpected status")
+			panic("unexpected status")
 		}
 
 	default:
 		TaskLog(t, "unexpected type")
 		panic("unexpected type")
 	}
-	return false
 }

@@ -2,15 +2,18 @@ package tasksv2
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/abci/types"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"sort"
 	"time"
 )
 
-// TODO: remove after things work
+// TaskLog logs basic task information for debugging purposes
 func TaskLog(task *TxTask, msg string) {
 	// helpful for debugging state transitions
 	//fmt.Println(fmt.Sprintf("%d: Task(%d/%s/%d):\t%s", time.Now().UnixMicro(), task.AbsoluteIndex, task.status, task.Incarnation, msg))
@@ -24,18 +27,18 @@ type mockEndable struct{}
 
 func (m *mockEndable) End(options ...trace.SpanEndOption) {}
 
-func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *TxTask) (sdk.Context, Endable) {
-	//spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
-	//if task != nil {
-	//	span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))))
-	//	span.SetAttributes(attribute.Int("txIndex", task.AbsoluteIndex))
-	//	span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
-	//}
-	//ctx = ctx.WithTraceSpanContext(spanCtx)
-	//return ctx, span
-	return ctx, &mockEndable{}
+func (s *scheduler) traceSpan(ctx sdk.Context, name string, task *TxTask) (sdk.Context, trace.Span) {
+	spanCtx, span := s.tracingInfo.StartWithContext(name, ctx.TraceSpanContext())
+	if task != nil {
+		span.SetAttributes(attribute.String("txHash", task.TxHash))
+		span.SetAttributes(attribute.Int("absoluteIndex", task.AbsoluteIndex))
+		span.SetAttributes(attribute.Int("txIncarnation", task.Incarnation))
+	}
+	ctx = ctx.WithTraceSpanContext(spanCtx)
+	return ctx, span
 }
 
+// hangDebug prints a message after 1s if not cancelled (detects hangs)
 func hangDebug(msg func()) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 	ticker := time.NewTicker(1 * time.Second)
@@ -60,6 +63,7 @@ func toTasks(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) []*TxTask {
 			AbsoluteIndex: r.AbsoluteIndex,
 			SdkTx:         r.SdkTx,
 			Checksum:      r.Checksum,
+			TxHash:        fmt.Sprintf("%X", sha256.Sum256(r.Request.Tx)),
 			Parents: &intSetMap{
 				m: make(map[int]struct{}),
 			},

@@ -45,6 +45,7 @@ type TxTask struct {
 	Executing     byte
 	Validating    byte
 	Incarnation   int
+	TxHash        string
 	Request       types.RequestDeliverTx
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
@@ -136,16 +137,6 @@ func (dt *TxTask) IsWaiting() bool {
 	dt.rwMx.RLock()
 	defer dt.rwMx.RUnlock()
 	return dt.status == statusWaiting
-}
-
-func (dt *TxTask) Reset() {
-	dt.rwMx.Lock()
-	defer dt.rwMx.Unlock()
-	dt.status = statusPending
-	dt.Response = nil
-	dt.Abort = nil
-	dt.AbortCh = nil
-	dt.VersionStores = nil
 }
 
 func (dt *TxTask) ResetForExecution() {

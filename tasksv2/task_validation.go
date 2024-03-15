@@ -18,7 +18,7 @@ func (s *scheduler) findConflicts(task *TxTask) (bool, []int) {
 			}
 		}
 		// any non-ok value makes valid false
-		valid = ok && valid
+		valid = valid && ok
 	}
 	sort.Ints(conflicts)
 	return valid, conflicts
@@ -34,6 +34,24 @@ func (s *scheduler) invalidateTask(task *TxTask) {
 
 func (s *scheduler) mockValidateTask(ctx sdk.Context, task *TxTask) {
 	task.SetStatus(statusValidated)
+}
+
+func (s *scheduler) validateAll(ctx sdk.Context) {
+	for _, t := range s.tasks {
+		if t.IsStatus(statusValidated) {
+			s.validateTask(ctx, t)
+			if t.IsStatus(statusValidated) {
+				continue
+			}
+		}
+		t.ResetForExecution()
+		t.Increment()
+		s.executeTask(t)
+		s.validateTask(ctx, t)
+		if !t.IsStatus(statusValidated) {
+			panic("invalid task after sequential execution")
+		}
+	}
 }
 
 func (s *scheduler) validateTask(ctx sdk.Context, task *TxTask) {

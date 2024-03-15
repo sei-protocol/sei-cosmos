@@ -72,7 +72,8 @@ func (dt *TxTask) IsStatus(s status) bool {
 }
 
 func (dt *TxTask) SetTaskType(tt TaskType) bool {
-	// Early check to potentially avoid locking.
+	dt.rwMx.Lock()
+	defer dt.rwMx.Unlock()
 	if tt == TypeValidation && dt.taskType == TypeNone && dt.Response != nil {
 		return dt.updateTaskType(tt)
 	} else if tt == TypeExecution && dt.taskType != TypeExecution {
@@ -83,8 +84,6 @@ func (dt *TxTask) SetTaskType(tt TaskType) bool {
 
 // updateTaskType assumes that an update is likely needed and does the final check within the lock.
 func (dt *TxTask) updateTaskType(tt TaskType) bool {
-	dt.rwMx.Lock()
-	defer dt.rwMx.Unlock()
 	if tt == TypeValidation && dt.taskType == TypeNone {
 		dt.taskType = tt
 		return true

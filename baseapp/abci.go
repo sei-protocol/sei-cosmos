@@ -6,14 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/tasksv2"
 	"os"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/cosmos/cosmos-sdk/tasks"
 
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
@@ -24,6 +21,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
+	"github.com/cosmos/cosmos-sdk/tasks"
+	"github.com/cosmos/cosmos-sdk/tasksv2"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"

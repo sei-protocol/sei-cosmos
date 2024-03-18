@@ -1,8 +1,10 @@
 package tasksv2
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"fmt"
 	"sort"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func (s *scheduler) findConflicts(task *TxTask) (bool, []int) {
@@ -44,13 +46,15 @@ func (s *scheduler) validateAll(ctx sdk.Context) {
 				continue
 			}
 		}
+		// invalidate before incrementing so that old incarnation is invalidated
+		s.invalidateTask(t)
 		t.ResetForExecution()
 		t.Increment()
 		s.executeTask(t)
 		s.validateTask(ctx, t)
 		if !t.IsStatus(statusValidated) {
 			s.printSummary()
-			panic("invalid task after sequential execution")
+			panic(fmt.Errorf("invalid task after sequential execution, index=%d, incarnation=%d", t.AbsoluteIndex, t.Incarnation))
 		}
 	}
 }

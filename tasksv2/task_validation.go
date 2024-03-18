@@ -49,6 +49,7 @@ func (s *scheduler) validateAll(ctx sdk.Context) {
 		s.executeTask(t)
 		s.validateTask(ctx, t)
 		if !t.IsStatus(statusValidated) {
+			s.printSummary()
 			panic("invalid task after sequential execution")
 		}
 	}

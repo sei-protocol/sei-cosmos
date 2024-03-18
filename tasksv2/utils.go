@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -108,4 +109,12 @@ func (s *scheduler) PrefillEstimates(reqs []*sdk.DeliverTxEntry) {
 			s.multiVersionStores[storeKey].SetEstimatedWriteset(i, -1, writeset)
 		}
 	}
+}
+
+func (s *scheduler) printSummary() {
+	var lines []string
+	for _, t := range s.tasks {
+		lines = append(lines, fmt.Sprintf("Task index=%d status=%s parents=%v", t.AbsoluteIndex, t.status, t.Parents.List()))
+	}
+	fmt.Println(strings.Join(lines, "\n"))
 }

@@ -60,8 +60,7 @@ const (
 	FlagChainID            = "chain-id"
 	FlagConcurrencyWorkers = "concurrency-workers"
 	FlagOccEnabled         = "occ-enabled"
-
-	FlagOccAsync = "occ-async"
+	FlagOccAsync           = "occ-async"
 )
 
 var (

@@ -254,7 +254,7 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // DeliverTxBatch executes multiple txs
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
 	var scheduler tasks.Scheduler
-	if ctx.IsOCCAsync() {
+	if app.occAsync {
 		scheduler = tasksv2.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
 	} else {
 		scheduler = tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)

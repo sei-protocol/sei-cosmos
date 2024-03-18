@@ -39,22 +39,27 @@ func (s *scheduler) mockValidateTask(ctx sdk.Context, task *TxTask) {
 }
 
 func (s *scheduler) validateAll(ctx sdk.Context) {
+	rerun := make(map[int]struct{})
 	for _, t := range s.tasks {
 		if t.IsStatus(statusValidated) {
 			s.validateTask(ctx, t)
 			if t.IsStatus(statusValidated) {
 				continue
 			}
+		} else {
+			// validateTask already invalidates, so we need to invalidate here
+			s.invalidateTask(t)
 		}
+		rerun[t.AbsoluteIndex] = struct{}{}
 		// invalidate before incrementing so that old incarnation is invalidated
-		s.invalidateTask(t)
 		t.ResetForExecution()
 		t.Increment()
 		s.executeTask(t)
 		s.validateTask(ctx, t)
 		if !t.IsStatus(statusValidated) {
 			s.printSummary()
-			panic(fmt.Errorf("invalid task after sequential execution, index=%d, incarnation=%d", t.AbsoluteIndex, t.Incarnation))
+			_, reran := rerun[t.AbsoluteIndex]
+			panic(fmt.Errorf("invalid task after sequential execution, index=%d, incarnation=%d, reran=%v", t.AbsoluteIndex, t.Incarnation, reran))
 		}
 	}
 }

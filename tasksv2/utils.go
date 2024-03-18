@@ -113,8 +113,10 @@ func (s *scheduler) PrefillEstimates(reqs []*sdk.DeliverTxEntry) {
 
 func (s *scheduler) printSummary() {
 	var lines []string
-	for _, t := range s.tasks {
-		lines = append(lines, fmt.Sprintf("Task index=%d status=%s parents=%v", t.AbsoluteIndex, t.status, t.Parents.List()))
+	for i, t := range s.tasks {
+		line := fmt.Sprintf("Task index=%d absoluteIndex=%d status=%s incarnation=%d parents=%v responseExists=%v", i, t.AbsoluteIndex, t.Status(), t.Incarnation, t.Parents.List(), t.Response != nil)
+		lines = append(lines, line)
 	}
+
 	fmt.Println(strings.Join(lines, "\n"))
 }

@@ -27,6 +27,7 @@ const (
 
 	// DefaultOccEanbled defines whether to use OCC for tx processing
 	DefaultOccEnabled = false
+	DefaultOccAsync   = false
 )
 
 // BaseConfig defines the server's basic configuration
@@ -100,6 +101,7 @@ type BaseConfig struct {
 	ConcurrencyWorkers int `mapstructure:"concurrency-workers"`
 	// Whether to enable optimistic concurrency control for tx execution, default is true
 	OccEnabled bool `mapstructure:"occ-enabled"`
+	OccAsync   bool `mapstructure:"occ-async"`
 }
 
 // APIConfig defines the API listener configuration.
@@ -252,6 +254,7 @@ func DefaultConfig() *Config {
 			NoVersioning:        false,
 			ConcurrencyWorkers:  DefaultConcurrencyWorkers,
 			OccEnabled:          DefaultOccEnabled,
+			OccAsync:            DefaultOccAsync,
 		},
 		Telemetry: telemetry.Config{
 			Enabled:      false,
@@ -330,6 +333,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			OrphanDirectory:              v.GetString("orphan-dir"),
 			ConcurrencyWorkers:           v.GetInt("concurrency-workers"),
 			OccEnabled:                   v.GetBool("occ-enabled"),
+			OccAsync:                     v.GetBool("occ-async"),
 		},
 		Telemetry: telemetry.Config{
 			ServiceName:             v.GetString("telemetry.service-name"),

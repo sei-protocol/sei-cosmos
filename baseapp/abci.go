@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/tasksv2"
 	"os"
 	"sort"
 	"strings"
@@ -252,13 +253,18 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 
 // DeliverTxBatch executes multiple txs
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
-	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
-	// This will basically no-op the actual prefill if the metadata for the txs is empty
+	var scheduler tasks.Scheduler
+	if ctx.IsOCCAsync() {
+		scheduler = tasksv2.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
+	} else {
+		scheduler = tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
+	}
 
 	// process all txs, this will also initializes the MVS if prefill estimates was disabled
 	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
 	if err != nil {
-		// TODO: handle error
+		app.logger.Error("DeliverTxBatch failed", "err", err)
+		panic(err)
 	}
 
 	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))

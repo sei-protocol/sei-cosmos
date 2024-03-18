@@ -88,6 +88,7 @@ func (s *contextTestSuite) TestContextWithCustom() {
 	chainid := "chainid"
 	ischeck := true
 	isOCC := true
+	isAsync := true
 	txbytes := []byte("txbytes")
 	logger := mocks.NewMockLogger(ctrl)
 	voteinfos := []abci.VoteInfo{{}}
@@ -106,12 +107,14 @@ func (s *contextTestSuite) TestContextWithCustom() {
 		WithGasMeter(meter).
 		WithMinGasPrices(minGasPrices).
 		WithHeaderHash(headerHash).
-		WithIsOCCEnabled(isOCC)
+		WithIsOCCEnabled(isOCC).
+		WithIsOCCAsync(isAsync)
 
 	s.Require().Equal(height, ctx.BlockHeight())
 	s.Require().Equal(chainid, ctx.ChainID())
 	s.Require().Equal(ischeck, ctx.IsCheckTx())
 	s.Require().Equal(isOCC, ctx.IsOCCEnabled())
+	s.Require().Equal(isAsync, ctx.IsOCCAsync())
 	s.Require().Equal(txbytes, ctx.TxBytes())
 	s.Require().Equal(logger, ctx.Logger())
 	s.Require().Equal(voteinfos, ctx.VoteInfos())

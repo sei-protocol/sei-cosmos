@@ -316,7 +316,28 @@ func (v *VersionIndexedStore) VersionExists(version int64) bool {
 }
 
 func (v *VersionIndexedStore) DeleteAll(start, end []byte) error {
-	return v.parent.DeleteAll(start, end)
+	for _, k := range v.GetAllKeyStrsInRange(start, end) {
+		v.Delete([]byte(k))
+	}
+	return nil
+}
+
+func (v *VersionIndexedStore) GetAllKeyStrsInRange(start, end []byte) (res []string) {
+	keyStrs := map[string]struct{}{}
+	for _, pk := range v.parent.GetAllKeyStrsInRange(start, end) {
+		keyStrs[pk] = struct{}{}
+	}
+	for k, val := range v.writeset {
+		if val == nil {
+			delete(keyStrs, string(k))
+		} else {
+			keyStrs[string(k)] = struct{}{}
+		}
+	}
+	for k := range keyStrs {
+		res = append(res, k)
+	}
+	return res
 }
 
 // GetStoreType implements types.KVStore.

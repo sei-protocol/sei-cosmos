@@ -79,8 +79,6 @@ func requestListWithEstimatedWritesets(n int) []*sdk.DeliverTxEntry {
 	return tasks
 }
 
-type mockLogger struct{}
-
 func initTestCtx(injectStores bool) sdk.Context {
 	ctx := sdk.Context{}.WithContext(context.Background())
 	keys := make(map[string]sdk.StoreKey)

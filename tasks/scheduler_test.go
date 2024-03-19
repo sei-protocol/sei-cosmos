@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/abci/types"
@@ -19,6 +21,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/cachemulti"
 	"github.com/cosmos/cosmos-sdk/store/dbadapter"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 )
 
@@ -38,6 +42,18 @@ func requestList(n int) []*sdk.DeliverTxEntry {
 
 	}
 	return tasks
+}
+
+func abortRecoveryFunc(response *types.ResponseDeliverTx) {
+	if r := recover(); r != nil {
+		_, ok := r.(occ.Abort)
+		if !ok {
+			panic(r)
+		}
+		response.Code = sdkerrors.ErrOCCAbort.ABCICode()
+		response.Codespace = sdkerrors.ErrOCCAbort.Codespace()
+		response.Info = "occ abort"
+	}
 }
 
 func initTestCtx(injectStores bool) sdk.Context {
@@ -100,7 +116,8 @@ func TestProcessAll(t *testing.T) {
 					kv.Set([]byte(fmt.Sprintf("%d", i)), []byte(fmt.Sprintf("%d", i)))
 				}
 			},
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&response)
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
 				if ctx.TxIndex()%2 == 0 {
 					// For even-indexed transactions, write to the store
@@ -140,7 +157,8 @@ func TestProcessAll(t *testing.T) {
 			runs:      10,
 			addStores: true,
 			requests:  requestList(1000),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&response)
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
 
@@ -171,7 +189,8 @@ func TestProcessAll(t *testing.T) {
 			runs:      5,
 			addStores: true,
 			requests:  requestList(1000),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&response)
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
 				val := string(kv.Get(itemKey))
@@ -206,7 +225,8 @@ func TestProcessAll(t *testing.T) {
 			runs:      1,
 			addStores: true,
 			requests:  requestList(2000),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&response)
 				if ctx.TxIndex()%10 != 0 {
 					return types.ResponseDeliverTx{
 						Info: "none",
@@ -233,7 +253,8 @@ func TestProcessAll(t *testing.T) {
 			runs:      10,
 			addStores: false,
 			requests:  requestList(10),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&response)
 				return types.ResponseDeliverTx{
 					Info: fmt.Sprintf("%d", ctx.TxIndex()),
 				}
@@ -242,6 +263,41 @@ func TestProcessAll(t *testing.T) {
 				for idx, response := range res {
 					require.Equal(t, fmt.Sprintf("%d", idx), response.Info)
 				}
+			},
+			expectedErr: nil,
+		},
+		{
+			name:      "Test every tx accesses same key with delays",
+			workers:   50,
+			runs:      1,
+			addStores: true,
+			requests:  requestList(1000),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&response)
+				wait := rand.Intn(10)
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				// all txs read and write to the same key to maximize conflicts
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+				val := string(kv.Get(itemKey))
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				// write to the store with this tx's index
+				newVal := val + fmt.Sprintf("%d", ctx.TxIndex())
+				kv.Set(itemKey, []byte(newVal))
+
+				// return what was read from the store (final attempt should be index-1)
+				return types.ResponseDeliverTx{
+					Info: newVal,
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				expected := ""
+				for idx, response := range res {
+					expected = expected + fmt.Sprintf("%d", idx)
+					require.Equal(t, expected, response.Info)
+				}
+				// confirm last write made it to the parent store
+				latest := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
+				require.Equal(t, expected, string(latest))
 			},
 			expectedErr: nil,
 		},
@@ -266,7 +322,7 @@ func TestProcessAll(t *testing.T) {
 				}
 
 				res, err := s.ProcessAll(ctx, tt.requests)
-				require.LessOrEqual(t, s.(*scheduler).maxIncarnation, maximumIncarnation)
+				require.LessOrEqual(t, s.(*scheduler).maxIncarnation, maximumIterations)
 				require.Len(t, res, len(tt.requests))
 
 				if !errors.Is(err, tt.expectedErr) {

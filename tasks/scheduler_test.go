@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/tendermint/tendermint/libs/log"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
@@ -78,6 +79,8 @@ func requestListWithEstimatedWritesets(n int) []*sdk.DeliverTxEntry {
 	return tasks
 }
 
+type mockLogger struct{}
+
 func initTestCtx(injectStores bool) sdk.Context {
 	ctx := sdk.Context{}.WithContext(context.Background())
 	keys := make(map[string]sdk.StoreKey)
@@ -90,6 +93,7 @@ func initTestCtx(injectStores bool) sdk.Context {
 	}
 	store := cachemulti.NewStore(db, stores, keys, nil, nil, nil)
 	ctx = ctx.WithMultiStore(&store)
+	ctx = ctx.WithLogger(log.NewNopLogger())
 	return ctx
 }
 

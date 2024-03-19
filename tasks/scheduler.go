@@ -334,14 +334,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
-	incarnationMap := make(map[int]int)
-	for _, t := range tasks {
-		if _, ok := incarnationMap[t.Incarnation]; !ok {
-			incarnationMap[t.Incarnation] = 0
-		}
-		incarnationMap[t.Incarnation]++
-	}
-	fmt.Printf("DEBUG scheduler height=%d txs=%d maxIncarnation=%d, iterations=%d, sync=%v, incarnations=%v\n", ctx.BlockHeight(), len(tasks), s.maxIncarnation, iterations, s.synchronous, incarnationMap)
+	ctx.Logger().Info("occ scheduler", "height", ctx.BlockHeight(), "txs", len(tasks), "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
 
 	return s.collectResponses(tasks), nil
 }

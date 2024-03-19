@@ -319,7 +319,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
-		toExecute, err := s.validateAll(ctx, tasks)
+		var err error
+		toExecute, err = s.validateAll(ctx, tasks)
 		if err != nil {
 			return nil, err
 		}
@@ -332,6 +333,16 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		mv.WriteLatestToStore()
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
+
+	incarnationMap := make(map[int]int)
+	for _, t := range tasks {
+		if _, ok := incarnationMap[t.Incarnation]; !ok {
+			incarnationMap[t.Incarnation] = 0
+		}
+		incarnationMap[t.Incarnation]++
+	}
+	fmt.Printf("DEBUG scheduler height=%d txs=%d maxIncarnation=%d, iterations=%d, sync=%v, incarnations=%v\n", ctx.BlockHeight(), len(tasks), s.maxIncarnation, iterations, s.synchronous, incarnationMap)
+
 	return s.collectResponses(tasks), nil
 }
 

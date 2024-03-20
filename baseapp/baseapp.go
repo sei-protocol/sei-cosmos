@@ -60,6 +60,7 @@ const (
 	FlagChainID            = "chain-id"
 	FlagConcurrencyWorkers = "concurrency-workers"
 	FlagOccEnabled         = "occ-enabled"
+	FlagOccAsync           = "occ-async"
 )
 
 var (
@@ -170,6 +171,7 @@ type BaseApp struct { //nolint: maligned
 
 	concurrencyWorkers int
 	occEnabled         bool
+	occAsync           bool
 }
 
 type appStore struct {
@@ -280,6 +282,7 @@ func NewBaseApp(
 	}
 
 	app.TracingInfo.SetContext(context.Background())
+	app.occAsync = cast.ToBool(appOpts.Get(FlagOccAsync))
 
 	for _, option := range options {
 		option(app)
@@ -304,6 +307,11 @@ func NewBaseApp(
 	// safely default this to the default value if 0
 	if app.concurrencyWorkers == 0 {
 		app.concurrencyWorkers = config.DefaultConcurrencyWorkers
+	}
+
+	//TODO: remove occAsync feature flag after it's the default version
+	if app.occAsync {
+		app.logger.Info("asynchronous occ scheduler is enabled")
 	}
 
 	return app

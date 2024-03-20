@@ -36,3 +36,11 @@ func TestOCCEnabled(t *testing.T) {
 	cfg.BaseConfig.OccEnabled = true
 	require.True(t, cfg.OccEnabled)
 }
+
+func TestOCCAsync(t *testing.T) {
+	cfg := DefaultConfig()
+	require.False(t, cfg.OccAsync)
+
+	cfg.BaseConfig.OccAsync = true
+	require.True(t, cfg.OccAsync)
+}

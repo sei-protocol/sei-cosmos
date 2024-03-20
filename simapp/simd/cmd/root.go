@@ -306,6 +306,7 @@ func (a appCreator) newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, t
 		baseapp.SetIAVLDisableFastNode(cast.ToBool(appOpts.Get(server.FlagIAVLFastNode))),
 		baseapp.SetCompactionInterval(cast.ToUint64(appOpts.Get(server.FlagCompactionInterval))),
 		baseapp.SetOccEnabled(cast.ToBool(appOpts.Get(baseapp.FlagOccEnabled))),
+		baseapp.SetOccEnabled(cast.ToBool(appOpts.Get(baseapp.FlagOccAsync))),
 	)
 }
 

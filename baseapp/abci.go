@@ -252,18 +252,22 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 // DeliverTxBatch executes multiple txs
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
 	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
-	// avoid overhead for empty batches
-	if len(req.TxEntries) > 0 {
-		scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
-		txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
-		if err != nil {
-			ctx.Logger().Error("error while processing scheduler", "err", err)
-			panic(err)
-		}
-		for _, tx := range txRes {
-			responses = append(responses, &sdk.DeliverTxResult{Response: tx})
-		}
+
+	if len(req.TxEntries) == 0 {
+		return sdk.DeliverTxBatchResponse{Results: responses}
 	}
+
+	// avoid overhead for empty batches
+	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
+	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
+	if err != nil {
+		ctx.Logger().Error("error while processing scheduler", "err", err)
+		panic(err)
+	}
+	for _, tx := range txRes {
+		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
+	}
+
 	return sdk.DeliverTxBatchResponse{Results: responses}
 }
 

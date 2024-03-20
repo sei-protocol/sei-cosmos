@@ -323,21 +323,12 @@ func (v *VersionIndexedStore) DeleteAll(start, end []byte) error {
 }
 
 func (v *VersionIndexedStore) GetAllKeyStrsInRange(start, end []byte) (res []string) {
-	keyStrs := map[string]struct{}{}
-	for _, pk := range v.parent.GetAllKeyStrsInRange(start, end) {
-		keyStrs[pk] = struct{}{}
+	iter := v.Iterator(start, end)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		res = append(res, string(iter.Key()))
 	}
-	for k, val := range v.writeset {
-		if val == nil {
-			delete(keyStrs, string(k))
-		} else {
-			keyStrs[string(k)] = struct{}{}
-		}
-	}
-	for k := range keyStrs {
-		res = append(res, k)
-	}
-	return res
+	return
 }
 
 // GetStoreType implements types.KVStore.

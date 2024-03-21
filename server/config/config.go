@@ -27,6 +27,7 @@ const (
 
 	// DefaultOccEanbled defines whether to use OCC for tx processing
 	DefaultOccEnabled = true
+)
 
 // BaseConfig defines the server's basic configuration
 type BaseConfig struct {

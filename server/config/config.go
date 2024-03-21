@@ -25,7 +25,7 @@ const (
 	// DefaultConcurrencyWorkers defines the default workers to use for concurrent transactions
 	DefaultConcurrencyWorkers = 500
 
-	// DefaultOccEanbled defines whether to use OCC for tx processing
+	// DefaultOccEnabled defines whether to use OCC for tx processing
 	DefaultOccEnabled = true
 )
 

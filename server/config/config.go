@@ -23,11 +23,10 @@ const (
 	DefaultGRPCWebAddress = "0.0.0.0:9091"
 
 	// DefaultConcurrencyWorkers defines the default workers to use for concurrent transactions
-	DefaultConcurrencyWorkers = 20
+	DefaultConcurrencyWorkers = 500
 
 	// DefaultOccEanbled defines whether to use OCC for tx processing
-	DefaultOccEnabled = false
-)
+	DefaultOccEnabled = true
 
 // BaseConfig defines the server's basic configuration
 type BaseConfig struct {

@@ -1207,7 +1207,7 @@ func (rs *Store) SetKVStores(handler func(key types.StoreKey, s types.KVStore) t
 }
 
 func (rs *Store) StoreKeys() []types.StoreKey {
-	res := make([]types.StoreKey, len(rs.keysByName))
+	res := make([]types.StoreKey, 0)
 	for _, sk := range rs.keysByName {
 		res = append(res, sk)
 	}

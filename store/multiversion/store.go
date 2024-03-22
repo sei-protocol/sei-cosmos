@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -282,6 +283,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 		}
 		// create a new MVSMergeiterator
 		mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending, NoOpHandler{})
+		fmt.Printf("[Debug] MVS iterator validation for tx index %d and iteration tracker %v\n", index, iterationTracker)
 		defer mergeIterator.Close()
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
 			if (len(expectedKeys) - foundKeys) == 0 {

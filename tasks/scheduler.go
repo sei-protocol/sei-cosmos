@@ -159,6 +159,7 @@ func (s *scheduler) findConflicts(task *deliverTxTask) (bool, []int) {
 	uniq := make(map[int]struct{})
 	valid := true
 	for _, mv := range s.multiVersionStores {
+		fmt.Printf("[Debug] Validating Transaction State for task %d, tx %v\n", task.Index, task.Request.Tx)
 		ok, mvConflicts := mv.ValidateTransactionState(task.Index)
 		for _, c := range mvConflicts {
 			if _, ok := uniq[c]; !ok {

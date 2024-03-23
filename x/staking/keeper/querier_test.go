@@ -349,7 +349,7 @@ func TestQueryDelegation(t *testing.T) {
 
 	// Query unbonding delegation
 	unbondingTokens := app.StakingKeeper.TokensFromConsensusPower(ctx, 10)
-	_, err = app.StakingKeeper.Undelegate(ctx, addrAcc2, val1.GetOperator(), unbondingTokens.ToDec())
+	_, _, err = app.StakingKeeper.Undelegate(ctx, addrAcc2, val1.GetOperator(), unbondingTokens.ToDec())
 	require.NoError(t, err)
 
 	queryBondParams = types.QueryDelegatorValidatorRequest{DelegatorAddr: addrAcc2.String(), ValidatorAddr: addrVal1.String()}
@@ -507,7 +507,7 @@ func TestQueryValidatorDelegations_Pagination(t *testing.T) {
 	// Undelegate
 	for _, addr := range addrs {
 		delTokens := app.StakingKeeper.TokensFromConsensusPower(ctx, 20)
-		_, err := app.StakingKeeper.Undelegate(ctx, addr, val1.GetOperator(), delTokens.ToDec())
+		_, _, err := app.StakingKeeper.Undelegate(ctx, addr, val1.GetOperator(), delTokens.ToDec())
 		require.NoError(t, err)
 	}
 
@@ -629,7 +629,7 @@ func TestQueryUnbondingDelegation(t *testing.T) {
 
 	// undelegate
 	undelAmount := app.StakingKeeper.TokensFromConsensusPower(ctx, 20)
-	_, err = app.StakingKeeper.Undelegate(ctx, addrAcc1, val1.GetOperator(), undelAmount.ToDec())
+	_, _, err = app.StakingKeeper.Undelegate(ctx, addrAcc1, val1.GetOperator(), undelAmount.ToDec())
 	require.NoError(t, err)
 	applyValidatorSetUpdates(t, ctx, app.StakingKeeper, -1)
 

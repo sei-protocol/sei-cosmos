@@ -245,7 +245,9 @@ func (k msgServer) Delegate(goCtx context.Context, msg *types.MsgDelegate) (*typ
 		),
 	})
 
-	return &types.MsgDelegateResponse{}, nil
+	return &types.MsgDelegateResponse{
+		Shares: newShares,
+	}, nil
 }
 
 // BeginRedelegate defines a method for performing a redelegation of coins from a delegator and source validator to a destination validator
@@ -342,7 +344,7 @@ func (k msgServer) Undelegate(goCtx context.Context, msg *types.MsgUndelegate) (
 		)
 	}
 
-	completionTime, err := k.Keeper.Undelegate(ctx, delegatorAddress, addr, shares)
+	ubdID, completionTime, err := k.Keeper.Undelegate(ctx, delegatorAddress, addr, shares)
 	if err != nil {
 		return nil, err
 	}
@@ -373,6 +375,7 @@ func (k msgServer) Undelegate(goCtx context.Context, msg *types.MsgUndelegate) (
 	})
 
 	return &types.MsgUndelegateResponse{
+		UnbondingId:    ubdID,
 		CompletionTime: completionTime,
 	}, nil
 }

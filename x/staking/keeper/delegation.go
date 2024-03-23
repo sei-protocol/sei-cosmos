@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -147,6 +148,19 @@ func (k Keeper) GetUnbondingDelegation(
 	ubd = types.MustUnmarshalUBD(k.cdc, value)
 
 	return ubd, true
+}
+
+func (k Keeper) GetUnbondingDelegationByUnbondingID(
+	ctx sdk.Context, delAddr sdk.AccAddress, valAddr sdk.ValAddress, unbondingID uint64,
+) (ubdEntry types.UnbondingDelegationEntry, found bool) {
+	ubd, found := k.GetUnbondingDelegation(ctx, delAddr, valAddr)
+	if !found {
+		return ubdEntry, false
+	}
+	index := slices.IndexFunc(ubd.Entries, func(e types.UnbondingDelegationEntry) bool {
+		return e.UnbondingId == unbondingID
+	})
+	return ubd.Entries[index], index != -1
 }
 
 // GetUnbondingDelegationsFromValidator returns all unbonding delegations from a

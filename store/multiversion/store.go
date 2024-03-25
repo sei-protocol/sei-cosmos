@@ -3,6 +3,7 @@ package multiversion
 import (
 	"bytes"
 	"fmt"
+	"runtime/debug"
 	"sort"
 	"sync"
 
@@ -307,6 +308,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 						itemsIter.Next()
 					}
 				}
+				fmt.Println("Panic FULL trace: \n" + string(debug.Stack()))
 				panic(r)
 			}
 		}()

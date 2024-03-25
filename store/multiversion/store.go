@@ -272,6 +272,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 
 	// listen for abort while iterating
 	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort) {
+		// TODO: do we need to recover here for aborts due to abort panic? Add unit test - shouldnt be necessary?
 		var parentIter types.Iterator
 		expectedKeys := iterationTracker.iteratedKeys
 		foundKeys := 0
@@ -289,11 +290,22 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 				fmt.Printf("[Debug] MVS iterator validation recovering panic for tx index %d and iteration tracker StartKey:%X, endKey: %X, earlyStop: %X, raw %v\n", index, iterationTracker.startKey, iterationTracker.endKey, iterationTracker.earlyStopKey, iterationTracker)
 				fmt.Printf("ExpectedKeys (unordered): \n")
 				for key := range expectedKeys {
-					fmt.Printf("ExpectedKey %X\n", []byte(key))
+					fmt.Printf("ExpectedKey: %X\n", []byte(key))
 				}
 				fmt.Printf("FoundKeys: %d\n", foundKeys)
 				for _, key := range keysTraversed {
 					fmt.Printf("TraversedKey: %X\n", key)
+				}
+				fmt.Printf("memDB Items: \n")
+				itemsIter, err := items.Iterator(nil, nil)
+				if err != nil {
+					fmt.Printf("Error getting iterator: %v\n", err)
+				} else {
+					for itemsIter.Valid() {
+						key := itemsIter.Key()
+						fmt.Printf("ItemKey: %X\n", key)
+						itemsIter.Next()
+					}
 				}
 				panic(r)
 			}

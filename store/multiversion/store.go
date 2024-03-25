@@ -310,9 +310,8 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 						} else {
 							mvv := s.GetLatestBeforeIndex(index, key)
 							if mvv.IsEstimate() {
-								fmt.Printf("ESTIMATE\n")
-							}
-							if mvv.IsDeleted() {
+								val = []byte("ESTIMATE")
+							} else if mvv.IsDeleted() {
 								val = nil
 							} else {
 								val = mvv.Value()
@@ -323,7 +322,8 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 						itemsIter.Next()
 					}
 				}
-				panic(r)
+				fmt.Printf("Swallowed panic %v\n", r)
+				// panic(r)
 			}
 		}()
 		defer mergeIterator.Close()
@@ -354,8 +354,9 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 		returnChan <- !((len(expectedKeys) - foundKeys) > 0)
 	}(tracker, sortedItems, validChannel, abortChannel)
 	select {
-	case <-abortChannel:
+	case abt := <-abortChannel:
 		// if we get an abort, then we know that the iterator is invalid
+		fmt.Printf("[Debug] Received abort with value %v \n", abt)
 		return false
 	case valid := <-validChannel:
 		return valid
@@ -372,6 +373,7 @@ func (s *Store) checkIteratorAtIndex(index int) bool {
 	for _, iterationTracker := range iterateset {
 		// TODO: if the value of the key is nil maybe we need to exclude it? - actually it should
 		iteratorValid := s.validateIterator(index, *iterationTracker)
+		// TODO: maybe we need to also return conflict indices here?
 		valid = valid && iteratorValid
 	}
 	return valid

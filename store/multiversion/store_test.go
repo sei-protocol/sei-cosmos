@@ -824,15 +824,10 @@ func TestMVSIteratorValidationEarlyStopIncludedInIterateset(t *testing.T) {
 	require.Empty(t, conflicts)
 }
 
-func TestMVSIteratorValidationEarlyStopWithEarlierWrites(t *testing.T) {
+func TestMVSIteratorValidationEarlyStopWithEarlierInvalidation(t *testing.T) {
 	parentKVStore := dbadapter.Store{DB: dbm.NewMemDB()}
 	mvs := multiversion.NewMultiVersionStore(parentKVStore)
 	vis := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 5, 1, make(chan occ.Abort, 1))
-
-	parentKVStore.Set([]byte("key2"), []byte("value0"))
-	parentKVStore.Set([]byte("key3"), []byte("value3"))
-	parentKVStore.Set([]byte("key4"), []byte("value4"))
-	parentKVStore.Set([]byte("key5"), []byte("value5"))
 
 	writeset := make(multiversion.WriteSet)
 	writeset["key1"] = []byte("value1")
@@ -860,6 +855,9 @@ func TestMVSIteratorValidationEarlyStopWithEarlierWrites(t *testing.T) {
 	writeset2 := make(multiversion.WriteSet)
 	writeset2[string(laterKey)] = []byte("valueSpecialEarlier")
 	mvs.SetWriteset(2, 2, writeset2)
+
+	mvs.InvalidateWriteset(2, 2)
+	mvs.InvalidateWriteset(2, 2)
 
 	// should be invalid
 	valid, conflicts := mvs.ValidateTransactionState(5)

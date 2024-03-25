@@ -2,6 +2,7 @@ package multiversion_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/store/dbadapter"
@@ -829,35 +830,26 @@ func TestMVSIteratorValidationEarlyStopWithEarlierInvalidation(t *testing.T) {
 	mvs := multiversion.NewMultiVersionStore(parentKVStore)
 	vis := multiversion.NewVersionIndexedStore(parentKVStore, mvs, 5, 1, make(chan occ.Abort, 1))
 
-	writeset := make(multiversion.WriteSet)
-	writeset["key1"] = []byte("value1")
-	writeset["key3"] = nil
-	mvs.SetWriteset(1, 2, writeset)
+	key5 := []byte("key5")
+	writeset1 := make(multiversion.WriteSet)
+	writeset1[string(key5)] = []byte("value5")
+	mvs.SetWriteset(1, 2, writeset1)
 
-	readset := make(multiversion.ReadSet)
-	readset["key1"] = [][]byte{[]byte("value1")}
-	readset["key3"] = [][]byte{nil}
-	readset["key4"] = [][]byte{[]byte("value4")}
-	mvs.SetReadset(5, readset)
-
-	iter := vis.ReverseIterator([]byte("key1"), []byte("key7"))
-	var lastKey []byte
-	if iter.Valid() {
-		lastKey = iter.Key()
-
-	}
-	laterKey := append(lastKey, []byte("a")...)
-	iter.Close()
-	vis.Set(laterKey, []byte("valueSpecial"))
-	vis.WriteToMultiVersionStore()
-
-	// removal of key2 by an earlier tx - should cause invalidation for iterateset validation
 	writeset2 := make(multiversion.WriteSet)
-	writeset2[string(laterKey)] = []byte("valueSpecialEarlier")
+	writeset2[string(key5)] = []byte("value5a")
 	mvs.SetWriteset(2, 2, writeset2)
 
-	mvs.InvalidateWriteset(2, 2)
-	mvs.InvalidateWriteset(2, 2)
+	iter := vis.ReverseIterator([]byte("key1"), []byte("key7"))
+	if iter.Valid() {
+		key := iter.Key()
+		fmt.Println(string(key))
+	}
+	iter.Close()
+	key6 := []byte("key6")
+	vis.Set(key6, []byte("value6"))
+	vis.WriteToMultiVersionStore()
+
+	// mvs.InvalidateWriteset(2, 2)
 
 	// should be invalid
 	valid, conflicts := mvs.ValidateTransactionState(5)

@@ -322,8 +322,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 						itemsIter.Next()
 					}
 				}
-				fmt.Printf("Swallowed panic %v\n", r)
-				// panic(r)
+				panic(r)
 			}
 		}()
 		defer mergeIterator.Close()

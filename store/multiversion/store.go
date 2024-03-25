@@ -3,7 +3,6 @@ package multiversion
 import (
 	"bytes"
 	"fmt"
-	"runtime/debug"
 	"sort"
 	"sync"
 
@@ -253,6 +252,7 @@ func (s *Store) CollectIteratorItems(index int) *db.MemDB {
 		}
 		indexedWriteset := writesetAny.([]string)
 		// TODO: do we want to exclude keys out of the range or just let the iterator handle it?
+		// TODO: how do we want to handle cases where the writeset key is deleted?
 		for _, key := range indexedWriteset {
 			// TODO: inefficient because (logn) for each key + rebalancing? maybe theres a better way to add to a tree to reduce rebalancing overhead
 			sortedItems.Set([]byte(key), []byte{})
@@ -308,7 +308,6 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 						itemsIter.Next()
 					}
 				}
-				fmt.Println("Panic FULL trace: \n" + string(debug.Stack()))
 				panic(r)
 			}
 		}()
@@ -319,6 +318,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 				returnChan <- false
 				return
 			}
+			fmt.Println("Iter Valid", mergeIterator.Valid())
 			key := mergeIterator.Key()
 			keysTraversed = append(keysTraversed, key)
 			// TODO: is this ok to not delete the key since we shouldnt have duplicate keys?

@@ -318,7 +318,6 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 				returnChan <- false
 				return
 			}
-			fmt.Println("Iter Valid", mergeIterator.Valid(), mergeIterator.Valid())
 			key := mergeIterator.Key()
 			keysTraversed = append(keysTraversed, key)
 			// TODO: is this ok to not delete the key since we shouldnt have duplicate keys?

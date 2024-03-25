@@ -3,6 +3,7 @@ package multiversion
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -219,11 +220,14 @@ func (iter *mvsMergeIterator) skipUntilExistsOrInvalid() bool {
 	for {
 		// If parent is invalid, fast-forward cache.
 		if !iter.parent.Valid() {
+			fmt.Println("[Debug] parent is invalid, fast forward cache")
 			iter.skipCacheDeletes(nil)
+			fmt.Println("[Debug] skip cache deletes")
 			return iter.cache.Valid()
 		}
 		// Parent is valid.
 		if !iter.cache.Valid() {
+			fmt.Println("[Debug] parent is valid, cache is not")
 			return true
 		}
 		// Parent is valid, cache is valid.
@@ -234,10 +238,12 @@ func (iter *mvsMergeIterator) skipUntilExistsOrInvalid() bool {
 
 		switch iter.compare(keyP, keyC) {
 		case -1: // parent < cache.
+			fmt.Println("[Debug] both valid parent < cache")
 			return true
 
 		case 0: // parent == cache.
 			// Skip over if cache item is a delete.
+			fmt.Println("[Debug] both valid parent == cache")
 			valueC := iter.cache.Value()
 			if valueC == nil {
 				iter.parent.Next()
@@ -249,6 +255,7 @@ func (iter *mvsMergeIterator) skipUntilExistsOrInvalid() bool {
 
 			return true // cache exists.
 		case 1: // cache < parent
+			fmt.Println("[Debug] both valid cache < parent")
 			// Skip over if cache item is a delete.
 			valueC := iter.cache.Value()
 			if valueC == nil {

@@ -272,12 +272,6 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 
 	// listen for abort while iterating
 	go func(iterationTracker iterationTracker, items *db.MemDB, returnChan chan bool, abortChan chan occtypes.Abort) {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Printf("[Debug] MVS iterator validation recovering panic for tx index %d and iteration tracker StartKey:%X, endKey: %X, earlyStop: %X, raw %v\n", index, iterationTracker.startKey, iterationTracker.endKey, iterationTracker.earlyStopKey, iterationTracker)
-				panic(r)
-			}
-		}()
 		var parentIter types.Iterator
 		expectedKeys := iterationTracker.iteratedKeys
 		foundKeys := 0
@@ -289,6 +283,21 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 		}
 		// create a new MVSMergeiterator
 		mergeIterator := NewMVSMergeIterator(parentIter, iter, iterationTracker.ascending, NoOpHandler{})
+		keysTraversed := [][]byte{}
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Printf("[Debug] MVS iterator validation recovering panic for tx index %d and iteration tracker StartKey:%X, endKey: %X, earlyStop: %X, raw %v\n", index, iterationTracker.startKey, iterationTracker.endKey, iterationTracker.earlyStopKey, iterationTracker)
+				fmt.Printf("ExpectedKeys (unordered): \n")
+				for key := range expectedKeys {
+					fmt.Printf("ExpectedKey %X\n", []byte(key))
+				}
+				fmt.Printf("FoundKeys: %d\n", foundKeys)
+				for _, key := range keysTraversed {
+					fmt.Printf("TraversedKey: %X\n", key)
+				}
+				panic(r)
+			}
+		}()
 		defer mergeIterator.Close()
 		for ; mergeIterator.Valid(); mergeIterator.Next() {
 			if (len(expectedKeys) - foundKeys) == 0 {
@@ -297,6 +306,7 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 				return
 			}
 			key := mergeIterator.Key()
+			keysTraversed = append(keysTraversed, key)
 			// TODO: is this ok to not delete the key since we shouldnt have duplicate keys?
 			if _, ok := expectedKeys[string(key)]; !ok {
 				// if key isn't found

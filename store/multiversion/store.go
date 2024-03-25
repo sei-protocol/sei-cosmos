@@ -304,7 +304,22 @@ func (s *Store) validateIterator(index int, tracker iterationTracker) bool {
 				} else {
 					for itemsIter.Valid() {
 						key := itemsIter.Key()
-						fmt.Printf("ItemKey: %X\n", key)
+						var val []byte
+						if v, ok := iterationTracker.writeset[string(key)]; ok {
+							val = v
+						} else {
+							mvv := s.GetLatestBeforeIndex(index, key)
+							if mvv.IsEstimate() {
+								fmt.Printf("ESTIMATE\n")
+							}
+							if mvv.IsDeleted() {
+								val = nil
+							} else {
+								val = mvv.Value()
+							}
+
+						}
+						fmt.Printf("ItemKey: %X, ItemValue: %X\n", key, val)
 						itemsIter.Next()
 					}
 				}

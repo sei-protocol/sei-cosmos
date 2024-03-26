@@ -500,7 +500,7 @@ func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.R
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	startTime := time.Now()
 	defer telemetry.MeasureSince(time.Now(), "module", "total_begin_block")
-	defer fmt.Printf("[Debug] BeginBlock for height %d took %s", req.Header.Height, time.Since(startTime))
+	defer fmt.Printf("[Debug] BeginBlock for height %d took %s \n", req.Header.Height, time.Since(startTime))
 	for _, moduleName := range m.OrderBeginBlockers {
 		module, ok := m.Modules[moduleName].(BeginBlockAppModule)
 		if ok {
@@ -522,7 +522,7 @@ func (m *Manager) MidBlock(ctx sdk.Context, height int64) []abci.Event {
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	startTime := time.Now()
 	defer telemetry.MeasureSince(time.Now(), "module", "total_mid_block")
-	defer fmt.Printf("[Debug] MidBlock for height %d took %s", height, time.Since(startTime))
+	defer fmt.Printf("[Debug] MidBlock for height %d took %s \n", height, time.Since(startTime))
 	for _, moduleName := range m.OrderMidBlockers {
 		module, ok := m.Modules[moduleName].(MidBlockAppModule)
 		if !ok {
@@ -544,7 +544,7 @@ func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.Respo
 	startTime := time.Now()
 	validatorUpdates := []abci.ValidatorUpdate{}
 	defer telemetry.MeasureSince(time.Now(), "module", "total_end_block")
-	defer fmt.Printf("[Debug] EndBlock for height %d took %s", req.Height, time.Since(startTime))
+	defer fmt.Printf("[Debug] EndBlock for height %d took %s \n", req.Height, time.Since(startTime))
 	for _, moduleName := range m.OrderEndBlockers {
 		module, ok := m.Modules[moduleName].(EndBlockAppModule)
 		if !ok {

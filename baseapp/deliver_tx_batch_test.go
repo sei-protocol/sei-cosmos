@@ -121,7 +121,9 @@ func TestDeliverTxBatch(t *testing.T) {
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
 			requests = append(requests, &sdk.DeliverTxEntry{
-				Request: abci.RequestDeliverTx{Tx: txBytes},
+				Request:       abci.RequestDeliverTx{Tx: txBytes},
+				SdkTx:         *tx,
+				AbsoluteIndex: i,
 			})
 		}
 
@@ -135,6 +137,44 @@ func TestDeliverTxBatch(t *testing.T) {
 			requireAttribute(t, res.Events, "tx-val", fmt.Sprintf("%d", blockN+1))
 			requireAttribute(t, res.Events, "shared-val", fmt.Sprintf("%d", blockN*txPerHeight+idx+1))
 		}
+
+		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
+		require.Empty(t, app.deliverState.ctx.MultiStore().GetEvents())
+		app.SetDeliverStateToCommit()
+		app.Commit(context.Background())
+	}
+}
+
+func TestDeliverTxBatchEmpty(t *testing.T) {
+	// test increments in the ante
+	anteKey := []byte("ante-key")
+
+	anteOpt := func(bapp *BaseApp) {
+		bapp.SetAnteHandler(anteHandler(capKey1, anteKey))
+	}
+
+	// test increments in the handler
+	routerOpt := func(bapp *BaseApp) {
+		r := sdk.NewRoute(routeMsgCounter, handlerKVStore(capKey1))
+		bapp.Router().AddRoute(r)
+	}
+
+	app := setupBaseApp(t, anteOpt, routerOpt)
+	app.InitChain(context.Background(), &abci.RequestInitChain{})
+
+	// Create same codec used in txDecoder
+	codec := codec.NewLegacyAmino()
+	registerTestCodec(codec)
+
+	nBlocks := 3
+	for blockN := 0; blockN < nBlocks; blockN++ {
+		header := tmproto.Header{Height: int64(blockN) + 1}
+		app.setDeliverState(header)
+		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
+
+		var requests []*sdk.DeliverTxEntry
+		responses := app.DeliverTxBatch(app.deliverState.ctx, sdk.DeliverTxBatchRequest{TxEntries: requests})
+		require.Len(t, responses.Results, 0)
 
 		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
 		require.Empty(t, app.deliverState.ctx.MultiStore().GetEvents())

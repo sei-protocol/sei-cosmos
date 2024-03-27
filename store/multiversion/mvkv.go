@@ -311,6 +311,26 @@ func (store *VersionIndexedStore) iterator(start []byte, end []byte, ascending b
 
 }
 
+func (v *VersionIndexedStore) VersionExists(version int64) bool {
+	return v.parent.VersionExists(version)
+}
+
+func (v *VersionIndexedStore) DeleteAll(start, end []byte) error {
+	for _, k := range v.GetAllKeyStrsInRange(start, end) {
+		v.Delete([]byte(k))
+	}
+	return nil
+}
+
+func (v *VersionIndexedStore) GetAllKeyStrsInRange(start, end []byte) (res []string) {
+	iter := v.Iterator(start, end)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		res = append(res, string(iter.Key()))
+	}
+	return
+}
+
 // GetStoreType implements types.KVStore.
 func (v *VersionIndexedStore) GetStoreType() types.StoreType {
 	return v.parent.GetStoreType()

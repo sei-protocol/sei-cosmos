@@ -532,13 +532,9 @@ func (k Keeper) UpdateWritesetsWithAccessOps(accessOps []acltypes.AccessOperatio
 }
 
 // GenerateEstimatedWritesets utilizes the existing patterns for access operation generation to estimate the writesets for a transaction
-func (k Keeper) GenerateEstimatedWritesets(ctx sdk.Context, txDecoder sdk.TxDecoder, anteDepGen sdk.AnteDepGenerator, txIndex int, txBytes []byte) (sdk.MappedWritesets, error) {
+func (k Keeper) GenerateEstimatedWritesets(ctx sdk.Context, anteDepGen sdk.AnteDepGenerator, txIndex int, tx sdk.Tx) (sdk.MappedWritesets, error) {
 	storeKeyMap := k.GetStoreKeyMap(ctx)
 	writesets := make(sdk.MappedWritesets)
-	tx, err := txDecoder(txBytes)
-	if err != nil {
-		return nil, err
-	}
 	// generate antedeps accessOps for tx
 	anteDeps, err := anteDepGen([]acltypes.AccessOperation{}, tx, txIndex)
 	if err != nil {
@@ -556,14 +552,14 @@ func (k Keeper) GenerateEstimatedWritesets(ctx sdk.Context, txDecoder sdk.TxDeco
 	return writesets, nil
 }
 
-func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, anteDepGen sdk.AnteDepGenerator, txs [][]byte) (*types.Dag, error) {
+func (k Keeper) BuildDependencyDag(ctx sdk.Context, anteDepGen sdk.AnteDepGenerator, txs []sdk.Tx) (*types.Dag, error) {
 	defer MeasureBuildDagDuration(time.Now(), "BuildDependencyDag")
 	// contains the latest msg index for a specific Access Operation
 	dependencyDag := types.NewDag()
-	for txIndex, txBytes := range txs {
-		tx, err := txDecoder(txBytes) // TODO: results in repetitive decoding for txs with runtx decode (potential optimization)
-		if err != nil {
-			return nil, err
+	for txIndex, tx := range txs {
+		if tx == nil {
+			// this implies decoding error
+			return nil, sdkerrors.ErrTxDecode
 		}
 		// get the ante dependencies and add them to the dag
 		anteDeps, err := anteDepGen([]acltypes.AccessOperation{}, tx, txIndex)
@@ -588,6 +584,7 @@ func (k Keeper) BuildDependencyDag(ctx sdk.Context, txDecoder sdk.TxDecoder, ant
 		// add Access ops for msg for anteMsg
 		dependencyDag.AddAccessOpsForMsg(acltypes.ANTE_MSG_INDEX, txIndex, anteAccessOpsList)
 
+		ctx = ctx.WithTxIndex(txIndex)
 		msgs := tx.GetMsgs()
 		for messageIndex, msg := range msgs {
 			if types.IsGovMessage(msg) {

@@ -126,6 +126,18 @@ func (gs *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	return gi
 }
 
+func (gs *Store) VersionExists(version int64) bool {
+	return gs.parent.VersionExists(version)
+}
+
+func (gs *Store) DeleteAll(start, end []byte) error {
+	return gs.parent.DeleteAll(start, end)
+}
+
+func (gs *Store) GetAllKeyStrsInRange(start, end []byte) (res []string) {
+	return gs.parent.GetAllKeyStrsInRange(start, end)
+}
+
 type gasIterator struct {
 	gasMeter  types.GasMeter
 	gasConfig types.GasConfig

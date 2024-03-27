@@ -9,6 +9,9 @@ import (
 // This can be extended to include tx-level tracing or metadata
 type DeliverTxEntry struct {
 	Request            abci.RequestDeliverTx
+	SdkTx              Tx
+	Checksum           [32]byte
+	AbsoluteIndex      int
 	EstimatedWritesets MappedWritesets
 }
 

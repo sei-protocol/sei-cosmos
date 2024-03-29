@@ -349,7 +349,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
-	ctx.Logger().Info("[Debug] OCC scheduler", "height", ctx.BlockHeight(), "latency_ms", time.Since(startTime).Milliseconds(), "txs", len(tasks), "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers, "total_executes", TOTAL_EXECUTION.Load())
+	ctx.Logger().Info("[Debug] OCC scheduler", "height", ctx.BlockHeight(), "latency_ms", time.Since(startTime).Milliseconds(), "txs", len(tasks), "total_executes", TOTAL_EXECUTION.Load(), "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
 	TOTAL_EXECUTION.Store(0)
 	return s.collectResponses(tasks), nil
 }

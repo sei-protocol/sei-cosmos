@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
@@ -276,6 +277,8 @@ type schedulerMetrics struct {
 	retries int
 }
 
+var TOTAL_EXECUTION = atomic.Int64{}
+
 func (s *scheduler) emitMetrics() {
 	telemetry.IncrCounter(float32(s.metrics.retries), "scheduler", "retries")
 	telemetry.IncrCounter(float32(s.metrics.maxIncarnation), "scheduler", "incarnations")
@@ -346,8 +349,8 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
-	ctx.Logger().Info("[Debug] occ scheduler", "height", ctx.BlockHeight(), "latency_ms", time.Since(startTime).Milliseconds(), "txs", len(tasks), "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
-
+	ctx.Logger().Info("[Debug] OCC scheduler", "height", ctx.BlockHeight(), "latency_ms", time.Since(startTime).Milliseconds(), "txs", len(tasks), "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers, "total_executes", TOTAL_EXECUTION.Load())
+	TOTAL_EXECUTION.Store(0)
 	return s.collectResponses(tasks), nil
 }
 
@@ -554,6 +557,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	s.prepareTask(task)
 
+	TOTAL_EXECUTION.Add(1)
 	resp := s.deliverTx(task.Ctx, task.Request, task.SdkTx, task.Checksum)
 	// close the abort channel
 	close(task.AbortCh)

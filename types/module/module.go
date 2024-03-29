@@ -498,9 +498,7 @@ func (m Manager) RunMigrations(ctx sdk.Context, cfg Configurator, fromVM Version
 // modules.
 func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
-	startTime := time.Now()
 	defer telemetry.MeasureSince(time.Now(), "module", "total_begin_block")
-	defer fmt.Printf("[Debug] BeginBlock for height %d took %s \n", req.Header.Height, time.Since(startTime))
 	for _, moduleName := range m.OrderBeginBlockers {
 		module, ok := m.Modules[moduleName].(BeginBlockAppModule)
 		if ok {
@@ -520,9 +518,7 @@ func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.R
 // modules.
 func (m *Manager) MidBlock(ctx sdk.Context, height int64) []abci.Event {
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
-	startTime := time.Now()
 	defer telemetry.MeasureSince(time.Now(), "module", "total_mid_block")
-	defer fmt.Printf("[Debug] MidBlock for height %d took %s \n", height, time.Since(startTime))
 	for _, moduleName := range m.OrderMidBlockers {
 		module, ok := m.Modules[moduleName].(MidBlockAppModule)
 		if !ok {

@@ -339,6 +339,7 @@ func AddCommands(
 		debug.GetDebugCommand(logger),
 		commands.NewCompletionCmd(tendermintCmd, true),
 		commands.MakeSnapshotCommand(InterceptConfigs),
+		debug.GetBlockStoreCmd(conf, logger),
 	)
 
 	startCmd := StartCmd(appCreator, defaultNodeHome, tracerProviderOptions)

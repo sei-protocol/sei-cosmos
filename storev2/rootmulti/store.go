@@ -511,7 +511,7 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 		// Serve abci query from historical sc store if proofs needed
 		scStore, err := rs.scStore.LoadVersion(version, true)
 		fmt.Printf("DEBUG - load version\n")
-		defer scStore.Close()
+		// defer scStore.Close()
 		fmt.Printf("DEBUG - after defer\n")
 		if err != nil {
 			fmt.Printf("DEBUG - err %+v\n", err)

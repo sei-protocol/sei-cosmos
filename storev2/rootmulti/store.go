@@ -512,9 +512,12 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 		scStore, err := rs.scStore.LoadVersion(version, true)
 		fmt.Printf("DEBUG - load version\n")
 		defer scStore.Close()
+		fmt.Printf("DEBUG - after defer\n")
 		if err != nil {
+			fmt.Printf("DEBUG - err %+v\n", err)
 			return sdkerrors.QueryResult(err)
 		}
+		fmt.Printf("DEBUG - before Queryable %+v\n", err)
 		store = types.Queryable(commitment.NewStore(scStore.GetTreeByName(storeName), rs.logger))
 		fmt.Printf("DEBUG - load store\n")
 		commitInfo = convertCommitInfo(scStore.LastCommitInfo())

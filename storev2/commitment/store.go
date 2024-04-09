@@ -134,6 +134,7 @@ func (st *Store) PopChangeSet() iavl.ChangeSet {
 }
 
 func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	fmt.Printf("DEBUG - storev2 sc req%+v\n", req)
 	if req.Height > 0 && req.Height != st.tree.Version() {
 		return sdkerrors.QueryResult(errors.Wrap(sdkerrors.ErrInvalidHeight, "invalid height"))
 	}
@@ -142,11 +143,13 @@ func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 	switch req.Path {
 	case "/key": // get by key
 		res.Key = req.Data // data holds the key bytes
+		fmt.Printf("DEBUG - storev2 sc key get key\n")
 		res.Value = st.tree.Get(res.Key)
 		if !req.Prove {
 			break
 		}
 
+		fmt.Printf("DEBUG - storev2 sc key get proof \n")
 		// get proof from tree and convert to merkle.Proof before adding to result
 		commitmentProof := st.tree.GetProof(res.Key)
 		op := types.NewIavlCommitmentOp(res.Key, commitmentProof)

@@ -348,6 +348,7 @@ func getHeight(tree Tree, req abci.RequestQuery) int64 {
 // if you care to have the latest data to see a tx results, you must
 // explicitly set the height you want to see
 func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
+	fmt.Printf("DEBUG - iavl store Query req %+v\n", req)
 	defer telemetry.MeasureSince(time.Now(), "store", "iavl", "query")
 
 	if len(req.Data) == 0 {

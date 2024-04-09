@@ -489,6 +489,7 @@ func (rs *Store) GetStoreByName(name string) types.Store {
 
 // Implements interface Queryable
 func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
+	fmt.Printf("DEBUG - storev2 rootmulti Query req %+v\n", req)
 	version := req.Height
 	if version <= 0 || version > rs.lastCommitInfo.Version {
 		version = rs.scStore.Version()
@@ -502,9 +503,11 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 	var commitInfo *types.CommitInfo
 
 	if !req.Prove && rs.ssStore != nil {
+		fmt.Printf("DEBUG - Query serve from ss\n")
 		// Serve abci query from ss store if no proofs needed
 		store = types.Queryable(state.NewStore(rs.ssStore, types.NewKVStoreKey(storeName), version))
 	} else {
+		fmt.Printf("DEBUG - Query serve from sc\n")
 		// Serve abci query from historical sc store if proofs needed
 		scStore, err := rs.scStore.LoadVersion(version, true)
 		defer scStore.Close()

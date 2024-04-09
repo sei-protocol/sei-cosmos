@@ -645,6 +645,7 @@ func (rs *Store) GetStoreByName(name string) types.Store {
 // as response value. In addition, proofs of every store are appended to the response for
 // the requested height
 func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
+	fmt.Printf("DEBUG - rootmulti Query req %+v\n", req)
 	path := req.Path
 	firstPath, subpath, err := parsePath(path)
 	if err != nil {

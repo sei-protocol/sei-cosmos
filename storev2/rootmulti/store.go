@@ -489,7 +489,7 @@ func (rs *Store) GetStoreByName(name string) types.Store {
 
 // Implements interface Queryable
 func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
-	fmt.Printf("DEBUG - storev2 rootmulti Query req %+v\n", req)
+	fmt.Printf("DEBUG - storev2 rootmulti Query req \n")
 	version := req.Height
 	if version <= 0 || version > rs.lastCommitInfo.Version {
 		version = rs.scStore.Version()

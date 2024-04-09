@@ -51,7 +51,7 @@ func (st *Store) CacheWrapWithListeners(storeKey types.StoreKey, listeners []typ
 }
 
 func (st *Store) Get(key []byte) []byte {
-	fmt.Printf("DEBUG - state store Get %s\n", string(key))
+	fmt.Printf("DEBUG - state store Get \n")
 	value, err := st.store.Get(st.storeKey.Name(), st.version, key)
 	if err != nil {
 		panic(err)
@@ -96,7 +96,7 @@ func (st *Store) GetWorkingHash() ([]byte, error) {
 }
 
 func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
-	fmt.Printf("DEBUG - storev2 state store req%+v\n", req)
+	fmt.Printf("DEBUG - storev2 state store req\n")
 	if req.Height > 0 && req.Height > st.version {
 		return sdkerrors.QueryResult(errors.Wrap(sdkerrors.ErrInvalidHeight, "invalid height"))
 	}

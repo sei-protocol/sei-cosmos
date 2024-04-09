@@ -134,7 +134,7 @@ func (st *Store) PopChangeSet() iavl.ChangeSet {
 }
 
 func (st *Store) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
-	fmt.Printf("DEBUG - storev2 sc req%+v\n", req)
+	fmt.Printf("DEBUG - storev2 sc req\n")
 	if req.Height > 0 && req.Height != st.tree.Version() {
 		return sdkerrors.QueryResult(errors.Wrap(sdkerrors.ErrInvalidHeight, "invalid height"))
 	}

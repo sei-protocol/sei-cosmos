@@ -510,18 +510,24 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 		fmt.Printf("DEBUG - Query serve from sc\n")
 		// Serve abci query from historical sc store if proofs needed
 		scStore, err := rs.scStore.LoadVersion(version, true)
+		fmt.Printf("DEBUG - load version\n")
 		defer scStore.Close()
 		if err != nil {
 			return sdkerrors.QueryResult(err)
 		}
 		store = types.Queryable(commitment.NewStore(scStore.GetTreeByName(storeName), rs.logger))
+		fmt.Printf("DEBUG - load store\n")
 		commitInfo = convertCommitInfo(scStore.LastCommitInfo())
+		fmt.Printf("DEBUG - commit info\n")
 		commitInfo = amendCommitInfo(commitInfo, rs.storesParams)
+		fmt.Printf("DEBUG - ammend commit info\n")
 	}
 
 	// trim the path and execute the query
 	req.Path = subPath
+	fmt.Printf("DEBUG - root multi store query\n")
 	res := store.Query(req)
+	fmt.Printf("DEBUG - after root multi store query\n")
 
 	if !req.Prove || !rootmulti.RequireProof(subPath) {
 		return res

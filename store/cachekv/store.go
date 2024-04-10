@@ -2,6 +2,7 @@ package cachekv
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -135,6 +136,7 @@ func (store *Store) Write() {
 	store.cache = &sync.Map{}
 	store.deleted = &sync.Map{}
 	store.unsortedCache = &sync.Map{}
+	fmt.Printf("[Debug] Creating new memdb \n")
 	store.sortedCache = dbm.NewMemDB()
 }
 

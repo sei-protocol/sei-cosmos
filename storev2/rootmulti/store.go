@@ -509,7 +509,7 @@ func (rs *Store) Query(req abci.RequestQuery) abci.ResponseQuery {
 	} else {
 		fmt.Printf("DEBUG - Query serve from sc\n")
 		// Serve abci query from historical sc store if proofs needed
-		scStore, err := rs.scStore.LoadVersion(version, false)
+		scStore, err := rs.scStore.LoadVersion(version, true)
 		fmt.Printf("DEBUG - load version\n")
 		if err != nil {
 			fmt.Printf("DEBUG - err %+v\n", err)

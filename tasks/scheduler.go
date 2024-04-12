@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	store "github.com/cosmos/cosmos-sdk/store/types"
@@ -38,6 +40,8 @@ const (
 	// maximumIterations before we revert to sequential (for high conflict rates)
 	maximumIterations = 10
 )
+
+var TOTAL_EXECUTE = atomic.Int64{}
 
 type deliverTxTask struct {
 	Ctx     sdk.Context
@@ -281,6 +285,8 @@ func (s *scheduler) emitMetrics() {
 }
 
 func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]types.ResponseDeliverTx, error) {
+	startTime := time.Now()
+	TOTAL_EXECUTE.Store(0)
 	var iterations int
 	// initialize mutli-version stores if they haven't been initialized yet
 	s.tryInitMultiVersionStore(ctx)
@@ -344,7 +350,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
-	ctx.Logger().Info("occ scheduler", "height", ctx.BlockHeight(), "txs", len(tasks), "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
+	ctx.Logger().Info("occ scheduler", "height", ctx.BlockHeight(), "latency_ms", time.Since(startTime), "txs", len(tasks), "tx_execute", TOTAL_EXECUTE, "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
 
 	return s.collectResponses(tasks), nil
 }
@@ -552,6 +558,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	s.prepareTask(task)
 
+	TOTAL_EXECUTE.Add(1)
 	resp := s.deliverTx(task.Ctx, task.Request, task.SdkTx, task.Checksum)
 	// close the abort channel
 	close(task.AbortCh)

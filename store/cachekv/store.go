@@ -2,7 +2,6 @@ package cachekv
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"sort"
 	"sync"
@@ -136,7 +135,6 @@ func (store *Store) Write() {
 	store.cache = &sync.Map{}
 	store.deleted = &sync.Map{}
 	store.unsortedCache = &sync.Map{}
-	fmt.Printf("[Debug] Creating new memdb \n")
 	store.sortedCache = dbm.NewMemDB()
 }
 
@@ -383,11 +381,6 @@ func (store *Store) GetAllKeyStrsInRange(start, end []byte) (res []string) {
 		keyStrs[pk] = struct{}{}
 	}
 	store.cache.Range(func(key, value any) bool {
-		kbz := []byte(key.(string))
-		if bytes.Compare(kbz, start) < 0 || bytes.Compare(kbz, end) >= 0 {
-			// we don't want to break out of the iteration since cache isn't sorted
-			return true
-		}
 		cv := value.(*types.CValue)
 		if cv.Value() == nil {
 			delete(keyStrs, key.(string))

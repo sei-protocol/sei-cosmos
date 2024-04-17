@@ -24,4 +24,6 @@ type FeegrantKeeper interface {
 type ParamsKeeper interface {
 	SetFeesParams(ctx sdk.Context, feesParams paramtypes.FeesParams)
 	GetFeesParams(ctx sdk.Context) paramtypes.FeesParams
+	SetCosmosGasParams(ctx sdk.Context, cosmosGasParams types.CosmosGasParams)
+	GetCosmosGasParams(ctx sdk.Context) types.CosmosGasParams
 }

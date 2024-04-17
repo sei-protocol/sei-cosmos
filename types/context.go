@@ -61,6 +61,11 @@ type Context struct {
 	traceSpanContext context.Context
 }
 
+type CosmosConsensusParams struct {
+	CosmosGasParams           CosmosGasParams
+	TendermintConsensusParams *tmproto.ConsensusParams
+}
+
 // Proposed rename, not done to avoid API breakage
 type Request = Context
 

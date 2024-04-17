@@ -1,12 +1,14 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var ParamStoreKeyFeesParams = []byte("FeesParams")
+var ParamStoreKeyCosmosGasParams = []byte("CosmosGasParams")
 
 func NewFeesParams(minGasPrices sdk.DecCoins) FeesParams {
 	return FeesParams{
@@ -39,5 +41,20 @@ func validateFeesParams(i interface{}) error {
 	if err := v.Validate(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func NewCosmosGasParams(multiplierNumerator uint64, multiplierDenominator uint64) CosmosGasParams {
+	return CosmosGasParams{
+		CosmosGasMultiplierNumerator:   multiplierNumerator,
+		CosmosGasMultiplierDenominator: multiplierDenominator,
+	}
+}
+
+func (cg *CosmosGasParams) Validate() error {
+	if cg.CosmosGasMultiplierDenominator == 0 {
+		return errors.New("Cosmos Gas Multiplier Denominator can not be 0")
+	}
+
 	return nil
 }

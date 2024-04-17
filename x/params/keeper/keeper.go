@@ -71,7 +71,7 @@ func (k Keeper) SetCosmosGasParams(ctx sdk.Context, cosmosGasParams types.Cosmos
 func (k Keeper) GetCosmosGasParams(ctx sdk.Context) types.CosmosGasParams {
 	subspace, _ := k.GetSubspace(types.ModuleName)
 
-	if !subspace.Has(ctx, types.ParamStoreKeyFeesParams) {
+	if !subspace.Has(ctx, types.ParamStoreKeyCosmosGasParams) {
 		defaultParams := *types.DefaultCosmosGasParams()
 		k.SetCosmosGasParams(ctx, defaultParams)
 		return defaultParams

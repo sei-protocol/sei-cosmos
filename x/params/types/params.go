@@ -20,6 +20,7 @@ func NewFeesParams(minGasPrices sdk.DecCoins) FeesParams {
 func ParamKeyTable() KeyTable {
 	return NewKeyTable(
 		NewParamSetPair(ParamStoreKeyFeesParams, &FeesParams{}, validateFeesParams),
+		NewParamSetPair(ParamStoreKeyCosmosGasParams, &CosmosGasParams{}, validateCosmosGasParams),
 	)
 }
 
@@ -56,5 +57,17 @@ func (cg *CosmosGasParams) Validate() error {
 		return errors.New("Cosmos Gas Multiplier Denominator can not be 0")
 	}
 
+	return nil
+}
+
+func validateCosmosGasParams(i interface{}) error {
+	v, ok := i.(CosmosGasParams)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+
+	if err := v.Validate(); err != nil {
+		return err
+	}
 	return nil
 }

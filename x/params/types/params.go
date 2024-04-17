@@ -53,8 +53,12 @@ func NewCosmosGasParams(multiplierNumerator uint64, multiplierDenominator uint64
 }
 
 func (cg *CosmosGasParams) Validate() error {
+	if cg.CosmosGasMultiplierNumerator == 0 {
+		return errors.New("cosmos gas multiplier numerator can not be 0")
+	}
+
 	if cg.CosmosGasMultiplierDenominator == 0 {
-		return errors.New("Cosmos Gas Multiplier Denominator can not be 0")
+		return errors.New("cosmos gas multiplier denominator can not be 0")
 	}
 
 	return nil

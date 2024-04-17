@@ -261,3 +261,19 @@ func TestJSONUpdate(t *testing.T) {
 	space.Get(ctx, key, &param)
 	require.Equal(t, paramJSON{40964096, "goodbyeworld"}, param)
 }
+
+func TestUpdateCosmosGasParams(t *testing.T) {
+	_, ctx, _, _, keeper := testComponents()
+	cosmosGasParams := keeper.GetCosmosGasParams(ctx)
+	// If not set, gas params set to default
+	defaultParams := types.DefaultCosmosGasParams()
+	require.Equal(t, defaultParams.CosmosGasMultiplierNumerator, cosmosGasParams.CosmosGasMultiplierNumerator)
+	require.Equal(t, defaultParams.CosmosGasMultiplierDenominator, cosmosGasParams.CosmosGasMultiplierDenominator)
+
+	// Update to 1/4
+	keeper.SetCosmosGasParams(ctx, types.NewCosmosGasParams(1, 4))
+
+	cosmosGasParams = keeper.GetCosmosGasParams(ctx)
+	require.Equal(t, uint64(1), cosmosGasParams.CosmosGasMultiplierNumerator)
+	require.Equal(t, uint64(4), cosmosGasParams.CosmosGasMultiplierDenominator)
+}

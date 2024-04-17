@@ -48,9 +48,9 @@ message TextProposal {
 
   option (gogoproto.equal) = true;
 
-  string title       = 1;
-  string description = 2;
-  bool is_expedited  = 3;
+  string title        = 1;
+  string description  = 2;
+  bool   is_expedited = 3;
 }
 
 // Deposit defines an amount deposited by an account address to an active

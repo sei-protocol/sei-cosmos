@@ -8,16 +8,14 @@ import "cosmos/accesscontrol/accesscontrol.proto";
 option go_package = "github.com/cosmos/cosmos-sdk/types/accesscontrol";
 
 message LegacyAccessOperationWithSelector {
-    AccessOperation operation = 1;
-    AccessOperationSelectorType selector_type = 2;
-    string selector = 3;
+  AccessOperation             operation     = 1;
+  AccessOperationSelectorType selector_type = 2;
+  string                      selector      = 3;
 }
 
 message LegacyWasmDependencyMapping {
-    bool enabled = 1;
-    repeated LegacyAccessOperationWithSelector access_ops = 2 [
-        (gogoproto.nullable) = false
-    ];
-    string reset_reason = 3;
-    string contract_address = 4;
+  bool                                       enabled          = 1;
+  repeated LegacyAccessOperationWithSelector access_ops       = 2 [(gogoproto.nullable) = false];
+  string                                     reset_reason     = 3;
+  string                                     contract_address = 4;
 }

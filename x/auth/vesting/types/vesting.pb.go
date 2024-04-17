@@ -36,7 +36,8 @@ type BaseVestingAccount struct {
 	EndTime            int64                                    `protobuf:"varint,5,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty" yaml:"end_time"`
 	// admin field (optional), an address who has oversight powers for the vesting account such as cancelling
 	Admin string `protobuf:"bytes,6,opt,name=admin,proto3" json:"admin,omitempty" yaml:"admin"`
-	// this field (default nil) indicates whether the vesting for the account has been cancelled (and what time it was cancelled)
+	// this field (default nil) indicates whether the vesting for the account has been cancelled (and what time it was
+	// cancelled)
 	CancelledTime int64 `protobuf:"varint,7,opt,name=cancelled_time,json=cancelledTime,proto3" json:"cancelled_time,omitempty" yaml:"cancelled_time"`
 }
 

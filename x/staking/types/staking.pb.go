@@ -848,7 +848,8 @@ type Params struct {
 	MinCommissionRate github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,6,opt,name=min_commission_rate,json=minCommissionRate,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"min_commission_rate" yaml:"min_commission_rate"`
 	// max_voting_power_ratio defines the maximal allowable voting power ratio delegated to a validator.
 	MaxVotingPowerRatio github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,7,opt,name=max_voting_power_ratio,json=maxVotingPowerRatio,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"max_voting_power_ratio" yaml:"max_voting_power_ratio"`
-	// max_voting_power_enforcement_threshold defines the minimal bonded voting power of the max voting power ratio enforcement
+	// max_voting_power_enforcement_threshold defines the minimal bonded voting power of the max voting power ratio
+	// enforcement
 	MaxVotingPowerEnforcementThreshold github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,8,opt,name=max_voting_power_enforcement_threshold,json=maxVotingPowerEnforcementThreshold,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"max_voting_power_enforcement_threshold" yaml:"max_voting_power_enforcement_threshold"`
 }
 

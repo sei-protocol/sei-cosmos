@@ -9,7 +9,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
 message ValidatorSigningInfoLegacyMissedHeights {
-  option (gogoproto.equal)            = true;
+  option (gogoproto.equal) = true;
 
   string address = 1;
   // Height at which validator was first a candidate OR was unjailed

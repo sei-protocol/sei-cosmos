@@ -78,8 +78,6 @@ message QueryParamsResponse {
   Params params = 1 [(gogoproto.nullable) = false];
 }
 
-
-
 // QueryNextAccountRequest is the request type for the Query/NextAccountNumber RPC method.
 message QueryNextAccountNumberRequest {}
 

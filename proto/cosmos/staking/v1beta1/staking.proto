@@ -295,13 +295,14 @@ message Params {
     (gogoproto.nullable)   = false,
     (gogoproto.jsontag)    = "max_voting_power_ratio"
   ];
-  // max_voting_power_enforcement_threshold defines the minimal bonded voting power of the max voting power ratio enforcement
+  // max_voting_power_enforcement_threshold defines the minimal bonded voting power of the max voting power ratio
+  // enforcement
   string max_voting_power_enforcement_threshold = 8 [
     (gogoproto.moretags)   = "yaml:\"max_voting_power_enforcement_threshold\"",
     (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
     (gogoproto.nullable)   = false,
     (gogoproto.jsontag)    = "max_voting_power_enforcement_threshold"
-    ];
+  ];
 }
 
 // DelegationResponse is equivalent to Delegation except that it contains a

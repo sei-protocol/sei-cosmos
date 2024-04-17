@@ -59,6 +59,30 @@ func (k Keeper) GetFeesParams(ctx sdk.Context) types.FeesParams {
 	return feesParams
 }
 
+func (k Keeper) SetCosmosGasParams(ctx sdk.Context, cosmosGasParams types.CosmosGasParams) {
+	cosmosGasParams.Validate()
+	subspace, exist := k.GetSubspace(types.ModuleName)
+	if !exist {
+		panic("subspace params should exist")
+	}
+	subspace.Set(ctx, types.ParamStoreKeyCosmosGasParams, cosmosGasParams)
+}
+
+func (k Keeper) GetCosmosGasParams(ctx sdk.Context) types.CosmosGasParams {
+	subspace, _ := k.GetSubspace(types.ModuleName)
+
+	if !subspace.Has(ctx, types.ParamStoreKeyFeesParams) {
+		defaultParams := *types.DefaultFeesParams()
+		k.SetCosmosGasParams(ctx, defaultParams)
+		return defaultParams
+	}
+
+	bz := subspace.GetRaw(ctx, types.ParamStoreKeyCosmosGasParams)
+	var cosmosGasParams types.CosmosGasParams
+	json.Unmarshal(bz, &cosmosGasParams)
+	return cosmosGasParams
+}
+
 // Logger returns a module-specific logger.
 func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", "x/"+proposal.ModuleName)

@@ -63,7 +63,6 @@ message SigningInfo {
       [(gogoproto.nullable) = false, (gogoproto.moretags) = "yaml:\"validator_signing_info\""];
 }
 
-
 // SigningInfo stores validator signing info of corresponding address.
 message SigningInfoLegacyMissedHeights {
   // address is the validator address.

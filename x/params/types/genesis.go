@@ -12,13 +12,24 @@ func DefaultFeesParams() *FeesParams {
 	}
 }
 
+func DefaultCosmosGasParams() *CosmosGasParams {
+	return &CosmosGasParams{
+		CosmosGasMultiplierNumerator:   1,
+		CosmosGasMultiplierDenominator: 1,
+	}
+}
+
 // DefaultGenesis returns the default Capability genesis state
 func DefaultGenesis() *GenesisState {
 	return &GenesisState{
-		FeesParams: *DefaultFeesParams(),
+		FeesParams:      *DefaultFeesParams(),
+		CosmosGasParams: *DefaultCosmosGasParams(),
 	}
 }
 
 func (gs GenesisState) Validate() error {
+	if err := gs.CosmosGasParams.Validate(); err != nil {
+		return err
+	}
 	return gs.FeesParams.Validate()
 }

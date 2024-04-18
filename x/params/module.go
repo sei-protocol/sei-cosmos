@@ -100,6 +100,7 @@ func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 func (am AppModule) InitGenesis(ctx sdk.Context, _ codec.JSONCodec, _ json.RawMessage) []abci.ValidatorUpdate {
 	defaultGenesis := types.DefaultGenesis()
 	am.keeper.SetFeesParams(ctx, defaultGenesis.FeesParams)
+	am.keeper.SetCosmosGasParams(ctx, defaultGenesis.CosmosGasParams)
 	return []abci.ValidatorUpdate{}
 }
 

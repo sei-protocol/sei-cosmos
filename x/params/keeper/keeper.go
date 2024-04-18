@@ -73,7 +73,9 @@ func (k Keeper) GetCosmosGasParams(ctx sdk.Context) types.CosmosGasParams {
 
 	var cosmosGasParams types.CosmosGasParams
 	if !subspace.Has(ctx, types.ParamStoreKeyCosmosGasParams) {
-		return *types.DefaultCosmosGasParams()
+		defaultParams := *types.DefaultCosmosGasParams()
+		k.SetCosmosGasParams(ctx, defaultParams)
+		return defaultParams
 	}
 
 	bz := subspace.GetRaw(ctx, types.ParamStoreKeyCosmosGasParams)

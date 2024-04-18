@@ -49,7 +49,6 @@ func (k Keeper) GetFeesParams(ctx sdk.Context) types.FeesParams {
 
 	if !subspace.Has(ctx, types.ParamStoreKeyFeesParams) {
 		defaultParams := *types.DefaultFeesParams()
-		k.SetFeesParams(ctx, defaultParams)
 		return defaultParams
 	}
 
@@ -74,7 +73,6 @@ func (k Keeper) GetCosmosGasParams(ctx sdk.Context) types.CosmosGasParams {
 	var cosmosGasParams types.CosmosGasParams
 	if !subspace.Has(ctx, types.ParamStoreKeyCosmosGasParams) {
 		defaultParams := *types.DefaultCosmosGasParams()
-		k.SetCosmosGasParams(ctx, defaultParams)
 		return defaultParams
 	}
 

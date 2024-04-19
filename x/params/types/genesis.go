@@ -27,6 +27,13 @@ func DefaultGenesis() *GenesisState {
 	}
 }
 
+func NewGenesisState(feesParams FeesParams, cosmosGasParams CosmosGasParams) *GenesisState {
+	return &GenesisState{
+		FeesParams:      feesParams,
+		CosmosGasParams: cosmosGasParams,
+	}
+}
+
 func (gs GenesisState) Validate() error {
 	if err := gs.CosmosGasParams.Validate(); err != nil {
 		return err

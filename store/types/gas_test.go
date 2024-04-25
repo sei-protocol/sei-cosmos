@@ -9,7 +9,7 @@ import (
 
 func TestInfiniteGasMeter(t *testing.T) {
 	t.Parallel()
-	meter := NewInfiniteGasMeter()
+	meter := NewInfiniteMultiplierGasMeter(1, 1)
 	require.Equal(t, uint64(0), meter.Limit())
 	require.Equal(t, uint64(0), meter.GasConsumed())
 	require.Equal(t, uint64(0), meter.GasConsumedToLimit())

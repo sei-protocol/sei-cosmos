@@ -26,9 +26,11 @@ type ViewKeeper interface {
 	GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
 	LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
 	SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
+	GetWeiBalance(ctx sdk.Context, addr sdk.AccAddress) sdk.Int
 
 	IterateAccountBalances(ctx sdk.Context, addr sdk.AccAddress, cb func(coin sdk.Coin) (stop bool))
 	IterateAllBalances(ctx sdk.Context, cb func(address sdk.AccAddress, coin sdk.Coin) (stop bool))
+	IterateAllWeiBalances(ctx sdk.Context, cb func(sdk.AccAddress, sdk.Int) bool)
 }
 
 // BaseViewKeeper implements a read only keeper implementation of ViewKeeper.
@@ -231,4 +233,36 @@ func (k BaseViewKeeper) getAccountStore(ctx sdk.Context, addr sdk.AccAddress) pr
 	store := ctx.KVStore(k.storeKey)
 
 	return prefix.NewStore(store, types.CreateAccountBalancesPrefix(addr))
+}
+
+func (k BaseViewKeeper) GetWeiBalance(ctx sdk.Context, addr sdk.AccAddress) sdk.Int {
+	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.WeiBalancesPrefix)
+	val := store.Get(addr)
+	if val == nil {
+		return sdk.ZeroInt()
+	}
+	res := new(sdk.Int)
+	if err := res.Unmarshal(val); err != nil {
+		// should never happen
+		panic(err)
+	}
+	return *res
+}
+
+func (k BaseViewKeeper) IterateAllWeiBalances(ctx sdk.Context, cb func(sdk.AccAddress, sdk.Int) bool) {
+	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.WeiBalancesPrefix)
+
+	iterator := store.Iterator(nil, nil)
+	defer iterator.Close()
+
+	for ; iterator.Valid(); iterator.Next() {
+		val := new(sdk.Int)
+		if err := val.Unmarshal(iterator.Value()); err != nil {
+			// should never happen
+			panic(err)
+		}
+		if cb(iterator.Key(), *val) {
+			break
+		}
+	}
 }

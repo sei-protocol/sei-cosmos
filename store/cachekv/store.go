@@ -192,6 +192,10 @@ func (store *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	return NewCacheMergeIterator(parent, cache, ascending, store.storeKey)
 }
 
+func (store *Store) VersionExists(version int64) bool {
+	return store.parent.VersionExists(version)
+}
+
 func findStartIndex(strL []string, startQ string) int {
 	// Modified binary search to find the very first element in >=startQ.
 	if len(strL) == 0 {
@@ -358,4 +362,40 @@ func (store *Store) setCacheValue(key, value []byte, deleted bool, dirty bool) {
 func (store *Store) isDeleted(key string) bool {
 	_, ok := store.deleted.Load(key)
 	return ok
+}
+
+func (store *Store) GetParent() types.KVStore {
+	return store.parent
+}
+
+func (store *Store) DeleteAll(start, end []byte) error {
+	for _, k := range store.GetAllKeyStrsInRange(start, end) {
+		store.Delete([]byte(k))
+	}
+	return nil
+}
+
+func (store *Store) GetAllKeyStrsInRange(start, end []byte) (res []string) {
+	keyStrs := map[string]struct{}{}
+	for _, pk := range store.parent.GetAllKeyStrsInRange(start, end) {
+		keyStrs[pk] = struct{}{}
+	}
+	store.cache.Range(func(key, value any) bool {
+		kbz := []byte(key.(string))
+		if bytes.Compare(kbz, start) < 0 || bytes.Compare(kbz, end) >= 0 {
+			// we don't want to break out of the iteration since cache isn't sorted
+			return true
+		}
+		cv := value.(*types.CValue)
+		if cv.Value() == nil {
+			delete(keyStrs, key.(string))
+		} else {
+			keyStrs[key.(string)] = struct{}{}
+		}
+		return true
+	})
+	for k := range keyStrs {
+		res = append(res, k)
+	}
+	return res
 }

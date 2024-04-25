@@ -12,8 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/tasks"
-
 	"github.com/armon/go-metrics"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -23,6 +21,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
+	"github.com/cosmos/cosmos-sdk/tasks"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -203,7 +202,7 @@ func (app *BaseApp) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) (res abc
 // internal CheckTx state if the AnteHandler passes. Otherwise, the ResponseCheckTx
 // will contain releveant error information. Regardless of tx execution outcome,
 // the ResponseCheckTx will contain relevant gas execution context.
-func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTx, error) {
+func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abci.ResponseCheckTxV2, error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "check_tx")
 
 	var mode runTxMode
@@ -220,34 +219,55 @@ func (app *BaseApp) CheckTx(ctx context.Context, req *abci.RequestCheckTx) (*abc
 	}
 
 	sdkCtx := app.getContextForTx(mode, req.Tx)
-	gInfo, result, _, priority, err := app.runTx(sdkCtx, mode, req.Tx)
+	tx, err := app.txDecoder(req.Tx)
+	if err != nil {
+		res := sdkerrors.ResponseCheckTx(err, 0, 0, app.trace)
+		return &abci.ResponseCheckTxV2{ResponseCheckTx: &res}, err
+	}
+	gInfo, result, _, priority, pendingTxChecker, expireTxHandler, txCtx, err := app.runTx(sdkCtx, mode, tx, sha256.Sum256(req.Tx))
 	if err != nil {
 		res := sdkerrors.ResponseCheckTx(err, gInfo.GasWanted, gInfo.GasUsed, app.trace)
-		return &res, err
+		return &abci.ResponseCheckTxV2{ResponseCheckTx: &res}, err
 	}
 
-	return &abci.ResponseCheckTx{
-		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
-		Data:      result.Data,
-		Priority:  priority,
-	}, nil
+	res := &abci.ResponseCheckTxV2{
+		ResponseCheckTx: &abci.ResponseCheckTx{
+			GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
+			Data:      result.Data,
+			Priority:  priority,
+		},
+		ExpireTxHandler:  expireTxHandler,
+		EVMNonce:         txCtx.EVMNonce(),
+		EVMSenderAddress: txCtx.EVMSenderAddress(),
+		IsEVM:            txCtx.IsEVM(),
+	}
+	if pendingTxChecker != nil {
+		res.IsPendingTransaction = true
+		res.Checker = pendingTxChecker
+	}
+
+	return res, nil
 }
 
 // DeliverTxBatch executes multiple txs
 func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchRequest) (res sdk.DeliverTxBatchResponse) {
-	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
-	// This will basically no-op the actual prefill if the metadata for the txs is empty
+	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
 
-	// process all txs, this will also initializes the MVS if prefill estimates was disabled
-	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
-	if err != nil {
-		// TODO: handle error
+	if len(req.TxEntries) == 0 {
+		return sdk.DeliverTxBatchResponse{Results: responses}
 	}
 
-	responses := make([]*sdk.DeliverTxResult, 0, len(req.TxEntries))
+	// avoid overhead for empty batches
+	scheduler := tasks.NewScheduler(app.concurrencyWorkers, app.TracingInfo, app.DeliverTx)
+	txRes, err := scheduler.ProcessAll(ctx, req.TxEntries)
+	if err != nil {
+		ctx.Logger().Error("error while processing scheduler", "err", err)
+		panic(err)
+	}
 	for _, tx := range txRes {
 		responses = append(responses, &sdk.DeliverTxResult{Response: tx})
 	}
+
 	return sdk.DeliverTxBatchResponse{Results: responses}
 }
 
@@ -256,9 +276,7 @@ func (app *BaseApp) DeliverTxBatch(ctx sdk.Context, req sdk.DeliverTxBatchReques
 // Otherwise, the ResponseDeliverTx will contain relevant error information.
 // Regardless of tx execution outcome, the ResponseDeliverTx will contain relevant
 // gas execution context.
-// TODO: (occ) this is the function called from sei-chain to perform execution of a transaction.
-// We'd likely replace this with an execution tasks that is scheduled by the OCC scheduler
-func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res abci.ResponseDeliverTx) {
+func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res abci.ResponseDeliverTx) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "deliver_tx")
 	defer func() {
 		for _, streamingListener := range app.abciListeners {
@@ -278,7 +296,7 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 		telemetry.SetGauge(float32(gInfo.GasWanted), "tx", "gas", "wanted")
 	}()
 
-	gInfo, result, anteEvents, _, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, req.Tx)
+	gInfo, result, anteEvents, _, _, _, resCtx, err := app.runTx(ctx.WithTxBytes(req.Tx).WithVoteInfos(app.voteInfos), runTxModeDeliver, tx, checksum)
 	if err != nil {
 		resultStr = "failed"
 		// if we have a result, use those events instead of just the anteEvents
@@ -288,13 +306,21 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx) (res a
 		return sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, sdk.MarkEventsToIndex(anteEvents, app.indexEvents), app.trace)
 	}
 
-	return abci.ResponseDeliverTx{
+	res = abci.ResponseDeliverTx{
 		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
 		GasUsed:   int64(gInfo.GasUsed),   // TODO: Should type accept unsigned ints?
 		Log:       result.Log,
 		Data:      result.Data,
 		Events:    sdk.MarkEventsToIndex(result.Events, app.indexEvents),
 	}
+	if resCtx.IsEVM() {
+		res.EvmTxInfo = &abci.EvmTxInfo{
+			SenderAddress: resCtx.EVMSenderAddress(),
+			Nonce:         resCtx.EVMNonce(),
+			TxHash:        resCtx.EVMTxHash(),
+		}
+	}
+	return
 }
 
 func (app *BaseApp) WriteStateToCommitAndGetWorkingHash() []byte {
@@ -1033,6 +1059,20 @@ func (app *BaseApp) ProcessProposal(ctx context.Context, req *abci.RequestProces
 	// NOTE: header hash is not set in NewContext, so we manually set it here
 
 	app.prepareProcessProposalState(req.Hash)
+
+	defer func() {
+		if err := recover(); err != nil {
+			app.logger.Error(
+				"panic recovered in ProcessProposal",
+				"height", req.Height,
+				"time", req.Time,
+				"hash", fmt.Sprintf("%X", req.Hash),
+				"panic", err,
+			)
+
+			resp = &abci.ResponseProcessProposal{Status: abci.ResponseProcessProposal_REJECT}
+		}
+	}()
 
 	defer func() {
 		if err := recover(); err != nil {

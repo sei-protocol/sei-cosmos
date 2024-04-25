@@ -253,6 +253,12 @@ type KVStore interface {
 	ReverseIterator(start, end []byte) Iterator
 
 	GetWorkingHash() ([]byte, error)
+
+	VersionExists(version int64) bool
+
+	DeleteAll(start, end []byte) error
+
+	GetAllKeyStrsInRange(start, end []byte) []string
 }
 
 // Iterator is an alias db's Iterator for convenience.

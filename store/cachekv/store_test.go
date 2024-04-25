@@ -62,6 +62,26 @@ func TestCacheKVStore(t *testing.T) {
 	st.Write()
 	require.Empty(t, st.Get(keyFmt(1)), "Expected `key1` to be empty")
 	require.Empty(t, mem.Get(keyFmt(1)), "Expected `key1` to be empty")
+
+	// GetParent returns parent store
+	require.NotNil(t, st.GetParent())
+
+	// DeleteAll deletes all entries in cache but not affect mem
+	mem.Set(keyFmt(1), valFmt(1))
+	mem.Set(keyFmt(3), valFmt(4))
+	st = cachekv.NewStore(mem, types.NewKVStoreKey("CacheKvTest"), types.DefaultCacheSizeLimit)
+	st.Set(keyFmt(0), valFmt(0))
+	st.Set(keyFmt(1), valFmt(2))
+	st.Set(keyFmt(2), valFmt(3))
+	st.Set(keyFmt(5), valFmt(6))
+	require.Nil(t, st.DeleteAll(keyFmt(1), keyFmt(5)))
+	require.Nil(t, st.Get(keyFmt(1)))
+	require.Nil(t, st.Get(keyFmt(2)))
+	require.Nil(t, st.Get(keyFmt(3)))
+	require.NotNil(t, st.Get(keyFmt(0)))
+	require.NotNil(t, st.Get(keyFmt(5)))
+	require.Equal(t, valFmt(1), mem.Get(keyFmt(1)))
+	require.Equal(t, valFmt(4), mem.Get(keyFmt(3)))
 }
 
 func TestCacheKVStoreNoNilSet(t *testing.T) {

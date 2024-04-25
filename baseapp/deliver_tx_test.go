@@ -3,6 +3,7 @@ package baseapp
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
@@ -228,7 +229,8 @@ func TestWithRouter(t *testing.T) {
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
 
-			res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+			decoded, _ := app.txDecoder(txBytes)
+			res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 			require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 		}
 
@@ -434,7 +436,8 @@ func TestMultiMsgDeliverTx(t *testing.T) {
 	tx := newTxCounter(0, 0, 1, 2)
 	txBytes, err := codec.Marshal(tx)
 	require.NoError(t, err)
-	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	decoded, _ := app.txDecoder(txBytes)
+	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 	require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 
 	store := app.deliverState.ctx.KVStore(capKey1)
@@ -454,7 +457,8 @@ func TestMultiMsgDeliverTx(t *testing.T) {
 	tx.Msgs = append(tx.Msgs, msgCounter2{1})
 	txBytes, err = codec.Marshal(tx)
 	require.NoError(t, err)
-	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	decoded, _ = app.txDecoder(txBytes)
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 	require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 
 	store = app.deliverState.ctx.KVStore(capKey1)
@@ -651,9 +655,8 @@ func TestRunInvalidTransaction(t *testing.T) {
 		txBytes, err := newCdc.Marshal(tx)
 		require.NoError(t, err)
 
-		res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
-		require.EqualValues(t, sdkerrors.ErrTxDecode.ABCICode(), res.Code)
-		require.EqualValues(t, sdkerrors.ErrTxDecode.Codespace(), res.Codespace)
+		_, err = app.txDecoder(txBytes)
+		require.NotNil(t, err)
 	}
 }
 
@@ -922,7 +925,8 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	tx.setFailOnAnte(true)
 	txBytes, err := cdc.Marshal(tx)
 	require.NoError(t, err)
-	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	decoded, _ := app.txDecoder(txBytes)
+	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 	require.Empty(t, res.Events)
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
 
@@ -938,7 +942,8 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	txBytes, err = cdc.Marshal(tx)
 	require.NoError(t, err)
 
-	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	decoded, _ = app.txDecoder(txBytes)
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 	// should emit ante event
 	require.NotEmpty(t, res.Events)
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
@@ -955,7 +960,8 @@ func TestBaseAppAnteHandler(t *testing.T) {
 	txBytes, err = cdc.Marshal(tx)
 	require.NoError(t, err)
 
-	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	decoded, _ = app.txDecoder(txBytes)
+	res = app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 	require.NotEmpty(t, res.Events)
 	require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 
@@ -1032,7 +1038,7 @@ func TestGasConsumptionBadTx(t *testing.T) {
 	txBytes, err := cdc.Marshal(tx)
 	require.NoError(t, err)
 
-	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+	res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, tx, sha256.Sum256(txBytes))
 	require.False(t, res.IsOK(), fmt.Sprintf("%v", res))
 
 	// removed the block gas exceeded because of removal of block gas meter, gasWanted < max block gas is still fulfilled by various other checks
@@ -1492,18 +1498,39 @@ func TestDeliverTx(t *testing.T) {
 		app.BeginBlock(app.deliverState.ctx, abci.RequestBeginBlock{Header: header})
 
 		for i := 0; i < txPerHeight; i++ {
+			// every even i is an evm tx
+			isEvm := i%2 == 0
 			counter := int64(blockN*txPerHeight + i)
 			tx := newTxCounter(counter, counter)
 
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
 
-			res := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+			decoded, _ := app.txDecoder(txBytes)
+
+			ctx := app.deliverState.ctx
+
+			if isEvm {
+				ctx = ctx.WithIsEVM(true)
+				ctx = ctx.WithEVMNonce(12345)
+				ctx = ctx.WithEVMTxHash("hash")
+				ctx = ctx.WithEVMSenderAddress("address")
+			}
+
+			res := app.DeliverTx(ctx, abci.RequestDeliverTx{Tx: txBytes}, decoded, sha256.Sum256(txBytes))
 			require.True(t, res.IsOK(), fmt.Sprintf("%v", res))
 			events := res.GetEvents()
 			require.Len(t, events, 3, "should contain ante handler, message type and counter events respectively")
 			require.Equal(t, sdk.MarkEventsToIndex(counterEvent("ante_handler", counter).ToABCIEvents(), map[string]struct{}{})[0], events[0], "ante handler event")
 			require.Equal(t, sdk.MarkEventsToIndex(counterEvent(sdk.EventTypeMessage, counter).ToABCIEvents(), map[string]struct{}{})[0], events[2], "msg handler update counter event")
+
+			if isEvm {
+				require.Equal(t, uint64(12345), res.EvmTxInfo.Nonce)
+				require.Equal(t, "hash", res.EvmTxInfo.TxHash)
+				require.Equal(t, "address", res.EvmTxInfo.SenderAddress)
+			} else {
+				require.Nil(t, res.EvmTxInfo)
+			}
 		}
 
 		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})
@@ -1700,12 +1727,12 @@ func setupBaseAppWithSnapshots(t *testing.T, blocks uint, blockTxs int, options 
 				value := make([]byte, 10000)
 				_, err := r.Read(value)
 				require.NoError(t, err)
-				tx.Msgs = append(tx.Msgs, msgKeyValue{Key: key, Value: value})
+				tx.Msgs = append(tx.Msgs, &msgKeyValue{Key: key, Value: value})
 				keyCounter++
 			}
 			txBytes, err := codec.Marshal(tx)
 			require.NoError(t, err)
-			resp := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes})
+			resp := app.DeliverTx(app.deliverState.ctx, abci.RequestDeliverTx{Tx: txBytes}, tx, sha256.Sum256(txBytes))
 			require.True(t, resp.IsOK(), "%v", resp.String())
 		}
 		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{Height: height})

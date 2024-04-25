@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -20,13 +21,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/cachemulti"
 	"github.com/cosmos/cosmos-sdk/store/dbadapter"
+	"github.com/cosmos/cosmos-sdk/store/multiversion"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/occ"
 	"github.com/cosmos/cosmos-sdk/utils/tracing"
 )
 
-type mockDeliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx
+type mockDeliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx)
 
 var testStoreKey = sdk.NewKVStoreKey("mock")
 var itemKey = []byte("key")
@@ -38,6 +39,8 @@ func requestList(n int) []*sdk.DeliverTxEntry {
 			Request: types.RequestDeliverTx{
 				Tx: []byte(fmt.Sprintf("%d", i)),
 			},
+			AbsoluteIndex: i,
+			// TODO: maybe we need to add dummy sdkTx message types and handler routers too
 		}
 
 	}
@@ -50,10 +53,28 @@ func abortRecoveryFunc(response *types.ResponseDeliverTx) {
 		if !ok {
 			panic(r)
 		}
-		response.Code = sdkerrors.ErrOCCAbort.ABCICode()
-		response.Codespace = sdkerrors.ErrOCCAbort.Codespace()
+		// empty code and codespace
 		response.Info = "occ abort"
 	}
+}
+
+func requestListWithEstimatedWritesets(n int) []*sdk.DeliverTxEntry {
+	tasks := make([]*sdk.DeliverTxEntry, n)
+	for i := 0; i < n; i++ {
+		tasks[i] = &sdk.DeliverTxEntry{
+			Request: types.RequestDeliverTx{
+				Tx: []byte(fmt.Sprintf("%d", i)),
+			},
+			AbsoluteIndex: i,
+			EstimatedWritesets: sdk.MappedWritesets{
+				testStoreKey: multiversion.WriteSet{
+					string(itemKey): []byte("foo"),
+				},
+			},
+		}
+
+	}
+	return tasks
 }
 
 func initTestCtx(injectStores bool) sdk.Context {
@@ -68,6 +89,7 @@ func initTestCtx(injectStores bool) sdk.Context {
 	}
 	store := cachemulti.NewStore(db, stores, keys, nil, nil, nil)
 	ctx = ctx.WithMultiStore(&store)
+	ctx = ctx.WithLogger(log.NewNopLogger())
 	return ctx
 }
 
@@ -95,7 +117,7 @@ func TestProcessAll(t *testing.T) {
 			runs:      10,
 			addStores: true,
 			requests:  requestList(0),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) types.ResponseDeliverTx {
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
 				panic("should not deliver")
 			},
 			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
@@ -116,8 +138,8 @@ func TestProcessAll(t *testing.T) {
 					kv.Set([]byte(fmt.Sprintf("%d", i)), []byte(fmt.Sprintf("%d", i)))
 				}
 			},
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
-				defer abortRecoveryFunc(&response)
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
 				if ctx.TxIndex()%2 == 0 {
 					// For even-indexed transactions, write to the store
@@ -157,8 +179,8 @@ func TestProcessAll(t *testing.T) {
 			runs:      10,
 			addStores: true,
 			requests:  requestList(1000),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
-				defer abortRecoveryFunc(&response)
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
 
@@ -189,8 +211,44 @@ func TestProcessAll(t *testing.T) {
 			runs:      5,
 			addStores: true,
 			requests:  requestList(1000),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
-				defer abortRecoveryFunc(&response)
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
+				// all txs read and write to the same key to maximize conflicts
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+				val := string(kv.Get(itemKey))
+
+				// write to the store with this tx's index
+				kv.Set(itemKey, req.Tx)
+
+				// return what was read from the store (final attempt should be index-1)
+				return types.ResponseDeliverTx{
+					Info: val,
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				for idx, response := range res {
+					if idx == 0 {
+						require.Equal(t, "", response.Info)
+					} else {
+						// the info is what was read from the kv store by the tx
+						// each tx writes its own index, so the info should be the index of the previous tx
+						require.Equal(t, fmt.Sprintf("%d", idx-1), response.Info)
+					}
+				}
+				// confirm last write made it to the parent store
+				latest := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
+				require.Equal(t, []byte(fmt.Sprintf("%d", len(res)-1)), latest)
+			},
+			expectedErr: nil,
+		},
+		{
+			name:      "Test every tx accesses same key with estimated writesets",
+			workers:   50,
+			runs:      1,
+			addStores: true,
+			requests:  requestListWithEstimatedWritesets(1000),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
 				// all txs read and write to the same key to maximize conflicts
 				kv := ctx.MultiStore().GetKVStore(testStoreKey)
 				val := string(kv.Get(itemKey))
@@ -225,8 +283,8 @@ func TestProcessAll(t *testing.T) {
 			runs:      1,
 			addStores: true,
 			requests:  requestList(2000),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
-				defer abortRecoveryFunc(&response)
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
 				if ctx.TxIndex()%10 != 0 {
 					return types.ResponseDeliverTx{
 						Info: "none",
@@ -253,8 +311,8 @@ func TestProcessAll(t *testing.T) {
 			runs:      10,
 			addStores: false,
 			requests:  requestList(10),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
-				defer abortRecoveryFunc(&response)
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
 				return types.ResponseDeliverTx{
 					Info: fmt.Sprintf("%d", ctx.TxIndex()),
 				}
@@ -267,13 +325,49 @@ func TestProcessAll(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			name:      "Test every tx accesses same key with estimated writesets",
+			workers:   50,
+			runs:      1,
+			addStores: true,
+			requests:  requestListWithEstimatedWritesets(1000),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
+				// all txs read and write to the same key to maximize conflicts
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+				val := string(kv.Get(itemKey))
+
+				// write to the store with this tx's index
+				kv.Set(itemKey, req.Tx)
+
+				// return what was read from the store (final attempt should be index-1)
+				return types.ResponseDeliverTx{
+					Info: val,
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				for idx, response := range res {
+					if idx == 0 {
+						require.Equal(t, "", response.Info)
+					} else {
+						// the info is what was read from the kv store by the tx
+						// each tx writes its own index, so the info should be the index of the previous tx
+						require.Equal(t, fmt.Sprintf("%d", idx-1), response.Info)
+					}
+				}
+				// confirm last write made it to the parent store
+				latest := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
+				require.Equal(t, []byte(fmt.Sprintf("%d", len(res)-1)), latest)
+			},
+			expectedErr: nil,
+		},
+		{
 			name:      "Test every tx accesses same key with delays",
 			workers:   50,
 			runs:      1,
 			addStores: true,
 			requests:  requestList(1000),
-			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx) (response types.ResponseDeliverTx) {
-				defer abortRecoveryFunc(&response)
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
 				wait := rand.Intn(10)
 				time.Sleep(time.Duration(wait) * time.Millisecond)
 				// all txs read and write to the same key to maximize conflicts
@@ -283,6 +377,45 @@ func TestProcessAll(t *testing.T) {
 				// write to the store with this tx's index
 				newVal := val + fmt.Sprintf("%d", ctx.TxIndex())
 				kv.Set(itemKey, []byte(newVal))
+
+				// return what was read from the store (final attempt should be index-1)
+				return types.ResponseDeliverTx{
+					Info: newVal,
+				}
+			},
+			assertions: func(t *testing.T, ctx sdk.Context, res []types.ResponseDeliverTx) {
+				expected := ""
+				for idx, response := range res {
+					expected = expected + fmt.Sprintf("%d", idx)
+					require.Equal(t, expected, response.Info)
+				}
+				// confirm last write made it to the parent store
+				latest := ctx.MultiStore().GetKVStore(testStoreKey).Get(itemKey)
+				require.Equal(t, expected, string(latest))
+			},
+			expectedErr: nil,
+		},
+		{
+			name:      "Test tx Reset properly before re-execution via tracer",
+			workers:   10,
+			runs:      1,
+			addStores: true,
+			requests:  addTxTracerToTxEntries(requestList(250)),
+			deliverTxFunc: func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx) {
+				defer abortRecoveryFunc(&res)
+				wait := rand.Intn(10)
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				// all txs read and write to the same key to maximize conflicts
+				kv := ctx.MultiStore().GetKVStore(testStoreKey)
+				val := string(kv.Get(itemKey))
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				// write to the store with this tx's index
+				newVal := val + fmt.Sprintf("%d", ctx.TxIndex())
+				kv.Set(itemKey, []byte(newVal))
+
+				if v, ok := ctx.Context().Value("test_tracer").(*testTxTracer); ok {
+					v.OnTxExecute()
+				}
 
 				// return what was read from the store (final attempt should be index-1)
 				return types.ResponseDeliverTx{
@@ -333,4 +466,43 @@ func TestProcessAll(t *testing.T) {
 			}
 		})
 	}
+}
+
+func addTxTracerToTxEntries(txEntries []*sdk.DeliverTxEntry) []*sdk.DeliverTxEntry {
+	for _, txEntry := range txEntries {
+		txEntry.TxTracer = newTestTxTracer(txEntry.AbsoluteIndex)
+	}
+
+	return txEntries
+}
+
+var _ sdk.TxTracer = &testTxTracer{}
+
+func newTestTxTracer(txIndex int) *testTxTracer {
+	return &testTxTracer{txIndex: txIndex, canExecute: true}
+}
+
+type testTxTracer struct {
+	txIndex    int
+	canExecute bool
+}
+
+func (t *testTxTracer) Commit() {
+	t.canExecute = false
+}
+
+func (t *testTxTracer) InjectInContext(ctx sdk.Context) sdk.Context {
+	return ctx.WithContext(context.WithValue(ctx.Context(), "test_tracer", t))
+}
+
+func (t *testTxTracer) Reset() {
+	t.canExecute = true
+}
+
+func (t *testTxTracer) OnTxExecute() {
+	if !t.canExecute {
+		panic(fmt.Errorf("task #%d was asked to execute but the tracer is not in the correct state, most probably due to missing Reset call or over execution", t.txIndex))
+	}
+
+	t.canExecute = false
 }

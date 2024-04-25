@@ -81,6 +81,10 @@ func (s *Store) iterator(start, end []byte, ascending bool) types.Iterator {
 	return newTraceIterator(parent, s.listeners)
 }
 
+func (s *Store) VersionExists(version int64) bool {
+	return s.parent.VersionExists(version)
+}
+
 type listenIterator struct {
 	parent    types.Iterator
 	listeners []types.WriteListener
@@ -156,4 +160,12 @@ func (s *Store) onWrite(delete bool, key, value []byte) {
 	for _, l := range s.listeners {
 		l.OnWrite(s.parentStoreKey, key, value, delete)
 	}
+}
+
+func (s *Store) DeleteAll(start, end []byte) error {
+	return s.parent.DeleteAll(start, end)
+}
+
+func (s *Store) GetAllKeyStrsInRange(start, end []byte) []string {
+	return s.parent.GetAllKeyStrsInRange(start, end)
 }

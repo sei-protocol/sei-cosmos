@@ -106,6 +106,8 @@ func PopulateEvmAddrIfApplicable(info Info, o KeyOutput) (KeyOutput, error) {
 			return o, err
 		}
 		o.EvmAddress = crypto.PubkeyToAddress(privKey.PublicKey).Hex()
+	} else {
+		fmt.Printf("PSUDEBUG - LocalInfo err\n")
 	}
 	return o, nil
 }

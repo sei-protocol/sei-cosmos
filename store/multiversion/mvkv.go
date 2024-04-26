@@ -92,6 +92,7 @@ type VersionIndexedStore struct {
 	incarnation      int
 	// have abort channel here for aborting transactions
 	abortChannel chan scheduler.Abort
+	abortWritten bool
 }
 
 var _ types.KVStore = (*VersionIndexedStore)(nil)
@@ -120,6 +121,14 @@ func (store *VersionIndexedStore) GetReadset() map[string][][]byte {
 // GetWriteset returns the writeset
 func (store *VersionIndexedStore) GetWriteset() map[string][]byte {
 	return store.writeset
+}
+
+// WriteAbort writes an abort to the store but only allows one abort to be written PER instance of mvkv. This is because we pair abort channel writes with panics, and if we hit this more than once, it means that the panic was swallowed, so we won't write any aborts after a first abort is written to prevent any potential for deadlocking due to full channels
+func (store *VersionIndexedStore) WriteAbort(abort scheduler.Abort) {
+	if !store.abortWritten {
+		store.abortChannel <- abort
+	}
+	store.abortWritten = true
 }
 
 // Get implements types.KVStore.
@@ -152,7 +161,7 @@ func (store *VersionIndexedStore) Get(key []byte) []byte {
 	if mvsValue != nil {
 		if mvsValue.IsEstimate() {
 			abort := scheduler.NewEstimateAbort(mvsValue.Index())
-			store.abortChannel <- abort
+			store.WriteAbort(abort)
 			panic(abort)
 		} else {
 			// This handles both detecting readset conflicts and updating readset if applicable
@@ -202,7 +211,7 @@ func (store *VersionIndexedStore) ValidateReadset() bool {
 		if mvsValue != nil {
 			if mvsValue.IsEstimate() {
 				// if we see an estimate, that means that we need to abort and rerun
-				store.abortChannel <- scheduler.NewEstimateAbort(mvsValue.Index())
+				store.WriteAbort(scheduler.NewEstimateAbort(mvsValue.Index()))
 				return false
 			} else {
 				if mvsValue.IsDeleted() {

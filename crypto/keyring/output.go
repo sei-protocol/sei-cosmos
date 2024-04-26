@@ -80,12 +80,12 @@ func MkAccKeysOutput(infos []Info) ([]KeyOutput, error) {
 			fmt.Println("PSUDEBUG - err MkAccKeyOutputM: %s\n", err)
 			return nil, err
 		}
-		kos[i], err = PopulateEvmAddrIfApplicable(info, kos[i])
-		fmt.Printf("PSUDEBUG - finished PopulateEvmAddrIfApplicable\n")
-		if err != nil {
-			fmt.Printf("PSUDEBUG - err PopulateEvmAddrIfApplicable: %s\n", err)
-			return nil, err
-		}
+		//kos[i], err = PopulateEvmAddrIfApplicable(info, kos[i])
+		//fmt.Printf("PSUDEBUG - finished PopulateEvmAddrIfApplicable\n")
+		//if err != nil {
+		//	fmt.Printf("PSUDEBUG - err PopulateEvmAddrIfApplicable: %s\n", err)
+		//	return nil, err
+		//}
 	}
 
 	return kos, nil

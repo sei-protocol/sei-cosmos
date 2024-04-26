@@ -92,9 +92,9 @@ func MkAccKeysOutput(infos []Info) ([]KeyOutput, error) {
 }
 
 func PopulateEvmAddrIfApplicable(info Info, o KeyOutput) (KeyOutput, error) {
-	fmt.Printf("PSUDEBUG - starting cast to LocalInfo %\n")
+	fmt.Printf("PSUDEBUG - starting cast to LocalInfo\n")
 	localInfo, ok := info.(LocalInfo)
-	fmt.Printf("PSUDEBUG - finished cast to LocalInfo %\n")
+	fmt.Printf("PSUDEBUG - finished cast to LocalInfo %s\n", ok)
 	if ok {
 		priv, err := legacy.PrivKeyFromBytes([]byte(localInfo.PrivKeyArmor))
 		if err != nil {

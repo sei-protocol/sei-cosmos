@@ -96,11 +96,13 @@ func PopulateEvmAddrIfApplicable(info Info, o KeyOutput) (KeyOutput, error) {
 	if ok {
 		priv, err := legacy.PrivKeyFromBytes([]byte(localInfo.PrivKeyArmor))
 		if err != nil {
+			fmt.Printf("PSUDEBUG - PrivKeyFromBytes err : %s\n", err)
 			return o, err
 		}
 		privHex := hex.EncodeToString(priv.Bytes())
 		privKey, err := crypto.HexToECDSA(privHex)
 		if err != nil {
+			fmt.Printf("PSUDEBUG - HexToECDSA err : %s\n", err)
 			return o, err
 		}
 		o.EvmAddress = crypto.PubkeyToAddress(privKey.PublicKey).Hex()

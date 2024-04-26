@@ -82,6 +82,8 @@ func MkAccKeysOutput(infos []Info) ([]KeyOutput, error) {
 			return nil, err
 		}
 		if info.GetAlgo() == hd.Secp256k1Type {
+			// We only support getting evm-addr if the algo type is secp256k1 (which it should be, though there
+			// may be some legacy keys with sr25519)
 			kos[i], err = PopulateEvmAddrIfApplicable(info, kos[i])
 			fmt.Printf("PSUDEBUG - finished PopulateEvmAddrIfApplicable\n")
 			if err != nil {
@@ -95,24 +97,19 @@ func MkAccKeysOutput(infos []Info) ([]KeyOutput, error) {
 }
 
 func PopulateEvmAddrIfApplicable(info Info, o KeyOutput) (KeyOutput, error) {
-	fmt.Printf("PSUDEBUG - starting cast to LocalInfo\n")
 	localInfo, ok := info.(LocalInfo)
-	fmt.Printf("PSUDEBUG - finished cast to LocalInfo %s\n", ok)
 	if ok {
 		priv, err := legacy.PrivKeyFromBytes([]byte(localInfo.PrivKeyArmor))
 		if err != nil {
-			fmt.Printf("PSUDEBUG - PrivKeyFromBytes err : %s\n", err)
 			return o, err
 		}
 		privHex := hex.EncodeToString(priv.Bytes())
 		privKey, err := crypto.HexToECDSA(privHex)
 		if err != nil {
-			fmt.Printf("PSUDEBUG - HexToECDSA err : %s\n", err)
 			return o, err
 		}
 		o.EvmAddress = crypto.PubkeyToAddress(privKey.PublicKey).Hex()
 	} else {
-		fmt.Printf("PSUDEBUG - LocalInfo err\n")
 	}
 	return o, nil
 }

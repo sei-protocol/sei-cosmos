@@ -2,6 +2,7 @@ package keyring
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
@@ -74,11 +75,15 @@ func MkAccKeysOutput(infos []Info) ([]KeyOutput, error) {
 	var err error
 	for i, info := range infos {
 		kos[i], err = MkAccKeyOutput(info)
+		fmt.Println("PSUDEBUG - finished MkAccKeyOutputM")
 		if err != nil {
+			fmt.Println("PSUDEBUG - err MkAccKeyOutputM: %s\n", err)
 			return nil, err
 		}
 		kos[i], err = PopulateEvmAddrIfApplicable(info, kos[i])
+		fmt.Println("PSUDEBUG - finished PopulateEvmAddrIfApplicable")
 		if err != nil {
+			fmt.Println("PSUDEBUG - err PopulateEvmAddrIfApplicable: %s\n", err)
 			return nil, err
 		}
 	}

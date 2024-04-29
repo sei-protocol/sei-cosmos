@@ -102,6 +102,7 @@ func (s Subspace) Validate(ctx sdk.Context, key []byte, value interface{}) error
 func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	s.checkType(key, ptr)
 
+	fmt.Printf("PSUDEBUG - key: %s\n", string(key))
 	store := s.kvStore(ctx)
 	bz := store.Get(key)
 

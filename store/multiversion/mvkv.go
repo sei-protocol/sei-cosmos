@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"sort"
 
@@ -92,7 +93,6 @@ type VersionIndexedStore struct {
 	incarnation      int
 	// have abort channel here for aborting transactions
 	abortChannel chan scheduler.Abort
-	abortWritten bool
 }
 
 var _ types.KVStore = (*VersionIndexedStore)(nil)
@@ -125,10 +125,11 @@ func (store *VersionIndexedStore) GetWriteset() map[string][]byte {
 
 // WriteAbort writes an abort to the store but only allows one abort to be written PER instance of mvkv. This is because we pair abort channel writes with panics, and if we hit this more than once, it means that the panic was swallowed, so we won't write any aborts after a first abort is written to prevent any potential for deadlocking due to full channels
 func (store *VersionIndexedStore) WriteAbort(abort scheduler.Abort) {
-	if !store.abortWritten {
-		store.abortChannel <- abort
+	select {
+	case store.abortChannel <- abort:
+	default:
+		fmt.Println("WARN: abort channel full, discarding val")
 	}
-	store.abortWritten = true
 }
 
 // Get implements types.KVStore.

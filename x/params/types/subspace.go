@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"reflect"
+	"runtime/debug"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -106,7 +107,8 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	bz := store.Get(key)
 
 	if string(key) == "KeyPriorityNormalizer" {
-		fmt.Printf("PSUDEBUG - failing: %v, key: %s, %s\n", store, key, string(bz))
+		fmt.Printf("PSUDEBUG - about to unmarshal: %v, key: %s, %s\n ", store, key, string(bz))
+		fmt.Printf("PSUDEBUG - stack: %s\n", debug.Stack())
 	}
 	if err := s.legacyAmino.UnmarshalJSON(bz, ptr); err != nil {
 		fmt.Printf("PSUDEBUG - failing: %v, key: %s, %s\n", store, key, string(bz))

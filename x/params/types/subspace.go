@@ -106,7 +106,7 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	bz := store.Get(key)
 
 	if err := s.legacyAmino.UnmarshalJSON(bz, ptr); err != nil {
-		fmt.Printf("PSUDEBUG - failing: %v, key: %s\n", store, key)
+		fmt.Printf("PSUDEBUG - failing: %v, key: %s, %s\n", store, key, string(bz))
 		panic(err)
 	}
 }

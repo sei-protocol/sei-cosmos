@@ -252,9 +252,18 @@ func (rs *Store) CacheMultiStoreWithVersion(version int64) (types.CacheMultiStor
 		}
 	}
 	// TODO: May need to add historical SC store as well for nodes that doesn't enable ss but still need historical queries
+	// TODO: add config level check that the SC lookback is longer than snapshot interval
+	// try to serve from SC if version exists
+	scStore, err := rs.scStore.LoadVersion(version, true)
+	if err == nil {
+		// TODO: do logic here to serve from SC if version exists
+		for k, store := range rs.ckvStores {
+			if store.GetStoreType() == types.StoreTypeIAVL {
+				stores[k] = commitment.NewStore(scStore.GetTreeByName(k.Name()), rs.logger)
+			}
 
-	// add SS stores for historical queries
-	if rs.ssStore != nil {
+		}
+	} else if rs.ssStore != nil {
 		for k, store := range rs.ckvStores {
 			if store.GetStoreType() == types.StoreTypeIAVL {
 				stores[k] = state.NewStore(rs.ssStore, k, version)

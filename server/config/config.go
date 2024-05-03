@@ -180,7 +180,7 @@ type GRPCWebConfig struct {
 // StateSyncConfig defines the state sync snapshot configuration.
 type StateSyncConfig struct {
 	// SnapshotInterval sets the interval at which state sync snapshots are taken.
-	// 0 disables snapshots. Must be a multiple of PruningKeepEvery.
+	// 0 disables snapshots. Must be a multiple of PruningKeepEvery. For SeiDB, this must be less than the SnapshotInterval in StateCommitConfig.
 	SnapshotInterval uint64 `mapstructure:"snapshot-interval"`
 
 	// SnapshotKeepRecent sets the number of recent state sync snapshots to keep.
@@ -402,6 +402,12 @@ func (c Config) ValidateBasic(tendermintConfig *tmcfg.Config) error {
 	if c.Pruning == storetypes.PruningOptionEverything && c.StateSync.SnapshotInterval > 0 {
 		return sdkerrors.ErrAppConfig.Wrapf(
 			"cannot enable state sync snapshots with '%s' pruning setting", storetypes.PruningOptionEverything,
+		)
+	}
+	// if seidb State Commit enabled AND statesync enabled, check for statesync snapshot interval <= state commit snapshot interval
+	if c.StateCommit.Enable && c.StateSync.SnapshotInterval > 0 && c.StateSync.SnapshotInterval > uint64(c.StateCommit.SnapshotInterval) {
+		return sdkerrors.ErrAppConfig.Wrapf(
+			"cannot enable state sync snapshots when snapshot interval is greater than SeiDB state commit snaphot interval",
 		)
 	}
 

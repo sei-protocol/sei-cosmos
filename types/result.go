@@ -249,6 +249,7 @@ func WrapServiceResult(ctx Context, res proto.Message, err error) (*Result, erro
 	}
 
 	return &Result{
+		// This suggests it should just be events, not logs
 		Data:   data,
 		Events: events,
 	}, nil

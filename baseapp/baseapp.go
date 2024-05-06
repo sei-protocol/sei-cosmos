@@ -1079,7 +1079,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		}
 		msgEvents = msgEvents.AppendEvents(msgResult.GetEvents())
 
-		fmt.Printf("PSUDEBUG - msg %s resulted in msg result %s\n", msg.String(), msgResult.Log)
 		// append message events, data and logs
 		//
 		// Note: Each message result's data must be length-prefixed in order to
@@ -1118,6 +1117,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		return nil, sdkerrors.Wrap(err, "failed to marshal tx data")
 	}
 
+	fmt.Printf("PSUDEBUG - events: %s vs logs: %s\n", events, msgLogs)
 	return &sdk.Result{
 		Data:   data,
 		Log:    strings.TrimSpace(msgLogs.String()),

@@ -1079,6 +1079,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		}
 		msgEvents = msgEvents.AppendEvents(msgResult.GetEvents())
 
+		fmt.Printf("PSUDEBUG - msg %s resulted in msg events %v\n", msg.String(), msgEvents)
 		// append message events, data and logs
 		//
 		// Note: Each message result's data must be length-prefixed in order to

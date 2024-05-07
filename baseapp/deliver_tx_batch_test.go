@@ -136,6 +136,7 @@ func TestDeliverTxBatch(t *testing.T) {
 			requireAttribute(t, res.Events, "tx-id", fmt.Sprintf("%d", idx))
 			requireAttribute(t, res.Events, "tx-val", fmt.Sprintf("%d", blockN+1))
 			requireAttribute(t, res.Events, "shared-val", fmt.Sprintf("%d", blockN*txPerHeight+idx+1))
+			fmt.Printf("PSUDEBUG - %s\n", res.Log)
 		}
 
 		app.EndBlock(app.deliverState.ctx, abci.RequestEndBlock{})

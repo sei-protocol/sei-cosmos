@@ -1040,6 +1040,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 		startTime := time.Now()
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
+			fmt.Printf("PSUDEBUG: Handler: %s\n", handler)
 			// ADR 031 request type routing
 			msgResult, err = handler(msgCtx, msg)
 			eventMsgName = sdk.MsgTypeURL(msg)
@@ -1119,7 +1120,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 
 	for _, event := range events.ToABCIEvents() {
 		if !strings.Contains(strings.ToLower(event.String()), "vote") && !strings.Contains(strings.ToLower(event.String()), "oracle") {
-			fmt.Printf("PSUDEBUG - events: %s vs logs: %s\n", events, msgLogs)
+			fmt.Printf("PSUDEBUG - events: %v\n vs logs: %s\n\n", events, msgLogs)
 		}
 	}
 	return &sdk.Result{

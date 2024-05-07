@@ -48,6 +48,7 @@ func (s *resultTestSuite) TestABCIMessageLog() {
 	msgLogs := sdk.ABCIMessageLogs{msgLog}
 	bz, err := cdc.MarshalJSON(msgLogs)
 
+	fmt.Printf("debug: %s\n", msgLogs.String())
 	s.Require().NoError(err)
 	s.Require().Equal(string(bz), msgLogs.String())
 }

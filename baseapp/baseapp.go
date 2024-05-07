@@ -1094,7 +1094,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		msgMsCache.Write()
 
 		if ctx.MsgValidator() == nil {
-			fmt.Printf("PSUDEBUG - continue b/c ctx.MsgValidator is not nil")
+			fmt.Printf("PSUDEBUG - continue b/c ctx.MsgValidator is not nil\n")
 			continue
 		}
 		storeAccessOpEvents := msgMsCache.GetEvents()
@@ -1109,7 +1109,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			}
 			errMessage := fmt.Sprintf("Invalid Concurrent Execution messageIndex=%d, missing %d access operations", i, len(missingAccessOps))
 			// we need to bubble up the events for inspection
-			fmt.Printf("PSUDEBUG - returning early b/c of missing accessops")
+			fmt.Printf("PSUDEBUG - returning early b/c of missing accessops\n")
 			return &sdk.Result{
 				Log:    strings.TrimSpace(msgLogs.String()),
 				Events: events.ToABCIEvents(),

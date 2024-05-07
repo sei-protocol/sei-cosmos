@@ -1088,6 +1088,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		events = events.AppendEvents(msgEvents)
 
 		txMsgData.Data = append(txMsgData.Data, &sdk.MsgData{MsgType: sdk.MsgTypeURL(msg), Data: msgResult.Data})
+		fmt.Printf("PSUDEBUG appending Log: %s to : %s\n", msgResult.Log, msgLogs)
 		msgLogs = append(msgLogs, sdk.NewABCIMessageLog(uint32(i), msgResult.Log, events))
 
 		msgMsCache.Write()

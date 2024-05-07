@@ -1042,7 +1042,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		if handler := app.msgServiceRouter.Handler(msg); handler != nil {
 			// ADR 031 request type routing
 			msgResult, err = handler(msgCtx, msg)
-			fmt.Printf("PSUDEBUG finished running handler - events: %s \nand logs %s\n", msgResult.Events, msgResult.Log)
+			fmt.Printf("PSUDEBUG finished running handler - events: %v \nand logs %s\n", msgResult.Events, msgResult.Log)
 			eventMsgName = sdk.MsgTypeURL(msg)
 			metrics.MeasureSinceWithLabels(
 				[]string{"sei", "cosmos", "run", "msg", "latency"},
@@ -1062,7 +1062,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 				return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message route: %s; message index: %d", msgRoute, i)
 			}
 			msgResult, err = handler(msgCtx, msg)
-			fmt.Printf("PSUDEBUG finished running legacy handler - events: %s \nand logs %s\n", msgResult.Events, msgResult.Log)
+			fmt.Printf("PSUDEBUG finished running legacy handler - events: %v \nand logs %s\n", msgResult.Events, msgResult.Log)
 			metrics.MeasureSinceWithLabels(
 				[]string{"cosmos", "run", "msg", "latency"},
 				startTime,

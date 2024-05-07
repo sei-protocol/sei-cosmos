@@ -1117,7 +1117,11 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		return nil, sdkerrors.Wrap(err, "failed to marshal tx data")
 	}
 
-	fmt.Printf("PSUDEBUG - events: %s vs logs: %s\n", events, msgLogs)
+	for _, event := range events.ToABCIEvents() {
+		if !strings.Contains(strings.ToLower(event.String()), "vote") || !strings.Contains(strings.ToLower(event.String()), "oracle") {
+			fmt.Printf("PSUDEBUG - events: %s vs logs: %s\n", events, msgLogs)
+		}
+	}
 	return &sdk.Result{
 		Data:   data,
 		Log:    strings.TrimSpace(msgLogs.String()),

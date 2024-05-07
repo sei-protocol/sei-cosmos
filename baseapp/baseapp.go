@@ -1094,6 +1094,7 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 		msgMsCache.Write()
 
 		if ctx.MsgValidator() == nil {
+			fmt.Printf("PSUDEBUG - continue b/c ctx.MsgValidator is not nil")
 			continue
 		}
 		storeAccessOpEvents := msgMsCache.GetEvents()
@@ -1108,23 +1109,23 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 			}
 			errMessage := fmt.Sprintf("Invalid Concurrent Execution messageIndex=%d, missing %d access operations", i, len(missingAccessOps))
 			// we need to bubble up the events for inspection
+			fmt.Printf("PSUDEBUG - returning early b/c of missing accessops")
 			return &sdk.Result{
 				Log:    strings.TrimSpace(msgLogs.String()),
 				Events: events.ToABCIEvents(),
 			}, sdkerrors.Wrap(sdkerrors.ErrInvalidConcurrencyExecution, errMessage)
 		}
 	}
-
-	data, err := proto.Marshal(txMsgData)
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "failed to marshal tx data")
-	}
-
 	for _, event := range events.ToABCIEvents() {
 		if !strings.Contains(strings.ToLower(event.String()), "vote") && !strings.Contains(strings.ToLower(event.String()), "oracle") {
 			fmt.Printf("PSUDEBUG - events: %v\n vs logs: %s\n\n", events, msgLogs)
 		}
 	}
+	data, err := proto.Marshal(txMsgData)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "failed to marshal tx data")
+	}
+
 	return &sdk.Result{
 		Data:   data,
 		Log:    strings.TrimSpace(msgLogs.String()),

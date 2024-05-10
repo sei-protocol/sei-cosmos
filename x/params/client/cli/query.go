@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
@@ -44,6 +46,7 @@ func NewQuerySubspaceParamsCmd() *cobra.Command {
 			queryClient := proposal.NewQueryClient(clientCtx)
 
 			params := proposal.QueryParamsRequest{Subspace: args[0], Key: args[1]}
+			fmt.Printf("DEBUG - QueryParamsRequest %+v\n", params)
 			res, err := queryClient.Params(cmd.Context(), &params)
 			if err != nil {
 				return err

@@ -366,6 +366,7 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 	}
 	rs.scStore.Initialize(initialStores)
 	if _, err := rs.scStore.LoadVersion(version, false); err != nil {
+		fmt.Printf("DEBUG - Err sc Store Load version %+v\n", err)
 		return nil
 	}
 
@@ -389,6 +390,7 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 	for _, key := range storesKeys {
 		newStores[key], err = rs.loadCommitStoreFromParams(key, rs.storesParams[key])
 		if err != nil {
+			fmt.Printf("DEBUG - loadCommitStoreFromParams err %+v\n", err)
 			return err
 		}
 	}
@@ -438,6 +440,7 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, params storeParam
 // Implements interface CommitMultiStore
 // used by export cmd
 func (rs *Store) LoadVersion(ver int64) error {
+	fmt.Printf("DEBUG - rs Store LoadVersion version %+v\n", ver)
 	return rs.LoadVersionAndUpgrade(ver, nil)
 }
 

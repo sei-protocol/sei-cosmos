@@ -448,6 +448,7 @@ func (app *BaseApp) LoadVersion(version int64) error {
 // LoadVersionWithoutInit loads the BaseApp application version, it doesn't call app.init any more,
 // specifically used by export genesis command.
 func (app *BaseApp) LoadVersionWithoutInit(version int64) error {
+	fmt.Printf("DEBUG - Baseapp LoadVersionWithoutInit version %+v\n", version)
 	return app.cms.LoadVersion(version)
 }
 

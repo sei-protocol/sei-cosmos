@@ -74,6 +74,7 @@ func (s Subspace) WithKeyTable(table KeyTable) Subspace {
 
 // Returns a KVStore identical with ctx.KVStore(s.key).Prefix()
 func (s Subspace) kvStore(ctx sdk.Context) sdk.KVStore {
+	fmt.Printf("DEBUG - Params kvStore name %+v suffixedName %+v\n", s.Name(), string(s.suffixedName))
 	return prefix.NewStore(ctx.KVStore(s.key), s.suffixedName)
 }
 
@@ -106,6 +107,7 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	bz := store.Get(key)
 
 	if err := s.legacyAmino.UnmarshalJSON(bz, ptr); err != nil {
+		fmt.Printf("DEBUG - Panic Subspace Get key %+v bz %+v\n", string(key), bz)
 		panic(err)
 	}
 }
@@ -218,8 +220,11 @@ func (s Subspace) Update(ctx sdk.Context, key, value []byte) error {
 // retrieve the value and set it to the corresponding value pointer provided
 // in the ParamSetPair by calling Subspace#Get.
 func (s Subspace) GetParamSet(ctx sdk.Context, ps ParamSet) {
+	fmt.Printf("DEBUG - GetParamSet paramset %+v param set pairs %+v\n", ps, ps.ParamSetPairs())
 	for _, pair := range ps.ParamSetPairs() {
+		fmt.Printf("DEBUG - GetParamSet BEFORE pair Key %+v pair Value %+v\n", pair.Key, pair.Value)
 		s.Get(ctx, pair.Key, pair.Value)
+		fmt.Printf("DEBUG - GetParamSet AFTER pair Key %+v pair Value %+v\n", pair.Key, pair.Value)
 	}
 }
 

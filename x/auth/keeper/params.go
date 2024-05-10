@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/types"
 )
@@ -12,6 +14,7 @@ func (ak AccountKeeper) SetParams(ctx sdk.Context, params types.Params) {
 
 // GetParams gets the auth module's parameters.
 func (ak AccountKeeper) GetParams(ctx sdk.Context) (params types.Params) {
+	fmt.Printf("DEBUG - GetParams\n")
 	ak.paramSubspace.GetParamSet(ctx, &params)
 	return
 }

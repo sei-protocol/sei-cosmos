@@ -106,6 +106,8 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	store := s.kvStore(ctx)
 	bz := store.Get(key)
 
+	fmt.Printf("DEBUG - Subspace Get key %+v bz %+v\n", string(key), bz)
+
 	if err := s.legacyAmino.UnmarshalJSON(bz, ptr); err != nil {
 		fmt.Printf("DEBUG - Panic Subspace Get key %+v bz %+v\n", string(key), bz)
 		panic(err)

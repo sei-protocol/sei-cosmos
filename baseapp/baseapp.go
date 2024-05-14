@@ -448,7 +448,9 @@ func (app *BaseApp) LoadVersion(version int64) error {
 // LoadVersionWithoutInit loads the BaseApp application version, it doesn't call app.init any more,
 // specifically used by export genesis command.
 func (app *BaseApp) LoadVersionWithoutInit(version int64) error {
-	return app.cms.LoadVersion(version)
+	err := app.cms.LoadVersion(version)
+	app.setCheckState(tmproto.Header{})
+	return err
 }
 
 // LastCommitID returns the last CommitID of the multistore.

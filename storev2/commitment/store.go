@@ -94,7 +94,6 @@ func (st *Store) Set(key, value []byte) {
 
 // Implements types.KVStore.
 func (st *Store) Get(key []byte) []byte {
-	fmt.Printf("Getting key %s, current version is %d\n", string(key), st.tree.Version())
 	return st.tree.Get(key)
 }
 

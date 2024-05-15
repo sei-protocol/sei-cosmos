@@ -232,7 +232,6 @@ func (rs *Store) CacheWrapWithListeners(k types.StoreKey, listeners []types.Writ
 
 // Implements interface MultiStore
 func (rs *Store) CacheMultiStore() types.CacheMultiStore {
-	fmt.Printf("CacheMultiStore called with latest version:%d\n", rs.scStore.Version())
 	rs.mtx.RLock()
 	defer rs.mtx.RUnlock()
 	stores := make(map[types.StoreKey]types.CacheWrapper)
@@ -246,7 +245,6 @@ func (rs *Store) CacheMultiStore() types.CacheMultiStore {
 // CacheMultiStoreWithVersion Implements interface MultiStore
 // used to createQueryContext, abci_query or grpc query service.
 func (rs *Store) CacheMultiStoreWithVersion(version int64) (types.CacheMultiStore, error) {
-	fmt.Printf("CacheMultiStoreWithVersion with version %d\n", version)
 	if version <= 0 || (rs.lastCommitInfo != nil && version == rs.lastCommitInfo.Version) {
 		return rs.CacheMultiStore(), nil
 	}

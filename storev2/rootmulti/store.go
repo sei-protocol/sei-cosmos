@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cosmossdk.io/errors"
+	"github.com/armon/go-metrics"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/store/cachemulti"
 	"github.com/cosmos/cosmos-sdk/store/mem"
@@ -751,6 +752,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		return err
 	}
 	defer exporter.Close()
+	totalKeyBytes := int64(0)
+	totalValueBytes := int64(0)
+	totalNumKeys := int64(0)
 	for {
 		item, err := exporter.Next()
 		if err != nil {
@@ -774,6 +778,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			}); err != nil {
 				return err
 			}
+			totalKeyBytes += int64(len(item.Key))
+			totalValueBytes += int64(len(item.Value))
+			totalNumKeys += 1
 		case string:
 			if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_Store{
@@ -784,6 +791,24 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			}); err != nil {
 				return err
 			}
+			telemetry.SetGaugeWithLabels(
+				[]string{"iavl", "store", "total_num_keys"},
+				float32(totalNumKeys),
+				[]metrics.Label{telemetry.NewLabel("store_name", item)},
+			)
+			telemetry.SetGaugeWithLabels(
+				[]string{"iavl", "store", "total_key_bytes"},
+				float32(totalKeyBytes),
+				[]metrics.Label{telemetry.NewLabel("store_name", item)},
+			)
+			telemetry.SetGaugeWithLabels(
+				[]string{"iavl", "store", "total_value_bytes"},
+				float32(totalValueBytes),
+				[]metrics.Label{telemetry.NewLabel("store_name", item)},
+			)
+			totalKeyBytes = int64(0)
+			totalValueBytes = int64(0)
+			totalNumKeys = int64(0)
 		default:
 			return fmt.Errorf("unknown item type %T", item)
 		}

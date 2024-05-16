@@ -762,21 +762,21 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			if err == commonerrors.ErrorExportDone {
 				for k, v := range keySizePerStore {
 					telemetry.SetGaugeWithLabels(
-						[]string{"iavl", "store", "total_num_keys"},
+						[]string{"iavl", "store", "total_key_keys"},
 						float32(v),
 						[]metrics.Label{telemetry.NewLabel("store_name", k)},
 					)
 				}
 				for k, v := range valueSizePerStore {
 					telemetry.SetGaugeWithLabels(
-						[]string{"iavl", "store", "total_key_bytes"},
+						[]string{"iavl", "store", "total_value_bytes"},
 						float32(v),
 						[]metrics.Label{telemetry.NewLabel("store_name", k)},
 					)
 				}
 				for k, v := range numKeysPerStore {
 					telemetry.SetGaugeWithLabels(
-						[]string{"iavl", "store", "total_value_bytes"},
+						[]string{"iavl", "store", "total_num_keys"},
 						float32(v),
 						[]metrics.Label{telemetry.NewLabel("store_name", k)},
 					)

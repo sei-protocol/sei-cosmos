@@ -14,12 +14,18 @@ const (
 )
 
 // NewQueryBalanceRequest creates a new instance of QueryBalanceRequest.
+//
 //nolint:interfacer
 func NewQueryBalanceRequest(addr sdk.AccAddress, denom string) *QueryBalanceRequest {
 	return &QueryBalanceRequest{Address: addr.String(), Denom: denom}
 }
 
+func NewQueryBalanceForAllUsersRequest(denom string, req *query.PageRequest) *QueryBalanceForAllUsersRequest {
+	return &QueryBalanceForAllUsersRequest{Denom: denom, Pagination: req}
+}
+
 // NewQueryAllBalancesRequest creates a new instance of QueryAllBalancesRequest.
+//
 //nolint:interfacer
 func NewQueryAllBalancesRequest(addr sdk.AccAddress, req *query.PageRequest) *QueryAllBalancesRequest {
 	return &QueryAllBalancesRequest{Address: addr.String(), Pagination: req}

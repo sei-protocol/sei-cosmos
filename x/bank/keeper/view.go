@@ -235,6 +235,12 @@ func (k BaseViewKeeper) getAccountStore(ctx sdk.Context, addr sdk.AccAddress) pr
 	return prefix.NewStore(store, types.CreateAccountBalancesPrefix(addr))
 }
 
+// getAccountStore gets the account store of the given address.
+func (k BaseViewKeeper) getBalanceStore(ctx sdk.Context) prefix.Store {
+	store := ctx.KVStore(k.storeKey)
+	return prefix.NewStore(store, types.BalancesPrefix)
+}
+
 func (k BaseViewKeeper) GetWeiBalance(ctx sdk.Context, addr sdk.AccAddress) sdk.Int {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), types.WeiBalancesPrefix)
 	val := store.Get(addr)

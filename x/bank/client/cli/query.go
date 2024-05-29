@@ -33,6 +33,7 @@ func GetQueryCmd() *cobra.Command {
 		GetBalancesCmd(),
 		GetCmdQueryTotalSupply(),
 		GetCmdDenomsMetadata(),
+		GetBalancesForAllUsersCmd(),
 	)
 
 	return cmd
@@ -97,6 +98,52 @@ Example:
 	cmd.Flags().String(FlagDenom, "", "The specific balance denomination to query for")
 	flags.AddQueryFlagsToCmd(cmd)
 	flags.AddPaginationFlagsToCmd(cmd, "all balances")
+
+	return cmd
+}
+
+func GetBalancesForAllUsersCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "balance-for-all-users [denom]",
+		Short: "Query for all account balances by denom",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`Query the total balance of all accounts for a specific denom.
+
+Example:
+  $ %s query %s all-balances [denom]
+  $ %s query %s all-balances [denom] --denom=[denom]
+`,
+				version.AppName, types.ModuleName, version.AppName, types.ModuleName,
+			),
+		),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			queryClient := types.NewQueryClient(clientCtx)
+
+			denom := args[0]
+
+			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			if err != nil {
+				return err
+			}
+			ctx := cmd.Context()
+
+			req := types.NewQueryBalanceForAllUsersRequest(denom, pageReq)
+			res, err := queryClient.BalanceForAllUsers(ctx, req)
+			if err != nil {
+				return err
+			}
+			return clientCtx.PrintProto(res)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	flags.AddPaginationFlagsToCmd(cmd, "balance for all users")
 
 	return cmd
 }

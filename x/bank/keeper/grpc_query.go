@@ -39,6 +39,54 @@ func (k BaseKeeper) Balance(ctx context.Context, req *types.QueryBalanceRequest)
 	return &types.QueryBalanceResponse{Balance: &balance}, nil
 }
 
+// Balance implements the Query/Balance gRPC method
+func (k BaseKeeper) BalanceForAllUsers(ctx context.Context, req *types.QueryBalanceForAllUsersRequest) (*types.QueryBalanceForAllUsersResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	if req.Denom == "" {
+		return nil, status.Error(codes.InvalidArgument, "invalid denom")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	balances := make([]*types.Balance, 0)
+
+	balancesStore := k.getBalanceStore(sdkCtx)
+
+	pageRes, err := query.Paginate(balancesStore, req.Pagination, func(key, value []byte) error {
+		// unmarshal balance from store
+		// skip if balance is not in the requested denom
+		var balance sdk.Coin
+		err := k.cdc.Unmarshal(value, &balance)
+		if err != nil {
+			return err
+		}
+
+		if balance.Denom != req.Denom {
+			return nil
+		}
+
+		address, err := types.AddressFromBalancesStore(key)
+		if err != nil {
+			return err
+		}
+		accountBalance := types.Balance{
+			Address: address.String(),
+			Coins:   sdk.NewCoins(balance),
+		}
+		balances = append(balances, &accountBalance)
+		return nil
+	})
+
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "paginate: %v", err)
+	}
+
+	return &types.QueryBalanceForAllUsersResponse{UserBalances: balances, Pagination: pageRes}, nil
+}
+
 // AllBalances implements the Query/AllBalances gRPC method
 func (k BaseKeeper) AllBalances(ctx context.Context, req *types.QueryAllBalancesRequest) (*types.QueryAllBalancesResponse, error) {
 	if req == nil {

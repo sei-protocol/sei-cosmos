@@ -875,19 +875,32 @@ func (suite *IntegrationTestSuite) TestMsgSendCoinsAndWeiEvents() {
 		abci.EventAttribute{Key: []byte(sdk.AttributeKeyAmount), Value: []byte("100")},
 	)
 
+	weiTransfer := sdk.Event{
+		Type:       types.EventTypeWeiTransfer,
+		Attributes: []abci.EventAttribute{},
+	}
+
+	weiTransfer.Attributes = append(
+		weiTransfer.Attributes,
+		abci.EventAttribute{Key: []byte(types.AttributeKeyRecipient), Value: []byte(addr2.String())},
+		abci.EventAttribute{Key: []byte(types.AttributeKeySender), Value: []byte(addr.String())},
+		abci.EventAttribute{Key: []byte(sdk.AttributeKeyAmount), Value: []byte("100")},
+	)
+
 	// events are shifted due to the funding account events
 	events := ctx.EventManager().ABCIEvents()
-	suite.Require().Equal(6, len(events))
-	suite.Require().Equal(abci.Event(event1), events[4])
-	suite.Require().Equal(abci.Event(event2), events[5])
+	suite.Require().Equal(7, len(events))
+	suite.Require().Equal(abci.Event(weiTransfer), events[2])
+	suite.Require().Equal(abci.Event(event1), events[5])
+	suite.Require().Equal(abci.Event(event2), events[6])
 	suite.Require().Equal(abci.Event(weiEvent), events[0])
 	suite.Require().Equal(abci.Event(weiEvent2), events[1])
 
-	// verify no wei events are emitted when the amount is zero
+	// verify no wei add and sub events are emitted when the amount is zero
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	suite.Require().NoError(app.BankKeeper.SendCoinsAndWei(ctx, addr2, addr, sendCoins.AmountOf(sdk.MustGetBaseDenom()), sdk.ZeroInt()))
 	events = ctx.EventManager().ABCIEvents()
-	suite.Require().Equal(4, len(events))
+	suite.Require().Equal(5, len(events))
 }
 
 func (suite *IntegrationTestSuite) TestMsgMultiSendEvents() {

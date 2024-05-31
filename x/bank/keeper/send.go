@@ -391,6 +391,14 @@ func (k BaseSendKeeper) SendCoinsAndWei(ctx sdk.Context, from sdk.AccAddress, to
 	if err := k.AddWei(ctx, to, wei); err != nil {
 		return err
 	}
+	ctx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeWeiTransfer,
+			sdk.NewAttribute(types.AttributeKeyRecipient, to.String()),
+			sdk.NewAttribute(types.AttributeKeySender, from.String()),
+			sdk.NewAttribute(sdk.AttributeKeyAmount, wei.String()),
+		),
+	})
 	if amt.GT(sdk.ZeroInt()) {
 		return k.SendCoinsWithoutAccCreation(ctx, from, to, sdk.NewCoins(sdk.NewCoin(sdk.MustGetBaseDenom(), amt)))
 	}

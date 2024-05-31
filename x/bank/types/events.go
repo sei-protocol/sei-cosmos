@@ -6,7 +6,8 @@ import (
 
 // bank module event types
 const (
-	EventTypeTransfer = "transfer"
+	EventTypeTransfer    = "transfer"
+	EventTypeWeiTransfer = "wei_transfer"
 
 	AttributeKeyRecipient = "recipient"
 	AttributeKeySender    = "sender"

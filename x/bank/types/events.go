@@ -16,6 +16,8 @@ const (
 	// supply and balance tracking events name and attributes
 	EventTypeCoinSpent    = "coin_spent"
 	EventTypeCoinReceived = "coin_received"
+	EventTypeWeiSpent     = "wei_spent"
+	EventTypeWeiReceived  = "wei_received"
 	EventTypeCoinMint     = "coinbase" // NOTE(fdymylja): using mint clashes with mint module event
 	EventTypeCoinBurn     = "burn"
 
@@ -40,6 +42,26 @@ func NewCoinSpentEvent(spender sdk.AccAddress, amount sdk.Coins) sdk.Event {
 func NewCoinReceivedEvent(receiver sdk.AccAddress, amount sdk.Coins) sdk.Event {
 	return sdk.NewEvent(
 		EventTypeCoinReceived,
+		sdk.NewAttribute(AttributeKeyReceiver, receiver.String()),
+		sdk.NewAttribute(sdk.AttributeKeyAmount, amount.String()),
+	)
+}
+
+// NewWeiSpentEvent constructs a new wei spent sdk.Event
+// nolint: interfacer
+func NewWeiSpentEvent(spender sdk.AccAddress, amount sdk.Int) sdk.Event {
+	return sdk.NewEvent(
+		EventTypeWeiSpent,
+		sdk.NewAttribute(AttributeKeySpender, spender.String()),
+		sdk.NewAttribute(sdk.AttributeKeyAmount, amount.String()),
+	)
+}
+
+// NewWeiReceivedEvent constructs a new wei received sdk.Event
+// nolint: interfacer
+func NewWeiReceivedEvent(receiver sdk.AccAddress, amount sdk.Int) sdk.Event {
+	return sdk.NewEvent(
+		EventTypeWeiReceived,
 		sdk.NewAttribute(AttributeKeyReceiver, receiver.String()),
 		sdk.NewAttribute(sdk.AttributeKeyAmount, amount.String()),
 	)

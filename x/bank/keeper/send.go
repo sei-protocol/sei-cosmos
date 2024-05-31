@@ -330,10 +330,17 @@ func (k BaseSendKeeper) BlockedAddr(addr sdk.AccAddress) bool {
 	return k.blockedAddrs[addr.String()]
 }
 
-func (k BaseSendKeeper) SubWei(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Int) error {
+func (k BaseSendKeeper) SubWei(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Int) (err error) {
 	if amt.Equal(sdk.ZeroInt()) {
 		return nil
 	}
+	defer func() {
+		if err == nil {
+			ctx.EventManager().EmitEvent(
+				types.NewWeiSpentEvent(addr, amt),
+			)
+		}
+	}()
 	currentWeiBalance := k.GetWeiBalance(ctx, addr)
 	if amt.LTE(currentWeiBalance) {
 		// no need to change usei balance
@@ -352,10 +359,17 @@ func (k BaseSendKeeper) SubWei(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Int
 	return k.setWeiBalance(ctx, addr, weiBalance)
 }
 
-func (k BaseSendKeeper) AddWei(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Int) error {
+func (k BaseSendKeeper) AddWei(ctx sdk.Context, addr sdk.AccAddress, amt sdk.Int) (err error) {
 	if amt.Equal(sdk.ZeroInt()) {
 		return nil
 	}
+	defer func() {
+		if err == nil {
+			ctx.EventManager().EmitEvent(
+				types.NewWeiReceivedEvent(addr, amt),
+			)
+		}
+	}()
 	currentWeiBalance := k.GetWeiBalance(ctx, addr)
 	postWeiBalance := currentWeiBalance.Add(amt)
 	if postWeiBalance.LT(OneUseiInWei) {

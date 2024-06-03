@@ -157,7 +157,7 @@ var (
 	ErrUnsupportedTxType = Register(RootCodespace, 44, "unsupported transaction type")
 
 	// ErrEVMVMError defines an error for an evm vm error (eg. revert)
-	ErrEVMVMError = Register(RootCodespace, 45, "evm vm error")
+	ErrEVMVMError = Register(RootCodespace, 45, "evm reverted")
 
 	// ErrPanic is only set when we recover from a panic, so we know to
 	// redact potentially sensitive system info

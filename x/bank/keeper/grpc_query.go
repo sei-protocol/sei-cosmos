@@ -200,3 +200,19 @@ func (k BaseKeeper) DenomMetadata(c context.Context, req *types.QueryDenomMetada
 		Metadata: metadata,
 	}, nil
 }
+
+// DenomMetadataByQueryString is identical to DenomMetadata query, but receives request via query string.
+func (k BaseKeeper) DenomMetadataByQueryString(ctx context.Context, req *types.QueryDenomMetadataByQueryStringRequest) (*types.QueryDenomMetadataByQueryStringResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
+	}
+
+	res, err := k.DenomMetadata(ctx, &types.QueryDenomMetadataRequest{
+		Denom: req.Denom,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryDenomMetadataByQueryStringResponse{Metadata: res.Metadata}, nil
+}

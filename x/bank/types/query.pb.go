@@ -995,6 +995,8 @@ type QueryClient interface {
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
 	// DenomsMetadata queries the client metadata of a given coin denomination.
 	DenomMetadata(ctx context.Context, in *QueryDenomMetadataRequest, opts ...grpc.CallOption) (*QueryDenomMetadataResponse, error)
+	// DenomMetadataByQueryString queries the client metadata of a given coin denomination.
+	// Identical with DenomsMetadata but receives denom as query string.
 	DenomMetadataByQueryString(ctx context.Context, in *QueryDenomMetadataByQueryStringRequest, opts ...grpc.CallOption) (*QueryDenomMetadataByQueryStringResponse, error)
 	// DenomsMetadata queries the client metadata for all registered coin denominations.
 	DenomsMetadata(ctx context.Context, in *QueryDenomsMetadataRequest, opts ...grpc.CallOption) (*QueryDenomsMetadataResponse, error)
@@ -1106,6 +1108,8 @@ type QueryServer interface {
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
 	// DenomsMetadata queries the client metadata of a given coin denomination.
 	DenomMetadata(context.Context, *QueryDenomMetadataRequest) (*QueryDenomMetadataResponse, error)
+	// DenomMetadataByQueryString queries the client metadata of a given coin denomination.
+	// Identical with DenomsMetadata but receives denom as query string.
 	DenomMetadataByQueryString(context.Context, *QueryDenomMetadataByQueryStringRequest) (*QueryDenomMetadataByQueryStringResponse, error)
 	// DenomsMetadata queries the client metadata for all registered coin denominations.
 	DenomsMetadata(context.Context, *QueryDenomsMetadataRequest) (*QueryDenomsMetadataResponse, error)

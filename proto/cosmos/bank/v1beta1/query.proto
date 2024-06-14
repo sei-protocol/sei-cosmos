@@ -47,6 +47,8 @@ service Query {
     option (google.api.http).get = "/cosmos/bank/v1beta1/denoms_metadata/{denom}";
   }
 
+  // DenomMetadataByQueryString queries the client metadata of a given coin denomination.
+  // Identical with DenomsMetadata but receives denom as query string.
   rpc DenomMetadataByQueryString(QueryDenomMetadataByQueryStringRequest) returns (QueryDenomMetadataByQueryStringResponse) {
     option (google.api.http).get = "/cosmos/bank/v1beta1/denoms_metadata_by_query_string";
   }

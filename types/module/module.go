@@ -365,6 +365,12 @@ func (m *Manager) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) map[string
 	return genesisData
 }
 
+func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, process func(string, json.RawMessage)) {
+	for _, moduleName := range m.OrderExportGenesis {
+		process(moduleName, m.Modules[moduleName].ExportGenesis(ctx, cdc))
+	}
+}
+
 // assertNoForgottenModules checks that we didn't forget any modules in the
 // SetOrder* functions.
 func (m *Manager) assertNoForgottenModules(setOrderFnName string, moduleNames []string) {

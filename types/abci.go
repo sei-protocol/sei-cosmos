@@ -33,4 +33,4 @@ type FinalizeBlocker func(ctx Context, req *abci.RequestFinalizeBlock) (*abci.Re
 
 type LoadVersionHandler func() error
 
-type CommitHandler func(ctx Context) error
+type PreCommitHandler func(ctx Context) error

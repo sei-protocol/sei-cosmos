@@ -1426,7 +1426,13 @@ func TestCheckTx(t *testing.T) {
 		}))
 	}
 
-	app := setupBaseApp(t, anteOpt, routerOpt)
+	pchOpt := func(bapp *BaseApp) {
+		bapp.SetPreCommitHandler(func(ctx sdk.Context) error {
+			return nil
+		})
+	}
+
+	app := setupBaseApp(t, anteOpt, routerOpt, pchOpt)
 
 	nTxs := int64(5)
 	app.InitChain(context.Background(), &abci.RequestInitChain{})

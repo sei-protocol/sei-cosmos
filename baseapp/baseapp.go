@@ -91,6 +91,7 @@ type BaseApp struct { //nolint: maligned
 	finalizeBlocker        sdk.FinalizeBlocker
 	anteHandler            sdk.AnteHandler // ante handler for fee and auth
 	loadVersionHandler     sdk.LoadVersionHandler
+	commitHandler          sdk.CommitHandler
 
 	appStore
 	baseappVersions

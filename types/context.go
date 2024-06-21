@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	sstypes "github.com/sei-protocol/sei-db/ss/types"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -52,11 +53,12 @@ type Context struct {
 	txMsgAccessOps       map[int][]acltypes.AccessOperation
 
 	// EVM properties
-	evm              bool   // EVM transaction flag
-	evmNonce         uint64 // EVM Transaction nonce
-	evmSenderAddress string // EVM Sender address
-	evmTxHash        string // EVM TX hash
-	evmVmError       string // EVM VM error during execution
+	evm                  bool               // EVM transaction flag
+	evmNonce             uint64             // EVM Transaction nonce
+	evmSenderAddress     string             // EVM Sender address
+	evmTxHash            string             // EVM TX hash
+	evmVmError           string             // EVM VM error during execution
+	evmReceiptStateStore sstypes.StateStore // EVM Receipt storage
 
 	msgValidator *acltypes.MsgValidator
 	messageIndex int // Used to track current message being processed
@@ -73,6 +75,9 @@ func (c Context) Context() context.Context {
 	return c.ctx
 }
 
+func (c Context) EvmReceiptStateStore() sstypes.StateStore {
+	return c.evmReceiptStateStore
+}
 func (c Context) MultiStore() MultiStore {
 	return c.ms
 }
@@ -245,6 +250,11 @@ func NewContext(ms MultiStore, header tmproto.Header, isCheckTx bool, logger log
 // WithContext returns a Context with an updated context.Context.
 func (c Context) WithContext(ctx context.Context) Context {
 	c.ctx = ctx
+	return c
+}
+
+func (c Context) WithEVMReceiptFlusher(rf func(Context) error) Context {
+	c.evmReceiptFlusher = rf
 	return c
 }
 
@@ -435,6 +445,11 @@ func (c Context) WithEVMTxHash(txHash string) Context {
 
 func (c Context) WithEVMVMError(vmError string) Context {
 	c.evmVmError = vmError
+	return c
+}
+
+func (c Context) WithEVMReceiptStateStore(stateStore sstypes.StateStore) Context {
+	c.evmReceiptStateStore = stateStore
 	return c
 }
 

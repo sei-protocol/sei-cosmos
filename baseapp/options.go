@@ -191,6 +191,14 @@ func (app *BaseApp) SetPrepareProposalHandler(prepareProposalHandler sdk.Prepare
 	app.prepareProposalHandler = prepareProposalHandler
 }
 
+func (app *BaseApp) SetCommitHandler(commitHandler sdk.CommitHandler) {
+	if app.sealed {
+		panic("SetCommitHandler() on sealed BaseApp")
+	}
+
+	app.commitHandler = commitHandler
+}
+
 func (app *BaseApp) SetProcessProposalHandler(processProposalHandler sdk.ProcessProposalHandler) {
 	if app.sealed {
 		panic("SetProcessProposalHandler() on sealed BaseApp")

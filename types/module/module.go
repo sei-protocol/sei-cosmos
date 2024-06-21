@@ -367,7 +367,10 @@ func (m *Manager) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) map[string
 
 func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, process func(string, json.RawMessage)) {
 	for _, moduleName := range m.OrderExportGenesis {
-		process(moduleName, m.Modules[moduleName].ExportGenesis(ctx, cdc))
+		fmt.Println("Processing module: ", moduleName)
+		jsonRawMsg := m.Modules[moduleName].ExportGenesis(ctx, cdc)
+		fmt.Println("len of jsonRawMsg: ", len(jsonRawMsg))
+		process(moduleName, jsonRawMsg)
 	}
 }
 

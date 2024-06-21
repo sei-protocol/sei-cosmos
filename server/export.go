@@ -119,7 +119,7 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 	return cmd
 }
 
-type GenesisDocNoAppState struct {
+type GenesisDocNoAppHash struct {
 	GenesisTime     time.Time                  `json:"genesis_time"`
 	ChainID         string                     `json:"chain_id"`
 	InitialHeight   int64                      `json:"initial_height,string"`
@@ -191,7 +191,7 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 				return err
 			}
 
-			genesisDocNoAppHash := GenesisDocNoAppState{
+			genesisDocNoAppHash := GenesisDocNoAppHash{
 				GenesisTime:   doc.GenesisTime,
 				ChainID:       doc.ChainID,
 				AppHash:       doc.AppHash,

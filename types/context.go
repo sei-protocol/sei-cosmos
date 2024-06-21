@@ -253,11 +253,6 @@ func (c Context) WithContext(ctx context.Context) Context {
 	return c
 }
 
-func (c Context) WithEVMReceiptFlusher(rf func(Context) error) Context {
-	c.evmReceiptFlusher = rf
-	return c
-}
-
 // WithMultiStore returns a Context with an updated MultiStore.
 func (c Context) WithMultiStore(ms MultiStore) Context {
 	c.ms = ms

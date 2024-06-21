@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
@@ -118,15 +119,17 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 	return cmd
 }
 
-type GenesisDocNoAppHash struct {
+type GenesisDocNoAppState struct {
 	GenesisTime     time.Time                  `json:"genesis_time"`
 	ChainID         string                     `json:"chain_id"`
 	InitialHeight   int64                      `json:"initial_height,string"`
 	ConsensusParams *tmtypes.ConsensusParams   `json:"consensus_params,omitempty"`
 	Validators      []tmtypes.GenesisValidator `json:"validators,omitempty"`
-	AppState        json.RawMessage            `json:"app_state,omitempty"`
+	AppHash         tmbytes.HexBytes           `json:"app_hash"`
 }
 
+// ExportToFileCmd dumps app state to JSON. It appends the app state module by module to the file.
+// This is especially useful when the output is too large to fit in memory.
 func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export-to-file [jsonfile]",
@@ -163,7 +166,7 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 					return err
 				}
 
-				fmt.Println(string(genesis))
+				file.Write(genesis)
 				return nil
 			}
 
@@ -188,9 +191,10 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 				return err
 			}
 
-			genesisDocNoAppHash := GenesisDocNoAppHash{
+			genesisDocNoAppHash := GenesisDocNoAppState{
 				GenesisTime:   doc.GenesisTime,
 				ChainID:       doc.ChainID,
+				AppHash:       doc.AppHash,
 				InitialHeight: exported.Height,
 				ConsensusParams: &tmtypes.ConsensusParams{
 					Block: tmtypes.BlockParams{
@@ -217,7 +221,7 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 				return err
 			}
 
-			file.Write([]byte(fmt.Sprintf(",%s",string(sdk.MustSortJSON(encoded))[1:])))
+			file.Write([]byte(fmt.Sprintf(",%s", string(sdk.MustSortJSON(encoded))[1:])))
 			return nil
 		},
 	}

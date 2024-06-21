@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -117,6 +118,15 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 	return cmd
 }
 
+type GenesisDocNoAppHash struct {
+	GenesisTime     time.Time                  `json:"genesis_time"`
+	ChainID         string                     `json:"chain_id"`
+	InitialHeight   int64                      `json:"initial_height,string"`
+	ConsensusParams *tmtypes.ConsensusParams   `json:"consensus_params,omitempty"`
+	Validators      []tmtypes.GenesisValidator `json:"validators,omitempty"`
+	AppState        json.RawMessage            `json:"app_state,omitempty"`
+}
+
 func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export-to-file [jsonfile]",
@@ -125,6 +135,11 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			serverCtx := GetServerContextFromCmd(cmd)
 			config := serverCtx.Config
+			filePath := args[0]
+			file, err := os.Create(filePath)
+			if err != nil {
+				return err
+			}
 
 			homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
 			config.SetRoot(homeDir)
@@ -162,10 +177,47 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 			forZeroHeight, _ := cmd.Flags().GetBool(FlagForZeroHeight)
 			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(FlagJailAllowedAddrs)
 
-			err = appExporterToFile(serverCtx.Logger, db, traceWriter, height, forZeroHeight, jailAllowedAddrs, serverCtx.Viper, args[0])
+			file.Write([]byte("{"))
+			exported, err := appExporterToFile(serverCtx.Logger, db, traceWriter, height, forZeroHeight, jailAllowedAddrs, serverCtx.Viper, file)
 			if err != nil {
 				return fmt.Errorf("error exporting state: %v", err)
 			}
+
+			doc, err := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
+			if err != nil {
+				return err
+			}
+
+			genesisDocNoAppHash := GenesisDocNoAppHash{
+				GenesisTime:   doc.GenesisTime,
+				ChainID:       doc.ChainID,
+				InitialHeight: exported.Height,
+				ConsensusParams: &tmtypes.ConsensusParams{
+					Block: tmtypes.BlockParams{
+						MaxBytes: exported.ConsensusParams.Block.MaxBytes,
+						MaxGas:   exported.ConsensusParams.Block.MaxGas,
+					},
+					Evidence: tmtypes.EvidenceParams{
+						MaxAgeNumBlocks: exported.ConsensusParams.Evidence.MaxAgeNumBlocks,
+						MaxAgeDuration:  exported.ConsensusParams.Evidence.MaxAgeDuration,
+						MaxBytes:        exported.ConsensusParams.Evidence.MaxBytes,
+					},
+					Validator: tmtypes.ValidatorParams{
+						PubKeyTypes: exported.ConsensusParams.Validator.PubKeyTypes,
+					},
+				},
+				Validators: exported.Validators,
+			}
+
+			// NOTE: Tendermint uses a custom JSON decoder for GenesisDoc
+			// (except for stuff inside AppState). Inside AppState, we're free
+			// to encode as protobuf or amino.
+			encoded, err := json.Marshal(genesisDocNoAppHash)
+			if err != nil {
+				return err
+			}
+
+			file.Write([]byte(fmt.Sprintf(",%s",string(sdk.MustSortJSON(encoded))[1:])))
 			return nil
 		},
 	}

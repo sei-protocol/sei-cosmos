@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"io"
+	"os"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -89,5 +90,5 @@ type (
 	// AppExporterToFile is a function that dumps all app state to
 	// JSON-serializable structure and writes the result to a file.
 	// This is useful when the output is too large to fit in memory.
-	AppExporterToFile func(log.Logger, dbm.DB, io.Writer, int64, bool, []string, AppOptions, string) error
+	AppExporterToFile func(log.Logger, dbm.DB, io.Writer, int64, bool, []string, AppOptions, *os.File) (ExportedApp, error)
 )

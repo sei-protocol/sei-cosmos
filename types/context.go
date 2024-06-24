@@ -2,10 +2,10 @@ package types
 
 import (
 	"context"
-	sstypes "github.com/sei-protocol/sei-db/ss/types"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	sstypes "github.com/sei-protocol/sei-db/ss/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmbytes "github.com/tendermint/tendermint/libs/bytes"
 	"github.com/tendermint/tendermint/libs/log"

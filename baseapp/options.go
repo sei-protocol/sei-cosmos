@@ -199,9 +199,9 @@ func (app *BaseApp) SetPreCommitHandler(preCommitHandler sdk.PreCommitHandler) {
 	app.preCommitHandler = preCommitHandler
 }
 
-func (app *BaseApp) CloseHandler(closeHandler sdk.CloseHandler) {
+func (app *BaseApp) SetCloseHandler(closeHandler sdk.CloseHandler) {
 	if app.sealed {
-		panic("CloseHandler() on sealed BaseApp")
+		panic("SetCloseHandler() on sealed BaseApp")
 	}
 
 	app.closeHandler = closeHandler

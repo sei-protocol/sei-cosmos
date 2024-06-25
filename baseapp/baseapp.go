@@ -92,6 +92,7 @@ type BaseApp struct { //nolint: maligned
 	anteHandler            sdk.AnteHandler // ante handler for fee and auth
 	loadVersionHandler     sdk.LoadVersionHandler
 	preCommitHandler       sdk.PreCommitHandler
+	closeHandler           sdk.CloseHandler
 
 	appStore
 	baseappVersions
@@ -1172,7 +1173,13 @@ func (app *BaseApp) Close() error {
 	if err := app.cms.Close(); err != nil {
 		return err
 	}
-	return app.snapshotManager.Close()
+	if err := app.snapshotManager.Close(); err != nil {
+		return err
+	}
+	if app.closeHandler == nil {
+		return nil
+	}
+	return app.closeHandler()
 }
 
 func (app *BaseApp) ReloadDB() error {

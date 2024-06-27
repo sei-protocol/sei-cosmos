@@ -207,6 +207,13 @@ func (m *MockAppModuleGenesis) ExportGenesis(arg0 types0.Context, arg1 codec.JSO
 	return ret0
 }
 
+func (m *MockAppModuleGenesis) StreamGenesis(arg0 types0.Context, arg1 codec.JSONCodec) <-chan json.RawMessage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamGenesis", arg0, arg1)
+	ret0, _ := ret[0].(<-chan json.RawMessage)
+	return ret0
+}
+
 // ExportGenesis indicates an expected call of ExportGenesis.
 func (mr *MockAppModuleGenesisMockRecorder) ExportGenesis(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

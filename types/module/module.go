@@ -154,6 +154,7 @@ type AppModuleGenesis interface {
 
 	InitGenesis(sdk.Context, codec.JSONCodec, json.RawMessage) []abci.ValidatorUpdate
 	ExportGenesis(sdk.Context, codec.JSONCodec) json.RawMessage
+	StreamGenesis(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage
 }
 
 // AppModule is the standard form for an application module
@@ -355,6 +356,10 @@ func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData 
 	}
 }
 
+// TODO: make an initGenesisFromFile, instead of looping over modules, loop over each row/document
+//  - the name of the module will be in each row
+//  - make sure to stream each line, iostream kind of thing
+
 // ExportGenesis performs export genesis functionality for modules
 func (m *Manager) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) map[string]json.RawMessage {
 	genesisData := make(map[string]json.RawMessage)
@@ -368,9 +373,10 @@ func (m *Manager) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) map[string
 func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, process func(string, json.RawMessage)) {
 	for _, moduleName := range m.OrderExportGenesis {
 		fmt.Println("Processing module: ", moduleName)
-		jsonRawMsg := m.Modules[moduleName].ExportGenesis(ctx, cdc)
-		fmt.Println("len of jsonRawMsg: ", len(jsonRawMsg))
-		process(moduleName, jsonRawMsg)
+		ch := m.Modules[moduleName].StreamGenesis(ctx, cdc)
+		for msg := range ch {
+			process(moduleName, msg)
+		}
 	}
 }
 

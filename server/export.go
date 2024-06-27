@@ -119,7 +119,7 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 	return cmd
 }
 
-type GenesisDocNoAppHash struct {
+type GenesisDocNoAppState struct {
 	GenesisTime     time.Time                  `json:"genesis_time"`
 	ChainID         string                     `json:"chain_id"`
 	InitialHeight   int64                      `json:"initial_height,string"`
@@ -180,7 +180,6 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 			forZeroHeight, _ := cmd.Flags().GetBool(FlagForZeroHeight)
 			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(FlagJailAllowedAddrs)
 
-			file.Write([]byte("{"))
 			exported, err := appExporterToFile(serverCtx.Logger, db, traceWriter, height, forZeroHeight, jailAllowedAddrs, serverCtx.Viper, file)
 			if err != nil {
 				return fmt.Errorf("error exporting state: %v", err)
@@ -191,7 +190,7 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 				return err
 			}
 
-			genesisDocNoAppHash := GenesisDocNoAppHash{
+			genesisDocNoAppHash := GenesisDocNoAppState{
 				GenesisTime:   doc.GenesisTime,
 				ChainID:       doc.ChainID,
 				AppHash:       doc.AppHash,
@@ -221,7 +220,7 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 				return err
 			}
 
-			file.Write([]byte(fmt.Sprintf(",%s", string(sdk.MustSortJSON(encoded))[1:])))
+			file.Write([]byte(fmt.Sprintf("%s", string(sdk.MustSortJSON(encoded)))))
 			return nil
 		},
 	}

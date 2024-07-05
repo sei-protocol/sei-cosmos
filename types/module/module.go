@@ -55,6 +55,7 @@ type AppModuleBasic interface {
 
 	DefaultGenesis(codec.JSONCodec) json.RawMessage
 	ValidateGenesis(codec.JSONCodec, client.TxEncodingConfig, json.RawMessage) error
+	ValidateGenesisStream(codec.JSONCodec, client.TxEncodingConfig, <-chan json.RawMessage) error
 
 	// client functionality
 	RegisterRESTRoutes(client.Context, *mux.Router)
@@ -108,6 +109,39 @@ func (bm BasicManager) ValidateGenesis(cdc codec.JSONCodec, txEncCfg client.TxEn
 	}
 
 	return nil
+}
+
+func (bm BasicManager) ValidateGenesisStream(cdc codec.JSONCodec, txEncCfg client.TxEncodingConfig, moduleName string, genesisCh <-chan json.RawMessage, doneCh <-chan struct{}, errCh chan<- error) {
+	fmt.Println("In BasicManager.ValidateGenesisStream for module: ", moduleName)
+	// we have a stream of genesis data for a module
+	// will be told when we're done
+	// can signal for any errors
+	moduleGenesisCh := make(chan json.RawMessage)
+	moduleDoneCh := make(chan struct{})
+
+	var err error
+
+	go func() {
+		fmt.Println("In BasicManager.ValidateGenesisStream kicked off go routine for module: ", moduleName)
+		err = bm[moduleName].ValidateGenesisStream(cdc, txEncCfg, moduleGenesisCh)
+		fmt.Println("In BasicManager.ValidateGenesisStream goroutine got err: ", err)
+		if err != nil {
+			errCh <- err
+		}
+		moduleDoneCh <- struct{}{}
+	}()
+
+	for {
+		select {
+		case <-doneCh:
+			fmt.Println("In BasicManager.ValidateGenesisStream received from doneCh")
+			close(moduleGenesisCh)
+			return
+		case genesisChunk := <-genesisCh:
+			fmt.Println("In BasicManager.ValidateGenesisStream received from genesisCh")
+			moduleGenesisCh <- genesisChunk
+		}
+	}
 }
 
 // RegisterRESTRoutes registers all module rest routes

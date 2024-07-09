@@ -135,9 +135,6 @@ func ValidateGenesisStreamCmd(mbm module.BasicManager) *cobra.Command {
 					} else {
 						moduleName = moduleState.AppState.Module
 					}
-					if moduleName != "ibc" {
-						continue
-					}
 					if seenModules[moduleName] {
 						errCh <- fmt.Errorf("module %s seen twice in genesis file", moduleName)
 						return

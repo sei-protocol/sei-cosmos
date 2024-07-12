@@ -13,6 +13,7 @@ import (
 
 	clientconfig "github.com/cosmos/cosmos-sdk/client/config"
 
+	genesistypes "github.com/cosmos/cosmos-sdk/types/genesis"
 	"github.com/spf13/cobra"
 	abciclient "github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/server"
@@ -83,6 +84,10 @@ const (
 	flagGRPCAddress    = "grpc.address"
 	flagGRPCWebEnable  = "grpc-web.enable"
 	flagGRPCWebAddress = "grpc-web.address"
+
+	// genesis import method
+	FlagGenesisImportStream = "genesis-import-stream"
+	FlagGenesisImportFile   = "genesis-import-file"
 
 	// archival related flags
 	FlagArchivalVersion                = "archival-version"
@@ -170,9 +175,14 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 			serverCtx.Viper.Set(flags.FlagChainID, chainID)
 
-			genesisFile, _ := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
-			if genesisFile.ChainID != clientCtx.ChainID {
-				panic(fmt.Sprintf("genesis file chain-id=%s does not equal config.toml chain-id=%s", genesisFile.ChainID, clientCtx.ChainID))
+			genesisStreaming, _ := cmd.Flags().GetBool(FlagGenesisImportStream)
+			serverCtx.Viper.Set(FlagGenesisImportStream, genesisStreaming)
+			serverCtx.Viper.Set(FlagGenesisImportFile, serverCtx.Config.GenesisFile())
+			if !genesisStreaming {
+				genesisFile, _ := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
+				if genesisFile.ChainID != clientCtx.ChainID {
+					panic(fmt.Sprintf("genesis file chain-id=%s does not equal config.toml chain-id=%s", genesisFile.ChainID, clientCtx.ChainID))
+				}
 			}
 
 			if enableTracing, _ := cmd.Flags().GetBool(tracing.FlagTracing); !enableTracing {
@@ -270,6 +280,8 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().String(FlagArchivalArweaveIndexDBFullPath, "", "Full local path to the levelDB used for indexing arweave data")
 	cmd.Flags().String(FlagArchivalArweaveNodeURL, "", "Arweave Node URL that stores archived data")
 	cmd.Flags().Bool(FlagIAVLFastNode, true, "Enable fast node for IAVL tree")
+
+	cmd.Flags().Bool(FlagGenesisImportStream, false, "Enable streaming genesis file import, useful for large genesis files")
 
 	cmd.Flags().String(FlagChainID, "", "Chain ID")
 
@@ -386,13 +398,27 @@ func startInProcess(
 		config.GRPC.Enable = true
 	} else {
 		ctx.Logger.Info("starting node with ABCI Tendermint in-process")
+		var gen *tmtypes.GenesisDoc
+		if ctx.Viper.Get(FlagGenesisImportStream).(bool) {
+			lines := genesistypes.IngestGenesisFileLineByLine(ctx.Viper.GetString(FlagGenesisImportFile))
+			for line := range lines {
+				genDoc, err := tmtypes.GenesisDocFromJSON([]byte(line))
+				if err != nil {
+					continue
+				}
+				if gen != nil {
+					return fmt.Errorf("error: multiple genesis docs found in stream")
+				}
+				gen = genDoc
+			}
+		}
 		tmNode, err = node.New(
 			goCtx,
 			ctx.Config,
 			ctx.Logger,
 			restartCh,
 			abciclient.NewLocalClient(ctx.Logger, app),
-			nil,
+			gen,
 			tracerProviderOptions,
 			nodeMetricsProvider,
 		)

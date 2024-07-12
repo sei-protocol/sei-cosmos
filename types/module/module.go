@@ -45,6 +45,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	genesistypes "github.com/cosmos/cosmos-sdk/types/genesis"
 )
 
 // AppModuleBasic is the standard form for basic non-dependant elements of an application module.
@@ -187,7 +188,9 @@ type AppModuleGenesis interface {
 	AppModuleBasic
 
 	InitGenesis(sdk.Context, codec.JSONCodec, json.RawMessage) []abci.ValidatorUpdate
+	// InitGenesisStream(sdk.Context, codec.JSONCodec, <-chan json.RawMessage) error
 	ExportGenesis(sdk.Context, codec.JSONCodec) json.RawMessage
+	// TODO: change to ExportGenesisStream
 	StreamGenesis(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage
 }
 
@@ -365,23 +368,76 @@ func (m *Manager) RegisterServices(cfg Configurator) {
 	}
 }
 
+type AppState struct {
+	Module string          `json:"module"`
+	Data   json.RawMessage `json:"data"`
+}
+
+type ModuleState struct {
+	AppState AppState `json:"app_state"`
+}
+
+func parseModule(jsonStr string) (*ModuleState, error) {
+	var module ModuleState
+	err := json.Unmarshal([]byte(jsonStr), &module)
+	if err != nil {
+		return nil, err
+	}
+	if module.AppState.Module == "" {
+		return nil, fmt.Errorf("module name is empty")
+	}
+	return &module, nil
+}
+
 // InitGenesis performs init genesis functionality for modules
-func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData map[string]json.RawMessage) abci.ResponseInitChain {
+// JEREMYFLAG: Manager InitGenesis - Will call InitGenesis to all modules
+func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData map[string]json.RawMessage, genesisImportConfig genesistypes.GenesisImportConfig) abci.ResponseInitChain {
 	var validatorUpdates []abci.ValidatorUpdate
-	for _, moduleName := range m.OrderInitGenesis {
-		if genesisData[moduleName] == nil {
-			continue
-		}
-
-		moduleValUpdates := m.Modules[moduleName].InitGenesis(ctx, cdc, genesisData[moduleName])
-
-		// use these validator updates if provided, the module manager assumes
-		// only one module will update the validator set
-		if len(moduleValUpdates) > 0 {
-			if len(validatorUpdates) > 0 {
-				panic("validator InitGenesis updates already set by a previous module")
+	// if we're streaming it, then I want to
+	if genesisImportConfig.StreamGenesisImport {
+		lines := genesistypes.IngestGenesisFileLineByLine(genesisImportConfig.GenesisStreamFile)
+		errCh := make(chan error, 1)
+		seenModules := make(map[string]bool)
+		var moduleName string
+		go func() {
+			for line := range lines {
+				moduleState, err := parseModule(line)
+				if err != nil {
+					moduleName = "genesisDoc"
+				} else {
+					moduleName = moduleState.AppState.Module
+				}
+				if moduleName == "genesisDoc" {
+					continue
+				}
+				if seenModules[moduleName] {
+					errCh <- fmt.Errorf("module %s seen twice in genesis file", moduleName)
+					return
+				}
+				m.Modules[moduleName].InitGenesis(ctx, cdc, moduleState.AppState.Data)
 			}
-			validatorUpdates = moduleValUpdates
+			errCh <- nil
+		}()
+		err := <-errCh
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		for _, moduleName := range m.OrderInitGenesis {
+			if genesisData[moduleName] == nil {
+				continue
+			}
+
+			moduleValUpdates := m.Modules[moduleName].InitGenesis(ctx, cdc, genesisData[moduleName])
+
+			// use these validator updates if provided, the module manager assumes
+			// only one module will update the validator set
+			if len(moduleValUpdates) > 0 {
+				if len(validatorUpdates) > 0 {
+					panic("validator InitGenesis updates already set by a previous module")
+				}
+				validatorUpdates = moduleValUpdates
+			}
 		}
 	}
 

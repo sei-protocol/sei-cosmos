@@ -130,6 +130,7 @@ type GenesisDocNoAppState struct {
 
 // ExportToFileCmd dumps app state to JSON. It appends the app state module by module to the file.
 // This is especially useful when the output is too large to fit in memory.
+// TODO: change name to ExportStream, also can make it a flag under export
 func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export-to-file [jsonfile]",

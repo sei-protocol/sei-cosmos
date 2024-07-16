@@ -156,6 +156,11 @@ func (m *Manager) sortedExtensionNames() []string {
 
 // Create creates a snapshot and returns its metadata.
 func (m *Manager) Create(height uint64) (*types.Snapshot, error) {
+	return m.CreateAndMaybeWait(height, false)
+}
+
+// Create creates a snapshot and returns its metadata.
+func (m *Manager) CreateAndMaybeWait(height uint64, blocking bool) (*types.Snapshot, error) {
 	if m == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "no snapshot store configured")
 	}
@@ -176,7 +181,11 @@ func (m *Manager) Create(height uint64) (*types.Snapshot, error) {
 
 	// Spawn goroutine to generate snapshot chunks and pass their io.ReadClosers through a channel
 	ch := make(chan io.ReadCloser)
-	go m.createSnapshot(height, ch)
+	if blocking {
+		m.createSnapshot(height, ch)
+	} else {
+		go m.createSnapshot(height, ch)
+	}
 
 	return m.store.Save(height, types.CurrentFormat, ch)
 }

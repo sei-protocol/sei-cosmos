@@ -414,7 +414,14 @@ func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData 
 					errCh <- fmt.Errorf("module %s seen twice in genesis file", moduleName)
 					return
 				}
-				m.Modules[moduleName].InitGenesis(ctx, cdc, moduleState.AppState.Data)
+				fmt.Println("Calling initGenesis for module: ", moduleName, " with data: ", string(moduleState.AppState.Data))
+				moduleValUpdates := m.Modules[moduleName].InitGenesis(ctx, cdc, moduleState.AppState.Data)
+				if len(moduleValUpdates) > 0 {
+					if len(validatorUpdates) > 0 {
+						panic("validator InitGenesis updates already set by a previous module")
+					}
+					validatorUpdates = moduleValUpdates
+				}
 			}
 			errCh <- nil
 		}()
@@ -423,6 +430,7 @@ func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData 
 			panic(err)
 		}
 	} else {
+		fmt.Println("order init genesis = ", m.OrderInitGenesis)
 		for _, moduleName := range m.OrderInitGenesis {
 			if genesisData[moduleName] == nil {
 				continue
@@ -461,7 +469,10 @@ func (m *Manager) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) map[string
 }
 
 func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, process func(string, json.RawMessage)) {
-	for _, moduleName := range m.OrderExportGenesis {
+	// It's important that we use OrderInitGenesis here instead of OrderExportGenesis because the order of exporting
+	// doesn't matter much but the order of importing does due to invariant checks and how we are streaming the genesis
+	// file here
+	for _, moduleName := range m.OrderInitGenesis {
 		fmt.Println("Processing module: ", moduleName)
 		ch := m.Modules[moduleName].StreamGenesis(ctx, cdc)
 		for msg := range ch {

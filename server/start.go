@@ -402,19 +402,16 @@ func startInProcess(
 		if ctx.Viper.Get(FlagGenesisImportStream).(bool) {
 			lines := genesistypes.IngestGenesisFileLineByLine(ctx.Viper.GetString(FlagGenesisImportFile))
 			for line := range lines {
-				fmt.Println("checking line = ", line)
 				genDoc, err := tmtypes.GenesisDocFromJSON([]byte(line))
 				if err != nil {
 					continue
 				}
-				fmt.Println("found valid genDoc")
 				if gen != nil {
 					return fmt.Errorf("error: multiple genesis docs found in stream")
 				}
 				gen = genDoc
 			}
 		}
-		fmt.Printf("gen = %+v\n", gen)
 		tmNode, err = node.New(
 			goCtx,
 			ctx.Config,

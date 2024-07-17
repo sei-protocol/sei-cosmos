@@ -414,7 +414,6 @@ func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData 
 					errCh <- fmt.Errorf("module %s seen twice in genesis file", moduleName)
 					return
 				}
-				fmt.Println("Calling initGenesis for module: ", moduleName, " with data: ", string(moduleState.AppState.Data))
 				moduleValUpdates := m.Modules[moduleName].InitGenesis(ctx, cdc, moduleState.AppState.Data)
 				if len(moduleValUpdates) > 0 {
 					if len(validatorUpdates) > 0 {

@@ -862,6 +862,7 @@ func (rs *Store) StoreKeys() []types.StoreKey {
 	return res
 }
 
+// GetEarliestVersion return earliest version for SS or latestVersion if only SC is enabled
 func (rs *Store) GetEarliestVersion() int64 {
 	latestVersion := rs.lastCommitInfo.Version
 	if rs.ssStore != nil {

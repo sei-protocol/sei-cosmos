@@ -85,10 +85,6 @@ const (
 	flagGRPCWebEnable  = "grpc-web.enable"
 	flagGRPCWebAddress = "grpc-web.address"
 
-	// genesis import method
-	FlagGenesisImportStream = "genesis-import-stream"
-	FlagGenesisImportFile   = "genesis-import-file"
-
 	// archival related flags
 	FlagArchivalVersion                = "archival-version"
 	FlagArchivalDBType                 = "archival-db-type"
@@ -175,16 +171,6 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 			serverCtx.Viper.Set(flags.FlagChainID, chainID)
 
-			genesisStreaming, _ := cmd.Flags().GetBool(FlagGenesisImportStream)
-			serverCtx.Viper.Set(FlagGenesisImportStream, genesisStreaming)
-			serverCtx.Viper.Set(FlagGenesisImportFile, serverCtx.Config.GenesisFile())
-			if !genesisStreaming {
-				genesisFile, _ := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
-				if genesisFile.ChainID != clientCtx.ChainID {
-					panic(fmt.Sprintf("genesis file chain-id=%s does not equal config.toml chain-id=%s", genesisFile.ChainID, clientCtx.ChainID))
-				}
-			}
-
 			if enableTracing, _ := cmd.Flags().GetBool(tracing.FlagTracing); !enableTracing {
 				serverCtx.Logger.Info("--tracing not passed in, tracing is not enabled")
 				tracerProviderOptions = []trace.TracerProviderOption{}
@@ -206,6 +192,12 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 			apiMetrics, err := telemetry.New(config.Telemetry)
 			if err != nil {
 				return fmt.Errorf("failed to initialize telemetry: %w", err)
+			}
+			if !config.Genesis.StreamImport {
+				genesisFile, _ := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
+				if genesisFile.ChainID != clientCtx.ChainID {
+					panic(fmt.Sprintf("genesis file chain-id=%s does not equal config.toml chain-id=%s", genesisFile.ChainID, clientCtx.ChainID))
+				}
 			}
 
 			restartCoolDownDuration := time.Second * time.Duration(serverCtx.Config.SelfRemediation.RestartCooldownSeconds)
@@ -280,8 +272,6 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().String(FlagArchivalArweaveIndexDBFullPath, "", "Full local path to the levelDB used for indexing arweave data")
 	cmd.Flags().String(FlagArchivalArweaveNodeURL, "", "Arweave Node URL that stores archived data")
 	cmd.Flags().Bool(FlagIAVLFastNode, true, "Enable fast node for IAVL tree")
-
-	cmd.Flags().Bool(FlagGenesisImportStream, false, "Enable streaming genesis file import, useful for large genesis files")
 
 	cmd.Flags().String(FlagChainID, "", "Chain ID")
 
@@ -399,8 +389,8 @@ func startInProcess(
 	} else {
 		ctx.Logger.Info("starting node with ABCI Tendermint in-process")
 		var gen *tmtypes.GenesisDoc
-		if ctx.Viper.Get(FlagGenesisImportStream).(bool) {
-			lines := genesistypes.IngestGenesisFileLineByLine(ctx.Viper.GetString(FlagGenesisImportFile))
+		if config.Genesis.StreamImport {
+			lines := genesistypes.IngestGenesisFileLineByLine(config.Genesis.ImportFile)
 			for line := range lines {
 				genDoc, err := tmtypes.GenesisDocFromJSON([]byte(line))
 				if err != nil {

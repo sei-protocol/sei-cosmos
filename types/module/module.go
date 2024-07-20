@@ -393,7 +393,6 @@ func parseModule(jsonStr string) (*ModuleState, error) {
 // JEREMYFLAG: Manager InitGenesis - Will call InitGenesis to all modules
 func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData map[string]json.RawMessage, genesisImportConfig genesistypes.GenesisImportConfig) abci.ResponseInitChain {
 	var validatorUpdates []abci.ValidatorUpdate
-	// if we're streaming it, then I want to
 	if genesisImportConfig.StreamGenesisImport {
 		lines := genesistypes.IngestGenesisFileLineByLine(genesisImportConfig.GenesisStreamFile)
 		errCh := make(chan error, 1)

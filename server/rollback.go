@@ -9,7 +9,6 @@ import (
 	tmcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 )
 
-
 var removeBlock = false
 
 // NewRollbackCmd creates a command to rollback tendermint and multistore state by one height.

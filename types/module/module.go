@@ -451,16 +451,20 @@ func (m *Manager) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) map[string
 	return genesisData
 }
 
-func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, process func(string, json.RawMessage)) {
+func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, process func(string, json.RawMessage) error) error {
 	// It's important that we use OrderInitGenesis here instead of OrderExportGenesis because the order of exporting
 	// doesn't matter much but the order of importing does due to invariant checks and how we are streaming the genesis
 	// file here
 	for _, moduleName := range m.OrderInitGenesis {
 		ch := m.Modules[moduleName].StreamGenesis(ctx, cdc)
 		for msg := range ch {
-			process(moduleName, msg)
+			err := process(moduleName, msg)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 // assertNoForgottenModules checks that we didn't forget any modules in the

@@ -130,7 +130,6 @@ func ValidateGenesisStreamCmd(mbm module.BasicManager) *cobra.Command {
 						}
 						seenModules[prevModule] = true
 						if moduleName != "genesisDoc" {
-							fmt.Println("In ValidateGenesisStreamCmd, kicking off mbm.ValidateGenesisStream for module ", moduleName)
 							go mbm.ValidateGenesisStream(cdc, clientCtx.TxConfig, moduleName, genesisCh, doneCh, errCh)
 							genesisCh <- moduleState.AppState.Data
 						} else {
@@ -140,7 +139,6 @@ func ValidateGenesisStreamCmd(mbm module.BasicManager) *cobra.Command {
 							}
 						}
 					} else { // same module
-						fmt.Println("Sending data to channel for module ", moduleName)
 						genesisCh <- moduleState.AppState.Data
 					}
 					prevModule = moduleName

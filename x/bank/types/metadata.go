@@ -39,18 +39,13 @@ func (m Metadata) Validate() error {
 
 	seenUnits := make(map[string]bool)
 
-	fmt.Printf("m = %+v\n", m)
-	fmt.Println("m.DenomUnits = ", m.DenomUnits)
-
 	for i, denomUnit := range m.DenomUnits {
 		// The first denomination unit MUST be the base
 		if i == 0 {
 			// validate denomination and exponent
 			if denomUnit.Denom != m.Base {
-				fmt.Println("denomUnit.Denom = ", denomUnit.Denom)
 				return fmt.Errorf("metadata's first denomination unit must be the one with base denom '%s'", m.Base)
 			}
-			fmt.Println("denomUnit.Exponent = ", denomUnit.Exponent)
 			if denomUnit.Exponent != 0 {
 				return fmt.Errorf("the exponent for base denomination unit %s must be 0", m.Base)
 			}

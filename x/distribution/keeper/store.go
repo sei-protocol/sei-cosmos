@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"fmt"
 
 	gogotypes "github.com/gogo/protobuf/types"
 
@@ -49,7 +48,6 @@ func (k Keeper) IterateDelegatorWithdrawAddrs(ctx sdk.Context, handler func(del 
 func (k Keeper) GetFeePool(ctx sdk.Context) (feePool types.FeePool) {
 	store := ctx.KVStore(k.storeKey)
 	b := store.Get(types.FeePoolKey)
-	fmt.Println("fee pool key = ", b, ", is b == nil?", b == nil)
 	if b == nil {
 		panic("Stored fee pool should not have been nil")
 	}

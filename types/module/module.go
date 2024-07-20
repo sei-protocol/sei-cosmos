@@ -112,20 +112,15 @@ func (bm BasicManager) ValidateGenesis(cdc codec.JSONCodec, txEncCfg client.TxEn
 	return nil
 }
 
+// ValidateGenesisStream performs genesis state validation on all modules in a streaming fashion.
 func (bm BasicManager) ValidateGenesisStream(cdc codec.JSONCodec, txEncCfg client.TxEncodingConfig, moduleName string, genesisCh <-chan json.RawMessage, doneCh <-chan struct{}, errCh chan<- error) {
-	fmt.Println("In BasicManager.ValidateGenesisStream for module: ", moduleName)
-	// we have a stream of genesis data for a module
-	// will be told when we're done
-	// can signal for any errors
 	moduleGenesisCh := make(chan json.RawMessage)
 	moduleDoneCh := make(chan struct{})
 
 	var err error
 
 	go func() {
-		fmt.Println("In BasicManager.ValidateGenesisStream kicked off go routine for module: ", moduleName)
 		err = bm[moduleName].ValidateGenesisStream(cdc, txEncCfg, moduleGenesisCh)
-		fmt.Println("In BasicManager.ValidateGenesisStream goroutine got err: ", err)
 		if err != nil {
 			errCh <- err
 		}
@@ -135,11 +130,9 @@ func (bm BasicManager) ValidateGenesisStream(cdc codec.JSONCodec, txEncCfg clien
 	for {
 		select {
 		case <-doneCh:
-			fmt.Println("In BasicManager.ValidateGenesisStream received from doneCh")
 			close(moduleGenesisCh)
 			return
 		case genesisChunk := <-genesisCh:
-			fmt.Println("In BasicManager.ValidateGenesisStream received from genesisCh")
 			moduleGenesisCh <- genesisChunk
 		}
 	}
@@ -188,9 +181,7 @@ type AppModuleGenesis interface {
 	AppModuleBasic
 
 	InitGenesis(sdk.Context, codec.JSONCodec, json.RawMessage) []abci.ValidatorUpdate
-	// InitGenesisStream(sdk.Context, codec.JSONCodec, <-chan json.RawMessage) error
 	ExportGenesis(sdk.Context, codec.JSONCodec) json.RawMessage
-	// TODO: change to ExportGenesisStream
 	StreamGenesis(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage
 }
 
@@ -390,7 +381,6 @@ func parseModule(jsonStr string) (*ModuleState, error) {
 }
 
 // InitGenesis performs init genesis functionality for modules
-// JEREMYFLAG: Manager InitGenesis - Will call InitGenesis to all modules
 func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData map[string]json.RawMessage, genesisImportConfig genesistypes.GenesisImportConfig) abci.ResponseInitChain {
 	var validatorUpdates []abci.ValidatorUpdate
 	if genesisImportConfig.StreamGenesisImport {
@@ -428,7 +418,6 @@ func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData 
 			panic(err)
 		}
 	} else {
-		fmt.Println("order init genesis = ", m.OrderInitGenesis)
 		for _, moduleName := range m.OrderInitGenesis {
 			if genesisData[moduleName] == nil {
 				continue
@@ -452,10 +441,6 @@ func (m *Manager) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, genesisData 
 	}
 }
 
-// TODO: make an initGenesisFromFile, instead of looping over modules, loop over each row/document
-//  - the name of the module will be in each row
-//  - make sure to stream each line, iostream kind of thing
-
 // ExportGenesis performs export genesis functionality for modules
 func (m *Manager) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) map[string]json.RawMessage {
 	genesisData := make(map[string]json.RawMessage)
@@ -471,7 +456,6 @@ func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, 
 	// doesn't matter much but the order of importing does due to invariant checks and how we are streaming the genesis
 	// file here
 	for _, moduleName := range m.OrderInitGenesis {
-		fmt.Println("Processing module: ", moduleName)
 		ch := m.Modules[moduleName].StreamGenesis(ctx, cdc)
 		for msg := range ch {
 			process(moduleName, msg)

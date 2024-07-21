@@ -207,9 +207,9 @@ func (m *MockAppModuleGenesis) ExportGenesis(arg0 types0.Context, arg1 codec.JSO
 	return ret0
 }
 
-func (m *MockAppModuleGenesis) StreamGenesis(arg0 types0.Context, arg1 codec.JSONCodec) <-chan json.RawMessage {
+func (m *MockAppModuleGenesis) ExportGenesisStream(arg0 types0.Context, arg1 codec.JSONCodec) <-chan json.RawMessage {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamGenesis", arg0, arg1)
+	ret := m.ctrl.Call(m, "ExportGenesisStream", arg0, arg1)
 	ret0, _ := ret[0].(<-chan json.RawMessage)
 	return ret0
 }

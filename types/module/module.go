@@ -182,7 +182,7 @@ type AppModuleGenesis interface {
 
 	InitGenesis(sdk.Context, codec.JSONCodec, json.RawMessage) []abci.ValidatorUpdate
 	ExportGenesis(sdk.Context, codec.JSONCodec) json.RawMessage
-	StreamGenesis(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage
+	ExportGenesisStream(ctx sdk.Context, cdc codec.JSONCodec) <-chan json.RawMessage
 }
 
 // AppModule is the standard form for an application module
@@ -456,7 +456,7 @@ func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, 
 	// doesn't matter much but the order of importing does due to invariant checks and how we are streaming the genesis
 	// file here
 	for _, moduleName := range m.OrderInitGenesis {
-		ch := m.Modules[moduleName].StreamGenesis(ctx, cdc)
+		ch := m.Modules[moduleName].ExportGenesisStream(ctx, cdc)
 		for msg := range ch {
 			err := process(moduleName, msg)
 			if err != nil {

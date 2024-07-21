@@ -304,7 +304,7 @@ func AddCommands(
 	defaultNodeHome string,
 	appCreator types.AppCreator,
 	appExport types.AppExporter,
-	appExportToFile types.AppExporterToFile,
+	appExportToFile types.AppExporterStream,
 	addStartFlags types.ModuleInitFlags,
 	tracerProviderOptions []trace.TracerProviderOption,
 ) {

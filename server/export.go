@@ -131,7 +131,7 @@ type GenesisDocNoAppState struct {
 // ExportToFileCmd dumps app state to JSON. It appends the app state module by module to the file.
 // This is especially useful when the output is too large to fit in memory.
 // TODO: change name to ExportStream, also can make it a flag under export
-func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome string) *cobra.Command {
+func ExportToFileCmd(appExporterStream types.AppExporterStream, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export-to-file [jsonfile]",
 		Short: "Export state to JSON file",
@@ -157,7 +157,7 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 				return err
 			}
 
-			if appExporterToFile == nil {
+			if appExporterStream == nil {
 				if _, err := fmt.Fprintln(os.Stderr, "WARNING: App exporter not defined. Returning genesis file."); err != nil {
 					return err
 				}
@@ -181,7 +181,7 @@ func ExportToFileCmd(appExporterToFile types.AppExporterToFile, defaultNodeHome 
 			forZeroHeight, _ := cmd.Flags().GetBool(FlagForZeroHeight)
 			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(FlagJailAllowedAddrs)
 
-			exported, err := appExporterToFile(serverCtx.Logger, db, traceWriter, height, forZeroHeight, jailAllowedAddrs, serverCtx.Viper, file)
+			exported, err := appExporterStream(serverCtx.Logger, db, traceWriter, height, forZeroHeight, jailAllowedAddrs, serverCtx.Viper, file)
 			if err != nil {
 				return fmt.Errorf("error exporting state: %v", err)
 			}

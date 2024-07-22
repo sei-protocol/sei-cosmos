@@ -304,7 +304,6 @@ func AddCommands(
 	defaultNodeHome string,
 	appCreator types.AppCreator,
 	appExport types.AppExporter,
-	appExportToFile types.AppExporterStream,
 	addStartFlags types.ModuleInitFlags,
 	tracerProviderOptions []trace.TracerProviderOption,
 ) {
@@ -349,7 +348,6 @@ func AddCommands(
 		startCmd,
 		tendermintCmd,
 		ExportCmd(appExport, defaultNodeHome),
-		ExportToFileCmd(appExportToFile, defaultNodeHome),
 		version.NewVersionCommand(),
 		NewRollbackCmd(appCreator, defaultNodeHome),
 		LatestVersionCmd(defaultNodeHome),

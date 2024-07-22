@@ -170,7 +170,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		panic(err)
 	}
 
-	server.AddCommands(rootCmd, simapp.DefaultNodeHome, a.newApp, a.appExport, a.appExporterStream, addModuleInitFlags, []trace.TracerProviderOption{
+	server.AddCommands(rootCmd, simapp.DefaultNodeHome, a.newApp, a.appExport, addModuleInitFlags, []trace.TracerProviderOption{
 		trace.WithBatcher(exp),
 		// Record information about this application in a Resource.
 		trace.WithResource(resource.NewWithAttributes(
@@ -313,7 +313,7 @@ func (a appCreator) newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, t
 // and exports state.
 func (a appCreator) appExport(
 	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string,
-	appOpts servertypes.AppOptions) (servertypes.ExportedApp, error) {
+	appOpts servertypes.AppOptions, file *os.File) (servertypes.ExportedApp, error) {
 
 	var simApp *simapp.SimApp
 	homePath, ok := appOpts.Get(flags.FlagHome).(string)
@@ -332,10 +332,4 @@ func (a appCreator) appExport(
 	}
 
 	return simApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
-}
-
-func (a appCreator) appExporterStream(
-	logger log.Logger, db dbm.DB, traceStore io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string,
-	appOpts servertypes.AppOptions, file *os.File) (servertypes.ExportedApp, error) {
-	return a.appExport(logger, db, traceStore, height, forZeroHeight, jailAllowedAddrs, appOpts)
 }

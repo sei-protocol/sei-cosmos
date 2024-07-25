@@ -457,6 +457,9 @@ func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, 
 	// file here
 	for _, moduleName := range m.OrderInitGenesis {
 		fmt.Println("Exporting module: ", moduleName)
+		if moduleName != "bank" {
+			continue
+		}
 		ch := m.Modules[moduleName].ExportGenesisStream(ctx, cdc)
 		for msg := range ch {
 			err := process(moduleName, msg)

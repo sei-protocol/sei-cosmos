@@ -456,6 +456,9 @@ func (m *Manager) ProcessGenesisPerModule(ctx sdk.Context, cdc codec.JSONCodec, 
 	// doesn't matter much but the order of importing does due to invariant checks and how we are streaming the genesis
 	// file here
 	for _, moduleName := range m.OrderInitGenesis {
+		if moduleName != "evm" {
+			continue
+		}
 		ch := m.Modules[moduleName].ExportGenesisStream(ctx, cdc)
 		for msg := range ch {
 			err := process(moduleName, msg)

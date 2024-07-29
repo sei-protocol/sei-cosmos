@@ -62,7 +62,7 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 			}
 
 			if isStreaming && streamingFile == "" {
-				return fmt.Errorf("file to export stream to not provided")
+				return fmt.Errorf("file to export stream to not provided, please specify --streaming-file")
 			}
 
 			db, err := openDB(config.RootDir)

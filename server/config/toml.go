@@ -258,8 +258,8 @@ snapshot-directory = "{{ .StateSync.SnapshotDirectory }}"
 # file must be in stream form and exported in a streaming fashion.
 stream-import = {{ .Genesis.StreamImport }}
 
-# import-file specifies the path of the genesis json file to stream from.
-import-file = "{{ .Genesis.ImportFile }}"
+# genesis-stream-file specifies the path of the genesis json file to stream from.
+genesis-stream-file = "{{ .Genesis.ImportFile }}"
 ` + config.DefaultConfigTemplate
 
 var configTemplate *template.Template

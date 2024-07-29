@@ -390,11 +390,11 @@ func startInProcess(
 		ctx.Logger.Info("starting node with ABCI Tendermint in-process")
 		var gen *tmtypes.GenesisDoc
 		if config.Genesis.StreamImport {
-			lines := genesistypes.IngestGenesisFileLineByLine(config.Genesis.ImportFile)
+			lines := genesistypes.IngestGenesisFileLineByLine(config.Genesis.GenesisStreamFile)
 			for line := range lines {
 				genDoc, err := tmtypes.GenesisDocFromJSON([]byte(line))
 				if err != nil {
-					continue
+					return err
 				}
 				if gen != nil {
 					return fmt.Errorf("error: multiple genesis docs found in stream")

@@ -197,8 +197,8 @@ type GenesisConfig struct {
 	// StreamImport defines if the genesis.json is in stream form or not.
 	StreamImport bool `mapstructure:"stream-import"`
 
-	// ImportFile sets the genesis json file from which to stream from
-	ImportFile string `mapstructure:"import-file"`
+	// GenesisStreamFile sets the genesis json file from which to stream from
+	GenesisStreamFile string `mapstructure:"genesis-stream-file"`
 }
 
 // Config defines the server's top level configuration
@@ -299,8 +299,8 @@ func DefaultConfig() *Config {
 		StateCommit: config.DefaultStateCommitConfig(),
 		StateStore:  config.DefaultStateStoreConfig(),
 		Genesis: GenesisConfig{
-			StreamImport: false,
-			ImportFile:   "",
+			StreamImport:      false,
+			GenesisStreamFile: "",
 		},
 	}
 }
@@ -406,8 +406,8 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			ImportNumWorkers:     v.GetInt("state-store.import-num-workers"),
 		},
 		Genesis: GenesisConfig{
-			StreamImport: v.GetBool("genesis.stream-import"),
-			ImportFile:   v.GetString("genesis.import-file"),
+			StreamImport:      v.GetBool("genesis.stream-import"),
+			GenesisStreamFile: v.GetString("genesis.genesis-stream-file"),
 		},
 	}, nil
 }

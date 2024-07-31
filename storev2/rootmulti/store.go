@@ -191,11 +191,13 @@ func (rs *Store) Close() error {
 func (rs *Store) LastCommitID() types.CommitID {
 	if rs.lastCommitInfo == nil {
 		v, err := rs.scStore.GetLatestVersion()
+		fmt.Printf("SC rootmulti VersionInfo: %v\n", v)
 		if err != nil {
 			panic(fmt.Errorf("failed to get latest version: %w", err))
 		}
 		return types.CommitID{Version: v}
 	}
+	fmt.Printf("SC rootmulti CommitInfo: %v\n", rs.lastCommitInfo)
 
 	return rs.lastCommitInfo.CommitID()
 }

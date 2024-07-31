@@ -424,6 +424,7 @@ func (rs *Store) ListeningEnabled(key types.StoreKey) bool {
 // LastCommitID implements Committer/CommitStore.
 func (rs *Store) LastCommitID() types.CommitID {
 	c := rs.LastCommitInfo()
+	fmt.Printf("Last Commit Info: %v\n", c)
 	if c == nil {
 		return types.CommitID{
 			Version: GetLatestVersion(rs.db),

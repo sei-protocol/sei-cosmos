@@ -44,6 +44,7 @@ func (st *Store) Commit(_ bool) types.CommitID {
 
 func (st *Store) LastCommitID() types.CommitID {
 	hash := st.tree.RootHash()
+	fmt.Printf("SC rootmulti committer hash: %X\n", hash)
 	return types.CommitID{
 		Version: st.tree.Version(),
 		Hash:    hash,

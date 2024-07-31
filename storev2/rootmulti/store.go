@@ -345,6 +345,7 @@ func (rs *Store) MountStoreWithDB(key types.StoreKey, typ types.StoreType, _ dbm
 	if _, ok := rs.storeKeys[key.Name()]; ok {
 		panic(fmt.Sprintf("store duplicate store key name %v", key))
 	}
+	fmt.Printf("[DEBUG] Mounting store %s with type %s\n", key.Name(), typ)
 	rs.storesParams[key] = newStoreParams(key, typ)
 	rs.storeKeys[key.Name()] = key
 }
@@ -399,6 +400,7 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 
 	var treeUpgrades []*proto.TreeNameUpgrade
 	for _, key := range storesKeys {
+		fmt.Printf("[DEBUG] Checking Store Upgrade %s\n", key.Name())
 		switch {
 		case upgrades.IsDeleted(key.Name()):
 			treeUpgrades = append(treeUpgrades, &proto.TreeNameUpgrade{Name: key.Name(), Delete: true})
@@ -407,6 +409,7 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 		}
 	}
 
+	fmt.Printf("[DEBUG] Upgrading %d trees for upgrades %s and tree upgrades %s\n", len(treeUpgrades), upgrades, treeUpgrades)
 	if len(treeUpgrades) > 0 {
 		if err := rs.scStore.ApplyUpgrades(treeUpgrades); err != nil {
 			return err
@@ -716,6 +719,7 @@ loop:
 		switch item := snapshotItem.Item.(type) {
 		case *snapshottypes.SnapshotItem_Store:
 			storeKey = item.Store.Name
+			fmt.Printf("[DEBUG] SC Snapshot Store %s\n", storeKey)
 			if err = scImporter.AddTree(storeKey); err != nil {
 				restoreErr = err
 				break loop

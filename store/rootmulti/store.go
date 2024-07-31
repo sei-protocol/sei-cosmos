@@ -881,6 +881,7 @@ loop:
 				importer.Close()
 			}
 			store, ok := rs.GetStoreByName(item.Store.Name).(*iavl.Store)
+			fmt.Printf("[DEBUG] IAVL Snapshot Store %s\n", item.Store.Name)
 			if !ok || store == nil {
 				return snapshottypes.SnapshotItem{}, sdkerrors.Wrapf(sdkerrors.ErrLogic, "cannot import into non-IAVL store %q", item.Store.Name)
 			}

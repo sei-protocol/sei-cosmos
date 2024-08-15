@@ -162,8 +162,6 @@ var (
 	// ErrInvalidRecipient defines an error for sending to disallowed recipients in bank
 	ErrInvalidRecipient = Register(RootCodespace, 46, "invalid bank recipient")
 
-	ErrInvalidGasLimit = Register(RootCodespace, 47, "invalid gas limit")
-
 	// ErrPanic is only set when we recover from a panic, so we know to
 	// redact potentially sensitive system info
 	ErrPanic = Register(UndefinedCodespace, 111222, "panic")

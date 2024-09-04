@@ -18,6 +18,10 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
+const (
+	TokenFactoryPrefix = "factory"
+)
+
 var _ Keeper = (*BaseKeeper)(nil)
 
 // Keeper defines a module interface that facilitates the transfer of coins
@@ -373,9 +377,8 @@ func (k BaseKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.Allow
 
 func (k BaseKeeper) IsAllowedSendReceiveCoins(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, coins ...sdk.Coin) (bool, bool) {
 	for _, coin := range coins {
-		// skip if denom does not contain factory prefix
-		// TODO: move factory to a constant
-		if strings.HasPrefix(coin.Denom, "factory") {
+		// skip if denom does not contain token factory prefix
+		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
 			allowList := k.GetDenomAllowList(ctx, coin.Denom)
 			if allowList.Addresses != nil && len(allowList.Addresses) > 0 {
 				allowedAddressesMap := make(map[string]struct{})

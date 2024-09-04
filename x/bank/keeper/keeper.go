@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
@@ -35,6 +36,9 @@ type Keeper interface {
 	GetDenomMetaData(ctx sdk.Context, denom string) (types.Metadata, bool)
 	SetDenomMetaData(ctx sdk.Context, denomMetaData types.Metadata)
 	IterateAllDenomMetaData(ctx sdk.Context, cb func(types.Metadata) bool)
+	SetDenomAllowList(ctx sdk.Context, denom string, allowList types.AllowList)
+	GetDenomAllowList(ctx sdk.Context, denom string) types.AllowList
+	IsAllowedSendReceiveCoins(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, coins ...sdk.Coin) (bool, bool)
 
 	SendCoinsFromModuleToAccount(ctx sdk.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
 	SendCoinsFromModuleToModule(ctx sdk.Context, senderModule, recipientModule string, amt sdk.Coins) error
@@ -342,6 +346,58 @@ func (k BaseKeeper) SetDenomMetaData(ctx sdk.Context, denomMetaData types.Metada
 
 	m := k.cdc.MustMarshal(&denomMetaData)
 	denomMetaDataStore.Set([]byte(denomMetaData.Base), m)
+}
+
+func (k BaseKeeper) SetDenomAllowList(ctx sdk.Context, denom string, allowList types.AllowList) {
+	store := ctx.KVStore(k.storeKey)
+	denomAllowListStore := prefix.NewStore(store, types.DenomAllowListKey(denom))
+
+	m := k.cdc.MustMarshal(&allowList)
+	denomAllowListStore.Set([]byte(denom), m)
+}
+
+func (k BaseKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.AllowList {
+	store := ctx.KVStore(k.storeKey)
+	store = prefix.NewStore(store, types.DenomAllowListKey(denom))
+
+	bz := store.Get([]byte(denom))
+	if bz == nil {
+		return types.AllowList{}
+	}
+
+	var metadata types.AllowList
+	k.cdc.MustUnmarshal(bz, &metadata)
+
+	return metadata
+}
+
+func (k BaseKeeper) IsAllowedSendReceiveCoins(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, coins ...sdk.Coin) (bool, bool) {
+	for _, coin := range coins {
+		// skip if denom does not contain factory prefix
+		// TODO: move factory to a constant
+		if strings.HasPrefix(coin.Denom, "factory") {
+			allowList := k.GetDenomAllowList(ctx, coin.Denom)
+			if allowList.Addresses != nil && len(allowList.Addresses) > 0 {
+				allowedAddressesMap := make(map[string]struct{})
+				for _, addr := range allowList.Addresses {
+					allowedAddressesMap[addr] = struct{}{}
+				}
+				if !isAddressAllowed(allowedAddressesMap, from) {
+					return false, true
+				}
+				if !isAddressAllowed(allowedAddressesMap, to) {
+					return true, false
+				}
+			}
+		}
+	}
+
+	return true, true
+}
+
+func isAddressAllowed(allowedAddresses map[string]struct{}, address sdk.AccAddress) bool {
+	_, exists := allowedAddresses[address.String()]
+	return exists
 }
 
 // SendCoinsFromModuleToAccount transfers coins from a ModuleAccount to an AccAddress.

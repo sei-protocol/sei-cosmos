@@ -484,9 +484,14 @@ func (k BaseSendKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.A
 	return metadata
 }
 
+// IsAllowedToSendCoins checks if the given address is allowed to send the given coins.
+// The check is performed only fot token factory denoms. For each token factory denom,
+// it checks if there is allow list for the given denom. If there is no allow list,
+// the address is allowed to send the coins. If there is an allow list, the address is
+// allowed to send the coins only if it is in the allow list.
 func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool {
 	for _, coin := range coins {
-		// skip if denom does not contain token factory prefix
+		// process only if denom does contain token factory prefix
 		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
 			allowedAddresses := k.getAllowedAddresses(ctx, cache, coin.Denom)
 			if len(allowedAddresses.set) > 0 {

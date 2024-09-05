@@ -98,15 +98,16 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 	if err := types.ValidateInputsOutputs(inputs, outputs); err != nil {
 		return err
 	}
-	denomToAllowListCache := make(map[string]AllowedAddresses)
+
+	err := k.validateInputOutputAddressesAllowedToSendCoins(ctx, inputs, outputs)
+	if err != nil {
+		return err
+	}
+
 	for _, in := range inputs {
 		inAddress, err := sdk.AccAddressFromBech32(in.Address)
 		if err != nil {
 			return err
-		}
-		allowedToSend := k.IsAllowedToSendCoins(ctx, inAddress, in.Coins, denomToAllowListCache)
-		if !allowedToSend {
-			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", inAddress)
 		}
 
 		err = k.SubUnlockedCoins(ctx, inAddress, in.Coins, true)
@@ -126,10 +127,6 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 		outAddress, err := sdk.AccAddressFromBech32(out.Address)
 		if err != nil {
 			return err
-		}
-		allowedToReceive := k.IsAllowedToSendCoins(ctx, outAddress, out.Coins, denomToAllowListCache)
-		if !allowedToReceive {
-			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", outAddress)
 		}
 		err = k.AddCoins(ctx, outAddress, out.Coins, true)
 		if err != nil {
@@ -155,6 +152,31 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 		}
 	}
 
+	return nil
+}
+
+func (k BaseSendKeeper) validateInputOutputAddressesAllowedToSendCoins(ctx sdk.Context, inputs []types.Input, outputs []types.Output) error {
+	denomToAllowListCache := make(map[string]AllowedAddresses)
+	for _, in := range inputs {
+		inAddress, err := sdk.AccAddressFromBech32(in.Address)
+		if err != nil {
+			return err
+		}
+		allowedToSend := k.IsAllowedToSendCoins(ctx, inAddress, in.Coins, denomToAllowListCache)
+		if !allowedToSend {
+			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", inAddress)
+		}
+	}
+	for _, out := range outputs {
+		outAddress, err := sdk.AccAddressFromBech32(out.Address)
+		if err != nil {
+			return err
+		}
+		allowedToReceive := k.IsAllowedToSendCoins(ctx, outAddress, out.Coins, denomToAllowListCache)
+		if !allowedToReceive {
+			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", outAddress)
+		}
+	}
 	return nil
 }
 

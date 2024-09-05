@@ -23,12 +23,13 @@ import (
 )
 
 const (
-	fooDenom     = "foo"
-	barDenom     = "bar"
-	initialPower = int64(100)
-	holder       = "holder"
-	multiPerm    = "multiple permissions account"
-	randomPerm   = "random permission"
+	fooDenom           = "foo"
+	barDenom           = "bar"
+	factoryDenomPrefix = "factory"
+	initialPower       = int64(100)
+	holder             = "holder"
+	multiPerm          = "multiple permissions account"
+	randomPerm         = "random permission"
 )
 
 var (
@@ -45,6 +46,10 @@ var (
 
 func newFooCoin(amt int64) sdk.Coin {
 	return sdk.NewInt64Coin(fooDenom, amt)
+}
+
+func newFactoryCoin(address sdk.AccAddress, amt int64) sdk.Coin {
+	return sdk.NewInt64Coin(fmt.Sprintf("%s/%s/%s", factoryDenomPrefix, address, fooDenom), amt)
 }
 
 func newBarCoin(amt int64) sdk.Coin {
@@ -483,6 +488,84 @@ func (suite *IntegrationTestSuite) TestInputOutputCoins() {
 
 	acc3Balances := app.BankKeeper.GetAllBalances(ctx, addr3)
 	suite.Require().Equal(expected, acc3Balances)
+}
+
+func (suite *IntegrationTestSuite) TestInputOutputCoinsWithAllowList() {
+	app, ctx := suite.app, suite.ctx
+
+	addr1 := sdk.AccAddress("addr1_______________")
+	acc1 := app.AccountKeeper.NewAccountWithAddress(ctx, addr1)
+	app.AccountKeeper.SetAccount(ctx, acc1)
+	factoryCoin := newFactoryCoin(addr1, 90)
+	balances := sdk.NewCoins(factoryCoin)
+
+	addr2 := sdk.AccAddress("addr2_______________")
+	acc2 := app.AccountKeeper.NewAccountWithAddress(ctx, addr2)
+	app.AccountKeeper.SetAccount(ctx, acc2)
+
+	addr3 := sdk.AccAddress("addr3_______________")
+	acc3 := app.AccountKeeper.NewAccountWithAddress(ctx, addr3)
+	app.AccountKeeper.SetAccount(ctx, acc3)
+
+	addr4 := sdk.AccAddress("addr4_______________")
+	acc4 := app.AccountKeeper.NewAccountWithAddress(ctx, addr4)
+	app.AccountKeeper.SetAccount(ctx, acc4)
+
+	suite.Require().NoError(simapp.FundAccount(app.BankKeeper, ctx, addr1, balances))
+	app.BankKeeper.SetDenomAllowList(ctx, factoryCoin.Denom,
+		types.AllowList{
+			Addresses: []string{addr1.String(), addr2.String(), addr3.String()}})
+
+	inputs := []types.Input{
+		{Address: addr1.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 30))},
+		{Address: addr1.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 30))},
+	}
+	outputs := []types.Output{
+		{Address: addr2.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 30))},
+		{Address: addr3.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 30))},
+	}
+	suite.Require().NoError(app.BankKeeper.InputOutputCoins(ctx, inputs, outputs))
+
+	acc1Balances := app.BankKeeper.GetAllBalances(ctx, addr1)
+	expected := sdk.NewCoins(newFactoryCoin(addr1, 30))
+	suite.Require().Equal(expected, acc1Balances)
+
+	inputs1 := []types.Input{
+		{Address: addr1.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 5))},
+		{Address: addr1.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 10))},
+	}
+	outputs1 := []types.Output{
+		{Address: addr2.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 5))},
+		{Address: addr4.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 10))},
+	}
+
+	err := app.BankKeeper.InputOutputCoins(ctx, inputs1, outputs1)
+	suite.Require().Error(err)
+	suite.Require().Equal(
+		fmt.Sprintf("%s is not allowed to receive funds: unauthorized", addr4.String()), err.Error())
+
+	acc1Balances = app.BankKeeper.GetAllBalances(ctx, addr1)
+	expected = sdk.NewCoins(newFactoryCoin(addr1, 30))
+	suite.Require().Equal(expected, acc1Balances)
+
+	inputs2 := []types.Input{
+		{Address: addr4.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 5))},
+		{Address: addr4.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 10))},
+	}
+	outputs2 := []types.Output{
+		{Address: addr1.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 5))},
+		{Address: addr2.String(), Coins: sdk.NewCoins(newFactoryCoin(addr1, 10))},
+	}
+
+	err = app.BankKeeper.InputOutputCoins(ctx, inputs2, outputs2)
+	suite.Require().Error(err)
+	suite.Require().Equal(
+		fmt.Sprintf("%s is not allowed to send funds: unauthorized", addr4.String()), err.Error())
+
+	acc1Balances = app.BankKeeper.GetAllBalances(ctx, addr1)
+	expected = sdk.NewCoins(newFactoryCoin(addr1, 30))
+	suite.Require().Equal(expected, acc1Balances)
+
 }
 
 func (suite *IntegrationTestSuite) TestSendCoins() {

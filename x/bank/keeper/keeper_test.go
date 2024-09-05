@@ -1374,53 +1374,46 @@ func (suite *IntegrationTestSuite) TestSetAllowList() {
 	suite.Require().Equal(allowList, actualAllowList)
 }
 
-func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedSendReceiveCoins() {
+func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedToSendCoins() {
 	type CoinToAllowList struct {
 		coin      sdk.Coin
 		allowList types.AllowList
 	}
 	type args struct {
-		from             sdk.AccAddress
-		to               sdk.AccAddress
+		addr             sdk.AccAddress
 		coinsToAllowList []CoinToAllowList
 	}
 	tests := []struct {
-		name              string
-		args              args
-		senderIsAllowed   bool
-		receiverIsAllowed bool
+		name      string
+		args      args
+		isAllowed bool
 	}{
 		{
-			name: "Allowed for all for empty coins",
+			name: "Allowed for for empty coins",
 			args: args{
-				from: sdk.AccAddress{},
-				to:   sdk.AccAddress{},
+				addr: sdk.AccAddress{},
 				coinsToAllowList: []CoinToAllowList{
 					{coin: sdk.Coin{}},
 				},
 			},
-			senderIsAllowed:   true,
-			receiverIsAllowed: true,
+			isAllowed: true,
 		},
 		{
-			name: "allowed for all with a non-factory coin",
+			name: "allowed for to transfer with a non-factory coin",
 			args: args{
-				from: sdk.AccAddress("from"),
-				to:   sdk.AccAddress("to"),
+				addr: sdk.AccAddress("from"),
 				coinsToAllowList: []CoinToAllowList{
 					{
 						coin: sdk.NewInt64Coin("test", 100),
 					},
 				},
 			},
-			senderIsAllowed:   true,
-			receiverIsAllowed: true,
+			isAllowed: true,
 		},
 		{
-			name: "allowed for all with a factory coin with no allow list",
+			name: "allowed with a factory coin with no allow list",
 			args: args{
-				from: sdk.AccAddress("from"),
-				to:   sdk.AccAddress("to"),
+				addr: sdk.AccAddress("from"),
 				coinsToAllowList: []CoinToAllowList{
 					{
 						coin: sdk.NewInt64Coin(
@@ -1428,14 +1421,26 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedSendReceiveCoins() {
 					},
 				},
 			},
-			senderIsAllowed:   true,
-			receiverIsAllowed: true,
+			isAllowed: true,
 		},
 		{
-			name: "sender is not allowed send coins for denom",
+			name: "allowed with a factory coin with no empty allow list",
 			args: args{
-				from: sdk.AccAddress("from"),
-				to:   sdk.AccAddress("to"),
+				addr: sdk.AccAddress("from"),
+				coinsToAllowList: []CoinToAllowList{
+					{
+						coin: sdk.NewInt64Coin(
+							fmt.Sprintf("factory/%s/test", sdk.AccAddress("from")), 100),
+						allowList: types.AllowList{},
+					},
+				},
+			},
+			isAllowed: true,
+		},
+		{
+			name: "not allowed to transfer coins for denom if not in allowlist",
+			args: args{
+				addr: sdk.AccAddress("from"),
 				coinsToAllowList: []CoinToAllowList{
 					{
 						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test", sdk.AccAddress("from")), 100),
@@ -1445,31 +1450,12 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedSendReceiveCoins() {
 					},
 				},
 			},
-			senderIsAllowed:   false,
-			receiverIsAllowed: true,
+			isAllowed: false,
 		},
 		{
-			name: "receiver is not allowed to receive coins for denom",
+			name: "allowed to transfer for denom",
 			args: args{
-				from: sdk.AccAddress("from"),
-				to:   sdk.AccAddress("to"),
-				coinsToAllowList: []CoinToAllowList{
-					{
-						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test", sdk.AccAddress("from")), 100),
-						allowList: types.AllowList{
-							Addresses: []string{sdk.AccAddress("from").String(), sdk.AccAddress("other").String()},
-						},
-					},
-				},
-			},
-			senderIsAllowed:   true,
-			receiverIsAllowed: false,
-		},
-		{
-			name: "both sender and receiver are allowed to send and receive coins for denom",
-			args: args{
-				from: sdk.AccAddress("from"),
-				to:   sdk.AccAddress("to"),
+				addr: sdk.AccAddress("from"),
 				coinsToAllowList: []CoinToAllowList{
 					{
 						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test", sdk.AccAddress("from")), 100),
@@ -1479,14 +1465,12 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedSendReceiveCoins() {
 					},
 				},
 			},
-			senderIsAllowed:   true,
-			receiverIsAllowed: true,
+			isAllowed: true,
 		},
 		{
-			name: "both sender and receiver are allowed for one coin but nota allowed for another coin",
+			name: "allowed for one coin but not allowed for another coin",
 			args: args{
-				from: sdk.AccAddress("from"),
-				to:   sdk.AccAddress("to"),
+				addr: sdk.AccAddress("from"),
 				coinsToAllowList: []CoinToAllowList{
 					{
 						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test", sdk.AccAddress("from")), 100),
@@ -1502,8 +1486,7 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedSendReceiveCoins() {
 					},
 				},
 			},
-			senderIsAllowed:   false,
-			receiverIsAllowed: true,
+			isAllowed: false,
 		},
 	}
 
@@ -1519,16 +1502,14 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedSendReceiveCoins() {
 					}
 				}
 			}
-			senderIsAllowed, receiverIsAllowed :=
-				app.BankKeeper.IsAllowedSendReceiveCoins(ctx, tt.args.from, tt.args.to, coins...)
+			denomToAllowedAddressesCache := make(map[string]keeper.AllowedAddresses)
+			isAllowed :=
+				app.BankKeeper.IsAllowedToSendCoins(ctx, tt.args.addr, coins, denomToAllowedAddressesCache)
 
 			// Use suite.Require to assert the results
-			suite.Require().Equal(tt.senderIsAllowed, senderIsAllowed,
-				fmt.Errorf("IsAllowedSendReceiveCoins() senderIsAllowed = %v, want %v",
-					senderIsAllowed, tt.senderIsAllowed))
-			suite.Require().Equal(tt.receiverIsAllowed, receiverIsAllowed,
-				fmt.Errorf("IsAllowedSendReceiveCoins() receiverIsAllowed = %v, want %v",
-					receiverIsAllowed, tt.receiverIsAllowed))
+			suite.Require().Equal(tt.isAllowed, isAllowed,
+				fmt.Errorf("IsAllowedToSendCoins() isAllowed = %v, want %v",
+					isAllowed, tt.isAllowed))
 		})
 	}
 }

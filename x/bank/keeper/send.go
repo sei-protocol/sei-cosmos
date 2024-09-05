@@ -8,6 +8,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	"strings"
 )
 
 // SendKeeper defines a module interface that facilitates the transfer of coins
@@ -29,6 +30,9 @@ type SendKeeper interface {
 
 	IsSendEnabledCoin(ctx sdk.Context, coin sdk.Coin) bool
 	IsSendEnabledCoins(ctx sdk.Context, coins ...sdk.Coin) error
+	SetDenomAllowList(ctx sdk.Context, denom string, allowList types.AllowList)
+	GetDenomAllowList(ctx sdk.Context, denom string) types.AllowList
+	IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool
 
 	BlockedAddr(addr sdk.AccAddress) bool
 	RegisterRecipientChecker(RecipientChecker)
@@ -89,11 +93,15 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 	if err := types.ValidateInputsOutputs(inputs, outputs); err != nil {
 		return err
 	}
-
+	denomToAllowListCache := make(map[string]AllowedAddresses)
 	for _, in := range inputs {
 		inAddress, err := sdk.AccAddressFromBech32(in.Address)
 		if err != nil {
 			return err
+		}
+		allowedToSend := k.IsAllowedToSendCoins(ctx, inAddress, in.Coins, denomToAllowListCache)
+		if !allowedToSend {
+			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", inAddress)
 		}
 
 		err = k.SubUnlockedCoins(ctx, inAddress, in.Coins, true)
@@ -113,6 +121,10 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 		outAddress, err := sdk.AccAddressFromBech32(out.Address)
 		if err != nil {
 			return err
+		}
+		allowedToReceive := k.IsAllowedToSendCoins(ctx, outAddress, out.Coins, denomToAllowListCache)
+		if !allowedToReceive {
+			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", outAddress)
 		}
 		err = k.AddCoins(ctx, outAddress, out.Coins, true)
 		if err != nil {
@@ -144,6 +156,17 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 // SendCoins transfers amt coins from a sending account to a receiving account.
 // An error is returned upon failure.
 func (k BaseSendKeeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error {
+	denomToAllowedAddressesCache := make(map[string]AllowedAddresses)
+	fromAllowed := k.IsAllowedToSendCoins(ctx, fromAddr, amt, denomToAllowedAddressesCache)
+	if !fromAllowed {
+		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", fromAddr)
+	}
+
+	toAllowed := k.IsAllowedToSendCoins(ctx, toAddr, amt, denomToAllowedAddressesCache)
+	if !toAllowed {
+		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr)
+	}
+
 	if err := k.SendCoinsWithoutAccCreation(ctx, fromAddr, toAddr, amt); err != nil {
 		return err
 	}
@@ -431,4 +454,92 @@ func (k BaseSendKeeper) CanSendTo(ctx sdk.Context, recipient sdk.AccAddress) boo
 
 func SplitUseiWeiAmount(amt sdk.Int) (sdk.Int, sdk.Int) {
 	return amt.Quo(OneUseiInWei), amt.Mod(OneUseiInWei)
+}
+
+func (k BaseSendKeeper) SetDenomAllowList(ctx sdk.Context, denom string, allowList types.AllowList) {
+	store := ctx.KVStore(k.storeKey)
+	denomAllowListStore := prefix.NewStore(store, types.DenomAllowListKey(denom))
+
+	m := k.cdc.MustMarshal(&allowList)
+	denomAllowListStore.Set([]byte(denom), m)
+}
+
+func (k BaseSendKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.AllowList {
+	store := ctx.KVStore(k.storeKey)
+	store = prefix.NewStore(store, types.DenomAllowListKey(denom))
+
+	bz := store.Get([]byte(denom))
+	if bz == nil {
+		return types.AllowList{}
+	}
+
+	var metadata types.AllowList
+	k.cdc.MustUnmarshal(bz, &metadata)
+
+	return metadata
+}
+
+func (k BaseSendKeeper) IsAllowedSendReceiveCoins(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, coins ...sdk.Coin) (bool, bool) {
+	allowedAddressesCache := make(map[string]AllowedAddresses)
+	for _, coin := range coins {
+		// skip if denom does not contain token factory prefix
+		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
+			allowedAddresses := k.getAllowedAddresses(ctx, allowedAddressesCache, coin.Denom)
+			if len(allowedAddresses.set) > 0 {
+				if !allowedAddresses.contains(from) {
+					return false, true
+				}
+				if !allowedAddresses.contains(to) {
+					return true, false
+				}
+			}
+		}
+	}
+
+	return true, true
+}
+
+func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool {
+	for _, coin := range coins {
+		// skip if denom does not contain token factory prefix
+		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
+			allowedAddresses := k.getAllowedAddresses(ctx, cache, coin.Denom)
+			if len(allowedAddresses.set) > 0 {
+				return allowedAddresses.contains(addr)
+			}
+		}
+	}
+	return true
+}
+
+func (k BaseSendKeeper) getAllowedAddresses(ctx sdk.Context, cache map[string]AllowedAddresses, denom string) AllowedAddresses {
+	allowedAddresses, exists := cache[denom]
+	if !exists {
+		allowList := k.GetDenomAllowList(ctx, denom)
+		allowedAddresses = k.buildAllowedAddressesMap(allowList)
+		// we cache even if the allowList is empty to avoid multiple db reads
+		cache[denom] = allowedAddresses
+	}
+	return allowedAddresses
+}
+
+type AllowedAddresses struct {
+	set map[string]struct{}
+}
+
+func (a AllowedAddresses) contains(address sdk.AccAddress) bool {
+	_, exists := a.set[address.String()]
+	return exists
+}
+
+func (k BaseSendKeeper) buildAllowedAddressesMap(allowList types.AllowList) AllowedAddresses {
+	allowedAddressesMap := make(map[string]struct{})
+	if allowList.Addresses != nil && len(allowList.Addresses) > 0 {
+		for _, addr := range allowList.Addresses {
+			allowedAddressesMap[addr] = struct{}{}
+		}
+	}
+	return AllowedAddresses{
+		set: allowedAddressesMap,
+	}
 }

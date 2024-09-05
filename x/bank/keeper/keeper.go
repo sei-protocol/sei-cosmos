@@ -3,6 +3,8 @@ package keeper
 import (
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,11 +15,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/bank/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	abci "github.com/tendermint/tendermint/abci/types"
-	"sort"
-)
-
-const (
-	TokenFactoryPrefix = "factory"
 )
 
 var _ Keeper = (*BaseKeeper)(nil)

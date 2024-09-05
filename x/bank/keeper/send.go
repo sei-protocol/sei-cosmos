@@ -484,26 +484,6 @@ func (k BaseSendKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.A
 	return metadata
 }
 
-func (k BaseSendKeeper) IsAllowedSendReceiveCoins(ctx sdk.Context, from sdk.AccAddress, to sdk.AccAddress, coins ...sdk.Coin) (bool, bool) {
-	allowedAddressesCache := make(map[string]AllowedAddresses)
-	for _, coin := range coins {
-		// skip if denom does not contain token factory prefix
-		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
-			allowedAddresses := k.getAllowedAddresses(ctx, allowedAddressesCache, coin.Denom)
-			if len(allowedAddresses.set) > 0 {
-				if !allowedAddresses.contains(from) {
-					return false, true
-				}
-				if !allowedAddresses.contains(to) {
-					return true, false
-				}
-			}
-		}
-	}
-
-	return true, true
-}
-
 func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool {
 	for _, coin := range coins {
 		// skip if denom does not contain token factory prefix

@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	TokenFactoryPrefix = "factory"
+	TokenFactoryPrefix     = "factory"
+	TokenFactoryModuleName = "tokenfactory"
 )
 
 // SendKeeper defines a module interface that facilitates the transfer of coins
@@ -517,6 +518,12 @@ func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddres
 		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
 			allowedAddresses := k.getAllowedAddresses(ctx, cache, coin.Denom)
 			if len(allowedAddresses.set) > 0 {
+				// Add token factory module address to allowlist for minting tokens if allowlist is not empty
+				tokenFactoryAddr := k.ak.GetModuleAddress(TokenFactoryModuleName)
+				if tokenFactoryAddr != nil {
+					allowedAddresses.set[tokenFactoryAddr.String()] = struct{}{}
+				}
+
 				return allowedAddresses.contains(addr)
 			}
 		}

@@ -1627,7 +1627,7 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedToSendCoins() {
 			isAllowed: true,
 		},
 		{
-			name: "allowed with a factory coin with no empty allow list",
+			name: "allowed with a factory coin with empty allow list",
 			args: args{
 				addr: sdk.AccAddress("from"),
 				coinsToAllowList: []CoinToAllowList{

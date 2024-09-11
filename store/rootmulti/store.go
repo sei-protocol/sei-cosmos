@@ -218,7 +218,9 @@ func (rs *Store) LoadVersionAndUpgrade(ver int64, upgrades *types.StoreUpgrades)
 
 // LoadLatestVersion implements CommitMultiStore.
 func (rs *Store) LoadLatestVersion() error {
+	fmt.Printf("[DebugComos] Multistore v1 LoadLatestVersion\n")
 	ver := GetLatestVersion(rs.db)
+	fmt.Printf("[DebugComos] Loadlatest version without upgrade: %d\n", ver)
 	err := rs.loadVersion(ver, nil)
 	return err
 }
@@ -229,6 +231,7 @@ func (rs *Store) LoadVersion(ver int64) error {
 }
 
 func (rs *Store) loadVersion(ver int64, upgrades *types.StoreUpgrades) error {
+	fmt.Printf("[DebugComos] Multistore loadversion with ver: %d\n", ver)
 	infos := make(map[string]types.StoreInfo)
 
 	cInfo := &types.CommitInfo{}
@@ -246,6 +249,7 @@ func (rs *Store) loadVersion(ver int64, upgrades *types.StoreUpgrades) error {
 			infos[storeInfo.Name] = storeInfo
 		}
 	}
+	fmt.Printf("[DebugComos] Finished loading store info\n")
 
 	// load each Store (note this doesn't panic on unmounted keys now)
 	var newStores = make(map[types.StoreKey]types.CommitKVStore)
@@ -272,7 +276,7 @@ func (rs *Store) loadVersion(ver int64, upgrades *types.StoreUpgrades) error {
 		if upgrades.IsAdded(key.Name()) {
 			storeParams.initialVersion = uint64(ver) + 1
 		}
-
+		fmt.Printf("[DebugComos] Start loadCommitStoreFromParams for key:%s\n", key.Name())
 		store, err := rs.loadCommitStoreFromParams(key, commitID, storeParams)
 		if err != nil {
 			return errors.Wrap(err, "failed to load store")
@@ -280,12 +284,15 @@ func (rs *Store) loadVersion(ver int64, upgrades *types.StoreUpgrades) error {
 
 		newStores[key] = store
 
+		fmt.Printf("[DebugComos] Finished loadCommitStoreFromParams for key:%s\n", key.Name())
 		// If it was deleted, remove all data
 		if upgrades.IsDeleted(key.Name()) {
+			fmt.Printf("[DebugComos] Deleting store for key:%s\n", key.Name())
 			deleteKVStore(store.(types.KVStore))
 		} else if oldName := upgrades.RenamedFrom(key.Name()); oldName != "" {
 			// handle renames specially
 			// make an unregistered key to satify loadCommitStore params
+			fmt.Printf("[DebugComos] Renaming store for key:%s\n", key.Name())
 			oldKey := types.NewKVStoreKey(oldName)
 			oldParams := storeParams
 			oldParams.key = oldKey

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	store "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,11 +14,13 @@ func UpgradeStoreLoader(upgradeHeight int64, storeUpgrades *store.StoreUpgrades)
 		if upgradeHeight == ms.LastCommitID().Version+1 {
 			// Check if the current commit version and upgrade height matches
 			if len(storeUpgrades.Renamed) > 0 || len(storeUpgrades.Deleted) > 0 || len(storeUpgrades.Added) > 0 {
+				fmt.Printf("[DebugComos] LoadLatestVersionAndUpgrade\n")
 				return ms.LoadLatestVersionAndUpgrade(storeUpgrades)
 			}
 		}
 
 		// Otherwise load default store loader
+		fmt.Printf("[DebugComos] Going to use default store loader\n")
 		return baseapp.DefaultStoreLoader(ms)
 	}
 }

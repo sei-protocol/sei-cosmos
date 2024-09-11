@@ -416,6 +416,7 @@ func (app *BaseApp) MountStore(key sdk.StoreKey, typ sdk.StoreType) {
 // LoadLatestVersion loads the latest application version. It will panic if
 // called more than once on a running BaseApp.
 func (app *BaseApp) LoadLatestVersion() error {
+	fmt.Printf("[DebugCosmos] LoadLatestVersion called\n")
 	err := app.storeLoader(app.cms)
 	if err != nil {
 		return fmt.Errorf("failed to load latest version: %w", err)

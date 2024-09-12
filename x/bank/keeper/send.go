@@ -501,10 +501,10 @@ func (k BaseSendKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.A
 		return types.AllowList{}
 	}
 
-	var metadata types.AllowList
-	k.cdc.MustUnmarshal(bz, &metadata)
+	var allowList types.AllowList
+	k.cdc.MustUnmarshal(bz, &allowList)
 
-	return metadata
+	return allowList
 }
 
 // IsAllowedToSendCoins checks if the given address is allowed to send the given coins.

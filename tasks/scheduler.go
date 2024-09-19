@@ -341,12 +341,18 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		iterations++
 	}
 
+	var totalGas uint64
+	for _, t := range tasks {
+		totalGas += t.Ctx.GasMeter().GasConsumed()
+		ctx.Logger().Info("[DEBUG] gas consumed", "tx", t.AbsoluteIndex, "gas", t.Ctx.GasMeter().GasConsumed())
+	}
+
 	for _, mv := range s.multiVersionStores {
 		mv.WriteLatestToStore()
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
-	ctx.Logger().Info("occ scheduler", "height", ctx.BlockHeight(), "txs", len(tasks), "latency_ms", time.Since(startTime).Milliseconds(), "retries", s.metrics.retries, "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
+	ctx.Logger().Info("occ scheduler", "gas", totalGas, "height", ctx.BlockHeight(), "txs", len(tasks), "latency_ms", time.Since(startTime).Milliseconds(), "retries", s.metrics.retries, "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
 
 	return s.collectResponses(tasks), nil
 }

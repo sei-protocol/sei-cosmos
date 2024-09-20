@@ -102,8 +102,8 @@ func (s Subspace) Validate(ctx sdk.Context, key []byte, value interface{}) error
 func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	s.checkType(key, ptr)
 	// print ctx pretty
-	fmt.Printf("[Debug] Context: %+v\n", ctx)
 	store := s.kvStore(ctx)
+	fmt.Println("[Debug] Store", store)
 	fmt.Println("[Debug] Getting key", string(key), "at height", ctx.BlockHeight())
 	bz := store.Get(key)
 	fmt.Println("[Debug] Got key", string(key), "at height", ctx.BlockHeight(), "with bz", bz)

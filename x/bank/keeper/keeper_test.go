@@ -1682,9 +1682,30 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedToSendCoins() {
 						},
 					},
 					{
+						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test2", sdk.AccAddress("from")), 100),
+						allowList: types.AllowList{
+							Addresses: []string{sdk.AccAddress("other").String(), sdk.AccAddress("yetanother").String()},
+						},
+					},
+				},
+			},
+			isAllowed: false,
+		},
+		{
+			name: "not allowed for first coin but allowed for another coin",
+			args: args{
+				addr: sdk.AccAddress("from"),
+				coinsToAllowList: []CoinToAllowList{
+					{
 						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test", sdk.AccAddress("from")), 100),
 						allowList: types.AllowList{
 							Addresses: []string{sdk.AccAddress("other").String(), sdk.AccAddress("yetanother").String()},
+						},
+					},
+					{
+						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test2", sdk.AccAddress("from")), 100),
+						allowList: types.AllowList{
+							Addresses: []string{sdk.AccAddress("from").String(), sdk.AccAddress("to").String()},
 						},
 					},
 				},

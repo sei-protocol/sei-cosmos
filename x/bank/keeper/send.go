@@ -524,7 +524,9 @@ func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddres
 					allowedAddresses.set[tokenFactoryAddr.String()] = struct{}{}
 				}
 
-				return allowedAddresses.contains(addr)
+				if !allowedAddresses.contains(addr) {
+					return false
+				}
 			}
 		}
 	}

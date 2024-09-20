@@ -103,11 +103,11 @@ func (s Subspace) Get(ctx sdk.Context, key []byte, ptr interface{}) {
 	s.checkType(key, ptr)
 	// print ctx pretty
 	store := s.kvStore(ctx)
-	fmt.Println("[Debug] Store", store)
-	fmt.Println("[Debug] Getting key", string(key), "at height", ctx.BlockHeight())
 	bz := store.Get(key)
-	fmt.Println("[Debug] Got key", string(key), "at height", ctx.BlockHeight(), "with bz", bz)
-
+	if len(bz) == 0 {
+		fmt.Printf("[Debug] Key %s not found\n", string(key))
+		return
+	}
 	if err := s.legacyAmino.UnmarshalJSON(bz, ptr); err != nil {
 		panic(err)
 	}

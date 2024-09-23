@@ -214,6 +214,11 @@ func (rs *Store) GetStoreType() types.StoreType {
 	return types.StoreTypeMulti
 }
 
+// GetStateStore returns the ssStore instance
+func (rs *Store) GetStateStore() sstypes.StateStore {
+	return rs.ssStore
+}
+
 // Implements interface CacheWrapper
 func (rs *Store) CacheWrap(_ types.StoreKey) types.CacheWrap {
 	return rs.CacheMultiStore().(types.CacheWrap)

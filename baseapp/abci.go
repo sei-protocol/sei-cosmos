@@ -912,12 +912,25 @@ func handleQueryApp(app *BaseApp, path []string, req abci.RequestQuery) abci.Res
 }
 
 func handleQueryStore(app *BaseApp, path []string, req abci.RequestQuery) abci.ResponseQuery {
-	// "/store" prefix for store queries
-	queryable, ok := app.cms.(sdk.Queryable)
-	if !ok {
-		return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
+
+	var (
+		queryable sdk.Queryable
+		ok        bool
+	)
+	// Check if online migration is enabled for fallback read
+	if req.Height < app.migrationHeight && app.qms != nil {
+		queryable, ok = app.qms.(sdk.Queryable)
+		if !ok {
+			return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
+		}
+	} else {
+		queryable, ok = app.cms.(sdk.Queryable)
+		if !ok {
+			return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
+		}
 	}
 
+	// "/store" prefix for store queries
 	req.Path = "/" + strings.Join(path[1:], "/")
 
 	if req.Height <= 1 && req.Prove {

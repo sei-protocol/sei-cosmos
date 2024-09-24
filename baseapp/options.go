@@ -362,7 +362,12 @@ func (app *BaseApp) SetStreamingService(s StreamingService) {
 	app.abciListeners = append(app.abciListeners, s)
 }
 
-// SetQueryMultiStore set a alternative MultiStore implementation to support grpc query service.
+// SetQueryMultiStore set a alternative MultiStore implementation to support online migration fallback read.
 func (app *BaseApp) SetQueryMultiStore(ms sdk.MultiStore) {
 	app.qms = ms
+}
+
+// SetMigrationHeight set the migration height for online migration so that query below this height will still be served from IAVL.
+func (app *BaseApp) SetMigrationHeight(height int64) {
+	app.migrationHeight = height
 }

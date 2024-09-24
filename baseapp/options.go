@@ -361,3 +361,8 @@ func (app *BaseApp) SetStreamingService(s StreamingService) {
 	// BaseApp will pass BeginBlock, DeliverTx, and EndBlock requests and responses to the streaming services to update their ABCI context
 	app.abciListeners = append(app.abciListeners, s)
 }
+
+// SetQueryMultiStore set a alternative MultiStore implementation to support grpc query service.
+func (app *BaseApp) SetQueryMultiStore(ms sdk.MultiStore) {
+	app.qms = ms
+}

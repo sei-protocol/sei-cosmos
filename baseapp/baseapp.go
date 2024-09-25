@@ -179,9 +179,11 @@ type BaseApp struct { //nolint: maligned
 }
 
 type appStore struct {
-	db          dbm.DB               // common DB backend
-	cms         sdk.CommitMultiStore // Main (uncached) state
-	storeLoader StoreLoader          // function to handle store loading, may be overridden with SetStoreLoader()
+	db              dbm.DB               // common DB backend
+	cms             sdk.CommitMultiStore // Main (uncached) state
+	qms             sdk.MultiStore       // Query multistore used for migration only
+	migrationHeight int64
+	storeLoader     StoreLoader // function to handle store loading, may be overridden with SetStoreLoader()
 
 	// an inter-block write-through cache provided to the context during deliverState
 	interBlockCache sdk.MultiStorePersistentCache

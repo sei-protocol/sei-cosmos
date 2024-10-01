@@ -45,7 +45,6 @@ func (stdTxSignModeHandler) GetSignBytes(mode signingtypes.SignMode, data signin
 	ret := StdSignBytes(
 		data.ChainID, data.AccountNumber, data.Sequence, stdTx.GetTimeoutHeight(), StdFee{Amount: stdTx.GetFee(), Gas: stdTx.GetGas()}, tx.GetMsgs(), stdTx.GetMemo(),
 	)
-	fmt.Println("[DEBUG] amino sign bytes", ret)
 	return ret, nil
 }
 

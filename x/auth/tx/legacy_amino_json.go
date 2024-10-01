@@ -46,9 +46,11 @@ func (s signModeLegacyAminoJSONHandler) GetSignBytes(mode signingtypes.SignMode,
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "SIGN_MODE_LEGACY_AMINO_JSON does not support protobuf extension options.")
 	}
 
-	return legacytx.StdSignBytes(
+	ret := legacytx.StdSignBytes(
 		data.ChainID, data.AccountNumber, data.Sequence, protoTx.GetTimeoutHeight(),
 		legacytx.StdFee{Amount: protoTx.GetFee(), Gas: protoTx.GetGas()},
 		tx.GetMsgs(), protoTx.GetMemo(),
-	), nil
+	)
+	fmt.Println("[DEBUG] legacy amino json handler", ret)
+	return ret, nil
 }

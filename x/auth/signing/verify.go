@@ -23,7 +23,7 @@ func VerifySignature(pubKey cryptotypes.PubKey, signerData SignerData, sigData s
 			fmt.Printf("[DEBUG] pubkey type %T\n", pubKey)
 			return fmt.Errorf("unable to verify single signer signature")
 		}
-		fmt.Println("[DEBU] verified single signer signature", data.Signature, signBytes)
+
 		return nil
 
 	case *signing.MultiSignatureData:

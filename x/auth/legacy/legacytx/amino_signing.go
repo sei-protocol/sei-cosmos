@@ -42,9 +42,11 @@ func (stdTxSignModeHandler) GetSignBytes(mode signingtypes.SignMode, data signin
 		return nil, fmt.Errorf("expected %T, got %T", StdTx{}, tx)
 	}
 
-	return StdSignBytes(
+	ret := StdSignBytes(
 		data.ChainID, data.AccountNumber, data.Sequence, stdTx.GetTimeoutHeight(), StdFee{Amount: stdTx.GetFee(), Gas: stdTx.GetGas()}, tx.GetMsgs(), stdTx.GetMemo(),
-	), nil
+	)
+	fmt.Println("[DEBUG] amino sign bytes", ret)
+	return ret, nil
 }
 
 // SignatureDataToAminoSignature converts a SignatureData to amino-encoded signature bytes.

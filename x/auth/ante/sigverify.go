@@ -293,6 +293,7 @@ func (svd SigVerificationDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simul
 		// no need to verify signatures on recheck tx
 		if !simulate && !ctx.IsReCheckTx() {
 			err := authsigning.VerifySignature(pubKey, signerData, sig.Data, svd.signModeHandler, tx)
+			fmt.Println("[DEBUG] verify signature error", err)
 			if err != nil {
 				var errMsg string
 				if OnlyLegacyAminoSigners(sig.Data) {

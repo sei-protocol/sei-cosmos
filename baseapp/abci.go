@@ -327,8 +327,10 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx, tx sdk
 			resultStr = "failed"
 		}
 	}
+
+	infiniteGasCtx := ctx.WithGasMeter(sdk.NewInfiniteGasMeter(1, 1))
 	for _, hook := range app.deliverTxHooks {
-		hook(ctx, tx, checksum, res)
+		hook(infiniteGasCtx, tx, checksum, res)
 	}
 	return
 }

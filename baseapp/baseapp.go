@@ -1227,22 +1227,24 @@ func (app *BaseApp) getDeliverTxResponse(ctx sdk.Context, gInfo sdk.GasInfo, res
 	res := abci.ResponseDeliverTx{
 		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
 		GasUsed:   int64(gInfo.GasUsed),   // TODO: Should type accept unsigned ints?
-		Log:       result.Log,
-		Data:      result.Data,
-		Events:    sdk.MarkEventsToIndex(result.Events, app.indexEvents),
 	}
-	if ctx.IsEVM() {
-		res.EvmTxInfo = &abci.EvmTxInfo{
-			SenderAddress: ctx.EVMSenderAddress(),
-			Nonce:         ctx.EVMNonce(),
-			TxHash:        ctx.EVMTxHash(),
-			VmError:       result.EvmError,
-		}
-		// TODO: populate error data for EVM err
-		if result.EvmError != "" {
-			evmErr := sdkerrors.Wrap(sdkerrors.ErrEVMVMError, result.EvmError)
-			res.Codespace, res.Code, res.Log = sdkerrors.ABCIInfo(evmErr, app.trace)
-			*resultStr = "failed"
+	if result != nil {
+		res.Log = result.Log
+		res.Data = result.Data
+		res.Events = sdk.MarkEventsToIndex(result.Events, app.indexEvents)
+		if ctx.IsEVM() {
+			res.EvmTxInfo = &abci.EvmTxInfo{
+				SenderAddress: ctx.EVMSenderAddress(),
+				Nonce:         ctx.EVMNonce(),
+				TxHash:        ctx.EVMTxHash(),
+				VmError:       result.EvmError,
+			}
+			// TODO: populate error data for EVM err
+			if result.EvmError != "" {
+				evmErr := sdkerrors.Wrap(sdkerrors.ErrEVMVMError, result.EvmError)
+				res.Codespace, res.Code, res.Log = sdkerrors.ABCIInfo(evmErr, app.trace)
+				*resultStr = "failed"
+			}
 		}
 	}
 	return res

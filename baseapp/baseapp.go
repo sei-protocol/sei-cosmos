@@ -1007,6 +1007,11 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 	if ctx.CheckTxCallback() != nil {
 		ctx.CheckTxCallback()(ctx, err)
 	}
+	resultStr := ""
+	res := app.getDeliverTxResponse(ctx, gInfo, result, &resultStr)
+	for _, hook := range app.deliverTxHooks {
+		hook(ctx, tx, checksum, res)
+	}
 	return gInfo, result, anteEvents, priority, pendingTxChecker, expireHandler, ctx, err
 }
 
@@ -1216,4 +1221,29 @@ func (app *BaseApp) GetCheckCtx() sdk.Context {
 
 func (app *BaseApp) RegisterDeliverTxHook(hook DeliverTxHook) {
 	app.deliverTxHooks = append(app.deliverTxHooks, hook)
+}
+
+func (app *BaseApp) getDeliverTxResponse(ctx sdk.Context, gInfo sdk.GasInfo, result *sdk.Result, resultStr *string) abci.ResponseDeliverTx {
+	res := abci.ResponseDeliverTx{
+		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
+		GasUsed:   int64(gInfo.GasUsed),   // TODO: Should type accept unsigned ints?
+		Log:       result.Log,
+		Data:      result.Data,
+		Events:    sdk.MarkEventsToIndex(result.Events, app.indexEvents),
+	}
+	if ctx.IsEVM() {
+		res.EvmTxInfo = &abci.EvmTxInfo{
+			SenderAddress: ctx.EVMSenderAddress(),
+			Nonce:         ctx.EVMNonce(),
+			TxHash:        ctx.EVMTxHash(),
+			VmError:       result.EvmError,
+		}
+		// TODO: populate error data for EVM err
+		if result.EvmError != "" {
+			evmErr := sdkerrors.Wrap(sdkerrors.ErrEVMVMError, result.EvmError)
+			res.Codespace, res.Code, res.Log = sdkerrors.ABCIInfo(evmErr, app.trace)
+			*resultStr = "failed"
+		}
+	}
+	return res
 }

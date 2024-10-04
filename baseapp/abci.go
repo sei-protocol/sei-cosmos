@@ -305,32 +305,7 @@ func (app *BaseApp) DeliverTx(ctx sdk.Context, req abci.RequestDeliverTx, tx sdk
 		}
 		return sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, sdk.MarkEventsToIndex(anteEvents, app.indexEvents), app.trace)
 	}
-
-	res = abci.ResponseDeliverTx{
-		GasWanted: int64(gInfo.GasWanted), // TODO: Should type accept unsigned ints?
-		GasUsed:   int64(gInfo.GasUsed),   // TODO: Should type accept unsigned ints?
-		Log:       result.Log,
-		Data:      result.Data,
-		Events:    sdk.MarkEventsToIndex(result.Events, app.indexEvents),
-	}
-	if resCtx.IsEVM() {
-		res.EvmTxInfo = &abci.EvmTxInfo{
-			SenderAddress: resCtx.EVMSenderAddress(),
-			Nonce:         resCtx.EVMNonce(),
-			TxHash:        resCtx.EVMTxHash(),
-			VmError:       result.EvmError,
-		}
-		// TODO: populate error data for EVM err
-		if result.EvmError != "" {
-			evmErr := sdkerrors.Wrap(sdkerrors.ErrEVMVMError, result.EvmError)
-			res.Codespace, res.Code, res.Log = sdkerrors.ABCIInfo(evmErr, app.trace)
-			resultStr = "failed"
-			return
-		}
-	}
-	for _, hook := range app.deliverTxHooks {
-		hook(ctx, tx, checksum, res)
-	}
+	res = app.getDeliverTxResponse(resCtx, gInfo, result, &resultStr)
 	return
 }
 

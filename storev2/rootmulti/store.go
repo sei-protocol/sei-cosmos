@@ -63,6 +63,7 @@ func NewStore(
 	logger log.Logger,
 	scConfig config.StateCommitConfig,
 	ssConfig config.StateStoreConfig,
+	migrateIavl bool,
 ) *Store {
 	scStore := sc.NewCommitStore(homeDir, logger, scConfig)
 	store := &Store{
@@ -81,7 +82,7 @@ func NewStore(
 		// Check whether SC was enabled before but SS was not
 		ssVersion, _ := ssStore.GetLatestVersion()
 		scVersion, _ := scStore.GetLatestVersion()
-		if ssVersion <= 0 && scVersion > 0 {
+		if ssVersion <= 0 && scVersion > 0 && !migrateIavl {
 			panic("Enabling SS store without state sync could cause data corruption")
 		}
 		if err = ss.RecoverStateStore(logger, homeDir, ssStore); err != nil {

@@ -23,6 +23,7 @@ import (
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/tasks"
 	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/legacytm"
@@ -707,7 +708,8 @@ func checkNegativeHeight(height int64) error {
 // CreateQueryContext creates a new sdk.Context for a query, taking as args
 // the block height and whether the query needs a proof or not.
 func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, error) {
-	if err := checkNegativeHeight(height); err != nil {
+	err := checkNegativeHeight(height)
+	if err != nil {
 		return sdk.Context{}, err
 	}
 
@@ -733,7 +735,12 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 			)
 	}
 
-	cacheMS, err := app.cms.CacheMultiStoreWithVersion(height)
+	var cacheMS types.CacheMultiStore
+	if height < app.migrationHeight && app.qms != nil {
+		cacheMS, err = app.qms.CacheMultiStoreWithVersion(height)
+	} else {
+		cacheMS, err = app.cms.CacheMultiStoreWithVersion(height)
+	}
 	if err != nil {
 		return sdk.Context{},
 			sdkerrors.Wrapf(
@@ -904,12 +911,24 @@ func handleQueryApp(app *BaseApp, path []string, req abci.RequestQuery) abci.Res
 }
 
 func handleQueryStore(app *BaseApp, path []string, req abci.RequestQuery) abci.ResponseQuery {
-	// "/store" prefix for store queries
-	queryable, ok := app.cms.(sdk.Queryable)
-	if !ok {
-		return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
+	var (
+		queryable sdk.Queryable
+		ok        bool
+	)
+	// Check if online migration is enabled for fallback read
+	if req.Height < app.migrationHeight && app.qms != nil {
+		queryable, ok = app.qms.(sdk.Queryable)
+		if !ok {
+			return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
+		}
+	} else {
+		queryable, ok = app.cms.(sdk.Queryable)
+		if !ok {
+			return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
+		}
 	}
 
+	// "/store" prefix for store queries
 	req.Path = "/" + strings.Join(path[1:], "/")
 
 	if req.Height <= 1 && req.Prove {

@@ -83,6 +83,8 @@ func NewStore(
 		ssVersion, _ := ssStore.GetLatestVersion()
 		scVersion, _ := scStore.GetLatestVersion()
 		if ssVersion <= 0 && scVersion > 0 && !migrateIavl {
+			fmt.Printf("PANIC - Enabling SS store without state sync could cause data corruption\n")
+			fmt.Printf("ssVersion: %d, scVersion: %d, migrateIavl: %v\n", ssVersion, scVersion, migrateIavl)
 			panic("Enabling SS store without state sync could cause data corruption")
 		}
 		if err = ss.RecoverStateStore(logger, homeDir, ssStore); err != nil {

@@ -364,8 +364,12 @@ func (app *BaseApp) SetDeliverStateToCommit() {
 // height.
 func (app *BaseApp) Commit(ctx context.Context) (res *abci.ResponseCommit, err error) {
 	defer telemetry.MeasureSince(time.Now(), "abci", "commit")
+	startTime := time.Now()
 	app.commitLock.Lock()
 	defer app.commitLock.Unlock()
+	defer func() {
+		fmt.Printf("[Cosmos-DEBUG] ABCI Commit took %s for block %d\n", time.Since(startTime), app.LastBlockHeight())
+	}()
 
 	if app.stateToCommit == nil {
 		panic("no state to commit")

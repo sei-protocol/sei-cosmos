@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -468,6 +469,10 @@ func (rs *Store) GetWorkingHash() ([]byte, error) {
 
 // Commit implements Committer/CommitStore.
 func (rs *Store) Commit(bumpVersion bool) types.CommitID {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Cosmos-DEBUG] CMS commit took %s for block %d\n", time.Since(startTime), rs.lastCommitInfo.GetVersion())
+	}()
 	var previousHeight, version int64
 	c := rs.LastCommitInfo()
 	if c.GetVersion() == 0 && rs.initialVersion > 1 {
@@ -1056,8 +1061,8 @@ func (rs *Store) RollbackToVersion(target int64) error {
 }
 
 func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo) {
+	startTime := time.Now()
 	batch := db.NewBatch()
-	defer batch.Close()
 	if cInfo != nil {
 		flushCommitInfo(batch, version, cInfo)
 	}
@@ -1066,7 +1071,9 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 	if err := batch.WriteSync(); err != nil {
 		panic(fmt.Errorf("error on batch write %w", err))
 	}
+	batch.Close()
 	rs.logger.Info("App State Saved height=%d hash=%X\n", cInfo.CommitID().Version, cInfo.CommitID().Hash)
+	fmt.Printf("[Cosmos-DEBUG] CMS flushMetadata took %s for block %d\n", time.Since(startTime), version)
 }
 
 func (rs *Store) SetOrphanConfig(opts *iavltree.Options) {
@@ -1111,6 +1118,10 @@ func GetLatestVersion(db dbm.DB) int64 {
 
 // Commits each store and returns a new commitInfo.
 func commitStores(version int64, storeMap map[types.StoreKey]types.CommitKVStore, bumpVersion bool) *types.CommitInfo {
+	startTime := time.Now()
+	defer func() {
+		fmt.Printf("[Cosmos-DEBUG] Commit all stores took %s for block %d\n", time.Since(startTime), version)
+	}()
 	storeInfos := make([]types.StoreInfo, 0, len(storeMap))
 
 	for key, store := range storeMap {

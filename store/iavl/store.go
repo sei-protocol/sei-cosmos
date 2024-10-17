@@ -161,7 +161,10 @@ func (st *Store) Commit(bumpVersion bool) types.CommitID {
 	if bumpVersion {
 		startTime := time.Now()
 		hash, version, err = st.tree.SaveVersion()
-		fmt.Printf("[Cosmos-DEBUG] Commit version took %s for version %d\n", time.Since(startTime), version)
+		latency := time.Since(startTime)
+		if latency.Seconds() > 1 {
+			fmt.Printf("[Cosmos-DEBUG] Commit version took %s for version %d\n", time.Since(startTime), version)
+		}
 	} else {
 		hash, version, err = st.tree.SaveCurrentVersion()
 	}

@@ -1125,9 +1125,7 @@ func commitStores(version int64, storeMap map[types.StoreKey]types.CommitKVStore
 	storeInfos := make([]types.StoreInfo, 0, len(storeMap))
 
 	for key, store := range storeMap {
-		commitStart := time.Now()
 		commitID := store.Commit(bumpVersion)
-		fmt.Printf("[Cosmos-DEBUG] Commit store %s took %s for block %d\n", key.Name(), time.Since(commitStart), version)
 
 		if store.GetStoreType() == types.StoreTypeTransient {
 			continue

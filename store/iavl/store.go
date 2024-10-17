@@ -159,7 +159,9 @@ func (st *Store) Commit(bumpVersion bool) types.CommitID {
 	var version int64
 	var err error
 	if bumpVersion {
+		startTime := time.Now()
 		hash, version, err = st.tree.SaveVersion()
+		fmt.Printf("[Cosmos-DEBUG] Commit version took %s for version %d\n", time.Since(startTime), version)
 	} else {
 		hash, version, err = st.tree.SaveCurrentVersion()
 	}

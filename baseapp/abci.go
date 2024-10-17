@@ -738,8 +738,10 @@ func (app *BaseApp) CreateQueryContext(height int64, prove bool) (sdk.Context, e
 	var cacheMS types.CacheMultiStore
 	if height < app.migrationHeight && app.qms != nil {
 		cacheMS, err = app.qms.CacheMultiStoreWithVersion(height)
+		app.logger.Info("SeiDB Archive Migration: Serving Query From Iavl", "height", height)
 	} else {
 		cacheMS, err = app.cms.CacheMultiStoreWithVersion(height)
+		app.logger.Info("SeiDB Archive Migration: Serving Query From State Store", "height", height)
 	}
 
 	if err != nil {
@@ -912,7 +914,6 @@ func handleQueryApp(app *BaseApp, path []string, req abci.RequestQuery) abci.Res
 }
 
 func handleQueryStore(app *BaseApp, path []string, req abci.RequestQuery) abci.ResponseQuery {
-
 	var (
 		queryable sdk.Queryable
 		ok        bool
@@ -923,11 +924,13 @@ func handleQueryStore(app *BaseApp, path []string, req abci.RequestQuery) abci.R
 		if !ok {
 			return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
 		}
+		app.logger.Info("SeiDB Archive Migration: Serving Query From Iavl", "height", req.Height)
 	} else {
 		queryable, ok = app.cms.(sdk.Queryable)
 		if !ok {
 			return sdkerrors.QueryResultWithDebug(sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "multistore doesn't support queries"), app.trace)
 		}
+		app.logger.Info("SeiDB Archive Migration: Serving Query From State Store", "height", req.Height)
 	}
 
 	// "/store" prefix for store queries

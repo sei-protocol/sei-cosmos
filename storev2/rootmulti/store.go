@@ -824,7 +824,7 @@ loop:
 			}
 			scImporter.AddNode(node)
 			nodeCount++
-			if nodeCount%10000 == 0 {
+			if nodeCount%100000 == 0 {
 				fmt.Printf("Added %d nodes to SC importer\n", nodeCount)
 			}
 

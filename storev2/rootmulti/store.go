@@ -752,6 +752,7 @@ func (rs *Store) restore(height int64, protoReader protoio.Reader) (snapshottype
 		snapshotItem snapshottypes.SnapshotItem
 		storeKey     string
 		restoreErr   error
+		nodeCount    int
 	)
 
 	fmt.Printf("Initializing SC store importer\n")
@@ -821,8 +822,11 @@ loop:
 				fmt.Printf("Setting nil value to empty for leaf node\n")
 				node.Value = []byte{}
 			}
-			fmt.Printf("Adding node to SC importer\n")
 			scImporter.AddNode(node)
+			nodeCount++
+			if nodeCount%10000 == 0 {
+				fmt.Printf("Added %d nodes to SC importer\n", nodeCount)
+			}
 
 			// Check if we should also import to SS store
 			if rs.ssStore != nil && node.Height == 0 && ssImporter != nil {

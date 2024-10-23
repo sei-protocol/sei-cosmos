@@ -16,7 +16,7 @@ type DeliverTxEntry struct {
 	TxTracer           TxTracer
 }
 
-// EstimatedWritesets represents an estimated writeset for a transaction mapped by storekey to the writeset estimate.
+// MappedWritesets represents an estimated writeset for a transaction mapped by storekey to the writeset estimate.
 type MappedWritesets map[StoreKey]multiversion.WriteSet
 
 // DeliverTxBatchRequest represents a request object for a batch of transactions.

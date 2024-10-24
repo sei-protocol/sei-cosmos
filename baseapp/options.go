@@ -363,7 +363,7 @@ func (app *BaseApp) SetStreamingService(s StreamingService) {
 }
 
 // SetQueryMultiStore set a alternative MultiStore implementation to support online migration fallback read.
-func (app *BaseApp) SetQueryMultiStore(ms sdk.MultiStore) {
+func (app *BaseApp) SetQueryMultiStore(ms sdk.CommitMultiStore) {
 	app.qms = ms
 }
 

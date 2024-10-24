@@ -65,7 +65,6 @@ func NewStore(
 	ssConfig config.StateStoreConfig,
 	migrateIavl bool,
 ) *Store {
-	fmt.Printf("Creating new Store with homeDir: %s\n", homeDir)
 	scStore := sc.NewCommitStore(homeDir, logger, scConfig)
 	store := &Store{
 		logger:         logger,
@@ -76,7 +75,6 @@ func NewStore(
 		pendingChanges: make(chan VersionedChangesets, 1000),
 	}
 	if ssConfig.Enable {
-		fmt.Printf("SS store is enabled, initializing...\n")
 		ssStore, err := ss.NewStateStore(logger, homeDir, ssConfig)
 		if err != nil {
 			panic(err)
@@ -84,7 +82,6 @@ func NewStore(
 		// Check whether SC was enabled before but SS was not
 		ssVersion, _ := ssStore.GetLatestVersion()
 		scVersion, _ := scStore.GetLatestVersion()
-		fmt.Printf("SS version: %d, SC version: %d\n", ssVersion, scVersion)
 		if ssVersion <= 0 && scVersion > 0 && !migrateIavl {
 			panic("Enabling SS store without state sync could cause data corruption")
 		}
@@ -94,13 +91,11 @@ func NewStore(
 		store.ssStore = ssStore
 		go store.StateStoreCommit()
 	}
-	fmt.Printf("Store creation completed\n")
 	return store
 }
 
 // Commit implements interface Committer, called by ABCI Commit
 func (rs *Store) Commit(bumpVersion bool) types.CommitID {
-	fmt.Printf("Starting Commit process, bumpVersion: %v\n", bumpVersion)
 	if !bumpVersion {
 		panic("Commit should always bump version in root multistore")
 	}
@@ -110,28 +105,23 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		panic(err)
 	}
 
-	fmt.Printf("Acquiring lock for commit\n")
 	rs.mtx.Lock()
 	defer rs.mtx.Unlock()
-	for key, store := range rs.ckvStores {
+	for _, store := range rs.ckvStores {
 		if store.GetStoreType() != types.StoreTypeIAVL {
-			fmt.Printf("Committing non-IAVL store: %s\n", key)
 			_ = store.Commit(bumpVersion)
 		}
 	}
 	// Commit to SC Store
-	fmt.Printf("Committing to SC Store\n")
 	_, err := rs.scStore.Commit()
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Reloading IAVL stores\n")
 	// The underlying sc store might be reloaded, reload the store as well.
 	for key := range rs.ckvStores {
 		store := rs.ckvStores[key]
 		if store.GetStoreType() == types.StoreTypeIAVL {
-			fmt.Printf("Reloading IAVL store: %s\n", key)
 			rs.ckvStores[key], err = rs.loadCommitStoreFromParams(key, rs.storesParams[key])
 			if err != nil {
 				panic(fmt.Errorf("inconsistent store map, store %s not found", key.Name()))
@@ -141,40 +131,32 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 
 	rs.lastCommitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())
 	rs.lastCommitInfo = amendCommitInfo(rs.lastCommitInfo, rs.storesParams)
-	fmt.Printf("Commit completed, new version: %d\n", rs.lastCommitInfo.Version)
 	return rs.lastCommitInfo.CommitID()
 }
 
 // StateStoreCommit is a background routine to apply changes to SS store
 func (rs *Store) StateStoreCommit() {
-	fmt.Printf("Starting StateStoreCommit background routine\n")
 	for pendingChangeSet := range rs.pendingChanges {
 		version := pendingChangeSet.Version
-		fmt.Printf("Applying changes to SS store for version: %d\n", version)
 		telemetry.SetGauge(float32(version), "storeV2", "ss", "version")
 		for _, cs := range pendingChangeSet.Changesets {
-			fmt.Printf("Applying changeset for store: %s\n", cs.Name)
 			if err := rs.ssStore.ApplyChangeset(version, cs); err != nil {
 				panic(err)
 			}
 		}
 	}
-	fmt.Printf("StateStoreCommit routine ended\n")
 }
 
 // Flush all the pending changesets to commit store.
 func (rs *Store) flush() error {
-	fmt.Printf("Starting flush process\n")
 	var changeSets []*proto.NamedChangeSet
 	currentVersion := rs.lastCommitInfo.Version + 1
 	for key := range rs.ckvStores {
-		fmt.Printf("Flushing store: %s\n", key)
 		// it'll unwrap the inter-block cache
 		store := rs.GetCommitKVStore(key)
 		if commitStore, ok := store.(*commitment.Store); ok {
 			cs := commitStore.PopChangeSet()
 			if len(cs.Pairs) > 0 {
-				fmt.Printf("Adding changeset for store %s with %d pairs\n", key, len(cs.Pairs))
 				changeSets = append(changeSets, &proto.NamedChangeSet{
 					Name:      key.Name(),
 					Changeset: cs,
@@ -183,19 +165,16 @@ func (rs *Store) flush() error {
 		}
 	}
 	if changeSets != nil && len(changeSets) > 0 {
-		fmt.Printf("Sorting changesets\n")
 		sort.SliceStable(changeSets, func(i, j int) bool {
 			return changeSets[i].Name < changeSets[j].Name
 		})
 		if rs.ssStore != nil {
-			fmt.Printf("Sending changesets to SS store\n")
 			rs.pendingChanges <- VersionedChangesets{
 				Version:    currentVersion,
 				Changesets: changeSets,
 			}
 		}
 	}
-	fmt.Printf("Applying changesets to SC store\n")
 	return rs.scStore.ApplyChangeSets(changeSets)
 }
 
@@ -399,9 +378,7 @@ func (rs *Store) LoadLatestVersionAndUpgrade(upgrades *types.StoreUpgrades) erro
 // Implements interface CommitMultiStore
 // used by node startup with UpgradeStoreLoader
 func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgrades) error {
-	fmt.Printf("Starting LoadVersionAndUpgrade for version: %d\n", version)
 	if version > math.MaxUint32 {
-		fmt.Printf("Error: version %d overflows uint32\n", version)
 		return fmt.Errorf("version overflows uint32: %d", version)
 	}
 
@@ -410,89 +387,69 @@ func (rs *Store) LoadVersionAndUpgrade(version int64, upgrades *types.StoreUpgra
 		storesKeys = append(storesKeys, key)
 	}
 
-	fmt.Printf("Processing upgrades\n")
 	if upgrades != nil {
 		// load storeKeys for deletion
 		for _, upgrade := range upgrades.Deleted {
-			fmt.Printf("Adding deletion storeKey: %s\n", upgrade)
 			deletionStoreKey := types.NewKVStoreKey(upgrade)
 			storesKeys = append(storesKeys, deletionStoreKey)
 		}
 	}
 	// deterministic iteration order for upgrades
-	fmt.Printf("Sorting storeKeys\n")
 	sort.Slice(storesKeys, func(i, j int) bool {
 		return storesKeys[i].Name() < storesKeys[j].Name()
 	})
 
-	fmt.Printf("Initializing stores\n")
 	initialStores := make([]string, 0, len(storesKeys))
 	for _, key := range storesKeys {
 		if rs.storesParams[key].typ == types.StoreTypeIAVL {
-			fmt.Printf("Adding IAVL store: %s\n", key.Name())
 			initialStores = append(initialStores, key.Name())
 		}
 	}
 	rs.scStore.Initialize(initialStores)
-	fmt.Printf("Loading SC store version: %d\n", version)
 	if _, err := rs.scStore.LoadVersion(version, false); err != nil {
-		fmt.Printf("Error loading SC store version: %v\n", err)
 		return nil
 	}
 
-	fmt.Printf("Processing store upgrades\n")
 	storesKeysForDeletion := make(map[types.StoreKey]struct{})
 	var treeUpgrades []*proto.TreeNameUpgrade
 	for _, key := range storesKeys {
 		switch {
 		case upgrades.IsDeleted(key.Name()):
-			fmt.Printf("Marking store for deletion: %s\n", key.Name())
 			treeUpgrades = append(treeUpgrades, &proto.TreeNameUpgrade{Name: key.Name(), Delete: true})
 			storesKeysForDeletion[key] = struct{}{}
 		case upgrades.IsAdded(key.Name()) || upgrades.RenamedFrom(key.Name()) != "":
-			fmt.Printf("Marking store for addition/rename: %s\n", key.Name())
 			treeUpgrades = append(treeUpgrades, &proto.TreeNameUpgrade{Name: key.Name(), RenameFrom: upgrades.RenamedFrom(key.Name())})
 		}
 	}
 
 	if len(treeUpgrades) > 0 {
-		fmt.Printf("Applying %d tree upgrades\n", len(treeUpgrades))
 		if err := rs.scStore.ApplyUpgrades(treeUpgrades); err != nil {
-			fmt.Printf("Error applying tree upgrades: %v\n", err)
 			return err
 		}
 	}
 
-	fmt.Printf("Loading commit stores\n")
 	var err error
 	newStores := make(map[types.StoreKey]types.CommitKVStore, len(storesKeys))
 	for _, key := range storesKeys {
 		if _, ok := storesKeysForDeletion[key]; ok {
-			fmt.Printf("Skipping deleted store: %s\n", key.Name())
 			continue
 		}
-		fmt.Printf("Loading commit store for key: %s\n", key.Name())
 		newStores[key], err = rs.loadCommitStoreFromParams(key, rs.storesParams[key])
 		if err != nil {
-			fmt.Printf("Error loading commit store for key %s: %v\n", key.Name(), err)
 			return err
 		}
 	}
 
-	fmt.Printf("Updating store state\n")
 	rs.mtx.Lock()
 	defer rs.mtx.Unlock()
 	rs.ckvStores = newStores
 	// to keep the root hash compatible with cosmos-sdk 0.46
 	if rs.scStore.Version() != 0 {
-		fmt.Printf("Setting last commit info for non-zero version\n")
 		rs.lastCommitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())
 		rs.lastCommitInfo = amendCommitInfo(rs.lastCommitInfo, rs.storesParams)
 	} else {
-		fmt.Printf("Setting empty last commit info for version 0\n")
 		rs.lastCommitInfo = &types.CommitInfo{}
 	}
-	fmt.Printf("LoadVersionAndUpgrade completed successfully\n")
 	return nil
 }
 
@@ -745,46 +702,36 @@ func (rs *Store) Restore(
 }
 
 func (rs *Store) restore(height int64, protoReader protoio.Reader) (snapshottypes.SnapshotItem, error) {
-	fmt.Printf("Starting restore process for height: %d\n", height)
 
 	var (
 		ssImporter   chan sstypes.SnapshotNode
 		snapshotItem snapshottypes.SnapshotItem
 		storeKey     string
 		restoreErr   error
-		nodeCount    int
 	)
 
-	fmt.Printf("Initializing SC store importer\n")
 	scImporter, err := rs.scStore.Importer(height)
 	if err != nil {
-		fmt.Printf("Error initializing SC store importer: %v\n", err)
 		return snapshottypes.SnapshotItem{}, err
 	}
 
 	if rs.ssStore != nil {
-		fmt.Printf("Initializing SS store importer\n")
 		ssImporter = make(chan sstypes.SnapshotNode, 10000)
 		go func() {
-			fmt.Printf("Starting SS store import goroutine\n")
 			err := rs.ssStore.Import(height, ssImporter)
 			if err != nil {
-				fmt.Printf("Error in SS store import: %v\n", err)
 				panic(err)
 			}
 		}()
 	}
 
-	fmt.Printf("Starting main restore loop\n")
 loop:
 	for {
 		snapshotItem = snapshottypes.SnapshotItem{}
 		err = protoReader.ReadMsg(&snapshotItem)
 		if err == io.EOF {
-			fmt.Printf("Reached end of snapshot data\n")
 			break
 		} else if err != nil {
-			fmt.Printf("Error reading protobuf message: %v\n", err)
 			restoreErr = errors.Wrap(err, "invalid protobuf message")
 			break loop
 		}
@@ -792,16 +739,13 @@ loop:
 		switch item := snapshotItem.Item.(type) {
 		case *snapshottypes.SnapshotItem_Store:
 			storeKey = item.Store.Name
-			fmt.Printf("Processing store: %s\n", storeKey)
 			if err = scImporter.AddTree(storeKey); err != nil {
-				fmt.Printf("Error adding tree for store %s: %v\n", storeKey, err)
 				restoreErr = err
 				break loop
 			}
 			rs.logger.Info(fmt.Sprintf("Start restoring store: %s", storeKey))
 		case *snapshottypes.SnapshotItem_IAVL:
 			if item.IAVL.Height > math.MaxInt8 {
-				fmt.Printf("Error: node height %v exceeds maximum allowed %v\n", item.IAVL.Height, math.MaxInt8)
 				restoreErr = errors.Wrapf(sdkerrors.ErrLogic, "node height %v cannot exceed %v",
 					item.IAVL.Height, math.MaxInt8)
 				break loop
@@ -815,22 +759,15 @@ loop:
 			// Protobuf does not differentiate between []byte{} as nil, but fortunately IAVL does
 			// not allow nil keys nor nil values for leaf nodes, so we can always set them to empty.
 			if node.Key == nil {
-				fmt.Printf("Setting nil key to empty for node\n")
 				node.Key = []byte{}
 			}
 			if node.Height == 0 && node.Value == nil {
-				fmt.Printf("Setting nil value to empty for leaf node\n")
 				node.Value = []byte{}
 			}
 			scImporter.AddNode(node)
-			nodeCount++
-			if nodeCount%100000 == 0 {
-				fmt.Printf("Added %d nodes to SC importer\n", nodeCount)
-			}
 
 			// Check if we should also import to SS store
 			if rs.ssStore != nil && node.Height == 0 && ssImporter != nil {
-				fmt.Printf("Sending node to SS importer\n")
 				ssImporter <- sstypes.SnapshotNode{
 					StoreKey: storeKey,
 					Key:      node.Key,
@@ -838,45 +775,35 @@ loop:
 				}
 			}
 		default:
-			fmt.Printf("Unknown element type encountered, breaking loop\n")
 			break loop
 		}
 	}
 
-	fmt.Printf("Closing SC importer\n")
 	if err = scImporter.Close(); err != nil {
-		fmt.Printf("Error closing SC importer: %v\n", err)
 		if restoreErr == nil {
 			restoreErr = err
 		}
 	}
 	if ssImporter != nil {
-		fmt.Printf("Closing SS importer channel\n")
 		close(ssImporter)
 	}
 	// initialize the earliest version for SS store
 	if rs.ssStore != nil {
-		fmt.Printf("Setting earliest version for SS store: %d\n", height)
 		rs.ssStore.SetEarliestVersion(height)
 	}
 
-	fmt.Printf("Restore process completed\n")
 	return snapshotItem, restoreErr
 }
 
 // Snapshot Implements the interface from Snapshotter
 func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
-	fmt.Printf("Starting snapshot process for height: %d\n", height)
 
 	if height > math.MaxUint32 {
-		fmt.Printf("Error: height %d overflows uint32\n", height)
 		return fmt.Errorf("height overflows uint32: %d", height)
 	}
 
-	fmt.Printf("Initializing SC store exporter\n")
 	exporter, err := rs.scStore.Exporter(int64(height))
 	if err != nil {
-		fmt.Printf("Error initializing SC store exporter: %v\n", err)
 		return err
 	}
 	defer exporter.Close()
@@ -886,12 +813,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 	numKeysPerStore := map[string]int64{}
 	currentStoreName := ""
 
-	fmt.Printf("Starting main snapshot loop\n")
 	for {
 		item, err := exporter.Next()
 		if err != nil {
 			if err == commonerrors.ErrorExportDone {
-				fmt.Printf("Export completed, setting telemetry metrics\n")
 				for k, v := range keySizePerStore {
 					telemetry.SetGaugeWithLabels(
 						[]string{"iavl", "store", "total_key_bytes"},
@@ -915,12 +840,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 				}
 				break
 			}
-			fmt.Printf("Error exporting next item: %v\n", err)
 			return err
 		}
 		switch item := item.(type) {
 		case *sctypes.SnapshotNode:
-			fmt.Printf("Processing snapshot node\n")
 			if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_IAVL{
 					IAVL: &snapshottypes.SnapshotIAVLItem{
@@ -931,14 +854,12 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 					},
 				},
 			}); err != nil {
-				fmt.Printf("Error writing snapshot node: %v\n", err)
 				return err
 			}
 			keySizePerStore[currentStoreName] += int64(len(item.Key))
 			valueSizePerStore[currentStoreName] += int64(len(item.Value))
 			numKeysPerStore[currentStoreName] += 1
 		case string:
-			fmt.Printf("Processing store: %s\n", item)
 			if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_Store{
 					Store: &snapshottypes.SnapshotStoreItem{
@@ -946,17 +867,14 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 					},
 				},
 			}); err != nil {
-				fmt.Printf("Error writing store item: %v\n", err)
 				return err
 			}
 			currentStoreName = item
 		default:
-			fmt.Printf("Error: unknown item type %T\n", item)
 			return fmt.Errorf("unknown item type %T", item)
 		}
 	}
 
-	fmt.Printf("Snapshot process completed\n")
 	return nil
 }
 

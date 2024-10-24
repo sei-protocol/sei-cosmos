@@ -181,7 +181,7 @@ type BaseApp struct { //nolint: maligned
 type appStore struct {
 	db              dbm.DB               // common DB backend
 	cms             sdk.CommitMultiStore // Main (uncached) state
-	qms             sdk.MultiStore       // Query multistore used for migration only
+	qms             sdk.CommitMultiStore // Query multistore used for migration only
 	migrationHeight int64
 	storeLoader     StoreLoader // function to handle store loading, may be overridden with SetStoreLoader()
 
@@ -413,6 +413,9 @@ func (app *BaseApp) MountMemoryStores(keys map[string]*sdk.MemoryStoreKey) {
 // using the default DB.
 func (app *BaseApp) MountStore(key sdk.StoreKey, typ sdk.StoreType) {
 	app.cms.MountStoreWithDB(key, typ, nil)
+	if app.qms != nil {
+		app.qms.MountStoreWithDB(key, typ, nil)
+	}
 }
 
 // LoadLatestVersion loads the latest application version. It will panic if
@@ -421,6 +424,13 @@ func (app *BaseApp) LoadLatestVersion() error {
 	err := app.storeLoader(app.cms)
 	if err != nil {
 		return fmt.Errorf("failed to load latest version: %w", err)
+	}
+
+	if app.qms != nil {
+		err = app.storeLoader(app.qms)
+		if err != nil {
+			return fmt.Errorf("failed to load latest version: %w", err)
+		}
 	}
 
 	return app.init()

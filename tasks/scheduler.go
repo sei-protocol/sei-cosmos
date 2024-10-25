@@ -360,8 +360,10 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		iterations++
 	}
 
-	for _, mv := range s.multiVersionStores {
-		mv.WriteLatestToStore()
+	for storeKey, mv := range s.multiVersionStores {
+		if keysWritten := mv.WriteLatestToStore(); keysWritten > 0 {
+			ctx.Logger().Info(fmt.Sprintf("writing %d keys from MV store to parent for %s", keysWritten, storeKey.Name()))
+		}
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 

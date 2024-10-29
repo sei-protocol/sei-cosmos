@@ -540,6 +540,8 @@ func (s *scheduler) prepareTask(task *deliverTxTask) {
 		})
 
 		ctx = ctx.WithMultiStore(ms)
+	} else {
+		fmt.Printf("DEBUG: no multiversion store found when preparing task %d\n", task.AbsoluteIndex)
 	}
 
 	if task.TxTracer != nil {
@@ -561,6 +563,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 		if task.IsStatus(statusValidated) {
 			s.shouldRerun(task)
 			if task.IsStatus(statusValidated) {
+				fmt.Printf("DEBUG: early return for valid task %d in synchronous mode\n", task.AbsoluteIndex)
 				return
 			}
 		}

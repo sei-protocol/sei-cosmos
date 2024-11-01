@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -13,8 +14,7 @@ import (
 )
 
 const (
-	TokenFactoryPrefix     = "factory"
-	TokenFactoryModuleName = "tokenfactory"
+	TokenFactoryPrefix = "factory"
 )
 
 // SendKeeper defines a module interface that facilitates the transfer of coins
@@ -517,11 +517,12 @@ func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddres
 		// process only if denom does contain token factory prefix
 		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
 			allowedAddresses := k.getAllowedAddresses(ctx, cache, coin.Denom)
+			// Print all module names
 			if len(allowedAddresses.set) > 0 {
-				// Add token factory module address to allowlist for minting tokens if allowlist is not empty
-				tokenFactoryAddr := k.ak.GetModuleAddress(TokenFactoryModuleName)
-				if tokenFactoryAddr != nil {
-					allowedAddresses.set[tokenFactoryAddr.String()] = struct{}{}
+				// Add all module addresses as allowed addresses
+				moduleAddresses := k.getAllModuleAddresses(ctx)
+				for _, moduleAddr := range moduleAddresses {
+					allowedAddresses.set[moduleAddr] = struct{}{}
 				}
 
 				if !allowedAddresses.contains(addr) {
@@ -531,6 +532,19 @@ func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddres
 		}
 	}
 	return true
+}
+
+func (k BaseSendKeeper) getAllModuleAddresses(ctx sdk.Context) []string {
+	var moduleAddresses []string
+
+	k.ak.IterateAccounts(ctx, func(account authtypes.AccountI) bool {
+		if moduleAcc, ok := account.(authtypes.ModuleAccountI); ok {
+			moduleAddresses = append(moduleAddresses, moduleAcc.GetAddress().String())
+		}
+		return false
+	})
+
+	return moduleAddresses
 }
 
 func (k BaseSendKeeper) getAllowedAddresses(ctx sdk.Context, cache map[string]AllowedAddresses, denom string) AllowedAddresses {

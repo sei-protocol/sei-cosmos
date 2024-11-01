@@ -725,6 +725,137 @@ func (suite *IntegrationTestSuite) TestSendCoinsWithReceiverNotInAllowList() {
 	suite.Require().Equal(expected, acc2Balances)
 }
 
+// Test that creating allowlist does not block module to module transfers
+func (suite *IntegrationTestSuite) TestSendCoinsModuleToModuleWithAllowList() {
+	// add module accounts to supply keeper
+	ctx := suite.ctx
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper.SetModuleAccount(ctx, multiPermAcc)
+	authKeeper.SetModuleAccount(ctx, randomPermAcc)
+	app := suite.app
+	app.BankKeeper = keeper
+
+	addr1 := sdk.AccAddress("addr1_______________")
+	acc1 := app.AccountKeeper.NewAccountWithAddress(ctx, addr1)
+	app.AccountKeeper.SetAccount(ctx, acc1)
+	factoryCoin := newFactoryFooCoin(addr1, 100)
+	balances := sdk.NewCoins(factoryCoin, newBarCoin(50))
+	app.BankKeeper.SetDenomAllowList(ctx, factoryCoin.Denom, types.AllowList{
+		Addresses: []string{addr1.String()}})
+
+	// set up bank balances
+	suite.Require().NoError(simapp.FundAccount(app.BankKeeper, ctx, multiPermAcc.GetAddress(), balances))
+
+	sendCoins := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(20))
+	suite.Require().NoError(app.BankKeeper.SendCoinsFromModuleToModule(ctx, multiPerm, randomPerm, sendCoins))
+	expectedBankBalances := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(30))
+	// assert module balances correct
+	bals := app.BankKeeper.GetAllBalances(ctx, multiPermAcc.GetAddress())
+	suite.Require().Equal(expectedBankBalances, bals)
+	// assert receiver balances correct
+	userBals := app.BankKeeper.GetAllBalances(ctx, randomPermAcc.GetAddress())
+	suite.Require().Equal(sendCoins, userBals)
+}
+
+// Test that creating allowlist does not block sending from module to account even though we are not explicitly adding
+// the module account to the allowlist
+func (suite *IntegrationTestSuite) TestSendCoinsModuleToAccountWithAllowList() {
+	// add module accounts to supply keeper
+	ctx := suite.ctx
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper.SetModuleAccount(ctx, multiPermAcc)
+	app := suite.app
+	app.BankKeeper = keeper
+
+	addr1 := sdk.AccAddress("addr1_______________")
+	acc1 := app.AccountKeeper.NewAccountWithAddress(ctx, addr1)
+	app.AccountKeeper.SetAccount(ctx, acc1)
+	factoryCoin := newFactoryFooCoin(addr1, 100)
+	balances := sdk.NewCoins(factoryCoin, newBarCoin(50))
+	app.BankKeeper.SetDenomAllowList(ctx, factoryCoin.Denom, types.AllowList{
+		Addresses: []string{addr1.String()}})
+
+	// set up bank balances
+	suite.Require().NoError(simapp.FundAccount(app.BankKeeper, ctx, multiPermAcc.GetAddress(), balances))
+
+	sendCoins := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(20))
+	suite.Require().NoError(app.BankKeeper.SendCoinsFromModuleToAccount(ctx, multiPerm, addr1, sendCoins))
+
+	expectedBankBalances := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(30))
+	// assert module balances correct
+	bals := app.BankKeeper.GetAllBalances(ctx, multiPermAcc.GetAddress())
+	suite.Require().Equal(expectedBankBalances, bals)
+	// assert receiver balances correct
+	userBals := app.BankKeeper.GetAllBalances(ctx, addr1)
+	suite.Require().Equal(sendCoins, userBals)
+}
+
+// Test that creating allowlist does not block sending from account to module even though we are not explicitly adding
+// the module account to the allowlist
+func (suite *IntegrationTestSuite) TestSendCoinsAccountToModuleWithAllowList() {
+	// add module accounts to supply keeper
+	ctx := suite.ctx
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper.SetModuleAccount(ctx, multiPermAcc)
+	app := suite.app
+	app.BankKeeper = keeper
+
+	addr1 := sdk.AccAddress("addr1_______________")
+	acc1 := app.AccountKeeper.NewAccountWithAddress(ctx, addr1)
+	app.AccountKeeper.SetAccount(ctx, acc1)
+	factoryCoin := newFactoryFooCoin(addr1, 100)
+	balances := sdk.NewCoins(factoryCoin, newBarCoin(50))
+	app.BankKeeper.SetDenomAllowList(ctx, factoryCoin.Denom, types.AllowList{
+		Addresses: []string{addr1.String()}})
+
+	// set up bank balances
+	suite.Require().NoError(simapp.FundAccount(app.BankKeeper, ctx, addr1, balances))
+
+	sendCoins := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(20))
+	suite.Require().NoError(app.BankKeeper.SendCoinsFromAccountToModule(ctx, addr1, multiPerm, sendCoins))
+	expectedBankBalances := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(30))
+	// assert account balances correct
+	bals := app.BankKeeper.GetAllBalances(ctx, addr1)
+	suite.Require().Equal(expectedBankBalances, bals)
+	// assert module balances correct
+	userBals := app.BankKeeper.GetAllBalances(ctx, multiPermAcc.GetAddress())
+	suite.Require().Equal(sendCoins, userBals)
+}
+
+// Test that creating allowlist does not block sending from account to module even though we are not explicitly adding
+// the module account to the allowlist
+func (suite *IntegrationTestSuite) TestDeferredSendCoinsAccountToModuleWithAllowList() {
+	// add module accounts to supply keeper
+	ctx := suite.ctx
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper.SetModuleAccount(ctx, multiPermAcc)
+	app := suite.app
+	app.BankKeeper = keeper
+
+	addr1 := sdk.AccAddress("addr1_______________")
+	acc1 := app.AccountKeeper.NewAccountWithAddress(ctx, addr1)
+	app.AccountKeeper.SetAccount(ctx, acc1)
+	factoryCoin := newFactoryFooCoin(addr1, 100)
+	balances := sdk.NewCoins(factoryCoin, newBarCoin(50))
+	app.BankKeeper.SetDenomAllowList(ctx, factoryCoin.Denom, types.AllowList{
+		Addresses: []string{addr1.String()}})
+
+	// set up bank balances
+	suite.Require().NoError(simapp.FundAccount(app.BankKeeper, ctx, addr1, balances))
+
+	sendCoins := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(20))
+	suite.Require().NoError(app.BankKeeper.DeferredSendCoinsFromAccountToModule(ctx, addr1, multiPerm, sendCoins))
+	app.BankKeeper.WriteDeferredBalances(ctx)
+
+	expectedBankBalances := sdk.NewCoins(newFactoryFooCoin(addr1, 50), newBarCoin(30))
+	// assert account balances correct
+	bals := app.BankKeeper.GetAllBalances(ctx, addr1)
+	suite.Require().Equal(expectedBankBalances, bals)
+	// assert module balances correct
+	userBals := app.BankKeeper.GetAllBalances(ctx, multiPermAcc.GetAddress())
+	suite.Require().Equal(sendCoins, userBals)
+}
+
 func (suite *IntegrationTestSuite) TestSendCoinsModuleToAccount() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx

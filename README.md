@@ -31,7 +31,7 @@ parent:
     <img alt="Lines Of Code" src="https://tokei.rs/b1/github/cosmos/cosmos-sdk" />
   </a>
   <a href="https://discord.com/invite/cosmosnetwork">
-    <img alt="Discord" src="https://img.shields.io/discord/669268347736686612.svg" />
+    <img alt="Discord" src="https://img.shields.io/discord/1067165013397213286?label=discord" />
   </a>
   <a href="https://sourcegraph.com/github.com/cosmos/cosmos-sdk?badge">
     <img alt="Imported by" src="https://sourcegraph.com/github.com/cosmos/cosmos-sdk/-/badge.svg" />

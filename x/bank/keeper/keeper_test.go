@@ -79,7 +79,7 @@ type IntegrationTestSuite struct {
 	queryClient types.QueryClient
 }
 
-func (suite *IntegrationTestSuite) initKeepersWithmAccPerms(blockedAddrs map[string]bool) (authkeeper.AccountKeeper, keeper.BaseKeeper) {
+func (suite *IntegrationTestSuite) initKeepersWithmAccPerms(blockedAddrs map[string]bool, moduleAddresses map[string]bool) (authkeeper.AccountKeeper, keeper.BaseKeeper) {
 	app := suite.app
 	maccPerms := simapp.GetMaccPerms()
 	appCodec := simapp.MakeTestEncodingConfig().Marshaler
@@ -95,7 +95,7 @@ func (suite *IntegrationTestSuite) initKeepersWithmAccPerms(blockedAddrs map[str
 	)
 	keeper := keeper.NewBaseKeeperWithDeferredCache(
 		appCodec, app.GetKey(types.StoreKey), authKeeper,
-		app.GetSubspace(types.ModuleName), blockedAddrs, app.GetMemKey(types.DeferredCacheStoreKey),
+		app.GetSubspace(types.ModuleName), blockedAddrs, moduleAddresses, app.GetMemKey(types.DeferredCacheStoreKey),
 	)
 
 	return authKeeper, keeper
@@ -122,7 +122,7 @@ func (suite *IntegrationTestSuite) TestSendCoinsAndWei() {
 	ctx := suite.ctx
 	require := suite.Require()
 	sdk.RegisterDenom(sdk.DefaultBondDenom, sdk.OneDec())
-	_, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	_, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 	amt := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, sdk.NewInt(100)))
 	require.NoError(keeper.MintCoins(ctx, authtypes.Minter, amt))
 	addr1 := sdk.AccAddress([]byte("addr1_______________"))
@@ -167,7 +167,7 @@ func (suite *IntegrationTestSuite) TestSupply() {
 	require := suite.Require()
 
 	// add module accounts to supply keeper
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 
 	initialPower := int64(100)
 	initTokens := suite.app.StakingKeeper.TokensFromConsensusPower(ctx, initialPower)
@@ -197,7 +197,7 @@ func (suite *IntegrationTestSuite) TestIterateSupply() {
 	require := suite.Require()
 
 	// add module accounts to supply keeper
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 
 	initialPower := int64(100)
 	initTokens := suite.app.StakingKeeper.TokensFromConsensusPower(ctx, initialPower)
@@ -222,7 +222,7 @@ func (suite *IntegrationTestSuite) TestSendCoinsFromModuleToAccount_Blocklist() 
 
 	// add module accounts to supply keeper
 	addr1 := sdk.AccAddress([]byte("addr1_______________"))
-	_, keeper := suite.initKeepersWithmAccPerms(map[string]bool{addr1.String(): true})
+	_, keeper := suite.initKeepersWithmAccPerms(map[string]bool{addr1.String(): true}, make(map[string]bool))
 
 	suite.Require().NoError(keeper.MintCoins(ctx, minttypes.ModuleName, initCoins))
 	suite.Require().Error(keeper.SendCoinsFromModuleToAccount(
@@ -234,7 +234,7 @@ func (suite *IntegrationTestSuite) TestSupply_SendCoins() {
 	ctx := suite.ctx
 
 	// add module accounts to supply keeper
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 
 	baseAcc := authKeeper.NewAccountWithAddress(ctx, authtypes.NewModuleAddress("baseAcc"))
 
@@ -288,7 +288,7 @@ func (suite *IntegrationTestSuite) TestSupply_MintCoins() {
 	ctx := suite.ctx
 
 	// add module accounts to supply keeper
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 
 	authKeeper.SetModuleAccount(ctx, burnerAcc)
 	authKeeper.SetModuleAccount(ctx, minterAcc)
@@ -332,7 +332,7 @@ func (suite *IntegrationTestSuite) TestSupply_MintCoins() {
 func (suite *IntegrationTestSuite) TestSupply_BurnCoins() {
 	ctx := suite.ctx
 	// add module accounts to supply keeper
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 
 	// set burnerAcc balance
 	authKeeper.SetModuleAccount(ctx, burnerAcc)
@@ -729,9 +729,11 @@ func (suite *IntegrationTestSuite) TestSendCoinsWithReceiverNotInAllowList() {
 func (suite *IntegrationTestSuite) TestSendCoinsModuleToModuleWithAllowList() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
-	authKeeper.SetModuleAccount(ctx, multiPermAcc)
-	authKeeper.SetModuleAccount(ctx, randomPermAcc)
+	moduleAddresses := make(map[string]bool)
+	moduleAddresses[multiPermAcc.GetAddress().String()] = true
+	moduleAddresses[randomPermAcc.GetAddress().String()] = true
+	moduleAddresses[suite.app.AccountKeeper.GetModuleAddress("mint").String()] = true
+	_, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), moduleAddresses)
 	app := suite.app
 	app.BankKeeper = keeper
 
@@ -762,8 +764,10 @@ func (suite *IntegrationTestSuite) TestSendCoinsModuleToModuleWithAllowList() {
 func (suite *IntegrationTestSuite) TestSendCoinsModuleToAccountWithAllowList() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
-	authKeeper.SetModuleAccount(ctx, multiPermAcc)
+	moduleAddresses := make(map[string]bool)
+	moduleAddresses[multiPermAcc.GetAddress().String()] = true
+	moduleAddresses[suite.app.AccountKeeper.GetModuleAddress("mint").String()] = true
+	_, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), moduleAddresses)
 	app := suite.app
 	app.BankKeeper = keeper
 
@@ -795,8 +799,10 @@ func (suite *IntegrationTestSuite) TestSendCoinsModuleToAccountWithAllowList() {
 func (suite *IntegrationTestSuite) TestSendCoinsAccountToModuleWithAllowList() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
-	authKeeper.SetModuleAccount(ctx, multiPermAcc)
+	moduleAddresses := make(map[string]bool)
+	moduleAddresses[multiPermAcc.GetAddress().String()] = true
+	moduleAddresses[suite.app.AccountKeeper.GetModuleAddress("mint").String()] = true
+	_, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), moduleAddresses)
 	app := suite.app
 	app.BankKeeper = keeper
 
@@ -827,8 +833,10 @@ func (suite *IntegrationTestSuite) TestSendCoinsAccountToModuleWithAllowList() {
 func (suite *IntegrationTestSuite) TestDeferredSendCoinsAccountToModuleWithAllowList() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
-	authKeeper.SetModuleAccount(ctx, multiPermAcc)
+	moduleAddresses := make(map[string]bool)
+	moduleAddresses[multiPermAcc.GetAddress().String()] = true
+	moduleAddresses[suite.app.AccountKeeper.GetModuleAddress("mint").String()] = true
+	_, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), moduleAddresses)
 	app := suite.app
 	app.BankKeeper = keeper
 
@@ -859,7 +867,7 @@ func (suite *IntegrationTestSuite) TestDeferredSendCoinsAccountToModuleWithAllow
 func (suite *IntegrationTestSuite) TestSendCoinsModuleToAccount() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 	authKeeper.SetModuleAccount(ctx, multiPermAcc)
 	app := suite.app
 	app.BankKeeper = keeper
@@ -898,7 +906,7 @@ func (suite *IntegrationTestSuite) TestSendCoinsModuleToAccount() {
 func (suite *IntegrationTestSuite) TestSendCoinsModuleToModule() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 	authKeeper.SetModuleAccount(ctx, multiPermAcc)
 	authKeeper.SetModuleAccount(ctx, randomPermAcc)
 	app := suite.app
@@ -934,7 +942,7 @@ func (suite *IntegrationTestSuite) TestSendCoinsModuleToModule() {
 func (suite *IntegrationTestSuite) TestBurnCoins() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 	authKeeper.SetModuleAccount(ctx, multiPermAcc)
 	app := suite.app
 	app.BankKeeper = keeper
@@ -979,7 +987,7 @@ func (suite *IntegrationTestSuite) TestBurnCoins() {
 func (suite *IntegrationTestSuite) TestWriteDeferredOperations() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 	authKeeper.SetModuleAccount(ctx, multiPermAcc)
 	app := suite.app
 	app.BankKeeper = keeper
@@ -1553,7 +1561,7 @@ func (suite *IntegrationTestSuite) TestDelegateCoinsFromAccountToModule() {
 	undelCoins := sdk.NewCoins(sdk.NewInt64Coin("usei", 20))
 
 	addr := sdk.AccAddress([]byte("addr2_______________"))
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 	authKeeper.SetModuleAccount(ctx, multiPermAcc)
 	app.BankKeeper = keeper
 
@@ -1709,6 +1717,8 @@ func (suite *IntegrationTestSuite) TestSetAllowList() {
 }
 
 func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedToSendCoins() {
+	app := suite.app
+	mintModuduleAddress := app.AccountKeeper.GetModuleAddress("mint")
 	type CoinToAllowList struct {
 		coin      sdk.Coin
 		allowList types.AllowList
@@ -1843,6 +1853,21 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedToSendCoins() {
 			},
 			isAllowed: false,
 		},
+		{
+			name: "not in allow list but is a module address",
+			args: args{
+				addr: mintModuduleAddress,
+				coinsToAllowList: []CoinToAllowList{
+					{
+						coin: sdk.NewInt64Coin(fmt.Sprintf("factory/%s/test", sdk.AccAddress("from")), 100),
+						allowList: types.AllowList{
+							Addresses: []string{sdk.AccAddress("other").String(), sdk.AccAddress("yetanother").String()},
+						},
+					},
+				},
+			},
+			isAllowed: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1859,11 +1884,11 @@ func (suite *IntegrationTestSuite) TestBaseKeeper_IsAllowedToSendCoins() {
 			}
 			denomToAllowedAddressesCache := make(map[string]keeper.AllowedAddresses)
 			isAllowed :=
-				app.BankKeeper.IsAllowedToSendCoins(ctx, tt.args.addr, coins, denomToAllowedAddressesCache)
+				app.BankKeeper.IsInDenomAllowList(ctx, tt.args.addr, coins, denomToAllowedAddressesCache)
 
 			// Use suite.Require to assert the results
 			suite.Require().Equal(tt.isAllowed, isAllowed,
-				fmt.Errorf("IsAllowedToSendCoins() isAllowed = %v, want %v",
+				fmt.Errorf("IsInDenomAllowList() isAllowed = %v, want %v",
 					isAllowed, tt.isAllowed))
 		})
 	}
@@ -1925,7 +1950,7 @@ func (suite *IntegrationTestSuite) TestBalanceTrackingEvents() {
 	)
 
 	suite.app.BankKeeper = keeper.NewBaseKeeperWithDeferredCache(suite.app.AppCodec(), suite.app.GetKey(types.StoreKey),
-		suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil, suite.app.GetKey(types.DeferredCacheStoreKey))
+		suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil, nil, suite.app.GetKey(types.DeferredCacheStoreKey))
 
 	// set account with multiple permissions
 	suite.app.AccountKeeper.SetModuleAccount(suite.ctx, multiPermAcc)
@@ -2085,7 +2110,7 @@ func (suite *IntegrationTestSuite) TestMintCoinRestrictions() {
 
 	for _, test := range tests {
 		suite.app.BankKeeper = keeper.NewBaseKeeperWithDeferredCache(suite.app.AppCodec(), suite.app.GetKey(types.StoreKey),
-			suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil, suite.app.GetKey(types.DeferredCacheStoreKey)).WithMintCoinsRestriction(keeper.MintingRestrictionFn(test.restrictionFn))
+			suite.app.AccountKeeper, suite.app.GetSubspace(types.ModuleName), nil, nil, suite.app.GetKey(types.DeferredCacheStoreKey)).WithMintCoinsRestriction(keeper.MintingRestrictionFn(test.restrictionFn))
 		for _, testCase := range test.testCases {
 			if testCase.expectPass {
 				suite.Require().NoError(

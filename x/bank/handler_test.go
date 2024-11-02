@@ -71,7 +71,7 @@ func TestSendToModuleAccount(t *testing.T) {
 	app.BankKeeper = bankkeeper.NewBaseKeeper(
 		app.AppCodec(), app.GetKey(types.StoreKey), app.AccountKeeper, app.GetSubspace(types.ModuleName), map[string]bool{
 			moduleAccAddr.String(): true,
-		},
+		}, map[string]bool{moduleAccAddr.String(): true},
 	)
 	handler := bank.NewHandler(app.BankKeeper)
 

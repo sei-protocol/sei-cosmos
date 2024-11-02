@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -38,7 +37,7 @@ type SendKeeper interface {
 	IsSendEnabledCoins(ctx sdk.Context, coins ...sdk.Coin) error
 	SetDenomAllowList(ctx sdk.Context, denom string, allowList types.AllowList)
 	GetDenomAllowList(ctx sdk.Context, denom string) types.AllowList
-	IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool
+	IsInDenomAllowList(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool
 
 	BlockedAddr(addr sdk.AccAddress) bool
 	RegisterRecipientChecker(RecipientChecker)
@@ -60,22 +59,26 @@ type BaseSendKeeper struct {
 	paramSpace paramtypes.Subspace
 
 	// list of addresses that are restricted from receiving transactions
-	blockedAddrs      map[string]bool
-	recipientCheckers *[]RecipientChecker
+	blockedAddrs map[string]bool
+	// map of all registered module addresses
+	allModuleAddresses map[string]bool
+	recipientCheckers  *[]RecipientChecker
 }
 
 func NewBaseSendKeeper(
 	cdc codec.BinaryCodec, storeKey sdk.StoreKey, ak types.AccountKeeper, paramSpace paramtypes.Subspace, blockedAddrs map[string]bool,
+	allModuleAddresses map[string]bool,
 ) BaseSendKeeper {
 
 	return BaseSendKeeper{
-		BaseViewKeeper:    NewBaseViewKeeper(cdc, storeKey, ak),
-		cdc:               cdc,
-		ak:                ak,
-		storeKey:          storeKey,
-		paramSpace:        paramSpace,
-		blockedAddrs:      blockedAddrs,
-		recipientCheckers: &[]RecipientChecker{},
+		BaseViewKeeper:     NewBaseViewKeeper(cdc, storeKey, ak),
+		cdc:                cdc,
+		ak:                 ak,
+		storeKey:           storeKey,
+		paramSpace:         paramSpace,
+		blockedAddrs:       blockedAddrs,
+		recipientCheckers:  &[]RecipientChecker{},
+		allModuleAddresses: allModuleAddresses,
 	}
 }
 
@@ -163,7 +166,7 @@ func (k BaseSendKeeper) validateInputOutputAddressesAllowedToSendCoins(ctx sdk.C
 		if err != nil {
 			return err
 		}
-		allowedToSend := k.IsAllowedToSendCoins(ctx, inAddress, in.Coins, denomToAllowListCache)
+		allowedToSend := k.IsInDenomAllowList(ctx, inAddress, in.Coins, denomToAllowListCache)
 		if !allowedToSend {
 			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", inAddress)
 		}
@@ -173,7 +176,7 @@ func (k BaseSendKeeper) validateInputOutputAddressesAllowedToSendCoins(ctx sdk.C
 		if err != nil {
 			return err
 		}
-		allowedToReceive := k.IsAllowedToSendCoins(ctx, outAddress, out.Coins, denomToAllowListCache)
+		allowedToReceive := k.IsInDenomAllowList(ctx, outAddress, out.Coins, denomToAllowListCache)
 		if !allowedToReceive {
 			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", outAddress)
 		}
@@ -185,12 +188,12 @@ func (k BaseSendKeeper) validateInputOutputAddressesAllowedToSendCoins(ctx sdk.C
 // An error is returned upon failure.
 func (k BaseSendKeeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error {
 	denomToAllowedAddressesCache := make(map[string]AllowedAddresses)
-	fromAllowed := k.IsAllowedToSendCoins(ctx, fromAddr, amt, denomToAllowedAddressesCache)
+	fromAllowed := k.IsInDenomAllowList(ctx, fromAddr, amt, denomToAllowedAddressesCache)
 	if !fromAllowed {
 		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", fromAddr)
 	}
 
-	toAllowed := k.IsAllowedToSendCoins(ctx, toAddr, amt, denomToAllowedAddressesCache)
+	toAllowed := k.IsInDenomAllowList(ctx, toAddr, amt, denomToAllowedAddressesCache)
 	if !toAllowed {
 		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr)
 	}
@@ -507,44 +510,30 @@ func (k BaseSendKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.A
 	return allowList
 }
 
-// IsAllowedToSendCoins checks if the given address is allowed to send the given coins.
+// IsInDenomAllowList checks if the given address is allowed to send the given coins.
 // The check is performed only fot token factory denoms. For each token factory denom,
 // it checks if there is allow list for the given denom. If there is no allow list,
 // the address is allowed to send the coins. If there is an allow list, the address is
-// allowed to send the coins only if it is in the allow list.
-func (k BaseSendKeeper) IsAllowedToSendCoins(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool {
+// allowed to send the coins only if it is in the allow list or is module address.
+func (k BaseSendKeeper) IsInDenomAllowList(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool {
 	for _, coin := range coins {
-		// process only if denom does contain token factory prefix
-		if strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
-			allowedAddresses := k.getAllowedAddresses(ctx, cache, coin.Denom)
-			// Print all module names
-			if len(allowedAddresses.set) > 0 {
-				// Add all module addresses as allowed addresses
-				moduleAddresses := k.getAllModuleAddresses(ctx)
-				for _, moduleAddr := range moduleAddresses {
-					allowedAddresses.set[moduleAddr] = struct{}{}
-				}
+		// Skip if denom does not contain the token factory prefix
+		if !strings.HasPrefix(coin.Denom, TokenFactoryPrefix) {
+			continue
+		}
 
-				if !allowedAddresses.contains(addr) {
-					return false
-				}
-			}
+		allowedAddresses := k.getAllowedAddresses(ctx, cache, coin.Denom)
+		// skip if there is no allow list for the denom
+		if len(allowedAddresses.set) == 0 {
+			continue
+		}
+
+		// Return false if the address is neither allowed nor a module address
+		if !allowedAddresses.contains(addr) && !k.allModuleAddresses[addr.String()] {
+			return false
 		}
 	}
 	return true
-}
-
-func (k BaseSendKeeper) getAllModuleAddresses(ctx sdk.Context) []string {
-	var moduleAddresses []string
-
-	k.ak.IterateAccounts(ctx, func(account authtypes.AccountI) bool {
-		if moduleAcc, ok := account.(authtypes.ModuleAccountI); ok {
-			moduleAddresses = append(moduleAddresses, moduleAcc.GetAddress().String())
-		}
-		return false
-	})
-
-	return moduleAddresses
 }
 
 func (k BaseSendKeeper) getAllowedAddresses(ctx sdk.Context, cache map[string]AllowedAddresses, denom string) AllowedAddresses {

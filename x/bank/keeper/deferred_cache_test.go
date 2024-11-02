@@ -10,7 +10,7 @@ import (
 func (suite *IntegrationTestSuite) TestDeferredCacheUpsertBalances() {
 	// add module accounts to supply keeper
 	ctx := suite.ctx
-	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool))
+	authKeeper, keeper := suite.initKeepersWithmAccPerms(make(map[string]bool), make(map[string]bool))
 	authKeeper.SetModuleAccount(ctx, multiPermAcc)
 	app := suite.app
 	app.BankKeeper = keeper

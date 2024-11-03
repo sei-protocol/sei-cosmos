@@ -121,41 +121,6 @@ func TestSendNotEnoughBalance(t *testing.T) {
 	require.Equal(t, res2.GetSequence(), origSeq+1)
 }
 
-func TestSendNotEnoughBalance(t *testing.T) {
-	acc := &authtypes.BaseAccount{
-		Address: addr1.String(),
-	}
-
-	genAccs := []authtypes.GenesisAccount{acc}
-	app := simapp.SetupWithGenesisAccounts(genAccs)
-	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
-
-	require.NoError(t, simapp.FundAccount(app.BankKeeper, ctx, addr1, sdk.NewCoins(sdk.NewInt64Coin("foocoin", 67))))
-
-	app.Commit(context.Background())
-
-	res1 := app.AccountKeeper.GetAccount(ctx, addr1)
-	require.NotNil(t, res1)
-	require.Equal(t, acc, res1.(*authtypes.BaseAccount))
-
-	origAccNum := res1.GetAccountNumber()
-	origSeq := res1.GetSequence()
-
-	sendMsg := types.NewMsgSend(addr1, addr2, sdk.Coins{sdk.NewInt64Coin("foocoin", 100)})
-	header := tmproto.Header{Height: app.LastBlockHeight() + 1}
-	txGen := simapp.MakeTestEncodingConfig().TxConfig
-	_, _, err := simapp.SignCheckDeliver(t, txGen, app.BaseApp, header, []sdk.Msg{sendMsg}, "", []uint64{origAccNum}, []uint64{origSeq}, false, false, priv1)
-	require.Error(t, err)
-
-	simapp.CheckBalance(t, app, addr1, sdk.Coins{sdk.NewInt64Coin("foocoin", 67)})
-
-	res2 := app.AccountKeeper.GetAccount(app.NewContext(true, tmproto.Header{}), addr1)
-	require.NotNil(t, res2)
-
-	require.Equal(t, res2.GetAccountNumber(), origAccNum)
-	require.Equal(t, res2.GetSequence(), origSeq+1)
-}
-
 func TestMsgMultiSendWithAccounts(t *testing.T) {
 	acc := &authtypes.BaseAccount{
 		Address: addr1.String(),

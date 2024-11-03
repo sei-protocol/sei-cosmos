@@ -59,26 +59,22 @@ type BaseSendKeeper struct {
 	paramSpace paramtypes.Subspace
 
 	// list of addresses that are restricted from receiving transactions
-	blockedAddrs map[string]bool
-	// map of all registered module addresses
-	allModuleAddresses map[string]bool
-	recipientCheckers  *[]RecipientChecker
+	blockedAddrs      map[string]bool
+	recipientCheckers *[]RecipientChecker
 }
 
 func NewBaseSendKeeper(
 	cdc codec.BinaryCodec, storeKey sdk.StoreKey, ak types.AccountKeeper, paramSpace paramtypes.Subspace, blockedAddrs map[string]bool,
-	allModuleAddresses map[string]bool,
 ) BaseSendKeeper {
 
 	return BaseSendKeeper{
-		BaseViewKeeper:     NewBaseViewKeeper(cdc, storeKey, ak),
-		cdc:                cdc,
-		ak:                 ak,
-		storeKey:           storeKey,
-		paramSpace:         paramSpace,
-		blockedAddrs:       blockedAddrs,
-		recipientCheckers:  &[]RecipientChecker{},
-		allModuleAddresses: allModuleAddresses,
+		BaseViewKeeper:    NewBaseViewKeeper(cdc, storeKey, ak),
+		cdc:               cdc,
+		ak:                ak,
+		storeKey:          storeKey,
+		paramSpace:        paramSpace,
+		blockedAddrs:      blockedAddrs,
+		recipientCheckers: &[]RecipientChecker{},
 	}
 }
 
@@ -102,12 +98,6 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 	if err := types.ValidateInputsOutputs(inputs, outputs); err != nil {
 		return err
 	}
-
-	err := k.validateInputOutputAddressesAllowedToSendCoins(ctx, inputs, outputs)
-	if err != nil {
-		return err
-	}
-
 	for _, in := range inputs {
 		inAddress, err := sdk.AccAddressFromBech32(in.Address)
 		if err != nil {
@@ -159,45 +149,9 @@ func (k BaseSendKeeper) InputOutputCoins(ctx sdk.Context, inputs []types.Input, 
 	return nil
 }
 
-func (k BaseSendKeeper) validateInputOutputAddressesAllowedToSendCoins(ctx sdk.Context, inputs []types.Input, outputs []types.Output) error {
-	denomToAllowListCache := make(map[string]AllowedAddresses)
-	for _, in := range inputs {
-		inAddress, err := sdk.AccAddressFromBech32(in.Address)
-		if err != nil {
-			return err
-		}
-		allowedToSend := k.IsInDenomAllowList(ctx, inAddress, in.Coins, denomToAllowListCache)
-		if !allowedToSend {
-			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", inAddress)
-		}
-	}
-	for _, out := range outputs {
-		outAddress, err := sdk.AccAddressFromBech32(out.Address)
-		if err != nil {
-			return err
-		}
-		allowedToReceive := k.IsInDenomAllowList(ctx, outAddress, out.Coins, denomToAllowListCache)
-		if !allowedToReceive {
-			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", outAddress)
-		}
-	}
-	return nil
-}
-
 // SendCoins transfers amt coins from a sending account to a receiving account.
 // An error is returned upon failure.
 func (k BaseSendKeeper) SendCoins(ctx sdk.Context, fromAddr sdk.AccAddress, toAddr sdk.AccAddress, amt sdk.Coins) error {
-	denomToAllowedAddressesCache := make(map[string]AllowedAddresses)
-	fromAllowed := k.IsInDenomAllowList(ctx, fromAddr, amt, denomToAllowedAddressesCache)
-	if !fromAllowed {
-		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to send funds", fromAddr)
-	}
-
-	toAllowed := k.IsInDenomAllowList(ctx, toAddr, amt, denomToAllowedAddressesCache)
-	if !toAllowed {
-		return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "%s is not allowed to receive funds", toAddr)
-	}
-
 	if err := k.SendCoinsWithoutAccCreation(ctx, fromAddr, toAddr, amt); err != nil {
 		return err
 	}
@@ -514,7 +468,7 @@ func (k BaseSendKeeper) GetDenomAllowList(ctx sdk.Context, denom string) types.A
 // The check is performed only fot token factory denoms. For each token factory denom,
 // it checks if there is allow list for the given denom. If there is no allow list,
 // the address is allowed to send the coins. If there is an allow list, the address is
-// allowed to send the coins only if it is in the allow list or is module address.
+// allowed to send the coins only if it is in the allow list.
 func (k BaseSendKeeper) IsInDenomAllowList(ctx sdk.Context, addr sdk.AccAddress, coins sdk.Coins, cache map[string]AllowedAddresses) bool {
 	for _, coin := range coins {
 		// Skip if denom does not contain the token factory prefix
@@ -529,7 +483,7 @@ func (k BaseSendKeeper) IsInDenomAllowList(ctx sdk.Context, addr sdk.AccAddress,
 		}
 
 		// Return false if the address is neither allowed nor a module address
-		if !allowedAddresses.contains(addr) && !k.allModuleAddresses[addr.String()] {
+		if !allowedAddresses.contains(addr) {
 			return false
 		}
 	}

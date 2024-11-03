@@ -112,7 +112,6 @@ func NewBaseKeeper(
 	ak types.AccountKeeper,
 	paramSpace paramtypes.Subspace,
 	blockedAddrs map[string]bool,
-	allModuleAddrs map[string]bool,
 ) BaseKeeper {
 
 	// set KeyTable if it has not already been set
@@ -121,7 +120,7 @@ func NewBaseKeeper(
 	}
 
 	return BaseKeeper{
-		BaseSendKeeper:         NewBaseSendKeeper(cdc, storeKey, ak, paramSpace, blockedAddrs, allModuleAddrs),
+		BaseSendKeeper:         NewBaseSendKeeper(cdc, storeKey, ak, paramSpace, blockedAddrs),
 		ak:                     ak,
 		cdc:                    cdc,
 		storeKey:               storeKey,
@@ -136,7 +135,6 @@ func NewBaseKeeperWithDeferredCache(
 	ak types.AccountKeeper,
 	paramSpace paramtypes.Subspace,
 	blockedAddrs map[string]bool,
-	allModuleAddrs map[string]bool,
 	deferredCacheStoreKey sdk.StoreKey,
 ) BaseKeeper {
 
@@ -146,7 +144,7 @@ func NewBaseKeeperWithDeferredCache(
 	}
 
 	return BaseKeeper{
-		BaseSendKeeper:         NewBaseSendKeeper(cdc, storeKey, ak, paramSpace, blockedAddrs, allModuleAddrs),
+		BaseSendKeeper:         NewBaseSendKeeper(cdc, storeKey, ak, paramSpace, blockedAddrs),
 		ak:                     ak,
 		deferredCache:          NewDeferredCache(cdc, deferredCacheStoreKey),
 		cdc:                    cdc,

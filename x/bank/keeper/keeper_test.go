@@ -52,10 +52,6 @@ func newFactoryFooCoin(address sdk.AccAddress, amt int64) sdk.Coin {
 	return sdk.NewInt64Coin(fmt.Sprintf("%s/%s/%s", factoryDenomPrefix, address, fooDenom), amt)
 }
 
-func newFactoryBarCoin(address sdk.AccAddress, amt int64) sdk.Coin {
-	return sdk.NewInt64Coin(fmt.Sprintf("%s/%s/%s", factoryDenomPrefix, address, barDenom), amt)
-}
-
 func newBarCoin(amt int64) sdk.Coin {
 	return sdk.NewInt64Coin(barDenom, amt)
 }

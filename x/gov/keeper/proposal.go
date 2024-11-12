@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -18,6 +19,25 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, content types.Content) (typ
 func (keeper Keeper) SubmitProposalWithExpedite(ctx sdk.Context, content types.Content, isExpedited bool) (types.Proposal, error) {
 	if !keeper.router.HasRoute(content.ProposalRoute()) {
 		return types.Proposal{}, sdkerrors.Wrap(types.ErrNoProposalHandlerExists, content.ProposalRoute())
+	}
+	// Ensure that the parameter exists
+	if content.ProposalType() == proposal.ProposalTypeChange {
+		paramProposal, ok := content.(*proposal.ParameterChangeProposal)
+		if !ok {
+			return types.Proposal{}, sdkerrors.Wrap(types.ErrInvalidProposalContent, "proposal content is not a ParameterChangeProposal")
+		}
+
+		// Validate each parameter change
+		for _, change := range paramProposal.Changes {
+			subspace, found := keeper.paramSpace.GetSubspace(change.Subspace)
+			if !found {
+				return types.Proposal{}, sdkerrors.Wrapf(types.ErrInvalidProposalContent, "subspace %s not found", change.Subspace)
+			}
+
+			if !subspace.Has(ctx, []byte(change.Key)) {
+				return types.Proposal{}, sdkerrors.Wrapf(types.ErrInvalidProposalContent, "parameter %s not found in subspace %s", change.Key, change.Subspace)
+			}
+		}
 	}
 
 	proposalID, err := keeper.GetProposalID(ctx)

@@ -29,13 +29,16 @@ func (keeper Keeper) SubmitProposalWithExpedite(ctx sdk.Context, content types.C
 
 		// Validate each parameter change
 		for _, change := range paramProposal.Changes {
-			subspace, found := keeper.paramSpace.GetSubspace(change.Subspace)
-			if !found {
-				return types.Proposal{}, sdkerrors.Wrapf(types.ErrInvalidProposalContent, "subspace %s not found", change.Subspace)
-			}
-
-			if !subspace.Has(ctx, []byte(change.Key)) {
-				return types.Proposal{}, sdkerrors.Wrapf(types.ErrInvalidProposalContent, "parameter %s not found in subspace %s", change.Key, change.Subspace)
+			if err := func() (err error) {
+				defer func() {
+					if r := recover(); r != nil {
+						err = sdkerrors.Wrapf(types.ErrInvalidProposalContent, "parameter %s does not exist", change.Key)
+					}
+				}()
+				keeper.paramSpace.Get(ctx, []byte(change.Key), nil)
+				return nil
+			}(); err != nil {
+				return types.Proposal{}, err
 			}
 		}
 	}

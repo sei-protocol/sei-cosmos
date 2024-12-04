@@ -523,7 +523,7 @@ func (rs *Store) RollbackToVersion(target int64) error {
 	if err != nil {
 		return err
 	}
-	// to keep the root hash compatible with cosmos-sdk 0.46
+	// We need to update the lastCommitInfo after rollback
 	if rs.scStore.Version() != 0 {
 		fmt.Printf("Rolled back CMS to version %d\n", rs.scStore.Version())
 		rs.lastCommitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())

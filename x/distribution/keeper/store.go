@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 
 	gogotypes "github.com/gogo/protobuf/types"
 
@@ -87,6 +88,7 @@ func (k Keeper) SetPreviousProposerConsAddr(ctx sdk.Context, consAddr sdk.ConsAd
 func (k Keeper) GetDelegatorStartingInfo(ctx sdk.Context, val sdk.ValAddress, del sdk.AccAddress) (period types.DelegatorStartingInfo) {
 	store := ctx.KVStore(k.storeKey)
 	b := store.Get(types.GetDelegatorStartingInfoKey(val, del))
+	fmt.Printf("DEBUG - Get b: %v, is nil: %v\n", string(b), b == nil)
 	k.cdc.MustUnmarshal(b, &period)
 	return
 }

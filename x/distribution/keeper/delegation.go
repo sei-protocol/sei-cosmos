@@ -31,6 +31,7 @@ func (k Keeper) calculateDelegationRewardsBetween(ctx sdk.Context, val stakingty
 	startingPeriod, endingPeriod uint64, stake sdk.Dec) (rewards sdk.DecCoins) {
 	// sanity check
 	if startingPeriod > endingPeriod {
+		fmt.Printf("DEBUG - Panic: startingPeriod: %v, endingPeriod: %v moniker %v \n", startingPeriod, endingPeriod, val.GetMoniker())
 		panic("startingPeriod cannot be greater than endingPeriod")
 	}
 

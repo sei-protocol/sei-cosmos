@@ -101,6 +101,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 		panic("Commit should always bump version in root multistore")
 	}
 	commitStartTime := time.Now()
+	fmt.Printf("[Debug] Start commiting version %d\n", rs.lastCommitInfo.Version)
 	defer telemetry.MeasureSince(commitStartTime, "storeV2", "sc", "commit", "latency")
 	if err := rs.flush(); err != nil {
 		panic(err)
@@ -129,6 +130,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 			}
 		}
 	}
+	fmt.Printf("[Debug] Finished committing version %d, total commit time took %s\n", rs.lastCommitInfo.Version, time.Since(commitStartTime))
 
 	rs.lastCommitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())
 	rs.lastCommitInfo = amendCommitInfo(rs.lastCommitInfo, rs.storesParams)
@@ -798,7 +800,10 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		return fmt.Errorf("height overflows uint32: %d", height)
 	}
 
+	fmt.Printf("[Debug] Start creating exporter for snapshot height %d\n", height)
+	startTime := time.Now()
 	exporter, err := rs.scStore.Exporter(int64(height))
+	fmt.Printf("[Debug] Finished creating exporter for snapshot height %d, took %s\n", height, time.Since(startTime))
 	if err != nil {
 		return err
 	}
@@ -853,6 +858,9 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 			keySizePerStore[currentStoreName] += int64(len(item.Key))
 			valueSizePerStore[currentStoreName] += int64(len(item.Value))
 			numKeysPerStore[currentStoreName] += 1
+			if numKeysPerStore[currentStoreName]%1000000 == 0 {
+				fmt.Printf("[Debug] Exported %d keys for module %s\n", numKeysPerStore[currentStoreName], currentStoreName)
+			}
 		case string:
 			if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
 				Item: &snapshottypes.SnapshotItem_Store{

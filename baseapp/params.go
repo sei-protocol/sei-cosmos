@@ -49,7 +49,7 @@ func ValidateBlockParams(i interface{}) error {
 	}
 
 	if v.MinTxsInBlock < 0 {
-		return fmt.Errorf("block min txs in block must be positive: %d", v.MinTxsInBlock)
+		return fmt.Errorf("block min txs in block must be non-negative: %d", v.MinTxsInBlock)
 	}
 
 	return nil

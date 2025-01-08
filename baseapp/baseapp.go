@@ -682,6 +682,12 @@ func (app *BaseApp) GetConsensusParams(ctx sdk.Context) *tmproto.ConsensusParams
 
 		app.paramStore.Get(ctx, ParamStoreKeyBlockParams, &bp)
 		cp.Block = &bp
+
+		// Temporary
+		if cp.Block.MinTxsInBlock == 0 {
+			cp.Block.MinTxsInBlock = 10
+			app.paramStore.Set(ctx, ParamStoreKeyBlockParams, cp.Block)
+		}
 	}
 
 	if app.paramStore.Has(ctx, ParamStoreKeyEvidenceParams) {

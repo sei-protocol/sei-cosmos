@@ -281,7 +281,7 @@ func (rs *Store) CacheMultiStoreForExport(version int64) (types.CacheMultiStore,
 	if version <= 0 || (rs.lastCommitInfo != nil && version == rs.lastCommitInfo.Version) {
 		return rs.CacheMultiStore(), nil
 	}
-	// add SC stores for historical queries
+	// Open SC stores for wasm snapshot, this op is blocking and could take a long time
 	scStore, err := rs.scStore.LoadVersion(version, true)
 	if err != nil {
 		return nil, err
@@ -521,7 +521,17 @@ func (rs *Store) RollbackToVersion(target int64) error {
 	if target > math.MaxUint32 {
 		return fmt.Errorf("rollback height target %d exceeds max uint32", target)
 	}
-	return rs.scStore.Rollback(target)
+	err := rs.scStore.Rollback(target)
+	if err != nil {
+		return err
+	}
+	// We need to update the lastCommitInfo after rollback
+	if rs.scStore.Version() != 0 {
+		fmt.Printf("Rolled back CMS to version %d\n", rs.scStore.Version())
+		rs.lastCommitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())
+		rs.lastCommitInfo = amendCommitInfo(rs.lastCommitInfo, rs.storesParams)
+	}
+	return nil
 }
 
 // getStoreByName performs a lookup of a StoreKey given a store name typically

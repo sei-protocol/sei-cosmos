@@ -7,10 +7,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -23,7 +25,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/privval"
-	tmstate "github.com/tendermint/tendermint/proto/tendermint/state"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
@@ -33,7 +34,6 @@ import (
 const (
 	KeyIsTestnet      = "is-testnet"
 	KeyNewChainID     = "new-chain-ID"
-	KeyNewOpAddr      = "new-operator-addr"
 	KeyNewValAddr     = "new-validator-addr"
 	KeyUserPubKey     = "user-pub-key"
 	FlagShutdownGrace = "shutdown-grace"
@@ -66,9 +66,15 @@ Regardless of whether the flag is set or not, if any new stores are introduced i
 those stores will be registered in order to prevent panics. Therefore, you only need to set the flag if
 you want to test the upgrade handler itself.
 `,
-		Example: "in-place-testnet localsei sei12smx2wdlyttvyzvzg54y2vnqwq2qjateuf7thj",
-		Args:    cobra.ExactArgs(2),
+		Example: "in-place-testnet localsei",
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			defer func() {
+				if e := recover(); e != nil {
+					debug.PrintStack()
+					panic(e)
+				}
+			}()
 			serverCtx := GetServerContextFromCmd(cmd)
 			_, err := GetPruningOptionsFromFlags(serverCtx.Viper)
 			if err != nil {
@@ -81,7 +87,6 @@ you want to test the upgrade handler itself.
 			}
 
 			newChainID := args[0]
-			newOperatorAddress := args[1]
 
 			skipConfirmation, _ := cmd.Flags().GetBool("skip-confirmation")
 
@@ -101,7 +106,6 @@ you want to test the upgrade handler itself.
 			// This is done to prevent changes to existing start API.
 			serverCtx.Viper.Set(KeyIsTestnet, true)
 			serverCtx.Viper.Set(KeyNewChainID, newChainID)
-			serverCtx.Viper.Set(KeyNewOpAddr, newOperatorAddress)
 
 			config, _ := config.GetConfig(serverCtx.Viper)
 			apiMetrics, err := telemetry.New(config.Telemetry)
@@ -158,15 +162,15 @@ func testnetify(ctx *Context, testnetAppCreator types.AppCreator, db dbm.DB, tra
 	genFilePath := config.GenesisFile()
 	genDoc, err := tmtypes.GenesisDocFromFile(config.GenesisFile())
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	genDoc.ChainID = newChainID
 
 	if err := genDoc.ValidateAndComplete(); err != nil {
-		return nil, err
+		panic(err)
 	}
 	if err := genDoc.SaveAs(genFilePath); err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	// Regenerate addrbook.json to prevent peers on old network from causing error logs.
@@ -183,25 +187,22 @@ func testnetify(ctx *Context, testnetAppCreator types.AppCreator, db dbm.DB, tra
 	// Initialize blockStore and stateDB.
 	blockStoreDB, err := tmcfg.DefaultDBProvider(&tmcfg.DBContext{ID: "blockstore", Config: config})
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	blockStore := tmexport.NewBlockStore(blockStoreDB)
 
 	stateDB, err := tmcfg.DefaultDBProvider(&tmcfg.DBContext{ID: "state", Config: config})
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-
-	defer blockStore.Close()
-	defer stateDB.Close()
 
 	privValidator, err := privval.LoadOrGenFilePV(ctx.Config.PrivValidator.KeyFile(), ctx.Config.PrivValidator.StateFile())
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	userPubKey, err := privValidator.GetPubKey(context.Background())
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	validatorAddress := userPubKey.Address()
 
@@ -209,38 +210,41 @@ func testnetify(ctx *Context, testnetAppCreator types.AppCreator, db dbm.DB, tra
 
 	state, err := node.LoadStateFromDBOrGenesisDocProvider(stateStore, genDoc)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
+
+	blockStore.Close()
+	stateDB.Close()
 
 	ctx.Viper.Set(KeyNewValAddr, validatorAddress)
 	ctx.Viper.Set(KeyUserPubKey, userPubKey)
+	ctx.Viper.Set(FlagChainID, newChainID)
 	testnetApp := testnetAppCreator(ctx.Logger, db, traceWriter, ctx.Config, ctx.Viper)
 
 	// We need to create a temporary proxyApp to get the initial state of the application.
 	// Depending on how the node was stopped, the application height can differ from the blockStore height.
 	// This height difference changes how we go about modifying the state.
 	localClient := abciclient.NewLocalClient(ctx.Logger, testnetApp)
-	tmNode, err := node.New(
-		context.Background(),
-		ctx.Config,
-		ctx.Logger,
-		make(chan struct{}),
-		localClient,
-		nil,
-		[]trace.TracerProviderOption{},
-		node.DefaultMetricsProvider(ctx.Config.Instrumentation)(newChainID),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error creating node: %w", err)
-	}
-	if err := tmNode.Start(context.Background()); err != nil {
-		return nil, fmt.Errorf("error starting node: %w", err)
-	}
 	res, err := localClient.Info(context.Background(), &abci.RequestInfo{})
 	if err != nil {
 		return nil, fmt.Errorf("error calling Info: %v", err)
 	}
-	tmNode.Stop()
+
+	blockStoreDB, err = tmcfg.DefaultDBProvider(&tmcfg.DBContext{ID: "blockstore", Config: config})
+	if err != nil {
+		panic(err)
+	}
+	blockStore = tmexport.NewBlockStore(blockStoreDB)
+
+	stateDB, err = tmcfg.DefaultDBProvider(&tmcfg.DBContext{ID: "state", Config: config})
+	if err != nil {
+		panic(err)
+	}
+
+	stateStore = tmexport.NewStore(stateDB)
+
+	defer blockStore.Close()
+	defer stateStore.Close()
 
 	appHash := res.LastBlockAppHash
 	appHeight := res.LastBlockHeight
@@ -258,14 +262,14 @@ func testnetify(ctx *Context, testnetAppCreator types.AppCreator, db dbm.DB, tra
 			// Node was likely stopped via SIGTERM, delete the next block's seen commit
 			err := blockStoreDB.Delete([]byte(fmt.Sprintf("SC:%v", blockStore.Height()+1)))
 			if err != nil {
-				return nil, err
+				panic(err)
 			}
 		}
 	case blockStore.Height() > state.LastBlockHeight:
 		// This state usually occurs when we gracefully stop the node.
 		err = blockStore.DeleteLatestBlock()
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 		block = blockStore.LoadBlock(blockStore.Height())
 	default:
@@ -293,9 +297,14 @@ func testnetify(ctx *Context, testnetAppCreator types.AppCreator, db dbm.DB, tra
 
 	// Sign the vote, and copy the proto changes from the act of signing to the vote itself
 	voteProto := vote.ToProto()
+	privValidator.LastSignState.Round = 0
+	privValidator.LastSignState.Step = 0
+	if privValidator.LastSignState.Height > state.LastBlockHeight {
+		privValidator.LastSignState.Height = state.LastBlockHeight
+	}
 	err = privValidator.SignVote(context.Background(), newChainID, voteProto)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	vote.Signature = voteProto.Signature
 	vote.Timestamp = voteProto.Timestamp
@@ -305,17 +314,19 @@ func testnetify(ctx *Context, testnetAppCreator types.AppCreator, db dbm.DB, tra
 	block.LastCommit.Signatures[0].Signature = vote.Signature
 	block.LastCommit.Signatures = []tmtypes.CommitSig{block.LastCommit.Signatures[0]}
 
-	// Load the seenCommit of the lastBlockHeight and modify it to be signed from our validator
-	seenCommit := blockStore.LoadSeenCommit()
+	seenCommit := tmtypes.Commit{}
+	seenCommit.Height = state.LastBlockHeight
+	seenCommit.Round = vote.Round
 	seenCommit.BlockID = state.LastBlockID
 	seenCommit.Round = vote.Round
+	seenCommit.Signatures = []tmtypes.CommitSig{{}}
+	seenCommit.Signatures[0].BlockIDFlag = tmtypes.BlockIDFlagCommit
 	seenCommit.Signatures[0].Signature = vote.Signature
 	seenCommit.Signatures[0].ValidatorAddress = validatorAddress
 	seenCommit.Signatures[0].Timestamp = vote.Timestamp
-	seenCommit.Signatures = []tmtypes.CommitSig{seenCommit.Signatures[0]}
-	err = blockStore.SaveSeenCommit(state.LastBlockHeight, seenCommit)
+	err = blockStore.SaveSeenCommit(state.LastBlockHeight, &seenCommit)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	// Create ValidatorSet struct containing just our valdiator.
@@ -337,49 +348,24 @@ func testnetify(ctx *Context, testnetAppCreator types.AppCreator, db dbm.DB, tra
 
 	err = stateStore.Save(state)
 	if err != nil {
-		return nil, err
-	}
-
-	// Create a ValidatorsInfo struct to store in stateDB.
-	valSet, err := state.Validators.ToProto()
-	if err != nil {
-		return nil, err
-	}
-	valInfo := &tmstate.ValidatorsInfo{
-		ValidatorSet:      valSet,
-		LastHeightChanged: state.LastBlockHeight,
-	}
-	buf, err := valInfo.Marshal()
-	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	// Modfiy Validators stateDB entry.
-	err = stateDB.Set([]byte(fmt.Sprintf("validatorsKey:%v", blockStore.Height())), buf)
-	if err != nil {
-		return nil, err
-	}
-
-	// Modify LastValidators stateDB entry.
-	err = stateDB.Set([]byte(fmt.Sprintf("validatorsKey:%v", blockStore.Height()-1)), buf)
-	if err != nil {
-		return nil, err
-	}
-
-	// Modify NextValidators stateDB entry.
-	err = stateDB.Set([]byte(fmt.Sprintf("validatorsKey:%v", blockStore.Height()+1)), buf)
-	if err != nil {
-		return nil, err
-	}
+	stateStore.SaveValidatorSets(blockStore.Height()-1, blockStore.Height()-1, newValSet)
+	stateStore.SaveValidatorSets(blockStore.Height(), blockStore.Height(), newValSet)
+	stateStore.SaveValidatorSets(blockStore.Height()+1, blockStore.Height()+1, newValSet)
 
 	// Since we modified the chainID, we set the new genesisDoc in the stateDB.
 	b, err := tmjson.Marshal(genDoc)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	if err := stateDB.SetSync([]byte("genesisDoc"), b); err != nil {
-		return nil, err
+		panic(err)
 	}
+
+	testnetApp.InplaceTestnetInitialize(&ed25519.PubKey{Key: userPubKey.Bytes()})
 
 	return testnetApp, err
 }

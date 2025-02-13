@@ -236,6 +236,14 @@ func (w *wrapper) SetGasLimit(limit uint64) {
 	w.authInfoBz = nil
 }
 
+func (w *wrapper) SetGasEstimate(estimate uint64) {
+	if w.tx.AuthInfo.Fee == nil {
+		w.tx.AuthInfo.Fee = &tx.Fee{}
+	}
+
+	w.tx.AuthInfo.Fee.GasEstimate = estimate
+}
+
 func (w *wrapper) SetFeeAmount(coins sdk.Coins) {
 	if w.tx.AuthInfo.Fee == nil {
 		w.tx.AuthInfo.Fee = &tx.Fee{}

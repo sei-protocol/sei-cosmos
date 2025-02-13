@@ -80,6 +80,7 @@ type StdTx struct {
 	Signatures    []StdSignature `json:"signatures" yaml:"signatures"`
 	Memo          string         `json:"memo" yaml:"memo"`
 	TimeoutHeight uint64         `json:"timeout_height" yaml:"timeout_height"`
+	GasEstimate   uint64         `json:"gas_estimate" yaml:"gas_estimate"`
 }
 
 // Deprecated

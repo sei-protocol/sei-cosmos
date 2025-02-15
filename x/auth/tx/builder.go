@@ -1,6 +1,8 @@
 package tx
 
 import (
+	"fmt"
+
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -64,6 +66,10 @@ func (w *wrapper) ValidateBasic() error {
 	return w.tx.ValidateBasic()
 }
 
+func (w *wrapper) GetGasEstimate() uint64 {
+	return w.tx.GetGasEstimate()
+}
+
 func (w *wrapper) getBodyBytes() []byte {
 	if len(w.bodyBz) == 0 {
 		// if bodyBz is empty, then marshal the body. bodyBz will generally
@@ -124,6 +130,7 @@ func (w *wrapper) GetPubKeys() ([]cryptotypes.PubKey, error) {
 }
 
 func (w *wrapper) GetGas() uint64 {
+	fmt.Println("[DEBUG] in types/tx/types.go wrapper GetGas(), w.tx.AuthInfo.Fee.GasLimit = ", w.tx.AuthInfo.Fee.GasLimit)
 	return w.tx.AuthInfo.Fee.GasLimit
 }
 

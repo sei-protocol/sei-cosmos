@@ -34,6 +34,7 @@ type Context struct {
 	logger            log.Logger
 	voteInfo          []abci.VoteInfo
 	gasMeter          GasMeter
+	gasUsedEstimate   uint64
 	occEnabled        bool
 	blockGasMeter     GasMeter
 	checkTx           bool
@@ -340,6 +341,12 @@ func (c Context) WithVoteInfos(voteInfo []abci.VoteInfo) Context {
 // WithGasMeter returns a Context with an updated transaction GasMeter.
 func (c Context) WithGasMeter(meter GasMeter) Context {
 	c.gasMeter = meter
+	return c
+}
+
+// WithGasUsedEstimate returns a Context with an updated gas used estimate.
+func (c Context) WithGasUsedEstimate(gasUsedEstimate uint64) Context {
+	c.gasUsedEstimate = gasUsedEstimate
 	return c
 }
 

@@ -126,6 +126,10 @@ func (tx StdTx) ValidateBasic() error {
 	return nil
 }
 
+func (tx StdTx) GetGasEstimate() uint64 {
+	return tx.GasEstimate
+}
+
 // Deprecated: AsAny implements intoAny. It doesn't work for protobuf serialization,
 // so it can't be saved into protobuf configured storage. We are using it only for API
 // compatibility.

@@ -79,8 +79,8 @@ func (m *FeesParams) GetAllowedFeeDenoms() []string {
 }
 
 type CosmosGasParams struct {
-	CosmosGasMultiplierNumerator   uint64 `protobuf:"varint,1,opt,name=cosmos_gas_multiplier_numerator,json=cosmosGasMultiplierNumerator,proto3" json:"cosmos_gas_multiplier_numerator,omitempty"`
-	CosmosGasMultiplierDenominator uint64 `protobuf:"varint,2,opt,name=cosmos_gas_multiplier_denominator,json=cosmosGasMultiplierDenominator,proto3" json:"cosmos_gas_multiplier_denominator,omitempty"`
+	CosmosGasMultiplierNumerator   uint64 `protobuf:"varint,1,opt,name=cosmos_gas_multiplier_numerator,json=cosmosGasMultiplierNumerator,proto3" json:"cosmos_gas_multiplier_numerator,string,omitempty"`
+	CosmosGasMultiplierDenominator uint64 `protobuf:"varint,2,opt,name=cosmos_gas_multiplier_denominator,json=cosmosGasMultiplierDenominator,proto3" json:"cosmos_gas_multiplier_denominator,string,omitempty"`
 }
 
 func (m *CosmosGasParams) Reset()         { *m = CosmosGasParams{} }

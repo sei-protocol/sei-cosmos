@@ -1,8 +1,6 @@
 package tx
 
 import (
-	"fmt"
-
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -130,7 +128,6 @@ func (w *wrapper) GetPubKeys() ([]cryptotypes.PubKey, error) {
 }
 
 func (w *wrapper) GetGas() uint64 {
-	fmt.Println("[DEBUG] in types/tx/types.go wrapper GetGas(), w.tx.AuthInfo.Fee.GasLimit = ", w.tx.AuthInfo.Fee.GasLimit)
 	return w.tx.AuthInfo.Fee.GasLimit
 }
 

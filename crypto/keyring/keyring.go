@@ -249,7 +249,8 @@ func (ks keystore) ExportPrivateKeyObject(uid string) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			priv = legacy.Cdc.MustMarshal(privKeys)
+
+			priv = privKeys.Bytes()
 		}
 
 	case ledgerInfo, offlineInfo, multiInfo:

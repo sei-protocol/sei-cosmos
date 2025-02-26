@@ -249,7 +249,6 @@ func (ks keystore) ExportPrivateKeyObject(uid string) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-
 			priv = privKeys.Bytes()
 		}
 

@@ -891,6 +891,7 @@ func (app *BaseApp) runTx(ctx sdk.Context, mode runTxMode, tx sdk.Tx, checksum [
 		defer span.End()
 		ctx = ctx.WithTraceSpanContext(spanCtx)
 		span.SetAttributes(attribute.String("txHash", fmt.Sprintf("%X", checksum)))
+		span.SetAttributes(attribute.Bool("runTxModeDeliver", mode == runTxModeDeliver))
 	}
 
 	// NOTE: GasWanted should be returned by the AnteHandler. GasUsed is

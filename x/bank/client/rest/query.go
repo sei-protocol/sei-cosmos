@@ -91,28 +91,60 @@ func totalSupplyHandlerFn(clientCtx client.Context) http.HandlerFunc {
 	}
 }
 
-// HTTP request handler to query the supply of a single denom
-func supplyOfHandlerFn(clientCtx client.Context) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		denom := mux.Vars(r)["denom"]
-		clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
-		if !ok {
-			return
-		}
+// denomMetadataQueryHandlerFn handles denom metadata requests with forward slash support
+func denomMetadataQueryHandlerFn(clientCtx client.Context) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        denom := r.URL.Query().Get("denom")
+        if denom == "" {
+            rest.WriteErrorResponse(w, http.StatusBadRequest, "denom parameter is required")
+            return
+        }
 
-		params := types.NewQuerySupplyOfParams(denom)
-		bz, err := clientCtx.LegacyAmino.MarshalJSON(params)
+        clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
+        if !ok {
+            return
+        }
 
-		if rest.CheckBadRequestError(w, err) {
-			return
-		}
+        queryClient := types.NewQueryClient(clientCtx)
+        req := &types.QueryDenomMetadataRequest{
+            Denom: denom,
+        }
 
-		res, height, err := clientCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QuerySupplyOf), bz)
-		if rest.CheckInternalServerError(w, err) {
-			return
-		}
+        res, err := queryClient.DenomMetadata(r.Context(), req)
+        if err != nil {
+            rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+            return
+        }
 
-		clientCtx = clientCtx.WithHeight(height)
-		rest.PostProcessResponse(w, clientCtx, res)
-	}
+        rest.PostProcessResponse(w, clientCtx, res)
+    }
+}
+
+// supplyOfQueryHandlerFn handles supply queries with forward slash support
+func supplyOfQueryHandlerFn(clientCtx client.Context) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        denom := r.URL.Query().Get("denom")
+        if denom == "" {
+            rest.WriteErrorResponse(w, http.StatusBadRequest, "denom parameter is required")
+            return
+        }
+
+        clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
+        if !ok {
+            return
+        }
+
+        queryClient := types.NewQueryClient(clientCtx)
+        req := &types.QuerySupplyOfRequest{
+            Denom: denom,
+        }
+
+        res, err := queryClient.SupplyOf(r.Context(), req)
+        if err != nil {
+            rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
+            return
+        }
+
+        rest.PostProcessResponse(w, clientCtx, res)
+    }
 }

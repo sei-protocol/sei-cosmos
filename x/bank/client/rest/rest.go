@@ -16,4 +16,9 @@ func RegisterHandlers(clientCtx client.Context, rtr *mux.Router) {
 	r.HandleFunc("/bank/balances/{address}", QueryBalancesRequestHandlerFn(clientCtx)).Methods("GET")
 	r.HandleFunc("/bank/total", totalSupplyHandlerFn(clientCtx)).Methods("GET")
 	r.HandleFunc("/bank/total/{denom}", supplyOfHandlerFn(clientCtx)).Methods("GET")
+
+// Slash-safe query parameter routes
+        r.HandleFunc("/cosmos/bank/v1beta1/denoms_metadata_query", denomMetadataQueryHandlerFn(clientCtx)).Methods("GET")
+        r.HandleFunc("/cosmos/bank/v1beta1/supply_query", supplyOfQueryHandlerFn(clientCtx)).Methods("GET")
+
 }

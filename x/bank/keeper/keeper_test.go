@@ -1939,18 +1939,24 @@ func (suite *IntegrationTestSuite) TestMintCoinRestrictions() {
 	}
 }
 
-func (suite *IntegrationTestSuite) TestKeeperGetAllBalances(t *testing.T) {
+func (suite *IntegrationTestSuite) TestKeeperGetAllBalances() {
 	app, ctx := suite.app, suite.ctx
 	addr := sdk.AccAddress([]byte("addr1_______________"))
-	for i := 0; i < 1000000; i++ {
+	cnt := 1000000
+	allDenoms := make(sdk.Coins, cnt)
+	for i := 0; i < cnt; i++ {
+		d := fmt.Sprintf("d%d", i+10) // denom must be at least 3 chars.
 		app.BankKeeper.AddCoins(ctx, addr, sdk.Coins{sdk.Coin{
-			Denom: fmt.Sprintf("d%d", i), Amount: sdk.OneInt(),
+			Denom: d, Amount: sdk.OneInt(),
 		}}, false)
+		allDenoms[i] = sdk.Coin{Denom: d}
 	}
+	allDenoms = allDenoms.Sort()
 	balances := app.BankKeeper.GetAllBalances(ctx, addr)
-	for i := 0; i < 1000000; i++ {
-		suite.Require().Equal(t, fmt.Sprintf("d%d", i), balances[i].Denom)
-		suite.Require().Equal(t, sdk.OneInt(), balances[i].Amount)
+	suite.Require().Len(balances, cnt)
+	for i := 0; i < cnt; i++ {
+		suite.Require().Equal(allDenoms[i].Denom, balances[i].Denom)
+		suite.Require().Equal(sdk.OneInt(), balances[i].Amount)
 	}
 }
 

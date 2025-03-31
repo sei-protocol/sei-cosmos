@@ -1939,6 +1939,21 @@ func (suite *IntegrationTestSuite) TestMintCoinRestrictions() {
 	}
 }
 
+func (suite *IntegrationTestSuite) TestKeeperGetAllBalances(t *testing.T) {
+	app, ctx := suite.app, suite.ctx
+	addr := sdk.AccAddress([]byte("addr1_______________"))
+	for i := 0; i < 1000000; i++ {
+		app.BankKeeper.AddCoins(ctx, addr, sdk.Coins{sdk.Coin{
+			Denom: fmt.Sprintf("d%d", i), Amount: sdk.OneInt(),
+		}}, false)
+	}
+	balances := app.BankKeeper.GetAllBalances(ctx, addr)
+	for i := 0; i < 1000000; i++ {
+		suite.Require().Equal(t, fmt.Sprintf("d%d", i), balances[i].Denom)
+		suite.Require().Equal(t, sdk.OneInt(), balances[i].Amount)
+	}
+}
+
 func TestKeeperTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
 }

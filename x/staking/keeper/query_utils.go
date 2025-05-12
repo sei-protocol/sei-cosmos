@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 )
@@ -61,12 +62,13 @@ func (k Keeper) GetAllDelegatorDelegations(ctx sdk.Context, delegator sdk.AccAdd
 	defer iterator.Close()
 
 	i := 0
-
+	fmt.Printf("[Debug] Start GetAllDelegatorDelegations for delegator %s, delegatorPrefixKey is %X\n", delegator.String(), delegatorPrefixKey)
 	for ; iterator.Valid(); iterator.Next() {
 		delegation := types.MustUnmarshalDelegation(k.cdc, iterator.Value())
 		delegations = append(delegations, delegation)
 		i++
 	}
+	fmt.Printf("[Debug] Completed GetAllDelegatorDelegations for delegator %s\n", delegator.String())
 
 	return delegations
 }

@@ -73,6 +73,9 @@ func (gs *Store) Set(key []byte, value []byte) {
 	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostPerByte*types.Gas(len(key)), types.GasWritePerByteDesc)
 	gs.gasMeter.ConsumeGas(gs.gasConfig.WriteCostPerByte*types.Gas(len(value)), types.GasWritePerByteDesc)
 	gs.parent.Set(key, value)
+	if gs.tracer != nil {
+		gs.tracer.Set(key, value, gs.moduleName)
+	}
 }
 
 // Implements KVStore.
@@ -92,6 +95,9 @@ func (gs *Store) Delete(key []byte) {
 	// charge gas to prevent certain attack vectors even though space is being freed
 	gs.gasMeter.ConsumeGas(gs.gasConfig.DeleteCost, types.GasDeleteDesc)
 	gs.parent.Delete(key)
+	if gs.tracer != nil {
+		gs.tracer.Delete(key, gs.moduleName)
+	}
 }
 
 // Iterator implements the KVStore interface. It returns an iterator which

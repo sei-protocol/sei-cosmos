@@ -91,6 +91,12 @@ func (st *StoreTracer) getOrSetModuleTrace(module string) (mt *ModuleTrace) {
 	return
 }
 
+func (st *StoreTracer) Clear() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.Modules = map[string]*ModuleTrace{}
+}
+
 type StoreTraceDump struct {
 	Modules map[string]ModuleTraceDump `json:"modules"`
 }

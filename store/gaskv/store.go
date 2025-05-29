@@ -14,6 +14,7 @@ type IStoreTracer interface {
 	Set([]byte, []byte, string)
 	Delete([]byte, string)
 	DerivePrestateToJson() []byte
+	Clear()
 }
 
 var _ types.KVStore = &Store{}

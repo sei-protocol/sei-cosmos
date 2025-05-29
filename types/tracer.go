@@ -3,10 +3,12 @@ package types
 import (
 	"encoding/hex"
 	"encoding/json"
+	"sync"
 )
 
 type StoreTracer struct {
 	Modules map[string]*ModuleTrace
+	mu      *sync.Mutex
 }
 
 type ModuleTrace struct {
@@ -31,10 +33,13 @@ const (
 func NewStoreTracer() *StoreTracer {
 	return &StoreTracer{
 		Modules: map[string]*ModuleTrace{},
+		mu:      &sync.Mutex{},
 	}
 }
 
 func (st *StoreTracer) Get(key []byte, value []byte, module string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
 	accesses := st.getOrSetModuleTrace(module)
 	accesses.Accesses = append(accesses.Accesses, Access{
 		Op:    Get,
@@ -44,6 +49,8 @@ func (st *StoreTracer) Get(key []byte, value []byte, module string) {
 }
 
 func (st *StoreTracer) Set(key []byte, value []byte, module string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
 	accesses := st.getOrSetModuleTrace(module)
 	accesses.Accesses = append(accesses.Accesses, Access{
 		Op:    Set,
@@ -53,6 +60,8 @@ func (st *StoreTracer) Set(key []byte, value []byte, module string) {
 }
 
 func (st *StoreTracer) Has(key []byte, module string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
 	accesses := st.getOrSetModuleTrace(module)
 	accesses.Accesses = append(accesses.Accesses, Access{
 		Op:  Has,
@@ -61,6 +70,8 @@ func (st *StoreTracer) Has(key []byte, module string) {
 }
 
 func (st *StoreTracer) Delete(key []byte, module string) {
+	st.mu.Lock()
+	defer st.mu.Unlock()
 	accesses := st.getOrSetModuleTrace(module)
 	accesses.Accesses = append(accesses.Accesses, Access{
 		Op:  Delete,
@@ -80,6 +91,12 @@ func (st *StoreTracer) getOrSetModuleTrace(module string) (mt *ModuleTrace) {
 	return
 }
 
+func (st *StoreTracer) Clear() {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.Modules = map[string]*ModuleTrace{}
+}
+
 type StoreTraceDump struct {
 	Modules map[string]ModuleTraceDump `json:"modules"`
 }
@@ -90,6 +107,8 @@ type ModuleTraceDump struct {
 }
 
 func (st *StoreTracer) DerivePrestateToJson() []byte {
+	st.mu.Lock()
+	defer st.mu.Unlock()
 	d := StoreTraceDump{
 		Modules: make(map[string]ModuleTraceDump, len(st.Modules)),
 	}

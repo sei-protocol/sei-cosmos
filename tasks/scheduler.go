@@ -56,6 +56,7 @@ type deliverTxTask struct {
 	Response      *types.ResponseDeliverTx
 	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
 	TxTracer      sdk.TxTracer
+	CumulativeGas int64
 }
 
 // AppendDependencies appends the given indexes to the task's dependencies
@@ -203,8 +204,9 @@ func toTasks(reqs []*sdk.DeliverTxEntry) ([]*deliverTxTask, map[int]*deliverTxTa
 }
 
 type execMetrics struct {
-	totalGas int64
-	maxGas   int64
+	totalGas      int64
+	maxGas        int64
+	cumulativeGas int64
 }
 
 func (s *scheduler) collectResponses(tasks []*deliverTxTask) ([]types.ResponseDeliverTx, *execMetrics) {
@@ -216,6 +218,7 @@ func (s *scheduler) collectResponses(tasks []*deliverTxTask) ([]types.ResponseDe
 			m.maxGas = t.Response.GasUsed
 		}
 		m.totalGas += t.Response.GasUsed
+		m.cumulativeGas += t.CumulativeGas
 
 		if t.TxTracer != nil {
 			t.TxTracer.Commit()
@@ -366,6 +369,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		"maxIncarnation", s.maxIncarnation,
 		"totalGas", m.totalGas,
 		"maxGas", m.maxGas,
+		"cumulativeGas", m.cumulativeGas,
 		"iterations", iterations,
 		"sync", s.synchronous,
 		"workers", s.workers)
@@ -592,6 +596,7 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	task.SetStatus(statusExecuted)
 	task.Response = &resp
+	task.CumulativeGas += resp.GasUsed
 
 	// write from version store to multiversion stores
 	for _, v := range task.VersionStores {

@@ -202,16 +202,26 @@ func toTasks(reqs []*sdk.DeliverTxEntry) ([]*deliverTxTask, map[int]*deliverTxTa
 	return allTasks, tasksMap
 }
 
-func (s *scheduler) collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
+type execMetrics struct {
+	totalGas int64
+	maxGas   int64
+}
+
+func (s *scheduler) collectResponses(tasks []*deliverTxTask) ([]types.ResponseDeliverTx, *execMetrics) {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
+	m := &execMetrics{}
 	for _, t := range tasks {
 		res = append(res, *t.Response)
+		if t.Response.GasUsed > m.maxGas {
+			m.maxGas = t.Response.GasUsed
+		}
+		m.totalGas += t.Response.GasUsed
 
 		if t.TxTracer != nil {
 			t.TxTracer.Commit()
 		}
 	}
-	return res
+	return res, m
 }
 
 func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
@@ -346,9 +356,21 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
-	ctx.Logger().Info("occ scheduler", "height", ctx.BlockHeight(), "txs", len(tasks), "latency_ms", time.Since(startTime).Milliseconds(), "retries", s.metrics.retries, "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
+	r, m := s.collectResponses(tasks)
 
-	return s.collectResponses(tasks), nil
+	ctx.Logger().Info("occ scheduler",
+		"height", ctx.BlockHeight(),
+		"txs", len(tasks),
+		"latency_ms", time.Since(startTime).Milliseconds(),
+		"retries", s.metrics.retries,
+		"maxIncarnation", s.maxIncarnation,
+		"totalGas", m.totalGas,
+		"maxGas", m.maxGas,
+		"iterations", iterations,
+		"sync", s.synchronous,
+		"workers", s.workers)
+
+	return r, nil
 }
 
 func (s *scheduler) shouldRerun(task *deliverTxTask) bool {

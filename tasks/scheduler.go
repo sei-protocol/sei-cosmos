@@ -113,6 +113,7 @@ type scheduler struct {
 	metrics            *schedulerMetrics
 	synchronous        bool // true if maxIncarnation exceeds threshold
 	maxIncarnation     int  // current highest incarnation
+	execMetrics        *execMetrics
 }
 
 // NewScheduler creates a new scheduler
@@ -122,6 +123,7 @@ func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx
 		deliverTx:   deliverTxFunc,
 		tracingInfo: tracingInfo,
 		metrics:     &schedulerMetrics{},
+		execMetrics: &execMetrics{},
 	}
 }
 
@@ -204,27 +206,28 @@ func toTasks(reqs []*sdk.DeliverTxEntry) ([]*deliverTxTask, map[int]*deliverTxTa
 }
 
 type execMetrics struct {
-	totalGas      int64
-	maxGas        int64
-	cumulativeGas int64
+	totalGas                 int64
+	maxGas                   int64
+	cumulativeGas            int64
+	longestRunningTxHash     string
+	longestRunningTxDuration time.Duration
 }
 
-func (s *scheduler) collectResponses(tasks []*deliverTxTask) ([]types.ResponseDeliverTx, *execMetrics) {
+func (s *scheduler) collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
-	m := &execMetrics{}
 	for _, t := range tasks {
 		res = append(res, *t.Response)
-		if t.Response.GasUsed > m.maxGas {
-			m.maxGas = t.Response.GasUsed
+		if t.Response.GasUsed > s.execMetrics.maxGas {
+			s.execMetrics.maxGas = t.Response.GasUsed
 		}
-		m.totalGas += t.Response.GasUsed
-		m.cumulativeGas += t.CumulativeGas
+		s.execMetrics.totalGas += t.Response.GasUsed
+		s.execMetrics.cumulativeGas += t.CumulativeGas
 
 		if t.TxTracer != nil {
 			t.TxTracer.Commit()
 		}
 	}
-	return res, m
+	return res
 }
 
 func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
@@ -359,7 +362,7 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
-	r, m := s.collectResponses(tasks)
+	r := s.collectResponses(tasks)
 
 	ctx.Logger().Info("occ scheduler",
 		"height", ctx.BlockHeight(),
@@ -367,9 +370,11 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		"latency_ms", time.Since(startTime).Milliseconds(),
 		"retries", s.metrics.retries,
 		"maxIncarnation", s.maxIncarnation,
-		"totalGas", m.totalGas,
-		"maxGas", m.maxGas,
-		"cumulativeGas", m.cumulativeGas,
+		"totalGas", s.execMetrics.totalGas,
+		"maxGas", s.execMetrics.maxGas,
+		"cumulativeGas", s.execMetrics.cumulativeGas,
+		"longestRunningTxHash", s.execMetrics.longestRunningTxHash,
+		"longestRunningTxDuration", s.execMetrics.longestRunningTxDuration.Milliseconds(),
 		"iterations", iterations,
 		"sync", s.synchronous,
 		"workers", s.workers)
@@ -578,7 +583,14 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	s.prepareTask(task)
 
+	startTime := time.Now()
 	resp := s.deliverTx(task.Ctx, task.Request, task.SdkTx, task.Checksum)
+	duration := time.Since(startTime)
+	if duration > s.execMetrics.longestRunningTxDuration {
+		s.execMetrics.longestRunningTxDuration = duration
+		s.execMetrics.longestRunningTxHash = fmt.Sprintf("%X", sha256.Sum256(task.Request.Tx))
+	}
+
 	// close the abort channel
 	close(task.AbortCh)
 	abort, ok := <-task.AbortCh

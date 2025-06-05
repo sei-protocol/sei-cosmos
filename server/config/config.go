@@ -395,6 +395,7 @@ func GetConfig(v *viper.Viper) (Config, error) {
 			SnapshotInterval:    v.GetUint32("state-commit.snapshot-interval"),
 			SnapshotWriterLimit: v.GetInt("state-commit.snapshot-writer-limit"),
 			CacheSize:           v.GetInt("state-commit.cache-size"),
+			CacheModules:        v.GetString("state-commit.cache-modules"),
 		},
 		StateStore: config.StateStoreConfig{
 			Enable:               v.GetBool("state-store.enable"),

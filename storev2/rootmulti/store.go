@@ -261,8 +261,6 @@ func (rs *Store) CacheMultiStoreWithVersion(version int64) (types.CacheMultiStor
 			stores[k] = store
 		}
 	}
-	// TODO: May need to add historical SC store as well for nodes that doesn't enable ss but still need historical queries
-
 	// add SS stores for historical queries
 	if rs.ssStore != nil {
 		for k, store := range rs.ckvStores {
@@ -279,7 +277,29 @@ func (rs *Store) CacheMultiStoreForExport(version int64) (types.CacheMultiStore,
 	if version <= 0 || (rs.lastCommitInfo != nil && version == rs.lastCommitInfo.Version) {
 		return rs.CacheMultiStore(), nil
 	}
-	// Open SC stores for wasm snapshot, this op is blocking and could take a long time
+
+	// Check if we should use SS store for historical data (same logic as Store.Snapshot)
+	useSSForExport := false
+	if rs.ssStore != nil {
+		// Get SC store's earliest version
+		scEarliestVersion, err := rs.scStore.GetEarliestVersion()
+		if err == nil && version < scEarliestVersion {
+			// Check if SS store has the target version
+			ssEarliestVersion, ssErr := rs.ssStore.GetEarliestVersion()
+			ssLatestVersion, ssLatestErr := rs.ssStore.GetLatestVersion()
+			if ssErr == nil && ssLatestErr == nil &&
+				version >= ssEarliestVersion && version <= ssLatestVersion {
+				useSSForExport = true
+			}
+		}
+	}
+
+	if useSSForExport {
+		// Use SS store via CacheMultiStoreWithVersion which already handles SS
+		return rs.CacheMultiStoreWithVersion(version)
+	}
+
+	// Original SC store logic for non-pruned versions
 	scStore, err := rs.scStore.LoadVersion(version, true)
 	if err != nil {
 		return nil, err
@@ -937,6 +957,7 @@ func (rs *Store) snapshotFromSS(version int64, protoWriter protoio.Writer) error
 			return fmt.Errorf("failed to create iterator for store %s at version %d: %w", storeName, version, err)
 		}
 
+		keyCount := int64(0)
 		for itr.Valid() {
 			key := itr.Key()
 			value := itr.Value()
@@ -960,9 +981,30 @@ func (rs *Store) snapshotFromSS(version int64, protoWriter protoio.Writer) error
 			keySizePerStore[storeName] += int64(len(key))
 			valueSizePerStore[storeName] += int64(len(value))
 			numKeysPerStore[storeName] += 1
+			keyCount++
+
+			// Log progress every 1000 keys
+			if keyCount%10000 == 0 {
+				now := time.Now().Format("2006-01-02 15:04:05")
+				fmt.Printf("[%s] Processing store %s: processed %d keys, total key bytes: %d, total value bytes: %d\n",
+					now,
+					storeName,
+					numKeysPerStore[storeName],
+					keySizePerStore[storeName],
+					valueSizePerStore[storeName])
+			}
 
 			itr.Next()
 		}
+
+		// Log final count for this store
+		now := time.Now().Format("2006-01-02 15:04:05")
+		fmt.Printf("[%s] Completed store %s: total keys: %d, total key bytes: %d, total value bytes: %d\n",
+			now,
+			storeName,
+			numKeysPerStore[storeName],
+			keySizePerStore[storeName],
+			valueSizePerStore[storeName])
 
 		if err := itr.Error(); err != nil {
 			itr.Close()

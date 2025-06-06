@@ -261,8 +261,6 @@ func (rs *Store) CacheMultiStoreWithVersion(version int64) (types.CacheMultiStor
 			stores[k] = store
 		}
 	}
-	// TODO: May need to add historical SC store as well for nodes that doesn't enable ss but still need historical queries
-
 	// add SS stores for historical queries
 	if rs.ssStore != nil {
 		for k, store := range rs.ckvStores {
@@ -279,7 +277,29 @@ func (rs *Store) CacheMultiStoreForExport(version int64) (types.CacheMultiStore,
 	if version <= 0 || (rs.lastCommitInfo != nil && version == rs.lastCommitInfo.Version) {
 		return rs.CacheMultiStore(), nil
 	}
-	// Open SC stores for wasm snapshot, this op is blocking and could take a long time
+
+	// Check if we should use SS store for historical data (same logic as Store.Snapshot)
+	useSSForExport := false
+	if rs.ssStore != nil {
+		// Get SC store's earliest version
+		scEarliestVersion, err := rs.scStore.GetEarliestVersion()
+		if err == nil && version < scEarliestVersion {
+			// Check if SS store has the target version
+			ssEarliestVersion, ssErr := rs.ssStore.GetEarliestVersion()
+			ssLatestVersion, ssLatestErr := rs.ssStore.GetLatestVersion()
+			if ssErr == nil && ssLatestErr == nil &&
+				version >= ssEarliestVersion && version <= ssLatestVersion {
+				useSSForExport = true
+			}
+		}
+	}
+
+	if useSSForExport {
+		// Use SS store via CacheMultiStoreWithVersion which already handles SS
+		return rs.CacheMultiStoreWithVersion(version)
+	}
+
+	// Original SC store logic for non-pruned versions
 	scStore, err := rs.scStore.LoadVersion(version, true)
 	if err != nil {
 		return nil, err
@@ -808,11 +828,35 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		return fmt.Errorf("height overflows uint32: %d", height)
 	}
 
-	exporter, err := rs.scStore.Exporter(int64(height))
+	targetVersion := int64(height)
+
+	// Check if we should use SS store for historical data
+	useSSForSnapshot := false
+	if rs.ssStore != nil {
+		// Get SC store's earliest version
+		scEarliestVersion, err := rs.scStore.GetEarliestVersion()
+		if err == nil && targetVersion < scEarliestVersion {
+			// Check if SS store has the target version
+			ssEarliestVersion, ssErr := rs.ssStore.GetEarliestVersion()
+			ssLatestVersion, ssLatestErr := rs.ssStore.GetLatestVersion()
+			if ssErr == nil && ssLatestErr == nil &&
+				targetVersion >= ssEarliestVersion && targetVersion <= ssLatestVersion {
+				useSSForSnapshot = true
+			}
+		}
+	}
+
+	if useSSForSnapshot {
+		return rs.snapshotFromSS(targetVersion, protoWriter)
+	}
+
+	// Use existing SC store export logic
+	exporter, err := rs.scStore.Exporter(targetVersion)
 	if err != nil {
 		return err
 	}
 	defer exporter.Close()
+
 	keySizePerStore := map[string]int64{}
 	valueSizePerStore := map[string]int64{}
 	numKeysPerStore := map[string]int64{}
@@ -877,6 +921,116 @@ func (rs *Store) Snapshot(height uint64, protoWriter protoio.Writer) error {
 		default:
 			return fmt.Errorf("unknown item type %T", item)
 		}
+	}
+
+	return nil
+}
+
+// snapshotFromSS creates a snapshot using the SS store for historical data
+func (rs *Store) snapshotFromSS(version int64, protoWriter protoio.Writer) error {
+	keySizePerStore := map[string]int64{}
+	valueSizePerStore := map[string]int64{}
+	numKeysPerStore := map[string]int64{}
+
+	// Iterate through all IAVL stores and export their data from SS
+	for storeKey, params := range rs.storesParams {
+		if params.typ != types.StoreTypeIAVL {
+			continue
+		}
+
+		storeName := storeKey.Name()
+
+		// Write store item
+		if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
+			Item: &snapshottypes.SnapshotItem_Store{
+				Store: &snapshottypes.SnapshotStoreItem{
+					Name: storeName,
+				},
+			},
+		}); err != nil {
+			return err
+		}
+
+		// Iterate through all keys in this store using SS store
+		itr, err := rs.ssStore.Iterator(storeName, version, nil, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create iterator for store %s at version %d: %w", storeName, version, err)
+		}
+
+		keyCount := int64(0)
+		for itr.Valid() {
+			key := itr.Key()
+			value := itr.Value()
+
+			// Write IAVL item (height 0 for leaf nodes from SS store)
+			if err := protoWriter.WriteMsg(&snapshottypes.SnapshotItem{
+				Item: &snapshottypes.SnapshotItem_IAVL{
+					IAVL: &snapshottypes.SnapshotIAVLItem{
+						Key:     key,
+						Value:   value,
+						Height:  0, // SS store only contains leaf nodes
+						Version: version,
+					},
+				},
+			}); err != nil {
+				itr.Close()
+				return err
+			}
+
+			// Update metrics
+			keySizePerStore[storeName] += int64(len(key))
+			valueSizePerStore[storeName] += int64(len(value))
+			numKeysPerStore[storeName] += 1
+			keyCount++
+
+			// Log progress every 1000 keys
+			if keyCount%10000 == 0 {
+				rs.logger.Info(fmt.Sprintf("Processing store %s: processed %d keys, total key bytes: %d, total value bytes: %d",
+					storeName,
+					numKeysPerStore[storeName],
+					keySizePerStore[storeName],
+					valueSizePerStore[storeName]))
+			}
+
+			itr.Next()
+		}
+
+		// Log final count for this store
+		rs.logger.Info(fmt.Sprintf("Completed store %s: total keys: %d, total key bytes: %d, total value bytes: %d",
+			storeName,
+			numKeysPerStore[storeName],
+			keySizePerStore[storeName],
+			valueSizePerStore[storeName]))
+
+		if err := itr.Error(); err != nil {
+			itr.Close()
+			return fmt.Errorf("iterator error for store %s: %w", storeName, err)
+		}
+
+		itr.Close()
+	}
+
+	// Report metrics
+	for k, v := range keySizePerStore {
+		telemetry.SetGaugeWithLabels(
+			[]string{"iavl", "store", "total_key_bytes"},
+			float32(v),
+			[]metrics.Label{telemetry.NewLabel("store_name", k)},
+		)
+	}
+	for k, v := range valueSizePerStore {
+		telemetry.SetGaugeWithLabels(
+			[]string{"iavl", "store", "total_value_bytes"},
+			float32(v),
+			[]metrics.Label{telemetry.NewLabel("store_name", k)},
+		)
+	}
+	for k, v := range numKeysPerStore {
+		telemetry.SetGaugeWithLabels(
+			[]string{"iavl", "store", "total_num_keys"},
+			float32(v),
+			[]metrics.Label{telemetry.NewLabel("store_name", k)},
+		)
 	}
 
 	return nil

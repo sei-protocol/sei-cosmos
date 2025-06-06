@@ -985,26 +985,22 @@ func (rs *Store) snapshotFromSS(version int64, protoWriter protoio.Writer) error
 
 			// Log progress every 1000 keys
 			if keyCount%10000 == 0 {
-				now := time.Now().Format("2006-01-02 15:04:05")
-				fmt.Printf("[%s] Processing store %s: processed %d keys, total key bytes: %d, total value bytes: %d\n",
-					now,
+				rs.logger.Info(fmt.Sprintf("Processing store %s: processed %d keys, total key bytes: %d, total value bytes: %d",
 					storeName,
 					numKeysPerStore[storeName],
 					keySizePerStore[storeName],
-					valueSizePerStore[storeName])
+					valueSizePerStore[storeName]))
 			}
 
 			itr.Next()
 		}
 
 		// Log final count for this store
-		now := time.Now().Format("2006-01-02 15:04:05")
-		fmt.Printf("[%s] Completed store %s: total keys: %d, total key bytes: %d, total value bytes: %d\n",
-			now,
+		rs.logger.Info(fmt.Sprintf("Completed store %s: total keys: %d, total key bytes: %d, total value bytes: %d",
 			storeName,
 			numKeysPerStore[storeName],
 			keySizePerStore[storeName],
-			valueSizePerStore[storeName])
+			valueSizePerStore[storeName]))
 
 		if err := itr.Error(); err != nil {
 			itr.Close()

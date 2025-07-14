@@ -44,18 +44,27 @@ type deliverTxTask struct {
 	Ctx     sdk.Context
 	AbortCh chan occ.Abort
 
-	mx            sync.RWMutex
-	Status        status
-	Dependencies  map[int]struct{}
-	Abort         *occ.Abort
-	Incarnation   int
-	Request       types.RequestDeliverTx
-	SdkTx         sdk.Tx
-	Checksum      [32]byte
-	AbsoluteIndex int
-	Response      *types.ResponseDeliverTx
-	VersionStores map[sdk.StoreKey]*multiversion.VersionIndexedStore
-	TxTracer      sdk.TxTracer
+	mx             sync.RWMutex
+	Status         status
+	Dependencies   map[int]struct{}
+	Abort          *occ.Abort
+	Incarnation    int
+	Request        types.RequestDeliverTx
+	SdkTx          sdk.Tx
+	Checksum       [32]byte
+	AbsoluteIndex  int
+	Response       *types.ResponseDeliverTx
+	VersionStores  map[sdk.StoreKey]*multiversion.VersionIndexedStore
+	TxTracer       sdk.TxTracer
+	ExecutionMs    time.Duration
+	SumExecutionMs time.Duration
+}
+
+type txMetrics struct {
+	maxExecutionMs     time.Duration // max one-time tx execution ms.
+	maxExecutionIdx    int           // worst one-time tx idx.
+	sumExecutionMs     time.Duration // sum of last execution ms.
+	overallExecutionMs time.Duration // sum of all txs execution ms including retries.
 }
 
 // AppendDependencies appends the given indexes to the task's dependencies
@@ -202,16 +211,22 @@ func toTasks(reqs []*sdk.DeliverTxEntry) ([]*deliverTxTask, map[int]*deliverTxTa
 	return allTasks, tasksMap
 }
 
-func (s *scheduler) collectResponses(tasks []*deliverTxTask) []types.ResponseDeliverTx {
+func (s *scheduler) collectResponses(tasks []*deliverTxTask) ([]types.ResponseDeliverTx, *txMetrics) {
 	res := make([]types.ResponseDeliverTx, 0, len(tasks))
+	metrics := &txMetrics{}
 	for _, t := range tasks {
 		res = append(res, *t.Response)
-
+		if t.ExecutionMs > metrics.maxExecutionMs {
+			metrics.maxExecutionMs = t.ExecutionMs
+			metrics.maxExecutionIdx = t.AbsoluteIndex
+		}
+		metrics.sumExecutionMs += t.ExecutionMs
+		metrics.overallExecutionMs += t.SumExecutionMs
 		if t.TxTracer != nil {
 			t.TxTracer.Commit()
 		}
 	}
-	return res
+	return res, metrics
 }
 
 func (s *scheduler) tryInitMultiVersionStore(ctx sdk.Context) {
@@ -345,10 +360,23 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		mv.WriteLatestToStore()
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
+	res, m := s.collectResponses(tasks)
 
-	ctx.Logger().Info("occ scheduler", "height", ctx.BlockHeight(), "txs", len(tasks), "latency_ms", time.Since(startTime).Milliseconds(), "retries", s.metrics.retries, "maxIncarnation", s.maxIncarnation, "iterations", iterations, "sync", s.synchronous, "workers", s.workers)
+	ctx.Logger().Info("occ scheduler",
+		"height", ctx.BlockHeight(),
+		"txs", len(tasks),
+		"latency_ms", time.Since(startTime).Milliseconds(),
+		"retries", s.metrics.retries,
+		"maxIncarnation", s.maxIncarnation,
+		"maxExTime", m.maxExecutionMs.Milliseconds(),
+		"maxExIdx", m.maxExecutionIdx,
+		"overallExMs", m.overallExecutionMs,
+		"sumExMs", m.sumExecutionMs,
+		"iterations", iterations,
+		"sync", s.synchronous,
+		"workers", s.workers)
 
-	return s.collectResponses(tasks), nil
+	return res, nil
 }
 
 func (s *scheduler) shouldRerun(task *deliverTxTask) bool {
@@ -552,7 +580,10 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	s.prepareTask(task)
 
+	startTime := time.Now()
 	resp := s.deliverTx(task.Ctx, task.Request, task.SdkTx, task.Checksum)
+	task.ExecutionMs = time.Since(startTime)
+	task.SumExecutionMs += task.ExecutionMs
 	// close the abort channel
 	close(task.AbortCh)
 	abort, ok := <-task.AbortCh

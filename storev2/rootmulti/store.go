@@ -1,5 +1,50 @@
 package rootmulti
 
+/*
+InterBlockCache Monitoring and Metrics
+
+The storev2 rootmulti store provides comprehensive telemetry for monitoring the effectiveness
+of the inter-block cache. The following metrics are available:
+
+1. Cache Status Metrics:
+   - storev2.interblock_cache.enabled (gauge): 1 when cache is enabled, 0 when disabled
+   - storev2.interblock_cache.active (gauge): 1 when cache is actively being used
+   - storev2.interblock_cache.potential_stores (gauge): Number of IAVL stores that could use cache
+
+2. Cache Performance Metrics:
+   - storev2.interblock_cache.hits (counter): Number of cache hits per store
+   - storev2.interblock_cache.misses (counter): Number of cache misses per store
+   - storev2.interblock_cache.store_wrapped (counter): Number of stores wrapped with cache
+
+3. Performance Timing Metrics:
+   - storev2.interblock_cache.get_store_latency (histogram): Total latency for GetCommitKVStore calls
+   - storev2.interblock_cache.unwrap_latency (histogram): Latency for cache unwrap operations
+
+Monitoring Cache Effectiveness:
+
+To determine if the inter-block cache is effective, monitor:
+
+1. Cache Hit Rate: hits / (hits + misses)
+   - Good: >80% hit rate indicates effective caching
+   - Poor: <50% hit rate may indicate cache thrashing or inappropriate workload
+
+2. Performance Impact:
+   - Compare get_store_latency before and after enabling cache
+   - Monitor unwrap_latency to ensure cache lookups are fast
+
+3. Usage Verification:
+   - Confirm enabled=1 and active=1 when cache should be working
+   - Verify store_wrapped matches expected number of IAVL stores
+
+Example Prometheus queries:
+- Hit rate: rate(storev2_interblock_cache_hits_total[5m]) / (rate(storev2_interblock_cache_hits_total[5m]) + rate(storev2_interblock_cache_misses_total[5m]))
+- Average latency: histogram_quantile(0.95, rate(storev2_interblock_cache_get_store_latency_bucket[5m]))
+
+Log Messages:
+- "Inter-block cache enabled for storev2": Cache was successfully enabled
+- "Inter-block cache disabled for storev2": Cache was disabled
+*/
+
 import (
 	"fmt"
 	"io"
@@ -41,16 +86,17 @@ var (
 )
 
 type Store struct {
-	logger         log.Logger
-	mtx            sync.RWMutex
-	scStore        sctypes.Committer
-	ssStore        sstypes.StateStore
-	lastCommitInfo *types.CommitInfo
-	storesParams   map[types.StoreKey]storeParams
-	storeKeys      map[string]types.StoreKey
-	ckvStores      map[types.StoreKey]types.CommitKVStore
-	pendingChanges chan VersionedChangesets
-	pruningManager *pruning.Manager
+	logger          log.Logger
+	mtx             sync.RWMutex
+	scStore         sctypes.Committer
+	ssStore         sstypes.StateStore
+	lastCommitInfo  *types.CommitInfo
+	storesParams    map[types.StoreKey]storeParams
+	storeKeys       map[string]types.StoreKey
+	ckvStores       map[types.StoreKey]types.CommitKVStore
+	pendingChanges  chan VersionedChangesets
+	pruningManager  *pruning.Manager
+	interBlockCache types.MultiStorePersistentCache
 }
 
 type VersionedChangesets struct {
@@ -132,6 +178,10 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 
 	rs.lastCommitInfo = convertCommitInfo(rs.scStore.LastCommitInfo())
 	rs.lastCommitInfo = amendCommitInfo(rs.lastCommitInfo, rs.storesParams)
+
+	// Report inter-block cache metrics
+	rs.reportInterBlockCacheMetrics()
+
 	return rs.lastCommitInfo.CommitID()
 }
 
@@ -307,7 +357,12 @@ func (rs *Store) CacheMultiStoreForExport(version int64) (types.CacheMultiStore,
 
 // GetStore Implements interface MultiStore
 func (rs *Store) GetStore(key types.StoreKey) types.Store {
-	return rs.ckvStores[key]
+	store := rs.GetCommitKVStore(key)
+	if store == nil {
+		panic(fmt.Sprintf("store does not exist for key: %s", key.Name()))
+	}
+
+	return store
 }
 
 // GetKVStore Implements interface MultiStore
@@ -362,6 +417,32 @@ func (rs *Store) GetCommitStore(key types.StoreKey) types.CommitStore {
 
 // GetCommitKVStore Implements interface CommitMultiStore
 func (rs *Store) GetCommitKVStore(key types.StoreKey) types.CommitKVStore {
+	defer telemetry.MeasureSince(time.Now(), "storev2", "interblock_cache", "get_store_latency")
+
+	// If the Store has an inter-block cache, first attempt to lookup and unwrap
+	// the underlying CommitKVStore by StoreKey. If it does not exist, fallback to
+	// the main mapping of CommitKVStores.
+	if rs.interBlockCache != nil {
+		cacheStartTime := time.Now()
+		if store := rs.interBlockCache.Unwrap(key); store != nil {
+			// Cache hit - record metric and timing
+			telemetry.MeasureSince(cacheStartTime, "storev2", "interblock_cache", "unwrap_latency")
+			telemetry.IncrCounterWithLabels(
+				[]string{"storev2", "interblock_cache", "hits"},
+				1,
+				[]metrics.Label{telemetry.NewLabel("store_key", key.Name())},
+			)
+			return store
+		}
+		// Cache miss - record metric and timing
+		telemetry.MeasureSince(cacheStartTime, "storev2", "interblock_cache", "unwrap_latency")
+		telemetry.IncrCounterWithLabels(
+			[]string{"storev2", "interblock_cache", "misses"},
+			1,
+			[]metrics.Label{telemetry.NewLabel("store_key", key.Name())},
+		)
+	}
+
 	return rs.ckvStores[key]
 }
 
@@ -462,7 +543,23 @@ func (rs *Store) loadCommitStoreFromParams(key types.StoreKey, params storeParam
 		if tree == nil {
 			return nil, fmt.Errorf("new store is not added in upgrades: %s", key.Name())
 		}
-		return types.CommitKVStore(commitment.NewStore(tree, rs.logger)), nil
+		store := types.CommitKVStore(commitment.NewStore(tree, rs.logger))
+
+		if rs.interBlockCache != nil {
+			// Wrap and get a CommitKVStore with inter-block caching. Note, this should
+			// only wrap the primary CommitKVStore, not any store that is already
+			// branched as that will create unexpected behavior.
+			store = rs.interBlockCache.GetStoreCache(key, store)
+
+			// Record metric for cache wrapping
+			telemetry.IncrCounterWithLabels(
+				[]string{"storev2", "interblock_cache", "store_wrapped"},
+				1,
+				[]metrics.Label{telemetry.NewLabel("store_key", key.Name())},
+			)
+		}
+
+		return store, nil
 	case types.StoreTypeDB:
 		panic("recursive MultiStores not yet supported")
 	case types.StoreTypeTransient:
@@ -488,8 +585,20 @@ func (rs *Store) LoadVersion(ver int64) error {
 	return rs.LoadVersionAndUpgrade(ver, nil)
 }
 
-// SetInterBlockCache is a noop since we do caching on its own, which works well with zero-copy.
-func (rs *Store) SetInterBlockCache(_ types.MultiStorePersistentCache) {}
+// SetInterBlockCache sets the Store's internal inter-block (persistent) cache.
+// When this is defined, all CommitKVStores will be wrapped with their respective
+// inter-block cache.
+func (rs *Store) SetInterBlockCache(c types.MultiStorePersistentCache) {
+	if c != nil && rs.interBlockCache == nil {
+		rs.logger.Info("Inter-block cache enabled for storev2")
+		telemetry.SetGauge(1, "storev2", "interblock_cache", "enabled")
+	} else if c == nil && rs.interBlockCache != nil {
+		rs.logger.Info("Inter-block cache disabled for storev2")
+		telemetry.SetGauge(0, "storev2", "interblock_cache", "enabled")
+	}
+
+	rs.interBlockCache = c
+}
 
 // SetInitialVersion Implements interface CommitMultiStore
 // used by InitChain when the initial height is bigger than 1
@@ -907,4 +1016,52 @@ func (rs *Store) GetEarliestVersion() int64 {
 		return version
 	}
 	return latestVersion
+}
+
+// reportInterBlockCacheMetrics reports effectiveness metrics for the inter-block cache.
+// This should be called periodically (e.g., during commit) to track cache performance.
+func (rs *Store) reportInterBlockCacheMetrics() {
+	if rs.interBlockCache == nil {
+		return
+	}
+
+	// Report that inter-block cache is active
+	telemetry.SetGauge(1, "storev2", "interblock_cache", "active")
+
+	// Report number of stores that could potentially use the cache
+	numIAVLStores := 0
+	for _, params := range rs.storesParams {
+		if params.typ == types.StoreTypeIAVL {
+			numIAVLStores++
+		}
+	}
+	telemetry.SetGauge(float32(numIAVLStores), "storev2", "interblock_cache", "potential_stores")
+}
+
+// GetInterBlockCacheStatus returns a summary of the inter-block cache status for debugging.
+// This method provides a snapshot of cache configuration and can be used by monitoring tools.
+func (rs *Store) GetInterBlockCacheStatus() map[string]interface{} {
+	status := make(map[string]interface{})
+
+	status["enabled"] = rs.interBlockCache != nil
+
+	if rs.interBlockCache != nil {
+		status["cache_type"] = fmt.Sprintf("%T", rs.interBlockCache)
+	}
+
+	// Count IAVL stores that could benefit from caching
+	iavlStoreCount := 0
+	iavlStoreNames := make([]string, 0)
+	for key, params := range rs.storesParams {
+		if params.typ == types.StoreTypeIAVL {
+			iavlStoreCount++
+			iavlStoreNames = append(iavlStoreNames, key.Name())
+		}
+	}
+
+	status["iavl_store_count"] = iavlStoreCount
+	status["iavl_store_names"] = iavlStoreNames
+	status["total_stores"] = len(rs.storesParams)
+
+	return status
 }

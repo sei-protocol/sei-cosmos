@@ -6,7 +6,7 @@ package ledger
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/pkg/errors"
 
 	secp256k1 "github.com/tendermint/btcd/btcec"
@@ -73,7 +73,7 @@ func (mock LedgerSECP256K1Mock) GetAddressPubKeySECP256K1(derivationPath []uint3
 	}
 
 	// re-serialize in the 33-byte compressed format
-	cmp, err := btcec.ParsePubKey(pk[:], btcec.S256())
+	cmp, err := btcec.ParsePubKey(pk[:])
 	if err != nil {
 		return nil, "", fmt.Errorf("error parsing public key: %v", err)
 	}
@@ -102,14 +102,15 @@ func (mock LedgerSECP256K1Mock) SignSECP256K1(derivationPath []uint32, message [
 
 	priv, _ := secp256k1.PrivKeyFromBytes(secp256k1.S256(), derivedPriv[:])
 
-	sig, err := priv.Sign(cosmoscrypto.Sha256(message))
+	// Use double SHA256 to match the secp256k1.VerifySignature expectations
+	doubleHash := cosmoscrypto.Sha256(cosmoscrypto.Sha256(message))
+	sig, err := priv.Sign(doubleHash)
 	if err != nil {
 		return nil, err
 	}
 
-	// Need to return DER as the ledger does
-	sig2 := btcec.Signature{R: sig.R, S: sig.S}
-	return sig2.Serialize(), nil
+	// Return the signature in DER format as the ledger interface expects
+	return sig.Serialize(), nil
 }
 
 // ShowAddressSECP256K1 shows the address for the corresponding bip32 derivation path

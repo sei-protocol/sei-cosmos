@@ -1,8 +1,12 @@
 package cache
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
 	"github.com/cosmos/cosmos-sdk/store/types"
@@ -34,6 +38,8 @@ type (
 		// the same CommitKVStoreCache may be accessed concurrently by multiple
 		// goroutines due to transaction parallelization
 		mtx sync.RWMutex
+
+		storeName string
 	}
 
 	// CommitKVStoreCacheManager maintains a mapping from a StoreKey to a
@@ -47,7 +53,7 @@ type (
 	}
 )
 
-func NewCommitKVStoreCache(store types.CommitKVStore, size uint, cacheKVSize int) *CommitKVStoreCache {
+func NewCommitKVStoreCache(store types.CommitKVStore, size uint, cacheKVSize int, storeName string) *CommitKVStoreCache {
 	cache, err := lru.New2Q[string, []byte](int(size))
 	if err != nil {
 		panic(fmt.Errorf("failed to create KVStore cache: %s", err))
@@ -57,6 +63,7 @@ func NewCommitKVStoreCache(store types.CommitKVStore, size uint, cacheKVSize int
 		CommitKVStore: store,
 		cache:         cache,
 		cacheKVSize:   cacheKVSize,
+		storeName:     storeName,
 	}
 }
 
@@ -73,7 +80,7 @@ func NewCommitKVStoreCacheManager(size uint, cacheKVSize int) *CommitKVStoreCach
 // The returned Cache is meant to be used in a persistent manner.
 func (cmgr *CommitKVStoreCacheManager) GetStoreCache(key types.StoreKey, store types.CommitKVStore) types.CommitKVStore {
 	if cmgr.caches[key.Name()] == nil {
-		cmgr.caches[key.Name()] = NewCommitKVStoreCache(store, cmgr.cacheSize, cmgr.cacheKVSize)
+		cmgr.caches[key.Name()] = NewCommitKVStoreCache(store, cmgr.cacheSize, cmgr.cacheKVSize, key.Name())
 	}
 
 	return cmgr.caches[key.Name()]
@@ -125,6 +132,12 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 	types.AssertValidKey(key)
 
 	if value, ok := ckv.getFromCache(key); ok {
+		// we want to test cache and underlying store consistency
+		storeVal := ckv.CommitKVStore.Get(key)
+		if !bytes.Equal(value, storeVal) {
+			log.Error().Str("store", ckv.storeName).Str("key", hex.EncodeToString(key)).Str("cache_value", hex.EncodeToString(value)).Str("underlying_value", hex.EncodeToString(storeVal)).Msg("cache and underlying store are inconsistent")
+			return storeVal // TODO return the underlying value for now for safety
+		}
 		return value
 	}
 

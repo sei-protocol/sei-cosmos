@@ -136,7 +136,7 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 		storeVal := ckv.CommitKVStore.Get(key)
 		if !bytes.Equal(value, storeVal) {
 			log.Error().Str("store", ckv.storeName).Str("key", hex.EncodeToString(key)).Str("cache_value", hex.EncodeToString(value)).Str("underlying_value", hex.EncodeToString(storeVal)).Msg("cache and underlying store are inconsistent")
-			return storeVal // TODO return the underlying value for now for safety
+			return ckv.getAndWriteToCache(key) // TODO return the underlying value for now for safety and update cache
 		}
 		return value
 	}

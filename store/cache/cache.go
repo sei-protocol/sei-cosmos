@@ -111,15 +111,11 @@ func (ckv *CommitKVStoreCache) CacheWrap(storeKey types.StoreKey) types.CacheWra
 
 // getFromCache queries the write-through cache for a value by key.
 func (ckv *CommitKVStoreCache) getFromCache(key []byte) ([]byte, bool) {
-	ckv.mtx.RLock()
-	defer ckv.mtx.RUnlock()
 	return ckv.cache.Get(string(key))
 }
 
 // getAndWriteToCache queries the underlying CommitKVStore and writes the result
 func (ckv *CommitKVStoreCache) getAndWriteToCache(key []byte) []byte {
-	ckv.mtx.RLock()
-	defer ckv.mtx.RUnlock()
 	value := ckv.CommitKVStore.Get(key)
 	ckv.cache.Add(string(key), value)
 	return value
@@ -129,6 +125,9 @@ func (ckv *CommitKVStoreCache) getAndWriteToCache(key []byte) []byte {
 // If the value doesn't exist in the write-through cache, the query is delegated
 // to the underlying CommitKVStore.
 func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
+	// do top level locking for the GET to protect against racing for the cache <> store consistency check
+	ckv.mtx.RLock()
+	defer ckv.mtx.RUnlock()
 	types.AssertValidKey(key)
 
 	if value, ok := ckv.getFromCache(key); ok {

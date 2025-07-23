@@ -124,6 +124,7 @@ func (rs *Store) Commit(bumpVersion bool) types.CommitID {
 	for key := range rs.ckvStores {
 		store := rs.ckvStores[key]
 		if store.GetStoreType() == types.StoreTypeIAVL {
+			rs.logger.Info("Reloading sc store", "store", key.Name())
 			rs.ckvStores[key], err = rs.loadCommitStoreFromParams(key, rs.storesParams[key])
 			if err != nil {
 				panic(fmt.Errorf("inconsistent store map, store %s not found", key.Name()))

@@ -128,7 +128,7 @@ func (store *Store) Write() {
 		cacheValue, ok := store.cache.Load(key)
 		if ok && cacheValue.(*types.CValue).Value() != nil {
 			// It already exists in the parent, hence delete it.
-			store.parent.Set([]byte(key), cacheValue.(*types.CValue).Value())
+			store.parent.Set([]byte(key), cacheValue.(*types.CValue).Value()) // TODO: this is where we write to the interblock cache
 		}
 	}
 

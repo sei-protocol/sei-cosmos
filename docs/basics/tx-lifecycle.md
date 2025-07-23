@@ -117,7 +117,7 @@ nodes and add it to the Mempool so that the `Tx` becomes a candidate to be inclu
 The **mempool** serves the purpose of keeping track of transactions seen by all full-nodes.
 Full-nodes keep a **mempool cache** of the last `mempool.cache_size` transactions they have seen, as a first line of
 defense to prevent replay attacks. Ideally, `mempool.cache_size` is large enough to encompass all
-of the transactions in the full mempool. If the the mempool cache is too small to keep track of all
+of the transactions in the full mempool. If the mempool cache is too small to keep track of all
 the transactions, `CheckTx` is responsible for identifying and rejecting replayed transactions.
 
 Currently existing preventative measures include fees and a `sequence` (nonce) counter to distinguish

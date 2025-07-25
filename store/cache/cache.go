@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"runtime/debug"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -135,7 +134,7 @@ func (ckv *CommitKVStoreCache) Get(key []byte) []byte {
 		// we want to test cache and underlying store consistency
 		storeVal := ckv.CommitKVStore.Get(key)
 		if !bytes.Equal(value, storeVal) {
-			log.Error().Str("store", ckv.storeName).Str("key", hex.EncodeToString(key)).Str("cache_value", hex.EncodeToString(value)).Str("underlying_value", hex.EncodeToString(storeVal)).Str("stack", string(debug.Stack())).Msg("cache and underlying store are inconsistent")
+			log.Error().Str("store", ckv.storeName).Str("key", hex.EncodeToString(key)).Str("cache_value", hex.EncodeToString(value)).Str("underlying_value", hex.EncodeToString(storeVal)).Msg("cache and underlying store are inconsistent")
 			return ckv.getAndWriteToCache(key) // TODO return the underlying value for now for safety and update cache
 		}
 		return value

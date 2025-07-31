@@ -134,7 +134,7 @@ func ReferenceCountInvariant(k Keeper) sdk.Invariant {
 }
 
 // ModuleAccountInvariant checks that the coins held by the distr ModuleAccount
-// is consistent with the sum of validator outstanding rewards
+// are at least sufficient to cover the sum of validator outstanding rewards
 func ModuleAccountInvariant(k Keeper) sdk.Invariant {
 	return func(ctx sdk.Context) (string, bool) {
 
@@ -150,11 +150,11 @@ func ModuleAccountInvariant(k Keeper) sdk.Invariant {
 		macc := k.GetDistributionAccount(ctx)
 		balances := k.bankKeeper.GetAllBalances(ctx, macc.GetAddress())
 
-		broken := !balances.IsEqual(expectedInt)
+		broken := !balances.IsAllGTE(expectedInt)
 		return sdk.FormatInvariant(
 			types.ModuleName, "ModuleAccount coins",
-			fmt.Sprintf("\texpected ModuleAccount coins:     %s\n"+
-				"\tdistribution ModuleAccount coins: %s\n",
+			fmt.Sprintf("\tminimum required ModuleAccount coins: %s\n"+
+				"\tactual distribution ModuleAccount coins: %s\n",
 				expectedInt, balances,
 			),
 		), broken

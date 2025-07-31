@@ -26,6 +26,8 @@ and standard additions here would be better just to add to the Context struct
 type Context struct {
 	ctx               context.Context
 	ms                MultiStore
+	nextMs            MultiStore          // ms of the next height; only used in tracing
+	nextStoreKeys     map[string]struct{} // store key names that should use nextMs
 	header            tmproto.Header
 	headerHash        tmbytes.HexBytes
 	chainID           string
@@ -68,7 +70,8 @@ type Context struct {
 
 	traceSpanContext context.Context
 
-	isTracing bool
+	isTracing   bool
+	storeTracer gaskv.IStoreTracer
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -227,6 +230,13 @@ func (c Context) TraceSpanContext() context.Context {
 
 func (c Context) IsTracing() bool {
 	return c.isTracing
+}
+
+func (c Context) StoreTracer() gaskv.IStoreTracer {
+	if c.storeTracer == nil {
+		return nil
+	}
+	return c.storeTracer
 }
 
 // WithEventManager returns a Context with an updated tx priority
@@ -502,6 +512,18 @@ func (c Context) WithExpireTxHandler(expireTxHandler func()) Context {
 
 func (c Context) WithIsTracing(it bool) Context {
 	c.isTracing = it
+	if it {
+		c.storeTracer = NewStoreTracer()
+	}
+	return c
+}
+
+func (c Context) WithNextMs(ms MultiStore, nextStoreKeys []string) Context {
+	c.nextMs = ms
+	c.nextStoreKeys = make(map[string]struct{}, len(nextStoreKeys))
+	for _, k := range nextStoreKeys {
+		c.nextStoreKeys[k] = struct{}{}
+	}
 	return c
 }
 
@@ -541,12 +563,22 @@ func (c Context) Value(key interface{}) interface{} {
 
 // KVStore fetches a KVStore from the MultiStore.
 func (c Context) KVStore(key StoreKey) KVStore {
-	return gaskv.NewStore(c.MultiStore().GetKVStore(key), c.GasMeter(), stypes.KVGasConfig())
+	if c.isTracing {
+		if _, ok := c.nextStoreKeys[key.Name()]; ok {
+			return gaskv.NewStore(c.nextMs.GetKVStore(key), c.GasMeter(), stypes.KVGasConfig(), key.Name(), c.StoreTracer())
+		}
+	}
+	return gaskv.NewStore(c.MultiStore().GetKVStore(key), c.GasMeter(), stypes.KVGasConfig(), key.Name(), c.StoreTracer())
 }
 
 // TransientStore fetches a TransientStore from the MultiStore.
 func (c Context) TransientStore(key StoreKey) KVStore {
-	return gaskv.NewStore(c.MultiStore().GetKVStore(key), c.GasMeter(), stypes.TransientGasConfig())
+	if c.isTracing {
+		if _, ok := c.nextStoreKeys[key.Name()]; ok {
+			return gaskv.NewStore(c.nextMs.GetKVStore(key), c.GasMeter(), stypes.TransientGasConfig(), key.Name(), c.StoreTracer())
+		}
+	}
+	return gaskv.NewStore(c.MultiStore().GetKVStore(key), c.GasMeter(), stypes.TransientGasConfig(), key.Name(), c.StoreTracer())
 }
 
 // CacheContext returns a new Context with the multi-store cached and a new

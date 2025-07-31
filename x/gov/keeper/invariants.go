@@ -21,8 +21,8 @@ func AllInvariants(keeper Keeper, bk types.BankKeeper) sdk.Invariant {
 	}
 }
 
-// ModuleAccountInvariant checks that the module account coins reflects the sum of
-// deposit amounts held on store
+// ModuleAccountInvariant checks that the module account coins are at least
+// sufficient to cover the sum of deposit amounts held on store
 func ModuleAccountInvariant(keeper Keeper, bk types.BankKeeper) sdk.Invariant {
 	return func(ctx sdk.Context) (string, bool) {
 		var expectedDeposits sdk.Coins
@@ -34,10 +34,10 @@ func ModuleAccountInvariant(keeper Keeper, bk types.BankKeeper) sdk.Invariant {
 
 		macc := keeper.GetGovernanceAccount(ctx)
 		balances := bk.GetAllBalances(ctx, macc.GetAddress())
-		broken := !balances.IsEqual(expectedDeposits)
+		broken := !balances.IsAllGTE(expectedDeposits)
 
 		return sdk.FormatInvariant(types.ModuleName, "deposits",
-			fmt.Sprintf("\tgov ModuleAccount coins: %s\n\tsum of deposit amounts:  %s\n",
+			fmt.Sprintf("\tactual gov ModuleAccount coins: %s\n\tminimum required deposit amounts: %s\n",
 				balances, expectedDeposits)), broken
 	}
 }

@@ -24,14 +24,8 @@ const (
 
 	// bits required to represent the above precision
 	// Ceiling[Log2[10^Precision - 1]]
+	// Deprecated: This is unused and will be removed
 	DecimalPrecisionBits = 60
-
-	// decimalTruncateBits is the minimum number of bits removed
-	// by a truncate operation. It is equal to
-	// Floor[Log2[10^Precision - 1]].
-	decimalTruncateBits = DecimalPrecisionBits - 1
-
-	maxDecBitLen = maxBitLen + decimalTruncateBits
 
 	// max number of iterations in ApproxRoot function
 	maxApproxRootIterations = 100
@@ -109,9 +103,11 @@ func NewDecFromBigInt(i *big.Int) Dec {
 // create a new Dec from big integer assuming whole numbers
 // CONTRACT: prec <= Precision
 func NewDecFromBigIntWithPrec(i *big.Int, prec int64) Dec {
-	return Dec{
+	result := Dec{
 		new(big.Int).Mul(i, precisionMultiplier(prec)),
 	}
+	result.assertInValidRange()
+	return result
 }
 
 // create a new Dec from big integer assuming whole numbers
@@ -130,12 +126,15 @@ func NewDecFromIntWithPrec(i Int, prec int64) Dec {
 
 // create a decimal from an input decimal string.
 // valid must come in the form:
-//   (-) whole integers (.) decimal integers
+//
+//	(-) whole integers (.) decimal integers
+//
 // examples of acceptable input include:
-//   -123.456
-//   456.7890
-//   345
-//   -456789
+//
+//	-123.456
+//	456.7890
+//	345
+//	-456789
 //
 // NOTE - An error will return if more decimal places
 // are provided in the string than the constant Precision.
@@ -184,14 +183,16 @@ func NewDecFromStr(str string) (Dec, error) {
 	if !ok {
 		return Dec{}, fmt.Errorf("failed to set decimal string with base 10: %s", combinedStr)
 	}
-	if combined.BitLen() > maxDecBitLen {
-		return Dec{}, fmt.Errorf("decimal '%s' out of range; bitLen: got %d, max %d", str, combined.BitLen(), maxDecBitLen)
-	}
 	if neg {
 		combined = new(big.Int).Neg(combined)
 	}
 
-	return Dec{combined}, nil
+	d := Dec{combined}
+	if !d.IsInValidRange() {
+		return Dec{}, fmt.Errorf("decimal '%s' out of range", str)
+	}
+
+	return d, nil
 }
 
 // Decimal from string, panic on error
@@ -228,63 +229,51 @@ func (d Dec) BigInt() *big.Int {
 // addition
 func (d Dec) Add(d2 Dec) Dec {
 	res := new(big.Int).Add(d.i, d2.i)
-
-	if res.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{res}
+	result := Dec{res}
+	result.assertInValidRange()
+	return result
 }
 
 // subtraction
 func (d Dec) Sub(d2 Dec) Dec {
 	res := new(big.Int).Sub(d.i, d2.i)
-
-	if res.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{res}
+	result := Dec{res}
+	result.assertInValidRange()
+	return result
 }
 
 // multiplication
 func (d Dec) Mul(d2 Dec) Dec {
 	mul := new(big.Int).Mul(d.i, d2.i)
 	chopped := chopPrecisionAndRound(mul)
-
-	if chopped.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{chopped}
+	result := Dec{chopped}
+	result.assertInValidRange()
+	return result
 }
 
 // multiplication truncate
 func (d Dec) MulTruncate(d2 Dec) Dec {
 	mul := new(big.Int).Mul(d.i, d2.i)
 	chopped := chopPrecisionAndTruncate(mul)
-
-	if chopped.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{chopped}
+	result := Dec{chopped}
+	result.assertInValidRange()
+	return result
 }
 
 // multiplication
 func (d Dec) MulInt(i Int) Dec {
 	mul := new(big.Int).Mul(d.i, i.i)
-
-	if mul.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{mul}
+	result := Dec{mul}
+	result.assertInValidRange()
+	return result
 }
 
 // MulInt64 - multiplication with int64
 func (d Dec) MulInt64(i int64) Dec {
 	mul := new(big.Int).Mul(d.i, big.NewInt(i))
-
-	if mul.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{mul}
+	result := Dec{mul}
+	result.assertInValidRange()
+	return result
 }
 
 // quotient
@@ -295,11 +284,9 @@ func (d Dec) Quo(d2 Dec) Dec {
 
 	quo := new(big.Int).Quo(mul, d2.i)
 	chopped := chopPrecisionAndRound(quo)
-
-	if chopped.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{chopped}
+	result := Dec{chopped}
+	result.assertInValidRange()
+	return result
 }
 
 // quotient truncate
@@ -310,11 +297,9 @@ func (d Dec) QuoTruncate(d2 Dec) Dec {
 
 	quo := mul.Quo(mul, d2.i)
 	chopped := chopPrecisionAndTruncate(quo)
-
-	if chopped.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{chopped}
+	result := Dec{chopped}
+	result.assertInValidRange()
+	return result
 }
 
 // quotient, round up
@@ -325,11 +310,9 @@ func (d Dec) QuoRoundUp(d2 Dec) Dec {
 
 	quo := new(big.Int).Quo(mul, d2.i)
 	chopped := chopPrecisionAndRoundUp(quo)
-
-	if chopped.BitLen() > maxDecBitLen {
-		panic("Int overflow")
-	}
-	return Dec{chopped}
+	result := Dec{chopped}
+	result.assertInValidRange()
+	return result
 }
 
 // quotient
@@ -617,15 +600,17 @@ func (d Dec) Ceil() Dec {
 	quo, rem = quo.QuoRem(tmp, precisionReuse, rem)
 
 	// no need to round with a zero remainder regardless of sign
-	if rem.Cmp(zeroInt) == 0 {
-		return NewDecFromBigInt(quo)
+	var r Dec
+	switch rem.Sign() {
+	case 0:
+		r = NewDecFromBigInt(quo)
+	case -1:
+		r = NewDecFromBigInt(quo)
+	default:
+		r = NewDecFromBigInt(quo.Add(quo, oneInt))
 	}
-
-	if rem.Sign() == -1 {
-		return NewDecFromBigInt(quo)
-	}
-
-	return NewDecFromBigInt(quo.Add(quo, oneInt))
+	r.assertInValidRange()
+	return r
 }
 
 // MaxSortableDec is the largest Dec that can be passed into SortableDecBytes()
@@ -749,8 +734,8 @@ func (d *Dec) Unmarshal(data []byte) error {
 		return err
 	}
 
-	if d.i.BitLen() > maxDecBitLen {
-		return fmt.Errorf("decimal out of range; got: %d, max: %d", d.i.BitLen(), maxDecBitLen)
+	if !d.IsInValidRange() {
+		return errors.New("decimal out of range")
 	}
 
 	return nil
@@ -800,6 +785,24 @@ func MaxDec(d1, d2 Dec) Dec {
 		return d2
 	}
 	return d1
+}
+
+// IsInValidRange returns true if the decimal's underlying big.Int is within the valid range.
+// This addresses ASA-2024-010: Bit length differences between Int and Dec
+func (d Dec) IsInValidRange() bool {
+	if d.i == nil {
+		return true
+	}
+	// Using the same range as Int to prevent inconsistencies
+	// This ensures that Dec and Int have the same valid range, fixing the security issue
+	return d.i.BitLen() <= maxBitLen
+}
+
+// assertInValidRange panics if the decimal is out of the valid range
+func (d Dec) assertInValidRange() {
+	if !d.IsInValidRange() {
+		panic("decimal out of range")
+	}
 }
 
 // intended to be used with require/assert:  require.True(DecEq(...))

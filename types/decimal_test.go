@@ -35,6 +35,14 @@ func (s *decimalTestSuite) TestNewDecFromStr() {
 	largeBigInt, ok := new(big.Int).SetString("3144605511029693144278234343371835", 10)
 	s.Require().True(ok)
 
+	largerBigInt, ok := new(big.Int).SetString("8888888888888888888888888888888888888888888888888888888888888888888844444440", 10)
+	s.Require().True(ok)
+
+	largestBigInt, ok := new(big.Int).SetString("33499189745056880149688856635597007162669032647290798121690100488888732861290", 10)
+	s.Require().True(ok)
+	// largestBigInt is used for constructing test case expectations
+	_ = largestBigInt
+
 	tests := []struct {
 		decimalStr string
 		expErr     bool
@@ -59,8 +67,8 @@ func (s *decimalTestSuite) TestNewDecFromStr() {
 		{"foobar", true, sdk.Dec{}},
 		{"0.foobar", true, sdk.Dec{}},
 		{"0.foobar.", true, sdk.Dec{}},
-		{"8888888888888888888888888888888888888888888888888888888888888888888844444440", true, sdk.Dec{}},                     // Now fails due to 256-bit limit (253 bits × 10^18 > 256 bits)
-		{"33499189745056880149688856635597007162669032647290798121690100488888732861290.034376435130433535", true, sdk.Dec{}}, // Now fails due to 256-bit limit (largestBigInt is 315 bits)
+		{"8888888888888888888888888888888888888888888888888888888888888888888844444440", false, sdk.NewDecFromBigInt(largerBigInt)},                                                                                                            // Valid under 315-bit limit (253 bits × 10^18 = 313 bits < 315)
+		{"33499189745056880149688856635597007162669032647290798121690100488888732861290.034376435130433535", false, sdk.MustNewDecFromStr("33499189745056880149688856635597007162669032647290798121690100488888732861290.034376435130433535")}, // Valid at 315-bit boundary
 		{"133499189745056880149688856635597007162669032647290798121690100488888732861291", true, sdk.Dec{}},
 	}
 
@@ -550,8 +558,9 @@ func BenchmarkMarshalTo(b *testing.B) {
 	}
 }
 
-// 2^256 * 10^18 -1 - Maximum valid decimal number after ASA-2024-010 fix
-const maxValidDecNumber = "115792089237316195423570985008687907853269984665640564039457584007913129639935999999999999999999"
+// 2^315 - 1 - Maximum valid decimal number after ASA-2024-010 fix
+// This aligns with the official Cosmos SDK implementation (315 bits)
+const maxValidDecNumber = "66749594872528440074844428317798503581334516323645399060845050244444366430645017188217565216767"
 
 // TestCeilOverflow tests overflow behavior in Ceil operation
 func TestCeilOverflow(t *testing.T) {
@@ -569,7 +578,7 @@ func TestCeilOverflow(t *testing.T) {
 	require.Panics(t, func() { d.Ceil() }, "Ceil should panic when result would exceed range")
 }
 
-// TestDecOpsWithinLimits tests that all decimal operations respect the 256-bit limit
+// TestDecOpsWithinLimits tests that all decimal operations respect the 315-bit limit
 func TestDecOpsWithinLimits(t *testing.T) {
 	maxValid, ok := new(big.Int).SetString(maxValidDecNumber, 10)
 	require.True(t, ok)
@@ -581,7 +590,7 @@ func TestDecOpsWithinLimits(t *testing.T) {
 	}{
 		"max": {
 			src:               maxValid,
-			expectCreatePanic: true, // This should panic during creation
+			expectCreatePanic: false, // This should be valid with 315-bit limit
 		},
 		"max + 1": {
 			src:               new(big.Int).Add(maxValid, big.NewInt(1)),
@@ -589,7 +598,7 @@ func TestDecOpsWithinLimits(t *testing.T) {
 		},
 		"min": {
 			src:               minValid,
-			expectCreatePanic: true, // This should panic during creation
+			expectCreatePanic: false, // This should be valid with 315-bit limit
 		},
 		"min - 1": {
 			src:               new(big.Int).Sub(minValid, big.NewInt(1)),
@@ -672,10 +681,12 @@ func TestDecCeilLimits(t *testing.T) {
 	result := d.Ceil()
 	require.Equal(t, "2.000000000000000000", result.String())
 
-	// Test that creating very large numbers panics due to our security fix
+	// Test that creating numbers that exceed 315 bits panics due to our security fix
 	require.Panics(t, func() {
-		sdk.NewDecFromBigInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(70), nil))
-	}, "Creating very large decimals should panic due to 256-bit limit")
+		// Use 2^315 which should exceed our limit
+		maxPlus1 := new(big.Int).Exp(big.NewInt(2), big.NewInt(315), nil)
+		sdk.NewDecFromBigInt(maxPlus1)
+	}, "Creating decimals that exceed 315 bits should panic due to security fix")
 }
 
 // BenchmarkIsInValidRange benchmarks the IsInValidRange method performance

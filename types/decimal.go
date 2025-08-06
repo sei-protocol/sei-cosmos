@@ -22,10 +22,18 @@ const (
 	// number of decimal places
 	Precision = 18
 
-	// bits required to represent the above precision
-	// Ceiling[Log2[10^Precision - 1]]
-	// Deprecated: This is unused and will be removed
+	// bits required to represent the fractional precision.
+	// DecimalPrecisionBits = ceil(log2(10^Precision) - 1) = 60 for Precision=18.
 	DecimalPrecisionBits = 60
+
+	// intBitLen is the bit length used by sdk.Int (currently 256-bit)
+	intBitLen = 256
+
+	// maxDecBitLen is the maximum allowed bit length for Dec values.
+	// It is derived instead of hard-coded so that future changes to Precision
+	// or intBitLen automatically propagate.
+	// Example with current constants: 256 + 60 − 1 = 315.
+	maxDecBitLen = intBitLen + DecimalPrecisionBits - 1
 
 	// max number of iterations in ApproxRoot function
 	maxApproxRootIterations = 100
@@ -788,14 +796,14 @@ func MaxDec(d1, d2 Dec) Dec {
 }
 
 // IsInValidRange returns true if the decimal's underlying big.Int is within the valid range.
-// This addresses ASA-2024-010: Bit length differences between Int and Dec
 func (d Dec) IsInValidRange() bool {
 	if d.i == nil {
 		return true
 	}
-	// Using the same range as Int to prevent inconsistencies
-	// This ensures that Dec and Int have the same valid range, fixing the security issue
-	return d.i.BitLen() <= maxBitLen
+	// Use maxDecBitLen (315 bits) to align with the official Cosmos SDK implementation.
+	// 315 bits can cover all values within (2^256−1)×10^18 − 1,
+	// so bitLen ≤ maxDecBitLen ensures alignment with the 256-bit boundary of sdk.Int while also supporting 18-decimal-place precision.
+	return d.i.BitLen() <= maxDecBitLen
 }
 
 // assertInValidRange panics if the decimal is out of the valid range

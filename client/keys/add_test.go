@@ -273,3 +273,66 @@ func TestAddRecoverFileBackend(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "keyname1", info.GetName())
 }
+
+func Test_runAddCmdJSONEvmAddress(t *testing.T) {
+	cmd := AddKeyCommand()
+	cmd.Flags().AddFlagSet(Commands("home").PersistentFlags())
+
+	kbHome := t.TempDir()
+	mockIn := testutil.ApplyMockIODiscardOutErr(cmd)
+
+	clientCtx := client.Context{}.WithKeyringDir(kbHome).WithInput(mockIn)
+	ctx := context.WithValue(context.Background(), client.ClientContextKey, &clientCtx)
+
+	b := bytes.NewBufferString("")
+	cmd.SetOut(b)
+
+	cmd.SetArgs([]string{
+		"test-evm-key",
+		fmt.Sprintf("--%s=%s", flags.FlagHome, kbHome),
+		fmt.Sprintf("--%s=%s", cli.OutputFlag, OutputFormatJSON),
+		fmt.Sprintf("--%s=%s", flags.FlagKeyAlgorithm, string(hd.Secp256k1Type)),
+		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
+	})
+
+	require.NoError(t, cmd.ExecuteContext(ctx))
+
+	// Check that the JSON output contains an EVM address
+	output, err := ioutil.ReadAll(b)
+	require.NoError(t, err)
+
+	outputStr := string(output)
+	require.Contains(t, outputStr, `"evm_address"`)
+	require.Contains(t, outputStr, `"0x`)
+	require.NotContains(t, outputStr, `"evm_address":""`)
+	require.NotContains(t, outputStr, `"evm_address":null`)
+}
+
+func Test_PopulateEvmAddrError_JSONOutput(t *testing.T) {
+	// This test verifies that if PopulateEvmAddrIfApplicable returns an error,
+	// the add command properly handles it and returns the error
+
+	cmd := AddKeyCommand()
+	cmd.Flags().AddFlagSet(Commands("home").PersistentFlags())
+
+	kbHome := t.TempDir()
+	mockIn := testutil.ApplyMockIODiscardOutErr(cmd)
+
+	clientCtx := client.Context{}.WithKeyringDir(kbHome).WithInput(mockIn)
+	ctx := context.WithValue(context.Background(), client.ClientContextKey, &clientCtx)
+
+	// Create a key with sr25519 algorithm - this should fail when PopulateEvmAddrIfApplicable
+	// tries to parse the sr25519 private key as secp256k1
+	cmd.SetArgs([]string{
+		"test-sr25519-key",
+		fmt.Sprintf("--%s=%s", flags.FlagHome, kbHome),
+		fmt.Sprintf("--%s=%s", cli.OutputFlag, OutputFormatJSON),
+		fmt.Sprintf("--%s=%s", flags.FlagKeyAlgorithm, string(hd.Sr25519Type)),
+		fmt.Sprintf("--%s=%s", flags.FlagKeyringBackend, keyring.BackendTest),
+	})
+
+	// This should fail because sr25519 keys can't be used to generate EVM addresses
+	err := cmd.ExecuteContext(ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unmarshal to types.PrivKey failed")
+}

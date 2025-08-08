@@ -22,7 +22,7 @@ func TestErrorHandling(t *testing.T) {
 }
 
 func TestPublicKeyUnsafe(t *testing.T) {
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, err := NewPrivKeySecp256k1Unsafe(path)
 	require.NoError(t, err)
 	checkDefaultPubKey(t, priv)
@@ -60,7 +60,7 @@ func TestPublicKeyUnsafeHDPath(t *testing.T) {
 
 	// Check with device
 	for i := uint32(0); i < 10; i++ {
-		path := *hd.NewFundraiserParams(0, sdk.CoinType, i)
+		path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), i)
 		t.Logf("Checking keys at %v\n", path)
 
 		priv, err := NewPrivKeySecp256k1Unsafe(path)
@@ -94,7 +94,7 @@ func TestPublicKeyUnsafeHDPath(t *testing.T) {
 }
 
 func TestPublicKeySafe(t *testing.T) {
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, addr, err := NewPrivKeySecp256k1(path, "cosmos")
 
 	require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestPublicKeyHDPath(t *testing.T) {
 
 	// Check with device
 	for i := 0; i < len(expectedAddrs); i++ {
-		path := *hd.NewFundraiserParams(0, sdk.CoinType, uint32(i))
+		path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), uint32(i))
 		t.Logf("Checking keys at %s\n", path)
 
 		priv, addr, err := NewPrivKeySecp256k1(path, "cosmos")
@@ -192,7 +192,7 @@ func TestSignaturesHD(t *testing.T) {
 	for account := uint32(0); account < 100; account += 30 {
 		msg := getFakeTx(account)
 
-		path := *hd.NewFundraiserParams(account, sdk.CoinType, account/5)
+		path := *hd.NewFundraiserParams(account, sdk.GetConfig().GetCoinType(), account/5)
 		t.Logf("Checking signature at %v    ---   PLEASE REVIEW AND ACCEPT IN THE DEVICE\n", path)
 
 		priv, err := NewPrivKeySecp256k1Unsafe(path)
@@ -209,7 +209,7 @@ func TestSignaturesHD(t *testing.T) {
 
 func TestRealDeviceSecp256k1(t *testing.T) {
 	msg := getFakeTx(50)
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, err := NewPrivKeySecp256k1Unsafe(path)
 	require.NoError(t, err)
 

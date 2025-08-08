@@ -13,7 +13,7 @@ import (
 
 func TestBeach32ifPbKey(t *testing.T) {
 	require := require.New(t)
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, err := ledger.NewPrivKeySecp256k1Unsafe(path)
 	require.Nil(err, "%s", err)
 	require.NotNil(priv)

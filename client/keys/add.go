@@ -282,6 +282,9 @@ func runAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 		// Hide mnemonic from output
 		showMnemonic = false
 		mnemonic = ""
+		fmt.Fprintln(cmd.ErrOrStderr(), "\n**Important** Default coin type has been changed to ETH type 60. "+
+			"Your address will be different if it was created with previous default ATOM coin type. "+
+			"Try using '--coin-type 118' flag for recovery.")
 	}
 
 	return printCreate(cmd, info, showMnemonic, mnemonic, outputFormat)
@@ -316,7 +319,6 @@ func printCreate(cmd *cobra.Command, info keyring.Info, showMnemonic bool, mnemo
 		}
 
 		cmd.Println(string(jsonString))
-
 	default:
 		return fmt.Errorf("invalid output format %s", outputFormat)
 	}

@@ -16,7 +16,7 @@ import (
 func TestInMemoryCreateLedger(t *testing.T) {
 	kb := NewInMemory()
 
-	ledger, err := kb.SaveLedgerKey("some_account", hd.Secp256k1, "cosmos", 118, 3, 1)
+	ledger, err := kb.SaveLedgerKey("some_account", hd.Secp256k1, "cosmos", 60, 3, 1)
 
 	if err != nil {
 		require.Error(t, err)
@@ -28,7 +28,7 @@ func TestInMemoryCreateLedger(t *testing.T) {
 
 	// The mock is available, check that the address is correct
 	pubKey := ledger.GetPubKey()
-	expectedPkStr := "PubKeySecp256k1{03602C0CB4D8C0081FEE794BDE96E7B95FA16F2B5283B764AC070584327B2C7202}"
+	expectedPkStr := "PubKeySecp256k1{02522FC5F8F6C109A7D167871FCC74AAC406DF47F4F0E54BA212D9DFEEFBD86C58}"
 	require.Equal(t, expectedPkStr, pubKey.String())
 
 	// Check that restoring the key gets the same results
@@ -105,7 +105,7 @@ func TestAltKeyring_SaveLedgerKey(t *testing.T) {
 	// The mock is available, check that the address is correct
 	require.Equal(t, "some_account", ledger.GetName())
 	pubKey := ledger.GetPubKey()
-	expectedPkStr := "PubKeySecp256k1{03602C0CB4D8C0081FEE794BDE96E7B95FA16F2B5283B764AC070584327B2C7202}"
+	expectedPkStr := "PubKeySecp256k1{02522FC5F8F6C109A7D167871FCC74AAC406DF47F4F0E54BA212D9DFEEFBD86C58}"
 	require.Equal(t, expectedPkStr, pubKey.String())
 
 	// Check that restoring the key gets the same results

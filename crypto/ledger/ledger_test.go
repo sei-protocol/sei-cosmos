@@ -31,18 +31,18 @@ func TestPublicKeyUnsafe(t *testing.T) {
 func checkDefaultPubKey(t *testing.T, priv types.LedgerPrivKey) {
 	require.NotNil(t, priv)
 	expectedPkStr := "PubKeySecp256k1{034FEF9CD7C4C63588D3B03FEB5281B9D232CBA34D6F3D71AEE59211FFBFE1FE87}"
-	require.Equal(t, "eb5ae98721034fef9cd7c4c63588d3b03feb5281b9d232cba34d6f3d71aee59211ffbfe1fe87",
+	require.Equal(t, "eb5ae98721021853d93524119eeb31ab0b06f1dcb068f84943bb230dfa10b1292f47af643575",
 		fmt.Sprintf("%x", cdc.Amino.MustMarshalBinaryBare(priv.PubKey())),
 		"Is your device using test mnemonic: %s ?", testdata.TestMnemonic)
 	require.Equal(t, expectedPkStr, priv.PubKey().String())
 	addr := sdk.AccAddress(priv.PubKey().Address()).String()
-	require.Equal(t, "cosmos1w34k53py5v5xyluazqpq65agyajavep2rflq6h",
+	require.Equal(t, "cosmos1ndgvlye77dmuct2ncr4m8ghmfkwp7p8slz6zxm",
 		addr, "Is your device using test mnemonic: %s ?", testdata.TestMnemonic)
 }
 
 func TestPublicKeyUnsafeHDPath(t *testing.T) {
 	expectedAnswers := []string{
-		"PubKeySecp256k1{034FEF9CD7C4C63588D3B03FEB5281B9D232CBA34D6F3D71AEE59211FFBFE1FE87}",
+		"PubKeySecp256k1{021853D93524119EEB31AB0B06F1DCB068F84943BB230DFA10B1292F47AF643575}",
 		"PubKeySecp256k1{0260D0487A3DFCE9228EEE2D0D83A40F6131F551526C8E52066FE7FE1E4A509666}",
 		"PubKeySecp256k1{03A2670393D02B162D0ED06A08041E80D86BE36C0564335254DF7462447EB69AB3}",
 		"PubKeySecp256k1{033222FC61795077791665544A90740E8EAD638A391A3B8F9261F4A226B396C042}",
@@ -121,7 +121,7 @@ func TestPublicKeyHDPath(t *testing.T) {
 	}
 
 	expectedAddrs := []string{
-		"cosmos1w34k53py5v5xyluazqpq65agyajavep2rflq6h",
+		"cosmos1ndgvlye77dmuct2ncr4m8ghmfkwp7p8slz6zxm",
 		"cosmos19ewxwemt6uahejvwf44u7dh6tq859tkyvarh2q",
 		"cosmos1a07dzdjgjsntxpp75zg7cgatgq0udh3pcdcxm3",
 		"cosmos1qvw52lmn9gpvem8welghrkc52m3zczyhlqjsl7",

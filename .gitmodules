@@ -1,3 +1,0 @@
-[submodule "counter-sei/lib/forge-std"]
-	path = counter-sei/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std

@@ -1,7 +1,6 @@
 package hd_test
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -184,102 +183,6 @@ func TestDeriveHDPathRange(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ExampleStringifyPathParams() {
-	path := hd.NewParams(44, 0, 0, false, 0)
-	fmt.Println(path.String())
-	path = hd.NewParams(44, 33, 7, true, 9)
-	fmt.Println(path.String())
-	// Output:
-	// m/44'/0'/0'/0/0
-	// m/44'/33'/7'/1/9
-}
-
-func ExampleSomeBIP32TestVecs() {
-	seed := mnemonicToSeed("barrel original fuel morning among eternal " +
-		"filter ball stove pluck matrix mechanic")
-	master, ch := hd.ComputeMastersFromSeed(seed)
-	fmt.Println("keys from fundraiser test-vector (cosmos, bitcoin, ether)")
-	fmt.Println()
-	// cosmos
-	priv, err := hd.DerivePrivateKeyForPath(master, ch, types.FullFundraiserPath)
-	if err != nil {
-		fmt.Println("INVALID")
-	} else {
-		fmt.Println(hex.EncodeToString(priv[:]))
-	}
-	// bitcoin
-	priv, err = hd.DerivePrivateKeyForPath(master, ch, "44'/0'/0'/0/0")
-	if err != nil {
-		fmt.Println("INVALID")
-	} else {
-		fmt.Println(hex.EncodeToString(priv[:]))
-	}
-	// ether
-	priv, err = hd.DerivePrivateKeyForPath(master, ch, "44'/60'/0'/0/0")
-	if err != nil {
-		fmt.Println("INVALID")
-	} else {
-		fmt.Println(hex.EncodeToString(priv[:]))
-	}
-	// INVALID
-	priv, err = hd.DerivePrivateKeyForPath(master, ch, "X/0'/0'/0/0")
-	if err != nil {
-		fmt.Println("INVALID")
-	} else {
-		fmt.Println(hex.EncodeToString(priv[:]))
-	}
-	priv, err = hd.DerivePrivateKeyForPath(master, ch, "-44/0'/0'/0/0")
-	if err != nil {
-		fmt.Println("INVALID")
-	} else {
-		fmt.Println(hex.EncodeToString(priv[:]))
-	}
-
-	fmt.Println()
-	fmt.Println("keys generated via https://coinomi.com/recovery-phrase-tool.html")
-	fmt.Println()
-
-	seed = mnemonicToSeed(
-		"advice process birth april short trust crater change bacon monkey medal garment " +
-			"gorilla ranch hour rival razor call lunar mention taste vacant woman sister")
-	master, ch = hd.ComputeMastersFromSeed(seed)
-	priv, _ = hd.DerivePrivateKeyForPath(master, ch, "44'/1'/1'/0/4")
-	fmt.Println(hex.EncodeToString(priv[:]))
-
-	seed = mnemonicToSeed("idea naive region square margin day captain habit " +
-		"gun second farm pact pulse someone armed")
-	master, ch = hd.ComputeMastersFromSeed(seed)
-	priv, _ = hd.DerivePrivateKeyForPath(master, ch, "44'/0'/0'/0/420")
-	fmt.Println(hex.EncodeToString(priv[:]))
-
-	fmt.Println()
-	fmt.Println("BIP 32 example")
-	fmt.Println()
-
-	// bip32 path: m/0/7
-	seed = mnemonicToSeed("monitor flock loyal sick object grunt duty ride develop assault harsh history")
-	master, ch = hd.ComputeMastersFromSeed(seed)
-	priv, _ = hd.DerivePrivateKeyForPath(master, ch, "0/7")
-	fmt.Println(hex.EncodeToString(priv[:]))
-
-	// Output: keys from fundraiser test-vector (cosmos, bitcoin, ether)
-	//
-	// bfcb217c058d8bbafd5e186eae936106ca3e943889b0b4a093ae13822fd3170c
-	// e77c3de76965ad89997451de97b95bb65ede23a6bf185a55d80363d92ee37c3d
-	// 7fc4d8a8146dea344ba04c593517d3f377fa6cded36cd55aee0a0bb968e651bc
-	// INVALID
-	// INVALID
-	//
-	// keys generated via https://coinomi.com/recovery-phrase-tool.html
-	//
-	// a61f10c5fecf40c084c94fa54273b6f5d7989386be4a37669e6d6f7b0169c163
-	// 32c4599843de3ef161a629a461d12c60b009b676c35050be5f7ded3a3b23501f
-	//
-	// BIP 32 example
-	//
-	// c4c11d8c03625515905d7e89d25dfc66126fbc629ecca6db489a1a72fc4bda78
 }
 
 // Ensuring that we don't crash if values have trailing slashes

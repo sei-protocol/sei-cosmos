@@ -51,7 +51,7 @@ func TestPublicKeyUnsafeHDPath(t *testing.T) {
 		"PubKeySecp256k1{02E59347ED32D311543F1E82B4467684DC4995EEC4700437386E668D3D9E14C1E0}",
 		"PubKeySecp256k1{039D92D20650624E2C4A8CAE0421154FC59F885E9518D337BC2105DF8BF13E151B}",
 		"PubKeySecp256k1{03BE014D2A23A2D46ED95201DDA9D685DA0086B1A2978E3AC770E03E1C19A778F3}",
-		"PubKeySecp256k1{038BE7F348902D8C20BC88D32294F4F3B819284548122229DECD1ADF1A7EB0848B}",
+		"PubKeySecp256k1{0325E57703629DB24D61697147674FCB10B94ACA0136A89D37C00FC5CFD31B443A}",
 	}
 
 	const numIters = 10
@@ -127,7 +127,7 @@ func TestPublicKeyHDPath(t *testing.T) {
 		"cosmos1zhjvvpr8skduawtkz2gqdvpe3w8jj60z637arr",
 		"cosmos1r3amgzyuktpfzez9gyhj5dnpwm207gc32zcejc",
 		"cosmos146hlrlypx59e5sl50cfys75zcw6s5mymnqm4dj",
-		"cosmos10vf3sxmjg96rqq36axcphzfsl74dsntuehjlw5",
+		"cosmos1cwus47jk96mpc9t8aczzthwq2eshsfygxhrjlj",
 		"cosmos1cq83av8cmnar79h0rg7duh9gnr7wkh228a7fxg",
 		"cosmos1dszhfrt226jy5rsre7e48vw9tgwe90uerfyefa",
 		"cosmos1734d7qsylzrdt05muhqqtpd90j8mp4y6rzch8l",

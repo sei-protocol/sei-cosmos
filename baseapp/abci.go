@@ -1228,3 +1228,35 @@ func (app *BaseApp) LoadLatest(ctx context.Context, req *abci.RequestLoadLatest)
 	app.initialHeight = app.cms.LastCommitID().Version
 	return &abci.ResponseLoadLatest{}, nil
 }
+
+func (app *BaseApp) GetTxPriority(_ context.Context, req *abci.RequestGetTxPriority) (*abci.ResponseGetTxPriority, error) {
+	defer telemetry.MeasureSince(time.Now(), "abci", "get_tx_priority")
+
+	tx, err := app.txDecoder(req.Tx)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "nil tx")
+	}
+	if err := tx.ValidateBasic(); err != nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
+	}
+
+	// TODO: should we bother validating the messages here?
+	msgs := tx.GetMsgs()
+	if err := validateBasicTxMsgs(msgs); err != nil {
+		return nil, err
+	}
+	var priority int64
+	if app.txPrioritizer != nil {
+		sdkCtx := app.getContextForTx(runTxModeCheck, req.Tx)
+		priority, err = app.txPrioritizer(sdkCtx, tx)
+		if err != nil {
+			return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, fmt.Sprintf("error getting tx priority: %s", err.Error()))
+		}
+	}
+	return &abci.ResponseGetTxPriority{
+		Priority: priority,
+	}, nil
+}

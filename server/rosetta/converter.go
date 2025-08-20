@@ -55,7 +55,7 @@ type Converter interface {
 type ToRosettaConverter interface {
 	// BlockResponse returns a block response given a result block
 	BlockResponse(block *tmcoretypes.ResultBlock) crgtypes.BlockResponse
-	// BeginBlockToTx converts the given begin block hash to rosetta transaction hash
+	// BeginBlockTxHash converts the given begin block hash to rosetta transaction hash
 	BeginBlockTxHash(blockHash []byte) string
 	// EndBlockTxHash converts the given endblock hash to rosetta transaction hash
 	EndBlockTxHash(blockHash []byte) string

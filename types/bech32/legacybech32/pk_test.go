@@ -13,13 +13,13 @@ import (
 
 func TestBeach32ifPbKey(t *testing.T) {
 	require := require.New(t)
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, err := ledger.NewPrivKeySecp256k1Unsafe(path)
 	require.Nil(err, "%s", err)
 	require.NotNil(priv)
 
 	pubKeyAddr, err := MarshalPubKey(AccPK, priv.PubKey())
 	require.NoError(err)
-	require.Equal("cosmospub1addwnpepqd87l8xhcnrrtzxnkql7k55ph8fr9jarf4hn6udwukfprlalu8lgw0urza0",
+	require.Equal("cosmospub1addwnpepqgv98kf4ysgea6e34v9sduwukp50sj2rhv3sm7ssky5j73a0vs6h2cgfmwy",
 		pubKeyAddr, "Is your device using test mnemonic: %s ?", testdata.TestMnemonic)
 }

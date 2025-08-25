@@ -1229,8 +1229,8 @@ func (app *BaseApp) LoadLatest(ctx context.Context, req *abci.RequestLoadLatest)
 	return &abci.ResponseLoadLatest{}, nil
 }
 
-func (app *BaseApp) GetTxPriority(_ context.Context, req *abci.RequestGetTxPriority) (*abci.ResponseGetTxPriority, error) {
-	defer telemetry.MeasureSince(time.Now(), "abci", "get_tx_priority")
+func (app *BaseApp) GetTxPriorityHint(_ context.Context, req *abci.RequestGetTxPriorityHint) (*abci.ResponseGetTxPriorityHint, error) {
+	defer telemetry.MeasureSince(time.Now(), "abci", "get_tx_priority_hint")
 
 	tx, err := app.txDecoder(req.Tx)
 	if err != nil {
@@ -1256,7 +1256,7 @@ func (app *BaseApp) GetTxPriority(_ context.Context, req *abci.RequestGetTxPrior
 			return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, fmt.Sprintf("error getting tx priority: %s", err.Error()))
 		}
 	}
-	return &abci.ResponseGetTxPriority{
+	return &abci.ResponseGetTxPriorityHint{
 		Priority: priority,
 	}, nil
 }

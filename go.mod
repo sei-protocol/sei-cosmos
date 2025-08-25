@@ -1,4 +1,4 @@
-go 1.21
+go 1.24.5
 
 module github.com/cosmos/cosmos-sdk
 
@@ -198,7 +198,7 @@ replace (
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	// TODO: To be replaced with a concrete version number. See:
 	// - https://github.com/sei-protocol/sei-tendermint/pull/301
-	github.com/tendermint/tendermint => github.com/sei-protocol/sei-tendermint v0.6.2-0.20250819154648-ae86e6f22465
+	github.com/tendermint/tendermint => github.com/sei-protocol/sei-tendermint v0.6.2-0.20250825202636-492b079861fa
 	// latest grpc doesn't work with with our modified proto compiler, so we need to enforce
 	// the following version across all dependencies.
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2

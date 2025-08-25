@@ -381,7 +381,7 @@ func (app *BaseApp) SetMigrationHeight(height int64) {
 }
 
 // SetTxPrioritizer sets the transaction prioritizer for the BaseApp. If unset,
-// calls to GetTxPriority for all valid transactions will return 0.
+// calls to GetTxPriorityHint for all valid transactions will return 0.
 func (app *BaseApp) SetTxPrioritizer(prioritizer sdk.TxPrioritizer) {
 	app.txPrioritizer = prioritizer
 }

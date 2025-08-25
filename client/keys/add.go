@@ -306,6 +306,11 @@ func printCreate(cmd *cobra.Command, info keyring.Info, showMnemonic bool, mnemo
 			return err
 		}
 
+		out, err = keyring.PopulateEvmAddrIfApplicable(info, out)
+		if err != nil {
+			return err
+		}
+
 		if showMnemonic {
 			out.Mnemonic = mnemonic
 		}

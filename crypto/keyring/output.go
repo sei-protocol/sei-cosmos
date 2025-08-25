@@ -92,20 +92,28 @@ func MkAccKeysOutput(infos []Info) ([]KeyOutput, error) {
 }
 
 func PopulateEvmAddrIfApplicable(info Info, o KeyOutput) (KeyOutput, error) {
-	localInfo, ok := info.(LocalInfo)
-	if ok {
-		// Only works with secp256k1 algo
-		priv, err := legacy.PrivKeyFromBytes([]byte(localInfo.PrivKeyArmor))
-		if err != nil {
-			return o, err
-		}
-		privHex := hex.EncodeToString(priv.Bytes())
-		privKey, err := crypto.HexToECDSA(privHex)
-		if err != nil {
-			return o, err
-		}
-		o.EvmAddress = crypto.PubkeyToAddress(privKey.PublicKey).Hex()
-	} else {
+	var localInfo LocalInfo
+	switch v := info.(type) {
+	case LocalInfo:
+		localInfo = v
+	case *LocalInfo:
+		localInfo = *v
+	default:
+		return o, nil // non-local key – nothing to do
 	}
+
+	// Only secp256k1 keys produce an EVM address
+	priv, err := legacy.PrivKeyFromBytes([]byte(localInfo.PrivKeyArmor))
+	if err != nil {
+		return o, err
+	}
+
+	privHex := hex.EncodeToString(priv.Bytes())
+	privKey, err := crypto.HexToECDSA(privHex)
+	if err != nil {
+		return o, err
+	}
+
+	o.EvmAddress = crypto.PubkeyToAddress(privKey.PublicKey).Hex()
 	return o, nil
 }

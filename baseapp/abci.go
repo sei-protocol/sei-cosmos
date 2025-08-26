@@ -1229,7 +1229,22 @@ func (app *BaseApp) LoadLatest(ctx context.Context, req *abci.RequestLoadLatest)
 	return &abci.ResponseLoadLatest{}, nil
 }
 
-func (app *BaseApp) GetTxPriorityHint(_ context.Context, req *abci.RequestGetTxPriorityHint) (*abci.ResponseGetTxPriorityHint, error) {
+func (app *BaseApp) GetTxPriorityHint(_ context.Context, req *abci.RequestGetTxPriorityHint) (_resp *abci.ResponseGetTxPriorityHint, _err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Fall back to no-op priority if we panic for any reason. This is to avoid DoS
+			// vectors where a malicious actor crafts a transaction that panics the
+			// prioritizer. Since the prioritizer is used as a hint only, it's safe to fall
+			// back to zero priority in this case and log the panic for monitoring purposes.
+			app.logger.Error("tx prioritizer base app panicked. Falling back on no priority", "error", r)
+			if _err == nil {
+				_resp = &abci.ResponseGetTxPriorityHint{Priority: 0}
+			}
+			// Do not overwrite an existing error if one was already set to keep panics a
+			// non-event at this stage but safeguard against them.
+		}
+	}()
+
 	defer telemetry.MeasureSince(time.Now(), "abci", "get_tx_priority_hint")
 
 	tx, err := app.txDecoder(req.Tx)

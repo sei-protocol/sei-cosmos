@@ -199,7 +199,7 @@ replace (
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	//// TODO: To be replaced with a concrete version number. See:
 	//// - https://github.com/sei-protocol/sei-tendermint/pull/301
-	github.com/tendermint/tendermint => github.com/sei-protocol/sei-tendermint v0.6.4-0.20250903093204-d7c4560885bb
+	github.com/tendermint/tendermint => github.com/sei-protocol/sei-tendermint v0.6.4-0.20250905203244-31c1f39f5fce
 	// latest grpc doesn't work with with our modified proto compiler, so we need to enforce
 	// the following version across all dependencies.
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2

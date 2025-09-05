@@ -1254,9 +1254,6 @@ func (app *BaseApp) GetTxPriorityHint(_ context.Context, req *abci.RequestGetTxP
 	if tx == nil {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "nil tx")
 	}
-	if err := tx.ValidateBasic(); err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, err.Error())
-	}
 
 	// TODO: should we bother validating the messages here?
 	msgs := tx.GetMsgs()

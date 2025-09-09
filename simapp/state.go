@@ -82,7 +82,7 @@ func AppStateFn(cdc codec.JSONCodec, simManager *module.SimulationManager) simty
 		}
 
 		stakingState := new(stakingtypes.GenesisState)
-		err = cdc.UnmarshalJSON(stakingStateBz, stakingState)
+		err = cdc.UnmarshalAsJSON(stakingStateBz, stakingState)
 		if err != nil {
 			panic(err)
 		}
@@ -102,7 +102,7 @@ func AppStateFn(cdc codec.JSONCodec, simManager *module.SimulationManager) simty
 			panic("bank genesis state is missing")
 		}
 		bankState := new(banktypes.GenesisState)
-		err = cdc.UnmarshalJSON(bankStateBz, bankState)
+		err = cdc.UnmarshalAsJSON(bankStateBz, bankState)
 		if err != nil {
 			panic(err)
 		}

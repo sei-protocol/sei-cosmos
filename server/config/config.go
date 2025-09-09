@@ -214,7 +214,7 @@ type Config struct {
 	StateSync   StateSyncConfig          `mapstructure:"state-sync"`
 	StateCommit config.StateCommitConfig `mapstructure:"state-commit"`
 	StateStore  config.StateStoreConfig  `mapstructure:"state-store"`
-	Genesis     GenesisConfig            `mapstructure:genesis`
+	Genesis     GenesisConfig            `mapstructure:"genesis"`
 }
 
 // SetMinGasPrices sets the validator's minimum gas prices.

@@ -59,8 +59,8 @@ func (ac *AminoCodec) MustUnmarshalLengthPrefixed(bz []byte, ptr ProtoMarshaler)
 
 // MarshalJSON implements JSONCodec.MarshalJSON method,
 // it marshals to JSON using legacy amino codec.
-func (ac *AminoCodec) MarshalJSON(o proto.Message) ([]byte, error) {
-	return ac.LegacyAmino.MarshalJSON(o)
+func (ac *AminoCodec) MarshalAsJSON(o proto.Message) ([]byte, error) {
+	return ac.LegacyAmino.MarshalAsJSON(o)
 }
 
 // MustMarshalJSON implements JSONCodec.MustMarshalJSON method,
@@ -71,8 +71,8 @@ func (ac *AminoCodec) MustMarshalJSON(o proto.Message) []byte {
 
 // UnmarshalJSON implements JSONCodec.UnmarshalJSON method,
 // it unmarshals from JSON using legacy amino codec.
-func (ac *AminoCodec) UnmarshalJSON(bz []byte, ptr proto.Message) error {
-	return ac.LegacyAmino.UnmarshalJSON(bz, ptr)
+func (ac *AminoCodec) UnmarshalAsJSON(bz []byte, ptr proto.Message) error {
+	return ac.LegacyAmino.UnmarshalAsJSON(bz, ptr)
 }
 
 // MustUnmarshalJSON implements JSONCodec.MustUnmarshalJSON method,
@@ -96,8 +96,9 @@ func (ac *AminoCodec) MarshalInterface(i proto.Message) ([]byte, error) {
 // NOTE: to unmarshal a concrete type, you should use Unmarshal instead
 //
 // Example:
-//   var x MyInterface
-//   err := cdc.UnmarshalInterface(bz, &x)
+//
+//	var x MyInterface
+//	err := cdc.UnmarshalInterface(bz, &x)
 func (ac *AminoCodec) UnmarshalInterface(bz []byte, ptr interface{}) error {
 	return ac.LegacyAmino.Unmarshal(bz, ptr)
 }
@@ -109,7 +110,7 @@ func (ac *AminoCodec) MarshalInterfaceJSON(i proto.Message) ([]byte, error) {
 	if err := assertNotNil(i); err != nil {
 		return nil, err
 	}
-	return ac.LegacyAmino.MarshalJSON(i)
+	return ac.LegacyAmino.MarshalAsJSON(i)
 }
 
 // UnmarshalInterfaceJSON is a convenience function for amino unmarshaling interfaces.
@@ -117,8 +118,9 @@ func (ac *AminoCodec) MarshalInterfaceJSON(i proto.Message) ([]byte, error) {
 // NOTE: to unmarshal a concrete type, you should use UnmarshalJSON instead
 //
 // Example:
-//   var x MyInterface
-//   err := cdc.UnmarshalInterfaceJSON(bz, &x)
+//
+//	var x MyInterface
+//	err := cdc.UnmarshalInterfaceJSON(bz, &x)
 func (ac *AminoCodec) UnmarshalInterfaceJSON(bz []byte, ptr interface{}) error {
-	return ac.LegacyAmino.UnmarshalJSON(bz, ptr)
+	return ac.LegacyAmino.UnmarshalAsJSON(bz, ptr)
 }

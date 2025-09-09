@@ -47,7 +47,7 @@ func TestQueryParams(t *testing.T) {
 	res, sdkErr := querier(ctx, []string{types.QueryParameters}, abci.RequestQuery{})
 	require.NoError(t, sdkErr)
 
-	err := app.LegacyAmino().UnmarshalJSON(res, &params)
+	err := app.LegacyAmino().UnmarshalAsJSON(res, &params)
 	require.NoError(t, err)
 
 	require.Equal(t, app.MintKeeper.GetParams(ctx), params)
@@ -63,7 +63,7 @@ func TestQueryInflation(t *testing.T) {
 	res, sdkErr := querier(ctx, []string{types.QueryInflation}, abci.RequestQuery{})
 	require.NoError(t, sdkErr)
 
-	err := app.LegacyAmino().UnmarshalJSON(res, &inflation)
+	err := app.LegacyAmino().UnmarshalAsJSON(res, &inflation)
 	require.NoError(t, err)
 
 	require.Equal(t, app.MintKeeper.GetMinter(ctx).Inflation, inflation)
@@ -79,7 +79,7 @@ func TestQueryAnnualProvisions(t *testing.T) {
 	res, sdkErr := querier(ctx, []string{types.QueryAnnualProvisions}, abci.RequestQuery{})
 	require.NoError(t, sdkErr)
 
-	err := app.LegacyAmino().UnmarshalJSON(res, &annualProvisions)
+	err := app.LegacyAmino().UnmarshalAsJSON(res, &annualProvisions)
 	require.NoError(t, err)
 
 	require.Equal(t, app.MintKeeper.GetMinter(ctx).AnnualProvisions, annualProvisions)

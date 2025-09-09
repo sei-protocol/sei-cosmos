@@ -182,12 +182,12 @@ func (bva BaseVestingAccount) MarshalJSON() ([]byte, error) {
 		EndTime:          bva.EndTime,
 	}
 
-	return legacy.Cdc.MarshalJSON(alias)
+	return legacy.Cdc.MarshalAsJSON(alias)
 }
 
 func (bva *BaseVestingAccount) UnmarshalJSON(bz []byte) error {
 	var alias vestingAccountJSON
-	if err := legacy.Cdc.UnmarshalJSON(bz, &alias); err != nil {
+	if err := legacy.Cdc.UnmarshalAsJSON(bz, &alias); err != nil {
 		return err
 	}
 
@@ -237,12 +237,12 @@ func (cva ContinuousVestingAccount) MarshalJSON() ([]byte, error) {
 		StartTime:        cva.StartTime,
 	}
 
-	return legacy.Cdc.MarshalJSON(alias)
+	return legacy.Cdc.MarshalAsJSON(alias)
 }
 
 func (cva *ContinuousVestingAccount) UnmarshalJSON(bz []byte) error {
 	var alias vestingAccountJSON
-	if err := legacy.Cdc.UnmarshalJSON(bz, &alias); err != nil {
+	if err := legacy.Cdc.UnmarshalAsJSON(bz, &alias); err != nil {
 		return err
 	}
 
@@ -281,13 +281,13 @@ func (dva DelayedVestingAccount) MarshalJSON() ([]byte, error) {
 		EndTime:          dva.EndTime,
 	}
 
-	return legacy.Cdc.MarshalJSON(alias)
+	return legacy.Cdc.MarshalAsJSON(alias)
 }
 
 // UnmarshalJSON unmarshals raw JSON bytes into a DelayedVestingAccount.
 func (dva *DelayedVestingAccount) UnmarshalJSON(bz []byte) error {
 	var alias vestingAccountJSON
-	if err := legacy.Cdc.UnmarshalJSON(bz, &alias); err != nil {
+	if err := legacy.Cdc.UnmarshalAsJSON(bz, &alias); err != nil {
 		return err
 	}
 
@@ -341,13 +341,13 @@ func (pva PeriodicVestingAccount) MarshalJSON() ([]byte, error) {
 		VestingPeriods:   pva.VestingPeriods,
 	}
 
-	return legacy.Cdc.MarshalJSON(alias)
+	return legacy.Cdc.MarshalAsJSON(alias)
 }
 
 // UnmarshalJSON unmarshals raw JSON bytes into a PeriodicVestingAccount.
 func (pva *PeriodicVestingAccount) UnmarshalJSON(bz []byte) error {
 	var alias vestingAccountJSON
-	if err := legacy.Cdc.UnmarshalJSON(bz, &alias); err != nil {
+	if err := legacy.Cdc.UnmarshalAsJSON(bz, &alias); err != nil {
 		return err
 	}
 
@@ -390,7 +390,7 @@ func (ma ModuleAccount) Validate() error {
 
 // MarshalJSON returns the JSON representation of a ModuleAccount.
 func (ma ModuleAccount) MarshalJSON() ([]byte, error) {
-	return legacy.Cdc.MarshalJSON(moduleAccountPretty{
+	return legacy.Cdc.MarshalAsJSON(moduleAccountPretty{
 		Address:       ma.Address,
 		Coins:         ma.Coins,
 		PubKey:        "",
@@ -404,7 +404,7 @@ func (ma ModuleAccount) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals raw JSON bytes into a ModuleAccount.
 func (ma *ModuleAccount) UnmarshalJSON(bz []byte) error {
 	var alias moduleAccountPretty
-	if err := legacy.Cdc.UnmarshalJSON(bz, &alias); err != nil {
+	if err := legacy.Cdc.UnmarshalAsJSON(bz, &alias); err != nil {
 		return err
 	}
 

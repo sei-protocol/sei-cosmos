@@ -43,7 +43,7 @@ func TestMigrateJSON(t *testing.T) {
 
 	migrated := v043bank.MigrateJSON(bankGenState)
 
-	bz, err := clientCtx.Codec.MarshalJSON(migrated)
+	bz, err := clientCtx.Codec.MarshalAsJSON(migrated)
 	require.NoError(t, err)
 
 	// Indent the JSON bz correctly.

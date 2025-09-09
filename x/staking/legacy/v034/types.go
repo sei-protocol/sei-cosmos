@@ -147,7 +147,7 @@ func (v Validator) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return legacy.Cdc.MarshalJSON(bechValidator{
+	return legacy.Cdc.MarshalAsJSON(bechValidator{
 		OperatorAddress:         v.OperatorAddress,
 		ConsPubKey:              bechConsPubKey,
 		Jailed:                  v.Jailed,
@@ -165,7 +165,7 @@ func (v Validator) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals the validator from JSON using Bech32
 func (v *Validator) UnmarshalJSON(data []byte) error {
 	bv := &bechValidator{}
-	if err := legacy.Cdc.UnmarshalJSON(data, bv); err != nil {
+	if err := legacy.Cdc.UnmarshalAsJSON(data, bv); err != nil {
 		return err
 	}
 	consPubKey, err := legacybech32.UnmarshalPubKey(legacybech32.ConsPK, bv.ConsPubKey)

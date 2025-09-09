@@ -31,7 +31,7 @@ func (suite *KeeperTestSuite) TestQuerier_QueryEvidence_Existing() {
 	suite.NotNil(bz)
 
 	var e exported.Evidence
-	suite.Nil(legacyCdc.UnmarshalJSON(bz, &e))
+	suite.Nil(legacyCdc.UnmarshalAsJSON(bz, &e))
 	suite.Equal(evidence[0], e)
 }
 
@@ -67,7 +67,7 @@ func (suite *KeeperTestSuite) TestQuerier_QueryAllEvidence() {
 	suite.NotNil(bz)
 
 	var e []exported.Evidence
-	suite.Nil(cdc.UnmarshalJSON(bz, &e))
+	suite.Nil(cdc.UnmarshalAsJSON(bz, &e))
 	suite.Len(e, numEvidence)
 }
 
@@ -87,6 +87,6 @@ func (suite *KeeperTestSuite) TestQuerier_QueryAllEvidence_InvalidPagination() {
 	suite.NotNil(bz)
 
 	var e []exported.Evidence
-	suite.Nil(cdc.UnmarshalJSON(bz, &e))
+	suite.Nil(cdc.UnmarshalAsJSON(bz, &e))
 	suite.Len(e, 0)
 }

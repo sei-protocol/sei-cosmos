@@ -193,7 +193,10 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 				return fmt.Errorf("failed to initialize telemetry: %w", err)
 			}
 			if !config.Genesis.StreamImport {
-				genesisFile, _ := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
+				genesisFile, err := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
+				if err!=nil {
+					return fmt.Errorf("tmtypes.GenesisDocFromFile(): %w", err)
+				}
 				if genesisFile.ChainID != clientCtx.ChainID {
 					panic(fmt.Sprintf("genesis file chain-id=%s does not equal config.toml chain-id=%s", genesisFile.ChainID, clientCtx.ChainID))
 				}

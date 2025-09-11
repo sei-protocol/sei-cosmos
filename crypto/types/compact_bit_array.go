@@ -180,19 +180,20 @@ func (bA *CompactBitArray) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	bits := `"`
+	var bits strings.Builder
+	bits.WriteString(`"`)
 	size := bA.Count()
 	for i := 0; i < size; i++ {
 		if bA.GetIndex(i) {
-			bits += `x`
+			bits.WriteString(`x`)
 		} else {
-			bits += `_`
+			bits.WriteString(`_`)
 		}
 	}
 
-	bits += `"`
+	bits.WriteString(`"`)
 
-	return []byte(bits), nil
+	return []byte(bits.String()), nil
 }
 
 var bitArrayJSONRegexp = regexp.MustCompile(`\A"([_x]*)"\z`)

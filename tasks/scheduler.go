@@ -117,7 +117,7 @@ type scheduler struct {
 // NewScheduler creates a new scheduler
 func NewScheduler(workers int, tracingInfo *tracing.Info, deliverTxFunc func(ctx sdk.Context, req types.RequestDeliverTx, tx sdk.Tx, checksum [32]byte) (res types.ResponseDeliverTx)) Scheduler {
 	return &scheduler{
-		workers:     30,
+		workers:     500,
 		deliverTx:   deliverTxFunc,
 		tracingInfo: tracingInfo,
 		metrics:     &schedulerMetrics{},

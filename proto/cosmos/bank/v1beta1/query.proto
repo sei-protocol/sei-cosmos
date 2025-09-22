@@ -34,7 +34,7 @@ service Query {
 
   // SupplyOf queries the supply of a single coin.
   rpc SupplyOf(QuerySupplyOfRequest) returns (QuerySupplyOfResponse) {
-    option (google.api.http).get = "/cosmos/bank/v1beta1/supply/{denom}";
+    option (google.api.http).get = "/cosmos/bank/v1beta1/supply/by_denom";
   }
 
   // Params queries the parameters of x/bank module.
@@ -45,6 +45,12 @@ service Query {
   // DenomsMetadata queries the client metadata of a given coin denomination.
   rpc DenomMetadata(QueryDenomMetadataRequest) returns (QueryDenomMetadataResponse) {
     option (google.api.http).get = "/cosmos/bank/v1beta1/denoms_metadata/{denom}";
+  }
+
+  // DenomMetadataByQueryString queries the client metadata of a given coin denomination.
+  // Identical with DenomsMetadata but receives denom as query string.
+  rpc DenomMetadataByQueryString(QueryDenomMetadataByQueryStringRequest) returns (QueryDenomMetadataByQueryStringResponse) {
+    option (google.api.http).get = "/cosmos/bank/v1beta1/denoms_metadata_by_query_string";
   }
 
   // DenomsMetadata queries the client metadata for all registered coin denominations.
@@ -185,9 +191,23 @@ message QueryDenomMetadataRequest {
   string denom = 1;
 }
 
+// QueryDenomMetadataByQueryStringRequest is the request type for the Query/DenomMetadata RPC method.
+// Identical with QueryDenomMetadataRequest but receives denom as query string.
+message QueryDenomMetadataByQueryStringRequest {
+  // denom is the coin denom to query the metadata for.
+  string denom = 1;
+}
+
 // QueryDenomMetadataResponse is the response type for the Query/DenomMetadata RPC
 // method.
 message QueryDenomMetadataResponse {
+  // metadata describes and provides all the client information for the requested token.
+  Metadata metadata = 1 [(gogoproto.nullable) = false];
+}
+
+// QueryDenomMetadataByQueryStringResponse is the response type for the Query/DenomMetadata RPC
+// method. Identical with QueryDenomMetadataResponse but receives denom as query string in request.
+message QueryDenomMetadataByQueryStringResponse {
   // metadata describes and provides all the client information for the requested token.
   Metadata metadata = 1 [(gogoproto.nullable) = false];
 }

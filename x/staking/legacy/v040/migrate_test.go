@@ -32,7 +32,7 @@ func TestMigrate(t *testing.T) {
 
 	migrated := v040staking.Migrate(stakingGenState)
 
-	bz, err := clientCtx.Codec.MarshalJSON(migrated)
+	bz, err := clientCtx.Codec.MarshalAsJSON(migrated)
 	require.NoError(t, err)
 
 	// Indent the JSON bz correctly.

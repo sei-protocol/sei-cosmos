@@ -18,7 +18,7 @@ import (
 
 // SetupSimulation creates the config, db (levelDB), temporary directory and logger for
 // the simulation tests. If `FlagEnabledValue` is false it skips the current test.
-// Returns error on an invalid db intantiation or temp dir creation.
+// Returns error on an invalid db instantiation or temp dir creation.
 func SetupSimulation(dirPrefix, dbName string) (simtypes.Config, dbm.DB, string, log.Logger, bool, error) {
 	if !FlagEnabledValue {
 		return simtypes.Config{}, nil, "", nil, true, nil
@@ -29,8 +29,8 @@ func SetupSimulation(dirPrefix, dbName string) (simtypes.Config, dbm.DB, string,
 
 	var logger log.Logger
 	if FlagVerboseValue {
-		logger, err := log.NewDefaultLogger(log.LogFormatText, "debug")
-		logger = logger
+		var err error
+		logger, err = log.NewDefaultLogger(log.LogFormatText, "debug")
 		if err != nil {
 			return simtypes.Config{}, nil, "", nil, false, err
 		}

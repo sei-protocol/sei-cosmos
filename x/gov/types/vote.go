@@ -44,11 +44,12 @@ func (v Votes) String() string {
 	if len(v) == 0 {
 		return "[]"
 	}
-	out := fmt.Sprintf("Votes for Proposal %d:", v[0].ProposalId)
+	var out strings.Builder
+	out.WriteString(fmt.Sprintf("Votes for Proposal %d:", v[0].ProposalId))
 	for _, vot := range v {
-		out += fmt.Sprintf("\n  %s: %s", vot.Voter, vot.Options)
+		out.WriteString(fmt.Sprintf("\n  %s: %s", vot.Voter, vot.Options))
 	}
-	return out
+	return out.String()
 }
 
 // Empty returns whether a vote is empty.

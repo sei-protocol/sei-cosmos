@@ -161,19 +161,20 @@ func UnmarshalUBD(cdc codec.BinaryCodec, value []byte) (ubd UnbondingDelegation,
 
 // String returns a human readable string representation of an UnbondingDelegation.
 func (ubd UnbondingDelegation) String() string {
-	out := fmt.Sprintf(`Unbonding Delegations between:
+	var out strings.Builder
+	out.WriteString(fmt.Sprintf(`Unbonding Delegations between:
   Delegator:                 %s
   Validator:                 %s
-	Entries:`, ubd.DelegatorAddress, ubd.ValidatorAddress)
+	Entries:`, ubd.DelegatorAddress, ubd.ValidatorAddress))
 	for i, entry := range ubd.Entries {
-		out += fmt.Sprintf(`    Unbonding Delegation %d:
+		out.WriteString(fmt.Sprintf(`    Unbonding Delegation %d:
       Creation Height:           %v
       Min time to unbond (unix): %v
       Expected balance:          %s`, i, entry.CreationHeight,
-			entry.CompletionTime, entry.Balance)
+			entry.CompletionTime, entry.Balance))
 	}
 
-	return out
+	return out.String()
 }
 
 // UnbondingDelegations is a collection of UnbondingDelegation
@@ -256,26 +257,27 @@ func UnmarshalRED(cdc codec.BinaryCodec, value []byte) (red Redelegation, err er
 
 // String returns a human readable string representation of a Redelegation.
 func (red Redelegation) String() string {
-	out := fmt.Sprintf(`Redelegations between:
+	var out strings.Builder
+	out.WriteString(fmt.Sprintf(`Redelegations between:
   Delegator:                 %s
   Source Validator:          %s
   Destination Validator:     %s
   Entries:
 `,
 		red.DelegatorAddress, red.ValidatorSrcAddress, red.ValidatorDstAddress,
-	)
+	))
 
 	for i, entry := range red.Entries {
-		out += fmt.Sprintf(`    Redelegation Entry #%d:
+		out.WriteString(fmt.Sprintf(`    Redelegation Entry #%d:
       Creation height:           %v
       Min time to unbond (unix): %v
       Dest Shares:               %s
 `,
 			i, entry.CreationHeight, entry.CompletionTime, entry.SharesDst,
-		)
+		))
 	}
 
-	return strings.TrimRight(out, "\n")
+	return strings.TrimRight(out.String(), "\n")
 }
 
 // Redelegations are a collection of Redelegation

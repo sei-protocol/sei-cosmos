@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -42,11 +43,12 @@ func (d Deposits) String() string {
 	if len(d) == 0 {
 		return "[]"
 	}
-	out := fmt.Sprintf("Deposits for Proposal %d:", d[0].ProposalId)
+	var out strings.Builder
+	out.WriteString(fmt.Sprintf("Deposits for Proposal %d:", d[0].ProposalId))
 	for _, dep := range d {
-		out += fmt.Sprintf("\n  %s: %s", dep.Depositor, dep.Amount)
+		out.WriteString(fmt.Sprintf("\n  %s: %s", dep.Depositor, dep.Amount))
 	}
-	return out
+	return out.String()
 }
 
 // Empty returns whether a deposit is empty.

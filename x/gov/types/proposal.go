@@ -109,13 +109,14 @@ func (p Proposals) Equal(other Proposals) bool {
 
 // String implements stringer interface
 func (p Proposals) String() string {
-	out := "ID - (Status) [Type] Title\n"
+	var out strings.Builder
+	out.WriteString("ID - (Status) [Type] Title\n")
 	for _, prop := range p {
-		out += fmt.Sprintf("%d - (%s) [%s] %s\n",
+		out.WriteString(fmt.Sprintf("%d - (%s) [%s] %s\n",
 			prop.ProposalId, prop.Status,
-			prop.ProposalType(), prop.GetTitle())
+			prop.ProposalType(), prop.GetTitle()))
 	}
-	return strings.TrimSpace(out)
+	return strings.TrimSpace(out.String())
 }
 
 // UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces

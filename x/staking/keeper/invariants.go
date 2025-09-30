@@ -3,6 +3,7 @@ package keeper
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -94,7 +95,7 @@ func ModuleAccountInvariants(k Keeper) sdk.Invariant {
 func NonNegativePowerInvariant(k Keeper) sdk.Invariant {
 	return func(ctx sdk.Context) (string, bool) {
 		var (
-			msg    string
+			msg    strings.Builder
 			broken bool
 		)
 
@@ -110,18 +111,18 @@ func NonNegativePowerInvariant(k Keeper) sdk.Invariant {
 
 			if !bytes.Equal(iterator.Key(), powerKey) {
 				broken = true
-				msg += fmt.Sprintf("power store invariance:\n\tvalidator.Power: %v"+
+				msg.WriteString(fmt.Sprintf("power store invariance:\n\tvalidator.Power: %v"+
 					"\n\tkey should be: %v\n\tkey in store: %v\n",
-					validator.GetConsensusPower(k.PowerReduction(ctx)), powerKey, iterator.Key())
+					validator.GetConsensusPower(k.PowerReduction(ctx)), powerKey, iterator.Key()))
 			}
 
 			if validator.Tokens.IsNegative() {
 				broken = true
-				msg += fmt.Sprintf("\tnegative tokens for validator: %v\n", validator)
+				msg.WriteString(fmt.Sprintf("\tnegative tokens for validator: %v\n", validator))
 			}
 		}
 
-		return sdk.FormatInvariant(types.ModuleName, "nonnegative power", fmt.Sprintf("found invalid validator powers\n%s", msg)), broken
+		return sdk.FormatInvariant(types.ModuleName, "nonnegative power", fmt.Sprintf("found invalid validator powers\n%s", msg.String())), broken
 	}
 }
 
@@ -129,7 +130,7 @@ func NonNegativePowerInvariant(k Keeper) sdk.Invariant {
 func PositiveDelegationInvariant(k Keeper) sdk.Invariant {
 	return func(ctx sdk.Context) (string, bool) {
 		var (
-			msg   string
+			msg   strings.Builder
 			count int
 		)
 
@@ -138,20 +139,20 @@ func PositiveDelegationInvariant(k Keeper) sdk.Invariant {
 			if delegation.Shares.IsNegative() {
 				count++
 
-				msg += fmt.Sprintf("\tdelegation with negative shares: %+v\n", delegation)
+				msg.WriteString(fmt.Sprintf("\tdelegation with negative shares: %+v\n", delegation))
 			}
 
 			if delegation.Shares.IsZero() {
 				count++
 
-				msg += fmt.Sprintf("\tdelegation with zero shares: %+v\n", delegation)
+				msg.WriteString(fmt.Sprintf("\tdelegation with zero shares: %+v\n", delegation))
 			}
 		}
 
 		broken := count != 0
 
 		return sdk.FormatInvariant(types.ModuleName, "positive delegations", fmt.Sprintf(
-			"%d invalid delegations found\n%s", count, msg)), broken
+			"%d invalid delegations found\n%s", count, msg.String())), broken
 	}
 }
 
@@ -161,7 +162,7 @@ func PositiveDelegationInvariant(k Keeper) sdk.Invariant {
 func DelegatorSharesInvariant(k Keeper) sdk.Invariant {
 	return func(ctx sdk.Context) (string, bool) {
 		var (
-			msg    string
+			msg    strings.Builder
 			broken bool
 		)
 
@@ -187,12 +188,12 @@ func DelegatorSharesInvariant(k Keeper) sdk.Invariant {
 			calculatedValTotalDelShares := validatorsDelegationShares[validator.GetOperator().String()]
 			if !calculatedValTotalDelShares.Equal(expValTotalDelShares) {
 				broken = true
-				msg += fmt.Sprintf("broken delegator shares invariance:\n"+
+				msg.WriteString(fmt.Sprintf("broken delegator shares invariance:\n"+
 					"\tvalidator.DelegatorShares: %v\n"+
-					"\tsum of Delegator.Shares: %v\n", expValTotalDelShares, calculatedValTotalDelShares)
+					"\tsum of Delegator.Shares: %v\n", expValTotalDelShares, calculatedValTotalDelShares))
 			}
 		}
 
-		return sdk.FormatInvariant(types.ModuleName, "delegator shares", msg), broken
+		return sdk.FormatInvariant(types.ModuleName, "delegator shares", msg.String()), broken
 	}
 }

@@ -16,7 +16,7 @@ import (
 func TestInMemoryCreateLedger(t *testing.T) {
 	kb := NewInMemory()
 
-	ledger, err := kb.SaveLedgerKey("some_account", hd.Secp256k1, "cosmos", 118, 3, 1)
+	ledger, err := kb.SaveLedgerKey("some_account", hd.Secp256k1, "cosmos", 60, 3, 1)
 
 	if err != nil {
 		require.Error(t, err)
@@ -28,7 +28,7 @@ func TestInMemoryCreateLedger(t *testing.T) {
 
 	// The mock is available, check that the address is correct
 	pubKey := ledger.GetPubKey()
-	expectedPkStr := "PubKeySecp256k1{03602C0CB4D8C0081FEE794BDE96E7B95FA16F2B5283B764AC070584327B2C7202}"
+	expectedPkStr := "PubKeySecp256k1{02522FC5F8F6C109A7D167871FCC74AAC406DF47F4F0E54BA212D9DFEEFBD86C58}"
 	require.Equal(t, expectedPkStr, pubKey.String())
 
 	// Check that restoring the key gets the same results
@@ -42,7 +42,7 @@ func TestInMemoryCreateLedger(t *testing.T) {
 
 	path, err := restoredKey.GetPath()
 	require.NoError(t, err)
-	require.Equal(t, "m/44'/118'/3'/0/1", path.String())
+	require.Equal(t, "m/44'/60'/3'/0/1", path.String())
 }
 
 // TestSignVerify does some detailed checks on how we sign and validate
@@ -53,7 +53,7 @@ func TestSignVerifyKeyRingWithLedger(t *testing.T) {
 	kb, err := New("keybasename", "test", dir, nil)
 	require.NoError(t, err)
 
-	i1, err := kb.SaveLedgerKey("key", hd.Secp256k1, "cosmos", 118, 0, 0)
+	i1, err := kb.SaveLedgerKey("key", hd.Secp256k1, "cosmos", 60, 0, 0)
 	if err != nil {
 		require.Equal(t, "ledger nano S: support for ledger devices is not available in this executable", err.Error())
 		t.Skip("ledger nano S: support for ledger devices is not available in this executable")
@@ -91,11 +91,11 @@ func TestAltKeyring_SaveLedgerKey(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test unsupported Algo
-	_, err = keyring.SaveLedgerKey("key", notSupportedAlgo{}, "cosmos", 118, 0, 0)
+	_, err = keyring.SaveLedgerKey("key", notSupportedAlgo{}, "cosmos", 60, 0, 0)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), ErrUnsupportedSigningAlgo.Error())
 
-	ledger, err := keyring.SaveLedgerKey("some_account", hd.Secp256k1, "cosmos", 118, 3, 1)
+	ledger, err := keyring.SaveLedgerKey("some_account", hd.Secp256k1, "cosmos", 60, 3, 1)
 	if err != nil {
 		require.Equal(t, "ledger nano S: support for ledger devices is not available in this executable", err.Error())
 		t.Skip("ledger nano S: support for ledger devices is not available in this executable")
@@ -105,7 +105,7 @@ func TestAltKeyring_SaveLedgerKey(t *testing.T) {
 	// The mock is available, check that the address is correct
 	require.Equal(t, "some_account", ledger.GetName())
 	pubKey := ledger.GetPubKey()
-	expectedPkStr := "PubKeySecp256k1{03602C0CB4D8C0081FEE794BDE96E7B95FA16F2B5283B764AC070584327B2C7202}"
+	expectedPkStr := "PubKeySecp256k1{02522FC5F8F6C109A7D167871FCC74AAC406DF47F4F0E54BA212D9DFEEFBD86C58}"
 	require.Equal(t, expectedPkStr, pubKey.String())
 
 	// Check that restoring the key gets the same results
@@ -119,5 +119,5 @@ func TestAltKeyring_SaveLedgerKey(t *testing.T) {
 
 	path, err := restoredKey.GetPath()
 	require.NoError(t, err)
-	require.Equal(t, "m/44'/118'/3'/0/1", path.String())
+	require.Equal(t, "m/44'/60'/3'/0/1", path.String())
 }

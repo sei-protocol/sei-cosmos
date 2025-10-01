@@ -22,7 +22,7 @@ func TestErrorHandling(t *testing.T) {
 }
 
 func TestPublicKeyUnsafe(t *testing.T) {
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, err := NewPrivKeySecp256k1Unsafe(path)
 	require.NoError(t, err)
 	checkDefaultPubKey(t, priv)
@@ -30,28 +30,28 @@ func TestPublicKeyUnsafe(t *testing.T) {
 
 func checkDefaultPubKey(t *testing.T, priv types.LedgerPrivKey) {
 	require.NotNil(t, priv)
-	expectedPkStr := "PubKeySecp256k1{034FEF9CD7C4C63588D3B03FEB5281B9D232CBA34D6F3D71AEE59211FFBFE1FE87}"
-	require.Equal(t, "eb5ae98721034fef9cd7c4c63588d3b03feb5281b9d232cba34d6f3d71aee59211ffbfe1fe87",
+	expectedPkStr := "PubKeySecp256k1{021853D93524119EEB31AB0B06F1DCB068F84943BB230DFA10B1292F47AF643575}"
+	require.Equal(t, "eb5ae98721021853d93524119eeb31ab0b06f1dcb068f84943bb230dfa10b1292f47af643575",
 		fmt.Sprintf("%x", cdc.Amino.MustMarshalBinaryBare(priv.PubKey())),
 		"Is your device using test mnemonic: %s ?", testdata.TestMnemonic)
 	require.Equal(t, expectedPkStr, priv.PubKey().String())
 	addr := sdk.AccAddress(priv.PubKey().Address()).String()
-	require.Equal(t, "cosmos1w34k53py5v5xyluazqpq65agyajavep2rflq6h",
+	require.Equal(t, "cosmos1ndgvlye77dmuct2ncr4m8ghmfkwp7p8slz6zxm",
 		addr, "Is your device using test mnemonic: %s ?", testdata.TestMnemonic)
 }
 
 func TestPublicKeyUnsafeHDPath(t *testing.T) {
 	expectedAnswers := []string{
-		"PubKeySecp256k1{034FEF9CD7C4C63588D3B03FEB5281B9D232CBA34D6F3D71AEE59211FFBFE1FE87}",
-		"PubKeySecp256k1{0260D0487A3DFCE9228EEE2D0D83A40F6131F551526C8E52066FE7FE1E4A509666}",
-		"PubKeySecp256k1{03A2670393D02B162D0ED06A08041E80D86BE36C0564335254DF7462447EB69AB3}",
-		"PubKeySecp256k1{033222FC61795077791665544A90740E8EAD638A391A3B8F9261F4A226B396C042}",
-		"PubKeySecp256k1{03F577473348D7B01E7AF2F245E36B98D181BC935EC8B552CDE5932B646DC7BE04}",
-		"PubKeySecp256k1{0222B1A5486BE0A2D5F3C5866BE46E05D1BDE8CDA5EA1C4C77A9BC48D2FA2753BC}",
-		"PubKeySecp256k1{0377A1C826D3A03CA4EE94FC4DEA6BCCB2BAC5F2AC0419A128C29F8E88F1FF295A}",
-		"PubKeySecp256k1{031B75C84453935AB76F8C8D0B6566C3FCC101CC5C59D7000BFC9101961E9308D9}",
-		"PubKeySecp256k1{038905A42433B1D677CC8AFD36861430B9A8529171B0616F733659F131C3F80221}",
-		"PubKeySecp256k1{038BE7F348902D8C20BC88D32294F4F3B819284548122229DECD1ADF1A7EB0848B}",
+		"PubKeySecp256k1{021853D93524119EEB31AB0B06F1DCB068F84943BB230DFA10B1292F47AF643575}",
+		"PubKeySecp256k1{022374F2DACD71042B5A888E3839E4BA54752AD6A51D35B54F6ABB899C4329D4BF}",
+		"PubKeySecp256k1{03B7B924449C6C983CCA4CF01D7AC53811874C384D1EB18E04916EE9486AE89023}",
+		"PubKeySecp256k1{037795D6F3A390A2B83838DEE4F7DDBCE7FC9B745516B1F3031D858BCC5044B0A3}",
+		"PubKeySecp256k1{033729F993AE4D3347454A0D37D13C6E3484E7DC7DE7A63DDB4BCA556CCA3886E1}",
+		"PubKeySecp256k1{025FEB9BB0D950EFACAEBC163F17E76FAA4984B3FF3D41DD06DB79B9EEBBD930F9}",
+		"PubKeySecp256k1{02E59347ED32D311543F1E82B4467684DC4995EEC4700437386E668D3D9E14C1E0}",
+		"PubKeySecp256k1{039D92D20650624E2C4A8CAE0421154FC59F885E9518D337BC2105DF8BF13E151B}",
+		"PubKeySecp256k1{03BE014D2A23A2D46ED95201DDA9D685DA0086B1A2978E3AC770E03E1C19A778F3}",
+		"PubKeySecp256k1{0325E57703629DB24D61697147674FCB10B94ACA0136A89D37C00FC5CFD31B443A}",
 	}
 
 	const numIters = 10
@@ -60,7 +60,7 @@ func TestPublicKeyUnsafeHDPath(t *testing.T) {
 
 	// Check with device
 	for i := uint32(0); i < 10; i++ {
-		path := *hd.NewFundraiserParams(0, sdk.CoinType, i)
+		path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), i)
 		t.Logf("Checking keys at %v\n", path)
 
 		priv, err := NewPrivKeySecp256k1Unsafe(path)
@@ -94,7 +94,7 @@ func TestPublicKeyUnsafeHDPath(t *testing.T) {
 }
 
 func TestPublicKeySafe(t *testing.T) {
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, addr, err := NewPrivKeySecp256k1(path, "cosmos")
 
 	require.NoError(t, err)
@@ -108,29 +108,29 @@ func TestPublicKeySafe(t *testing.T) {
 
 func TestPublicKeyHDPath(t *testing.T) {
 	expectedPubKeys := []string{
-		"PubKeySecp256k1{034FEF9CD7C4C63588D3B03FEB5281B9D232CBA34D6F3D71AEE59211FFBFE1FE87}",
-		"PubKeySecp256k1{0260D0487A3DFCE9228EEE2D0D83A40F6131F551526C8E52066FE7FE1E4A509666}",
-		"PubKeySecp256k1{03A2670393D02B162D0ED06A08041E80D86BE36C0564335254DF7462447EB69AB3}",
-		"PubKeySecp256k1{033222FC61795077791665544A90740E8EAD638A391A3B8F9261F4A226B396C042}",
-		"PubKeySecp256k1{03F577473348D7B01E7AF2F245E36B98D181BC935EC8B552CDE5932B646DC7BE04}",
-		"PubKeySecp256k1{0222B1A5486BE0A2D5F3C5866BE46E05D1BDE8CDA5EA1C4C77A9BC48D2FA2753BC}",
-		"PubKeySecp256k1{0377A1C826D3A03CA4EE94FC4DEA6BCCB2BAC5F2AC0419A128C29F8E88F1FF295A}",
-		"PubKeySecp256k1{031B75C84453935AB76F8C8D0B6566C3FCC101CC5C59D7000BFC9101961E9308D9}",
-		"PubKeySecp256k1{038905A42433B1D677CC8AFD36861430B9A8529171B0616F733659F131C3F80221}",
-		"PubKeySecp256k1{038BE7F348902D8C20BC88D32294F4F3B819284548122229DECD1ADF1A7EB0848B}",
+		"PubKeySecp256k1{021853D93524119EEB31AB0B06F1DCB068F84943BB230DFA10B1292F47AF643575}",
+		"PubKeySecp256k1{022374F2DACD71042B5A888E3839E4BA54752AD6A51D35B54F6ABB899C4329D4BF}",
+		"PubKeySecp256k1{03B7B924449C6C983CCA4CF01D7AC53811874C384D1EB18E04916EE9486AE89023}",
+		"PubKeySecp256k1{037795D6F3A390A2B83838DEE4F7DDBCE7FC9B745516B1F3031D858BCC5044B0A3}",
+		"PubKeySecp256k1{033729F993AE4D3347454A0D37D13C6E3484E7DC7DE7A63DDB4BCA556CCA3886E1}",
+		"PubKeySecp256k1{025FEB9BB0D950EFACAEBC163F17E76FAA4984B3FF3D41DD06DB79B9EEBBD930F9}",
+		"PubKeySecp256k1{02E59347ED32D311543F1E82B4467684DC4995EEC4700437386E668D3D9E14C1E0}",
+		"PubKeySecp256k1{039D92D20650624E2C4A8CAE0421154FC59F885E9518D337BC2105DF8BF13E151B}",
+		"PubKeySecp256k1{03BE014D2A23A2D46ED95201DDA9D685DA0086B1A2978E3AC770E03E1C19A778F3}",
+		"PubKeySecp256k1{0325E57703629DB24D61697147674FCB10B94ACA0136A89D37C00FC5CFD31B443A}",
 	}
 
 	expectedAddrs := []string{
-		"cosmos1w34k53py5v5xyluazqpq65agyajavep2rflq6h",
-		"cosmos19ewxwemt6uahejvwf44u7dh6tq859tkyvarh2q",
-		"cosmos1a07dzdjgjsntxpp75zg7cgatgq0udh3pcdcxm3",
-		"cosmos1qvw52lmn9gpvem8welghrkc52m3zczyhlqjsl7",
-		"cosmos17m78ka80fqkkw2c4ww0v4xm5nsu2drgrlm8mn2",
-		"cosmos1ferh9ll9c452d2p8k2v7heq084guygkn43up9e",
-		"cosmos10vf3sxmjg96rqq36axcphzfsl74dsntuehjlw5",
-		"cosmos1cq83av8cmnar79h0rg7duh9gnr7wkh228a7fxg",
-		"cosmos1dszhfrt226jy5rsre7e48vw9tgwe90uerfyefa",
-		"cosmos1734d7qsylzrdt05muhqqtpd90j8mp4y6rzch8l",
+		"cosmos1ndgvlye77dmuct2ncr4m8ghmfkwp7p8slz6zxm",
+		"cosmos148thdqj6vnkkmsfd58ej4xjuacmqq7qwawg0ak",
+		"cosmos1dj36dxe0sgxygfya5ghggvrhe92qqwm2xcqhtu",
+		"cosmos1zhjvvpr8skduawtkz2gqdvpe3w8jj60z637arr",
+		"cosmos1r3amgzyuktpfzez9gyhj5dnpwm207gc32zcejc",
+		"cosmos146hlrlypx59e5sl50cfys75zcw6s5mymnqm4dj",
+		"cosmos1cwus47jk96mpc9t8aczzthwq2eshsfygxhrjlj",
+		"cosmos17g7vlqppmur95dlcgrflxp3et5f26q3mx5xu86",
+		"cosmos1nl69yryav4d2rxgwwzanft7frl63pe4ydqxy6x",
+		"cosmos1sufp46z4jp8v8wse096ytxv0nee3mm2zekjqhf",
 	}
 
 	const numIters = 10
@@ -139,7 +139,7 @@ func TestPublicKeyHDPath(t *testing.T) {
 
 	// Check with device
 	for i := 0; i < len(expectedAddrs); i++ {
-		path := *hd.NewFundraiserParams(0, sdk.CoinType, uint32(i))
+		path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), uint32(i))
 		t.Logf("Checking keys at %s\n", path)
 
 		priv, addr, err := NewPrivKeySecp256k1(path, "cosmos")
@@ -192,7 +192,7 @@ func TestSignaturesHD(t *testing.T) {
 	for account := uint32(0); account < 100; account += 30 {
 		msg := getFakeTx(account)
 
-		path := *hd.NewFundraiserParams(account, sdk.CoinType, account/5)
+		path := *hd.NewFundraiserParams(account, sdk.GetConfig().GetCoinType(), account/5)
 		t.Logf("Checking signature at %v    ---   PLEASE REVIEW AND ACCEPT IN THE DEVICE\n", path)
 
 		priv, err := NewPrivKeySecp256k1Unsafe(path)
@@ -209,7 +209,7 @@ func TestSignaturesHD(t *testing.T) {
 
 func TestRealDeviceSecp256k1(t *testing.T) {
 	msg := getFakeTx(50)
-	path := *hd.NewFundraiserParams(0, sdk.CoinType, 0)
+	path := *hd.NewFundraiserParams(0, sdk.GetConfig().GetCoinType(), 0)
 	priv, err := NewPrivKeySecp256k1Unsafe(path)
 	require.NoError(t, err)
 

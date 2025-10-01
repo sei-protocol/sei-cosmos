@@ -49,7 +49,7 @@ func NewConfig() *Config {
 		fullFundraiserPath: FullFundraiserPath,
 
 		purpose:   Purpose,
-		coinType:  CoinType,
+		coinType:  CoinType60,
 		txEncoder: nil,
 	}
 }

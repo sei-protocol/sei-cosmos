@@ -39,7 +39,7 @@ func (s *errorsTestSuite) TestStackTrace() {
 	const thisTestSrc = "types/errors/stacktrace_test.go"
 
 	for _, tc := range cases {
-		s.Require().True(reflect.DeepEqual(tc.err.Error(), tc.wantError))
+		s.Require().True(reflect.DeepEqual(tc.err.Error(), tc.wantError), tc.err.Error(), tc.wantError)
 		s.Require().NotNil(stackTrace(tc.err))
 		fullStack := fmt.Sprintf("%+v", tc.err)
 		s.Require().True(strings.Contains(fullStack, thisTestSrc))
@@ -59,4 +59,18 @@ func (s *errorsTestSuite) TestStackTrace() {
 		// be here, not the Wrap() function
 		s.Require().True(strings.Contains(tinyStack, thisTestSrc))
 	}
+}
+
+func (s *errorsTestSuite) TestReplaceWasmdVersionStr() {
+	input := "sei-wasmd@v0.3.11/some/path/file.go"
+	expected := "sei-wasmd@v0.3.10/some/path/file.go"
+	result := replaceWasmdVersionStr(input)
+	s.Require().Equal(expected, result)
+}
+
+func (s *errorsTestSuite) TestReplaceSeiCosmosVersionStr() {
+	input := "sei-cosmos@v0.3.67/some/path/file.go"
+	expected := "sei-cosmos@v0.3.66/some/path/file.go"
+	result := replaceSeiCosmosVersionStr(input)
+	s.Require().Equal(expected, result)
 }

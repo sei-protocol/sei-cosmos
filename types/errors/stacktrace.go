@@ -73,14 +73,26 @@ func writeSimpleFrame(s io.Writer, f errors.Frame) {
 	if len(chunks) == 2 {
 		file = chunks[1]
 	}
+	// replace specific file versions in stack trace
+	file = replaceWasmdVersionStr(file)
+	file = replaceSeiCosmosVersionStr(file)
 	fmt.Fprintf(s, " [%s:%d]", file, line)
+}
+
+func replaceWasmdVersionStr(err string) string {
+	return strings.Replace(err, "sei-wasmd@v0.3.11", "sei-wasmd@v0.3.10", 1)
+}
+
+func replaceSeiCosmosVersionStr(err string) string {
+	return strings.Replace(err, "sei-cosmos@v0.3.67", "sei-cosmos@v0.3.66", 1)
 }
 
 // Format works like pkg/errors, with additions.
 // %s is just the error message
 // %+v is the full stack trace
 // %v appends a compressed [filename:line] where the error
-//    was created
+//
+//	was created
 //
 // Inspired by https://github.com/pkg/errors/blob/v0.8.1/errors.go#L162-L176
 func (e *wrappedError) Format(s fmt.State, verb rune) {

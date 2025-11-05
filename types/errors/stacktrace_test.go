@@ -39,7 +39,7 @@ func (s *errorsTestSuite) TestStackTrace() {
 	const thisTestSrc = "types/errors/stacktrace_test.go"
 
 	for _, tc := range cases {
-		s.Require().True(reflect.DeepEqual(tc.err.Error(), tc.wantError), tc.err.Error(), tc.wantError)
+		s.Require().True(reflect.DeepEqual(tc.err.Error(), tc.wantError))
 		s.Require().NotNil(stackTrace(tc.err))
 		fullStack := fmt.Sprintf("%+v", tc.err)
 		s.Require().True(strings.Contains(fullStack, thisTestSrc))

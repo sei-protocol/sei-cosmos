@@ -73,7 +73,17 @@ func writeSimpleFrame(s io.Writer, f errors.Frame) {
 	if len(chunks) == 2 {
 		file = chunks[1]
 	}
+	// replace specific file versions in stack trace
+	file = replacePackageVersionStr(file)
 	fmt.Fprintf(s, " [%s:%d]", file, line)
+}
+
+func replacePackageVersionStr(err string) string {
+	err = strings.Replace(err, "sei-wasmd@v0.3.11", "sei-wasmd@v0.3.10", 1)
+	err = strings.Replace(err, "CosmWasm/wasmd@v0.27.0", "sei-protocol/sei-wasmd@v0.3.10", 1)
+	err = strings.Replace(err, "sei-cosmos@v0.3.67", "sei-cosmos@v0.3.66", 1)
+	err = strings.Replace(err, "sei-cosmos@v0.3.68", "sei-cosmos@v0.3.66", 1)
+	return err
 }
 
 // Format works like pkg/errors, with additions.

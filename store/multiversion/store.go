@@ -2,6 +2,7 @@ package multiversion
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -15,7 +16,7 @@ type MultiVersionStore interface {
 	GetLatest(key []byte) (value MultiVersionValueItem)
 	GetLatestBeforeIndex(index int, key []byte) (value MultiVersionValueItem)
 	Has(index int, key []byte) bool
-	WriteLatestToStore()
+	WriteLatestToStore() int
 	SetWriteset(index int, incarnation int, writeset WriteSet)
 	InvalidateWriteset(index int, incarnation int)
 	SetEstimatedWriteset(index int, incarnation int, writeset WriteSet)
@@ -396,7 +397,8 @@ func (s *Store) ValidateTransactionState(index int) (bool, []int) {
 	return iteratorValid && readsetValid, conflictIndices
 }
 
-func (s *Store) WriteLatestToStore() {
+func (s *Store) WriteLatestToStore() int {
+	keysWritten := 0
 	// sort the keys
 	keys := []string{}
 	s.multiVersionMap.Range(func(key, value interface{}) bool {
@@ -413,6 +415,7 @@ func (s *Store) WriteLatestToStore() {
 		mvValue, found := val.(MultiVersionValue).GetLatestNonEstimate()
 		if !found {
 			// this means that at some point, there was an estimate, but we have since removed it so there isn't anything writeable at the key, so we can skip
+			fmt.Printf("DEBUG: previously estimated key %s now removed and not written", key)
 			continue
 		}
 		// we shouldn't have any ESTIMATE values when performing the write, because we read the latest non-estimate values only
@@ -426,10 +429,13 @@ func (s *Store) WriteLatestToStore() {
 			// not. Once we get confirmation that .Delete is guaranteed not to
 			// save the byteslice, then we can assume only a read-only copy is sufficient.
 			s.parentStore.Delete([]byte(key))
+			keysWritten++
 			continue
 		}
 		if mvValue.Value() != nil {
 			s.parentStore.Set([]byte(key), mvValue.Value())
+			keysWritten++
 		}
 	}
+	return keysWritten
 }

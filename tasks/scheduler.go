@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/multiversion"
@@ -132,7 +133,9 @@ func (s *scheduler) invalidateTask(task *deliverTxTask) {
 	}
 }
 
-func start(ctx context.Context, ch chan func(), workers int) {
+func start(ctx context.Context, ch chan func(), workers int) *atomic.Int32 {
+	res := new(atomic.Int32)
+	res.Store(0)
 	for i := 0; i < workers; i++ {
 		go func() {
 			for {
@@ -140,11 +143,14 @@ func start(ctx context.Context, ch chan func(), workers int) {
 				case <-ctx.Done():
 					return
 				case work := <-ch:
+					res.Add(1)
 					work()
+					res.Add(-1)
 				}
 			}
 		}()
 	}
+	return res
 }
 
 func (s *scheduler) DoValidate(work func()) {
@@ -291,19 +297,24 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 	defer cancel()
 
 	// execution tasks are limited by workers
-	start(workerCtx, s.executeCh, workers)
+	executeBusyCnt := start(workerCtx, s.executeCh, workers)
 
 	// validation tasks uses length of tasks to avoid blocking on validation
-	start(workerCtx, s.validateCh, len(tasks))
+	validateBusyCnt := start(workerCtx, s.validateCh, len(tasks))
 
 	toExecute := tasks
 	for !allValidated(tasks) {
 		// if the max incarnation >= x, we should revert to synchronous
 		if iterations >= maximumIterations {
+			ctx.Logger().Info(fmt.Sprintf("iteration number %d exceeds max iteration %d, switching to sequential", iterations, maximumIterations))
+			if s.synchronous {
+				ctx.Logger().Error("already synchronous")
+			}
 			// process synchronously
 			s.synchronous = true
 			startIdx, anyLeft := s.findFirstNonValidated()
 			if !anyLeft {
+				ctx.Logger().Error("should be impossible to have any non-validated when the outer for loop hasn't exited")
 				break
 			}
 			toExecute = tasks[startIdx:]
@@ -314,6 +325,10 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 			return nil, err
 		}
 
+		if eBusy := executeBusyCnt.Load(); eBusy != 0 {
+			ctx.Logger().Error(fmt.Sprintf("%d goroutines are still executing when none is expected", eBusy))
+		}
+
 		// validate returns any that should be re-executed
 		// note this processes ALL tasks, not just those recently executed
 		var err error
@@ -321,13 +336,19 @@ func (s *scheduler) ProcessAll(ctx sdk.Context, reqs []*sdk.DeliverTxEntry) ([]t
 		if err != nil {
 			return nil, err
 		}
+
+		if vBusy := validateBusyCnt.Load(); vBusy != 0 {
+			ctx.Logger().Error(fmt.Sprintf("%d goroutines are still validating when none is expected", vBusy))
+		}
 		// these are retries which apply to metrics
 		s.metrics.retries += len(toExecute)
 		iterations++
 	}
 
-	for _, mv := range s.multiVersionStores {
-		mv.WriteLatestToStore()
+	for storeKey, mv := range s.multiVersionStores {
+		if keysWritten := mv.WriteLatestToStore(); keysWritten > 0 {
+			ctx.Logger().Info(fmt.Sprintf("writing %d keys from MV store to parent for %s", keysWritten, storeKey.Name()))
+		}
 	}
 	s.metrics.maxIncarnation = s.maxIncarnation
 
@@ -542,6 +563,9 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 	close(task.AbortCh)
 	abort, ok := <-task.AbortCh
 	if ok {
+		if s.synchronous {
+			task.Ctx.Logger().Error("synchronous processing received abort signal", "incarnation", task.Incarnation, "index", task.AbsoluteIndex)
+		}
 		// if there is an abort item that means we need to wait on the dependent tx
 		task.SetStatus(statusAborted)
 		task.Abort = &abort
@@ -555,6 +579,10 @@ func (s *scheduler) executeTask(task *deliverTxTask) {
 
 	task.SetStatus(statusExecuted)
 	task.Response = &resp
+
+	if len(task.VersionStores) == 0 {
+		task.Ctx.Logger().Error("no version store found when writing to multiversion store", "incarnation", task.Incarnation, "index", task.AbsoluteIndex)
+	}
 
 	// write from version store to multiversion stores
 	for _, v := range task.VersionStores {

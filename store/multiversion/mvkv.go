@@ -2,10 +2,12 @@ package multiversion
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"sort"
 
+	log "github.com/rs/zerolog/log"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/store/types"
@@ -93,13 +95,15 @@ type VersionIndexedStore struct {
 	incarnation      int
 	// have abort channel here for aborting transactions
 	abortChannel chan scheduler.Abort
+	// storeKey for granular logging
+	storeKey types.StoreKey
 }
 
 var _ types.KVStore = (*VersionIndexedStore)(nil)
 var _ ReadsetHandler = (*VersionIndexedStore)(nil)
 var _ IterateSetHandler = (*VersionIndexedStore)(nil)
 
-func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersionStore, transactionIndex, incarnation int, abortChannel chan scheduler.Abort) *VersionIndexedStore {
+func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersionStore, transactionIndex, incarnation int, abortChannel chan scheduler.Abort, storeKey types.StoreKey) *VersionIndexedStore {
 	return &VersionIndexedStore{
 		readset:           make(map[string][][]byte),
 		writeset:          make(map[string][]byte),
@@ -110,7 +114,13 @@ func NewVersionIndexedStore(parent types.KVStore, multiVersionStore MultiVersion
 		transactionIndex:  transactionIndex,
 		incarnation:       incarnation,
 		abortChannel:      abortChannel,
+		storeKey:          storeKey,
 	}
+}
+
+// StoreKey returns the store key for logging purposes
+func (store *VersionIndexedStore) StoreKey() types.StoreKey {
+	return store.storeKey
 }
 
 // GetReadset returns the readset
@@ -263,6 +273,15 @@ func (store *VersionIndexedStore) Set(key []byte, value []byte) {
 	// store.mtx.Lock()
 	// defer store.mtx.Unlock()
 	// defer telemetry.MeasureSince(time.Now(), "store", "mvkv", "set")
+
+	// if we are operating on the EVM storekey, we want to check if the key already exists in the readset (eg. has it already been read prior to performing the write)
+	// we also want to ignore the address mapping keys
+	if store.storeKey != nil && store.storeKey.Name() == "evm" && key[0] != 0x01 {
+		if _, ok := store.readset[string(key)]; !ok {
+			// we want to flag this case
+			log.Info().Str("store_key", store.storeKey.Name()).Str("key", hex.EncodeToString(key)).Msg("EVM store write key non-existent in readset, continuing with write")
+		}
+	}
 
 	types.AssertValidKey(key)
 	store.setValue(key, value)

@@ -276,7 +276,7 @@ func (store *VersionIndexedStore) Set(key []byte, value []byte) {
 
 	// if we are operating on the EVM storekey, we want to check if the key already exists in the readset (eg. has it already been read prior to performing the write)
 	// we also want to ignore the address mapping keys
-	if store.storeKey != nil && store.storeKey.Name() == "evm" && key[0] != 0x01 {
+	if store.storeKey != nil && store.storeKey.Name() == "evm" && (key[0] != 0x01 && key[0] != 0x02) {
 		if _, ok := store.readset[string(key)]; !ok {
 			// we want to flag this case
 			log.Info().Str("store_key", store.storeKey.Name()).Str("key", hex.EncodeToString(key)).Msg("EVM store write key non-existent in readset")

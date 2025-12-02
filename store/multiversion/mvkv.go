@@ -279,7 +279,7 @@ func (store *VersionIndexedStore) Set(key []byte, value []byte) {
 	if store.storeKey != nil && store.storeKey.Name() == "evm" && key[0] != 0x01 {
 		if _, ok := store.readset[string(key)]; !ok {
 			// we want to flag this case
-			log.Info().Str("store_key", store.storeKey.Name()).Str("key", hex.EncodeToString(key)).Msg("EVM store write key non-existent in readset, continuing with write")
+			log.Info().Str("store_key", store.storeKey.Name()).Str("key", hex.EncodeToString(key)).Msg("EVM store write key non-existent in readset")
 		}
 	}
 

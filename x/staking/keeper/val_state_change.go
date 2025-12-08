@@ -18,6 +18,7 @@ import (
 // As a result, we need to unjail them for the following block (129816000) to fix this issue and restore chain liveness
 func (k Keeper) Arctic1ValidatorHotfix(ctx sdk.Context) {
 	// if the current chain id isn't arctic-1 or the block height isn't 129816000, return
+	ctx.Logger().Info("Arctic-1 Hotfix: checking if hotfix is applicable", "chain_id", ctx.ChainID(), "block_height", ctx.BlockHeight())
 	if !(ctx.ChainID() == "arctic-1" && ctx.BlockHeight() == 129816000) {
 		return
 	}

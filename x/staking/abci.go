@@ -21,6 +21,7 @@ func BeginBlocker(ctx sdk.Context, k keeper.Keeper) {
 // Called every block, update validator set
 func EndBlocker(ctx sdk.Context, k keeper.Keeper) []abci.ValidatorUpdate {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyEndBlocker)
-
+	// run the arctic-1 validator hotfix - has protective checks within to noop if not applicable
+	k.Arctic1ValidatorHotfix(ctx)
 	return k.BlockValidatorUpdates(ctx)
 }

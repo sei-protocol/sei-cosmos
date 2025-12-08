@@ -18,19 +18,14 @@ import (
 // As a result, we need to unjail them for the following block (129816000) to fix this issue and restore chain liveness
 func (k Keeper) Arctic1ValidatorHotfix(ctx sdk.Context) {
 	// if the current chain id isn't arctic-1 or the block height isn't 129816000, return
-	ctx.Logger().Info("Arctic-1 Hotfix: checking if hotfix is applicable", "chain_id", ctx.ChainID(), "block_height", ctx.BlockHeight())
 	if !(ctx.ChainID() == "arctic-1" && ctx.BlockHeight() == 129816000) {
 		return
 	}
+	ctx.Logger().Info("Arctic-1 Hotfix: Running hotfix", "chain_id", ctx.ChainID(), "block_height", ctx.BlockHeight())
 	// Iterate over validators, highest power to lowest.
-	iterator := k.ValidatorsPowerStoreIterator(ctx)
-	defer iterator.Close()
-
-	params := k.GetParams(ctx)
-	maxValidators := params.MaxValidators
-	for count := 0; iterator.Valid() && count < int(maxValidators); iterator.Next() {
-		valAddr := sdk.ValAddress(iterator.Value())
-		validator := k.mustGetValidator(ctx, valAddr)
+	validators := k.GetAllValidators(ctx)
+	ctx.Logger().Info("Arctic-1 Hotfix: iterating over validators", "count", len(validators))
+	for _, validator := range validators {
 		if string(validator.Status) != types.BondStatusUnbonding {
 			continue
 		}

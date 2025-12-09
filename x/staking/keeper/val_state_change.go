@@ -26,8 +26,8 @@ func (k Keeper) Arctic1ValidatorHotfix(ctx sdk.Context) {
 	validators := k.GetAllValidators(ctx)
 	ctx.Logger().Info("Arctic-1 Hotfix: iterating over validators", "count", len(validators))
 	for _, validator := range validators {
-		if string(validator.Status) != types.BondStatusUnbonding {
-			ctx.Logger().Info("Arctic-1 Hotfix: validator not in unbonding status", "validator", validator.GetOperator().String(), "status", string(validator.Status))
+		if validator.UnbondingHeight != 129816000 {
+			ctx.Logger().Info("Arctic-1 Hotfix: validator not to be unbonded", "validator", validator.GetOperator().String(), "status", string(validator.Status))
 			continue
 		}
 		ctx.Logger().Info("Arctic-1 Hotfix: unjailing validator", "validator", validator.GetOperator().String())

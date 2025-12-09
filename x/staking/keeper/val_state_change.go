@@ -25,15 +25,19 @@ func (k Keeper) Arctic1ValidatorHotfix(ctx sdk.Context) {
 	// Iterate over validators, highest power to lowest.
 	validators := k.GetAllValidators(ctx)
 	ctx.Logger().Info("Arctic-1 Hotfix: iterating over validators", "count", len(validators))
+	validatorsReinstated := 0
 	for _, validator := range validators {
-		ctx.Logger().Info("Arctic-1 Hotfix: validator", "validator", validator.String())
-		if validator.UnbondingHeight != 129816000 {
-			ctx.Logger().Info("Arctic-1 Hotfix: validator not to be unbonded", "validator", validator.GetOperator().String(), "status", string(validator.Status), "unbonding_height", validator.UnbondingHeight)
+		// ctx.Logger().Info("Arctic-1 Hotfix: validator", "validator", validator.String())
+		// if validator is jailed and bonded, it is about to get unbonded, lets unjail is before that happens
+		if validator.Jailed && types.BondStatus_name[int32(validator.Status)] == types.BondStatusBonded {
+			ctx.Logger().Info("Arctic-1 Hotfix: unjailing validator", "validator", validator.GetOperator().String())
+			k.unjailValidator(ctx, validator)
+			validatorsReinstated++
 			continue
 		}
-		ctx.Logger().Info("Arctic-1 Hotfix: unjailing validator", "validator", validator.GetOperator().String())
-		k.unjailValidator(ctx, validator)
+		ctx.Logger().Info("Arctic-1 Hotfix: validator not to reinstated", "validator", validator.GetOperator().String(), "status", string(validator.Status), "unbonding_height", validator.UnbondingHeight)
 	}
+	ctx.Logger().Info("Arctic-1 Hotfix: validators reinstated", "count", validatorsReinstated)
 }
 
 // BlockValidatorUpdates calculates the ValidatorUpdates for the current block

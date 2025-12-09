@@ -12,6 +12,34 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
+// This is a hotfix specifically for arctic-1 on block 129816000.
+// In the previous block, due to oracle failure across all validators, the oracle endblocker jailed all the validators in block height 129815999.
+// Because that happened after staking endblocker, the validator updates weren't actually updated, leaving the validators in a state where they were committed to unbonding and were jailed, but the state was still commmitted.
+// As a result, we need to unjail them for the following block (129816000) to fix this issue and restore chain liveness
+func (k Keeper) Arctic1ValidatorHotfix(ctx sdk.Context) {
+	// if the current chain id isn't arctic-1 or the block height isn't 129816000, return
+	if !(ctx.ChainID() == "arctic-1" && ctx.BlockHeight() == 129816000) {
+		return
+	}
+	ctx.Logger().Info("Arctic-1 Hotfix: Running hotfix", "chain_id", ctx.ChainID(), "block_height", ctx.BlockHeight())
+	// Iterate over validators, highest power to lowest.
+	validators := k.GetAllValidators(ctx)
+	ctx.Logger().Info("Arctic-1 Hotfix: iterating over validators", "count", len(validators))
+	validatorsReinstated := 0
+	for _, validator := range validators {
+		// ctx.Logger().Info("Arctic-1 Hotfix: validator", "validator", validator.String())
+		// if validator is jailed and bonded, it is about to get unbonded, lets unjail is before that happens
+		if validator.Jailed && types.BondStatus_name[int32(validator.Status)] == types.BondStatusBonded {
+			ctx.Logger().Info("Arctic-1 Hotfix: unjailing validator", "validator", validator.GetOperator().String())
+			k.unjailValidator(ctx, validator)
+			validatorsReinstated++
+			continue
+		}
+		ctx.Logger().Info("Arctic-1 Hotfix: validator not to reinstated", "validator", validator.GetOperator().String(), "status", string(validator.Status), "unbonding_height", validator.UnbondingHeight)
+	}
+	ctx.Logger().Info("Arctic-1 Hotfix: validators reinstated", "count", validatorsReinstated)
+}
+
 // BlockValidatorUpdates calculates the ValidatorUpdates for the current block
 // Called in each EndBlock
 func (k Keeper) BlockValidatorUpdates(ctx sdk.Context) []abci.ValidatorUpdate {

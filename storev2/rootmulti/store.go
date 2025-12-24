@@ -170,6 +170,38 @@ func (rs *Store) flush() error {
 			return changeSets[i].Name < changeSets[j].Name
 		})
 		if rs.ssStore != nil {
+			// Compute LtHash before applying changesets
+			// Pass nil for lastFlushValueGetter for now (SS will read from DB)
+			// Collect metrics per store
+			totalPairs := 0
+			maxStorePairs := 0
+			maxStoreName := ""
+			for _, cs := range changeSets {
+				pairs := len(cs.Changeset.Pairs)
+				totalPairs += pairs
+				if pairs > maxStorePairs {
+					maxStorePairs = pairs
+					maxStoreName = cs.Name
+				}
+			}
+
+			stateHash, timings, _ := rs.ssStore.ApplyCommitHashWithTimings(currentVersion, changeSets, nil)
+			if timings != nil {
+				rs.logger.Info("LtHash computed",
+					"version", currentVersion,
+					"hash", fmt.Sprintf("%x", stateHash.Hash[:8]),
+					"total_us", timings.TotalNs/1000,
+					"serialize_us", timings.SerializeNs/1000,
+					"blake3_us", timings.Blake3Ns/1000,
+					"mix_us", timings.MixInOutNs/1000,
+					"merge_us", timings.MergeNs/1000,
+					"kv_pairs", totalPairs,
+					"stores", len(changeSets),
+					"max_store", maxStoreName,
+					"max_store_pairs", maxStorePairs,
+				)
+			}
+
 			rs.pendingChanges <- VersionedChangesets{
 				Version:    currentVersion,
 				Changesets: changeSets,

@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
 
 	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/jsonpb"
